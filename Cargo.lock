@@ -2263,6 +2263,7 @@ dependencies = [
  "mailcraft-ews",
  "mailcraft-jmap",
  "mailcraft-link",
+ "mailcraft-mcp",
  "mailcraft-model",
  "mailcraft-net",
  "mailcraft-proto",

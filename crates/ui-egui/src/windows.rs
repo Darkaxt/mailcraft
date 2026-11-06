@@ -261,6 +261,11 @@ impl Windows {
         self.open.len().saturating_add(self.out.len()) >= MAX_WINDOWS
     }
 
+    /// Whether any secondary window exists, including one currently being drawn.
+    pub(crate) fn has_open(&self) -> bool {
+        !self.open.is_empty() || !self.out.is_empty()
+    }
+
     /// Bring a window forward: it is the one in front from now on.
     fn raise(&mut self, id: u64) {
         if let Some(at) = self.open.iter().position(|w| w.id == id) {

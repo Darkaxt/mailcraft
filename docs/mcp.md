@@ -1,6 +1,6 @@
 # MCP server
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-11-03 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-11-06 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
 
 MailCraft speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio, so
 agents can read, file and write mail and keep a calendar.
@@ -198,6 +198,33 @@ app's Send/Receive) delivers it.
 
 ## Tools
 
+For background use, start the desktop app with `--hidden --control 7991
+--control-agents-only` and attach the authenticated bridge. Hidden startup is
+native app behavior, not the operating system's launch-window hint. It does not
+change saved window preferences. `status.lifecycle.nativeVisible` and
+`nativeFocused` report the native window's observed state (null when unknown);
+`hiddenRequested` is only the requested state.
+`canClose` and `closeBlocker` report current native close readiness; the close
+action rechecks it atomically rather than trusting this earlier observation.
+
+`hide_app` hides the main app without input or activation. It refuses while a
+dialog, an owner question or a secondary window is open. `close_app` requests
+normal exit only when there are no open editors, owner questions, active or queued
+mail jobs, sign-in or mailbox-opening operations. It never forces, discards or
+cancels work. Both tools take an empty argument object; there is no force/discard
+parameter. They need the desktop backend, not an in-memory headless session.
+
+The close reply acknowledges the request, not process exit. The app waits until
+its native transport has written that reply and this bridge disconnects. For a
+shared managed bridge, end the original workflow first, then use its installed
+lifecycle helper to stop the idle bridge. This leaves the GUI alive for workflow
+release and requires no desktop input. The app rechecks actual work and uses the
+normal save-and-close path. New application work cancels a close awaiting bridge
+release. A failed reply or save keeps it open. Observe the
+original app through exit; if it stays open, inspect `status.lifecycle.close` and
+`blocked`, retaining the original request identity. Do not replay an uncertain
+close. The old unrestricted `app.quit` remains unavailable to agents.
+
 | Tool | What it does |
 |---|---|
 | `list_commands` | every command (filter with `query`) |
@@ -213,6 +240,7 @@ app's Send/Receive) delivers it.
 | `parity` | feature coverage |
 | `status` | whether the mailbox is open; while the window still opens it at launch, every other tool is answered "the mailbox is still opening" |
 | `screenshot`, `click`, `key`, `ui_inspect` | the window (with `--connect` only) |
+| `hide_app`, `close_app` | explicit native hiding and idle-only normal exit, without desktop input |
 
 Everything else goes through `execute`: replying (`mail.reply`, `compose.set`, `compose.send`),
 filing (`mail.move`, `mail.categorize`, `mail.archive`), rules (`rules.add`), the calendar

@@ -1,6 +1,6 @@
 # Control protocol
 
-> **Last reviewed:** 2026-10-13 · **Last updated:** 2026-11-04 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
+> **Last reviewed:** 2026-10-13 · **Last updated:** 2026-11-06 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
 
 Start the app with a control port: `mailcraft --control 7991` (or `MAILCRAFT_CONTROL_PORT=7991`).
 It listens on `127.0.0.1` only. Send one JSON object per line, with the window's key (see
@@ -101,6 +101,25 @@ more. `ui.inspect` says
 each command's `agent` (`"safe"`, `"owner"`, `"never"`) and, for `"owner"`, `needs`.
 
 ## Methods
+
+`app.lifecycle {"action":"hide"}` and `{"action":"close"}` are the app-owned
+actions behind MCP's `hide_app` and `close_app`. They accept no other fields.
+Hiding refuses questions, dialogs and secondary windows. Closing refuses editors,
+questions, active/queued jobs and pending mailbox operations, and never forces or
+discards. Its native-only reply-delivery receipt cannot be supplied by JSON. The
+app begins normal close only after the accepted reply is written and its accepting
+bridge disconnects. A shared managed workflow releases first, then its installed
+lifecycle helper stops the idle bridge; the GUI remains alive for release checks.
+New application work cancels a pending close. The app rechecks actual work and
+waits for ordinary saving. Failed delivery or saving keeps it
+open. `app.status.lifecycle` reports the requested hidden state, observed native
+visibility/focus (null when unknown), close state and any blocker. A close reply
+is acknowledgement, not proof of process exit; retain the original request and
+observe actual exit. Agents still cannot call the old `app.quit`.
+
+`--hidden` requests a hidden, inactive native main window, including while the
+mailbox opens; it changes no saved window preference. Observe actual visibility
+through status rather than inferring it from the launch flag.
 
 **While the mailbox opens.** At launch the window comes up before its mailbox is read (#519).
 Until it is, every request but `app.status` is answered `{"ok": false, "error": "the mailbox is

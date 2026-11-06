@@ -1,6 +1,6 @@
 # Where MailCraft falls short of Outlook
 
-> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-11-05 · **Change:** minor
+> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-11-06 · **Change:** minor
 
 The ranked list of shortfalls and rough edges. The direction is in [`ROADMAP.md`](../ROADMAP.md):
 where MailCraft stands, the beta checklist and the steps to it, and what comes after beta; the order
@@ -13,6 +13,11 @@ that tracks the gap when it closes. Estimates are guesses until someone has done
 this code base.
 
 ## Ranked
+
+Account connection and renewed sign-in now queue their first mail download when
+another account is syncing, preserving the original job and FIFO order. The setup
+page distinguishes waiting from downloading. This corrects onboarding behavior;
+the broader live-interoperability and provider-acceptance gaps below remain open.
 
 | # | Gap | B | Evidence | Impact | Hours | Doc |
 |---|---|---|---|---|---|---|

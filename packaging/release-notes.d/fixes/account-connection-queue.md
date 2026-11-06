@@ -1,0 +1,1 @@
+- Connecting or signing back into another account queues its first download when Send/Receive is already running, without cancelling the current account or skipping the new one. The account-setup page says when that download is waiting.

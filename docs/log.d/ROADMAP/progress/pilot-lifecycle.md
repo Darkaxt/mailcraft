@@ -1,0 +1,1 @@
+| 2026-11-06 | Connected accounts and renewed sign-ins join the existing sync queue without cancelling another download; background app use has explicit native hidden startup and MCP hide/idle-close controls, with observed visibility and reply-delivery ordering. |

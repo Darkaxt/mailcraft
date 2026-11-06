@@ -210,6 +210,8 @@ pub enum Action {
 enum Outcome {
     /// The first Send/Receive is running.
     Downloading,
+    /// The first Send/Receive waits for another account's current work.
+    Queued,
     /// It has servers, but its first Send/Receive is still to be started.
     Later,
     /// It has servers, and this build can't reach any.
@@ -1383,7 +1385,8 @@ impl AccountSetup {
 
     /// The account exists: start its first download, and say how things stand.
     fn finish(&mut self, app: &mut MailApp, id: Id) {
-        self.outcome = match app.execute("ui.sync", json!({"account": id})) {
+        self.outcome = match app.sync_connected_account(id, false) {
+            Ok(answer) if answer.get("queued").and_then(Value::as_bool) == Some(true) => Outcome::Queued,
             Ok(_) => Outcome::Downloading,
             Err(_) if app.services.sync.is_none() => Outcome::Offline,
             Err(_) => Outcome::Later,
@@ -1888,6 +1891,7 @@ impl AccountSetup {
         let t = pass.t;
         let next = match self.outcome {
             Outcome::Downloading => tl!("Your mail is downloading now. The first time can take a few minutes."),
+            Outcome::Queued => tl!("Your account is ready. Its mail is waiting to download."),
             Outcome::Later => tl!("Press Send/Receive to download your mail."),
             Outcome::Offline => {
                 tl!(
@@ -2356,6 +2360,7 @@ mod tests {
     use crate::{Services, SignInRequest};
     use egui::Key;
 
+    mod connection_queue_tests;
     /// Google-specific keyboard, accessibility and compact-window behavior in both themes.
     mod google_accessibility_tests;
     /// Existing Gmail account preservation and transactional OAuth conversion.

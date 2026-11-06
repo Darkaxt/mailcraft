@@ -30,12 +30,15 @@ pub struct ControlRequest {
     /// From an agent (the MCP bridge marks its requests), with what the owner allowed it in
     /// advance; `None`: the owner's own script.
     pub agent: Option<Vec<mailcraft_engine::agent::Class>>,
+    /// Only the native host supplies this delivery receipt, never JSON input.
+    /// Safe close cannot start before its acknowledgement has been written.
+    pub close_receipt: Option<crate::app_lifecycle::CloseReceipt>,
 }
 
 impl ControlRequest {
     pub fn new(method: impl Into<String>, params: Value) -> (Self, std::sync::mpsc::Receiver<Value>) {
         let (tx, rx) = std::sync::mpsc::channel();
-        (Self { method: method.into(), params, reply: tx, agent: None }, rx)
+        (Self { method: method.into(), params, reply: tx, agent: None, close_receipt: None }, rx)
     }
 
     /// The same request, as an agent's that was allowed `allow`.
@@ -280,9 +283,14 @@ impl Drop for Driven<'_> {
 }
 
 #[cfg(test)]
+mod lifecycle_tests;
+#[cfg(test)]
 mod tests;
 
 fn dispatch(app: &mut MailApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+    if let Err(why) = app.lifecycle_before_request(&req.method) {
+        return err(why);
+    }
     if let Some(allow) = &req.agent
         && let Some(settled) = crate::agent_gate::screen(app, req, allow)
     {
@@ -308,7 +316,11 @@ fn dispatch(app: &mut MailApp, ctx: &egui::Context, req: &ControlRequest) -> Out
         "ui.inspect" => ok(inspect(app, ctx)),
         // Whether the mailbox is open (while it opens, this alone is answered: `opening`), and
         // the one being read in the background, if any.
-        "app.status" => ok(json!({"mailbox": "open", "opening": crate::opening::ahead_inspect(app)})),
+        "app.status" => ok(json!({"mailbox": "open", "opening": crate::opening::ahead_inspect(app), "lifecycle": app.lifecycle_status()})),
+        "app.lifecycle" => match app.lifecycle_action(ctx, p, req.close_receipt.as_ref()) {
+            Ok(value) => ok(value),
+            Err(why) => err(why),
+        },
         "ui.parity" => ok(mailcraft_engine::catalog::parity(&app.session.registry)),
         // The desktop alerts the window showed (read only: nothing can ask for one).
         "ui.alerts" => ok(crate::alerts::inspect(app, p)),

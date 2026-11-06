@@ -46,6 +46,7 @@ mod agent_leaves_tests;
 #[cfg(test)]
 mod agent_names_tests;
 pub mod alerts;
+pub mod app_lifecycle;
 pub mod approval;
 #[cfg(test)]
 mod attachment_menu_tests;
@@ -1399,6 +1400,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
 
 /// The application.
 pub struct MailApp {
+    pub(crate) lifecycle: app_lifecycle::State,
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
@@ -1830,6 +1832,7 @@ impl MailApp {
             sync_refused: false,
             sync_password: None,
             jmap_refused: Default::default(),
+            lifecycle: Default::default(),
             control_rx: None,
             shot_token: 0,
             queued_shots: Vec::new(),
@@ -3096,6 +3099,32 @@ impl MailApp {
         self.passwords.insert(account, password);
     }
 
+    /// A connected account downloads now, or waits in the existing round without
+    /// interrupting another account. Used after setup and successful sign-in.
+    fn sync_connected_account(&mut self, account: Id, quiet: bool) -> Result<Value, String> {
+        self.drop_secrets_if_replaced();
+        let busy = self.sync_rx.is_some() || self.graph_rx.is_some() || !self.sync_queue.is_empty() || self.calendar_job_for(account);
+        if !busy || self.unconfirmed || self.data_removed || self.offline() || !self.services.can_sync() {
+            return self.start_sync(&json!({"account": account, "quiet": quiet}));
+        }
+        // A successful connection keeps its first download even while another
+        // account runs. Never replace that job, its progress, or its cancellation.
+        if let Some((_, queued_quiet)) = self.sync_queue.iter_mut().find(|(id, _)| *id == account) {
+            *queued_quiet &= quiet;
+        } else {
+            self.sync_queue.push_back((account, quiet));
+        }
+        use mailcraft_engine::cmd::sync_progress::{AccountRun, RunState};
+        if let Some(row) = self.session.sync_progress.accounts.iter_mut().find(|r| r.account == account) {
+            if !matches!(row.state, RunState::Running | RunState::Waiting) {
+                *row = AccountRun { account, ..Default::default() };
+            }
+        } else {
+            self.session.sync_progress.accounts.push(AccountRun { account, ..Default::default() });
+        }
+        Ok(json!({"queued": true, "account": account}))
+    }
+
     /// Start a Send/Receive for an account (default: the first one with a server). Asks for the
     /// password the first time, or has the owner sign in on the provider's page; the answer is
     /// kept in memory until the app closes, and by the operating system when that is wanted.
@@ -3961,7 +3990,7 @@ impl MailApp {
             Ok(tokens) => {
                 self.remember("refresh", &address, &tokens.refresh);
                 self.tokens.insert(account, tokens);
-                if let Err(e) = self.start_sync(&json!({"account": account})) {
+                if let Err(e) = self.sync_connected_account(account, !asked_for) {
                     self.session.sync_status.clear();
                     self.status(e);
                 }
@@ -4344,6 +4373,7 @@ impl MailApp {
             self.ctx = Some(ctx.clone());
         }
         windows::remember_identity(ctx, self.services.window_identity.as_ref());
+        self.apply_background_visibility(ctx);
         // Waiting for the mailbox: nothing else happens.
         if self.opening.is_some() {
             opening::logic(self, ctx);
@@ -4353,6 +4383,11 @@ impl MailApp {
         // Before anything can start or end a Send/Receive in this frame ([`alerts`]).
         alerts::tick(self, ctx);
         self.drain_control(ctx);
+        // No new background job starts after an accepted idle close. The native
+        // host's reply delivery and the existing saver govern progress, not time.
+        if self.lifecycle_close_tick(ctx) {
+            return;
+        }
         control::trail(self, ctx);
         self.poll_sign_in();
         // A sign-in for an account that is being set up has nobody waiting for it once that dialog

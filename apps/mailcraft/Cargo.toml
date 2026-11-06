@@ -36,6 +36,7 @@ serde_json = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
+mailcraft-mcp = { workspace = true }
 # The tests run the whole way of a calendar change, and of reading Outlook's Favorites, against
 # a stand-in for Microsoft Graph that takes only what the documented service takes
 # (`mailcraft_net::graph::standin`).

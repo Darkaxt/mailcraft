@@ -101,6 +101,8 @@ mod gate_tests;
 #[cfg(test)]
 mod hidden_text_tests;
 #[cfg(test)]
+mod lifecycle_tests;
+#[cfg(test)]
 mod shared_window_tests;
 #[cfg(test)]
 mod tests;

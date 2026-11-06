@@ -201,6 +201,20 @@ pub fn tool_definitions() -> Value {
             false
         ),
         tool("inspect_mailbox", "Inspect mailbox", "Accounts and how much of everything the mailbox holds.", obj(json!({}), &[]), true),
+        tool(
+            "hide_app",
+            "Hide app",
+            "Hide the desktop app without focus or input. Mail synchronization and MCP remain available. Refused while an owner question or dialog is open.",
+            obj(json!({}), &[]),
+            false
+        ),
+        tool(
+            "close_app",
+            "Close app normally",
+            "Request idle-only normal app exit after this bridge disconnects. Never forces, discards or cancels work. End the original workflow, then stop its idle shared bridge through the installed lifecycle helper. Observe exact app exit; acknowledgement is not exit.",
+            obj(json!({}), &[]),
+            false
+        ),
         tool("list_folders", "List folders", "Every account's folder tree with message and unread counts.", obj(json!({}), &[]), true),
         tool(
             "list_messages",
@@ -480,6 +494,15 @@ pub fn call_tool(b: &mut dyn Backend, pol: &Policy, name: &str, a: &Value) -> To
         "click" => input(b, "ui.click", a.clone()),
         "key" => input(b, "ui.key", a.clone()),
         "ui_inspect" => wrap(b.call("ui.inspect", json!({}))),
+        "hide_app" | "close_app" => {
+            if !b.has_ui() {
+                return ToolResult::error(crate::NEEDS_APP);
+            }
+            if !a.as_object().is_some_and(serde_json::Map::is_empty) {
+                return ToolResult::error("this lifecycle action takes no parameters; force and discard are not supported");
+            }
+            wrap(b.call("app.lifecycle", json!({"action": if name == "hide_app" { "hide" } else { "close" }})))
+        }
         other => ToolResult::error(format!("unknown tool `{other}`")),
     }
 }

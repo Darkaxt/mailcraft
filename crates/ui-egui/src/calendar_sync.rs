@@ -161,6 +161,10 @@ impl MailApp {
         self.calendar.rx.as_ref().is_some_and(|(busy, ..)| *busy == owner || *busy == account)
     }
 
+    pub(crate) fn calendar_working(&self) -> bool {
+        self.calendar.rx.is_some() || self.calendar.check_rx.is_some()
+    }
+
     /// A Send/Receive the owner asked for was started for `account`: its calendar and contacts
     /// are asked for in the job that follows the round, the days on screen at least.
     pub(crate) fn calendar_after_round(&mut self, account: Id) {

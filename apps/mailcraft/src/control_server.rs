@@ -186,6 +186,7 @@ fn serve(stream: TcpStream, tx: Sender<ControlRequest>, ctx: egui::Context, key:
     let mut authorised = false;
     // The key an `auth` request gave this connection.
     let mut conn_key: Option<String> = None;
+    let mut accepted_close: Option<mailcraft_ui_egui::app_lifecycle::CloseReceipt> = None;
     while let Some(line) = read_line(&mut reader) {
         let line = match line {
             Ok(l) => l,
@@ -255,7 +256,10 @@ fn serve(stream: TcpStream, tx: Sender<ControlRequest>, ctx: egui::Context, key:
             }
             continue;
         }
-        let (req, rrx) = ControlRequest::new(method, params);
+        let close_receipt = (method == "app.lifecycle" && params.get("action").and_then(Value::as_str) == Some("close"))
+            .then(mailcraft_ui_egui::app_lifecycle::CloseReceipt::default);
+        let (mut req, rrx) = ControlRequest::new(method, params);
+        req.close_receipt = close_receipt.clone();
         // Marked by the MCP bridge (`agent`): the window's gate for agents decides, and asks the
         // owner about what needs them. A request without it is the owner's own script, unless
         // the window was started with `--control-agents-only`: then every request is an agent's
@@ -271,11 +275,28 @@ fn serve(stream: TcpStream, tx: Sender<ControlRequest>, ctx: egui::Context, key:
         }
         ctx.request_repaint();
         let r = rrx.recv_timeout(Duration::from_secs(60)).unwrap_or_else(|_| json!({"ok": false, "error": "timeout"}));
-        if !reply(r) {
+        let accepted = r.get("ok").and_then(Value::as_bool) == Some(true);
+        let delivered = reply(r);
+        if let Some(receipt) = close_receipt {
+            receipt.complete(accepted && delivered);
+            if accepted && delivered {
+                accepted_close = Some(receipt);
+            }
+            ctx.request_repaint();
+        }
+        if !delivered {
             break;
         }
     }
+    if let Some(receipt) = accepted_close {
+        receipt.release();
+        ctx.request_repaint();
+    }
 }
+
+#[cfg(test)]
+#[path = "control_server_lifecycle_tests.rs"]
+mod lifecycle_tests;
 
 #[cfg(test)]
 mod tests {

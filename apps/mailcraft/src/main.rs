@@ -151,6 +151,9 @@ impl HostUpdates {
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        if let Some(window) = frame.winit_window() {
+            self.0.observe_native_window(window.is_visible(), window.has_focus());
+        }
         #[cfg(target_os = "macos")]
         apple_events::poll(&self.6, &mut self.0, ctx);
         // MailCraft was started again (the shortcut, a `mailto:` link, a file opened from the
@@ -1898,6 +1901,23 @@ fn update_download(
 /// The application id of every window (by which Wayland desktops find the icon).
 const APP_ID: &str = "io.github.billsecond.mailcraft";
 
+fn desktop_viewport(hidden: bool, agents_only: bool) -> egui::ViewportBuilder {
+    egui::ViewportBuilder::default()
+        .with_title("MailCraft")
+        .with_active(!agents_only && !hidden)
+        .with_visible(!hidden)
+        .with_app_id(APP_ID)
+        .with_inner_size([1440.0, 920.0])
+        .with_min_inner_size([760.0, 480.0])
+        .with_drag_and_drop(true)
+        .with_fullsize_content_view(true)
+        .with_titlebar_shown(false)
+        .with_title_shown(false)
+}
+
+#[cfg(all(test, target_os = "windows"))]
+mod native_lifecycle_tests;
+
 /// Window, Dock and taskbar icon.
 fn app_icon() -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
@@ -2003,6 +2023,7 @@ fn main() -> eframe::Result {
     let mut control_agents_only = std::env::var("MAILCRAFT_CONTROL_AGENTS_ONLY").is_ok_and(|v| v == "1");
     let mut files = Vec::new();
     let mut sample = false;
+    let mut hidden = false;
     let mut mailbox_path: Option<PathBuf> = None;
     let mut after_update = false;
     let mut args = std::env::args().skip(1);
@@ -2011,6 +2032,7 @@ fn main() -> eframe::Result {
             "--control" => control_port = args.next().and_then(|p| p.parse().ok()),
             "--control-agents-only" => control_agents_only = true,
             "--sample" => sample = true,
+            "--hidden" => hidden = true,
             "--mailbox" => mailbox_path = args.next().map(PathBuf::from),
             // Started by the version this one replaced: it is let go first.
             self_update::AFTER_UPDATE => after_update = true,
@@ -2101,19 +2123,7 @@ fn main() -> eframe::Result {
             None => logger.no_file(),
         }
     }
-    let mut options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("MailCraft")
-            .with_active(!control_agents_only)
-            .with_app_id(APP_ID)
-            .with_inner_size([1440.0, 920.0])
-            .with_min_inner_size([760.0, 480.0])
-            .with_drag_and_drop(true)
-            .with_fullsize_content_view(true)
-            .with_titlebar_shown(false)
-            .with_title_shown(false),
-        ..Default::default()
-    };
+    let mut options = eframe::NativeOptions { viewport: desktop_viewport(hidden, control_agents_only), ..Default::default() };
     if let Some(icon) = app_icon() {
         options.viewport = options.viewport.with_icon(icon);
     }
@@ -2223,6 +2233,9 @@ fn main() -> eframe::Result {
                 app.settings_unread = settings_unread;
                 app.ui.window = restored;
                 app.integrated_titlebar = cfg!(target_os = "macos");
+                if hidden {
+                    app.start_hidden();
+                }
                 for f in files {
                     app.open_from_system(&f);
                 }
@@ -2232,6 +2245,9 @@ fn main() -> eframe::Result {
                 MailApp::opening(mailcraft_ui_egui::opening::Opening::new(arriving, progress, build), first_prefs, system_locale::system_locale());
             app.ui.window = restored;
             app.integrated_titlebar = cfg!(target_os = "macos");
+            if hidden {
+                app.start_hidden();
+            }
             let mut key_file = None;
             if let Some(port) = control_port
                 && let Some((rx, file)) =
