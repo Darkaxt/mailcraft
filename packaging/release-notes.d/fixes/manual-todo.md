@@ -1,0 +1,1 @@
+- Microsoft To Do is off until explicitly connected from File › Info. Checking mail no longer starts its permission prompt; disconnecting keeps existing tasks and mail sign-ins.

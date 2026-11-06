@@ -54,6 +54,7 @@ impl CloseReceipt {
 
 #[derive(Default)]
 pub(crate) struct State {
+    headless: bool,
     native_visible: Option<bool>,
     native_focused: Option<bool>,
     hidden: bool,
@@ -66,12 +67,42 @@ pub(crate) struct State {
 impl State {
     pub(crate) fn inspect(&self) -> Value {
         json!({"hiddenRequested": self.hidden, "nativeVisible": self.native_visible, "nativeFocused": self.native_focused,
+            "mode": if self.headless { "headless" } else { "desktop" },
+            "nativeWindow": if self.headless { Some(false) } else { self.native_visible.map(|_| true) },
             "close": if self.pending_close.as_ref().is_some_and(|r| r.delivery() == Some(true)) { "awaitingBridgeRelease" } else if self.pending_close.is_some() { "awaitingReplyDelivery" } else if self.closing { "closing" } else { "idle" },
             "blocked": self.blocked})
     }
 }
 
 impl MailApp {
+    /// App-owned service mode: no window, layout, fonts, graphics, or owner input.
+    /// This is host state, never a JSON permission or a persisted UI preference.
+    pub fn start_headless(&mut self) {
+        self.lifecycle.headless = true;
+        self.offer_setup = false;
+        self.offer_graph_switch = false;
+    }
+
+    pub fn is_headless(&self) -> bool {
+        self.lifecycle.headless
+    }
+
+    /// The same save/close decision as the desktop, without a native window event.
+    pub fn headless_close_ready(&mut self) -> bool {
+        if !self.is_headless() || !self.lifecycle.closing || !self.quit_requested {
+            return false;
+        }
+        self.quit_requested = false;
+        self.close_requested()
+    }
+
+    pub fn headless_save_failed(&mut self, why: &str) {
+        self.lifecycle.closing = false;
+        self.lifecycle.blocked = Some("the mailbox save failed; the app stays open");
+        self.close_anyway = true;
+        self.quit_requested = false;
+        self.status(why.to_string());
+    }
     pub(crate) fn lifecycle_status(&self) -> Value {
         let mut status = self.lifecycle.inspect();
         let blocker = if self.lifecycle.pending_close.is_some() || self.lifecycle.closing {
@@ -81,6 +112,12 @@ impl MailApp {
         };
         status["canClose"] = json!(blocker.is_none());
         status["closeBlocker"] = json!(blocker);
+        status["interactionRequired"] = json!(!self.asking.is_empty() || self.dialog.is_some() || self.windows.asks());
+        status["interaction"] = match &self.dialog {
+            Some(crate::dialogs::Dialog::Confirm { command, ask, .. }) => json!({"kind": "confirm", "command": command, "title": ask.title}),
+            Some(dialog) => json!({"kind": dialog.name()}),
+            None => Value::Null,
+        };
         status
     }
 
@@ -116,7 +153,7 @@ impl MailApp {
     }
 
     fn lifecycle_blocker(&self) -> Option<&'static str> {
-        if self.opening.is_some()
+        if (self.opening.is_some() && !(self.is_headless() && self.opening_needs_attention()))
             || self.reading_ahead.is_some()
             || self.after_save.is_some()
             || self.graph_switch_copy.is_some()
@@ -162,6 +199,9 @@ impl MailApp {
         }
         match params.get("action").and_then(Value::as_str) {
             Some("hide") => {
+                if self.is_headless() {
+                    return Ok(json!({"requested": "headless", "windowCreated": false, "focusRequested": false}));
+                }
                 if !self.asking.is_empty() || self.dialog.is_some() || self.windows.asks() {
                     return Err("an owner question or dialog is open; the app was not hidden".into());
                 }

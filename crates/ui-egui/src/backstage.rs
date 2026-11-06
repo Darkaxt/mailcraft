@@ -262,14 +262,20 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         }
         // Where keeping the tasks in step with Microsoft To Do stands, with a way to ask again (#248).
         if let Some((line, again)) = app.tasks_line(a.id) {
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.add_space(36.0);
                 ui.label(egui::RichText::new(line).font(regular(11.5)).color(t.text_dim));
                 let tip = tl!(
                     "Ask for permission to read and change your To Do lists and tasks: Microsoft's page opens in your browser. Without it, tasks stay on this computer."
                 );
-                if again && ui.link(tl!("Ask again")).on_hover_text(tip).clicked() {
-                    app.ask_tasks_again(a.id);
+                let label = if app.tasks_enabled(a.id) { tl!("Ask again") } else { tl!("Connect Microsoft To Do…") };
+                if again && ui.link(label).on_hover_text(tip).clicked()
+                    && let Err(why) = app.run("ui.tasksSync", serde_json::json!({"account": a.id, "enabled": true})) {
+                    app.status(why);
+                }
+                if app.tasks_enabled(a.id) && ui.link(tl!("Disconnect To Do")).on_hover_text(tl!("Stop syncing Microsoft To Do. Existing tasks and mail sign-ins are kept.")).clicked()
+                    && let Err(why) = app.run("ui.tasksSync", serde_json::json!({"account": a.id, "enabled": false})) {
+                    app.status(why);
                 }
             });
             if let Some((line, _)) = app.local_tasks_line().filter(|_| app.tasks_working_first() == Some(a.id)) {

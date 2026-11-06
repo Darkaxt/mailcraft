@@ -126,6 +126,36 @@ impl TaskSync {
 }
 
 impl MailApp {
+    pub(crate) fn tasks_enabled(&self, account: Id) -> bool {
+        self.session.mailbox.account(account).is_some_and(|a| self.ui.todo_sync_accounts.iter().any(|email| email.eq_ignore_ascii_case(&a.email)))
+    }
+
+    pub(crate) fn configure_tasks_sync(&mut self, params: &Value) -> Result<Value, String> {
+        let account = params.get("account").and_then(Value::as_u64).ok_or("`account` is required")?;
+        let enabled = params.get("enabled").and_then(Value::as_bool).ok_or("`enabled` is required")?;
+        if !tasks_remote::task_accounts(&self.session.mailbox).contains(&account) {
+            return Err(tl!("This account has no sign-in with Microsoft").to_string());
+        }
+        if self.tasks.busy() || self.signing_in.is_some() {
+            return Err(tl!("Wait for the current task operation to finish.").to_string());
+        }
+        if enabled {
+            if self.is_headless() {
+                return Err(tl!("Connect Microsoft To Do manually in the desktop app.").to_string());
+            }
+            if self.dialog.is_some() {
+                return Err(tl!("Close the current dialog first.").to_string());
+            }
+            self.ask_tasks_again(account);
+            Ok(json!({"pending": "ownerConsent", "account": account}))
+        } else {
+            if let Some(owner) = self.session.mailbox.account(account) {
+                self.ui.todo_sync_accounts.retain(|email| !email.eq_ignore_ascii_case(&owner.email));
+            }
+            self.tasks.perm.insert(account, Permission::Declined);
+            Ok(json!({"account": account, "enabled": false, "dataRemoved": false}))
+        }
+    }
     /// Whether the to-dos of `account` wait for the owner's permission, or for a new sign-in.
     fn tasks_blocked(&self, account: Id) -> bool {
         match self.tasks.perm.get(&account) {
@@ -155,6 +185,9 @@ impl MailApp {
             return false;
         }
         for account in tasks_remote::task_accounts(&self.session.mailbox) {
+            if !self.tasks_enabled(account) {
+                continue;
+            }
             if self.tasks_blocked(account) {
                 continue;
             }
@@ -204,7 +237,10 @@ impl MailApp {
         self.tasks_tick_at(now_ms());
         if self.tasks.rx.is_some() {
             ctx.request_repaint_after(std::time::Duration::from_millis(250));
-        } else if self.services.graph_tasks.is_some() && self.auto_sync && !tasks_remote::task_accounts(&self.session.mailbox).is_empty() {
+        } else if self.services.graph_tasks.is_some()
+            && self.auto_sync
+            && tasks_remote::task_accounts(&self.session.mailbox).iter().any(|a| self.tasks_enabled(*a))
+        {
             ctx.request_repaint_after(std::time::Duration::from_secs(5));
         }
     }
@@ -321,8 +357,8 @@ impl MailApp {
         self.note_sync_problems(account, &errors, false);
     }
 
-    /// Ask the owner, once, when a job found the sign-in doesn't cover to-dos: a question first,
-    /// then Microsoft's page. Not while another dialog is up or File is open.
+    /// Record questions dismissed by the owner. Permission and local-task
+    /// transfer offers are opened only by explicit manual actions.
     fn tasks_ask_tick(&mut self) {
         // The question about the local to-dos went away unanswered: that is a "Not now", noted,
         // so it is not asked on every look (File › Info offers it again).
@@ -340,16 +376,8 @@ impl MailApp {
                 self.tasks.perm.insert(account, Permission::Declined);
             }
         }
-        if self.dialog.is_some() || self.ui.backstage || self.signing_in.is_some() {
-            return;
-        }
-        let Some(account) = self.tasks.perm.iter().find(|(_, p)| **p == Permission::Needed).map(|(a, _)| *a) else {
-            if self.session.mailbox.local_tasks == LocalTasks::Unasked {
-                self.offer_local_tasks();
-            }
-            return;
-        };
-        self.ask_tasks(account);
+        // Missing permission is reported in File › Info. Only an explicit manual
+        // action opens the question or offers sending local tasks to Microsoft.
     }
 
     /// For a stand-in host (the screenshot example): every account that keeps to-dos has its To Do
@@ -357,13 +385,21 @@ impl MailApp {
     #[doc(hidden)]
     pub fn stand_in_tasks_work(&mut self) {
         for account in tasks_remote::task_accounts(&self.session.mailbox) {
+            if !self.tasks_enabled(account)
+                && let Some(owner) = self.session.mailbox.account(account)
+            {
+                self.ui.todo_sync_accounts.push(owner.email.clone());
+            }
             self.tasks.perm.insert(account, Permission::Given);
         }
     }
 
     /// The accounts whose To Do is working (a job read it with the permission).
     fn tasks_working(&self) -> Vec<Id> {
-        tasks_remote::task_accounts(&self.session.mailbox).into_iter().filter(|a| self.tasks.perm.get(a) == Some(&Permission::Given)).collect()
+        tasks_remote::task_accounts(&self.session.mailbox)
+            .into_iter()
+            .filter(|a| self.tasks_enabled(*a) && self.tasks.perm.get(a) == Some(&Permission::Given))
+            .collect()
     }
 
     /// Whether a to-do put in `account` waits on this computer because a job found that To Do
@@ -500,6 +536,9 @@ impl MailApp {
                 self.tasks.perm.insert(account, Permission::Needed);
             }
             Ok(tokens) => {
+                if !address.is_empty() && !self.tasks_enabled(account) {
+                    self.ui.todo_sync_accounts.push(address.clone());
+                }
                 if !tokens.refresh.is_empty() {
                     self.remember("refresh", &address, &tokens.refresh);
                     if let Some(kept) = self.tokens.get_mut(&account) {
@@ -542,6 +581,9 @@ impl MailApp {
         self.services.graph_tasks.as_ref()?;
         if !tasks_remote::task_accounts(&self.session.mailbox).contains(&account) {
             return None;
+        }
+        if !self.tasks_enabled(account) {
+            return Some((tl!("Microsoft To Do: off (connect manually)").to_string(), true));
         }
         Some(match self.tasks.perm.get(&account) {
             Some(Permission::Given) => (tl!("Tasks: kept in step with Microsoft To Do").to_string(), false),

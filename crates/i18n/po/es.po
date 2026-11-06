@@ -2411,6 +2411,11 @@ msgid "Close Window"
 msgstr "Cerrar ventana"
 
 #. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Close the current dialog first."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Close this shared mailbox and remove the mail kept for it here. Nothing on the server changes."
@@ -2501,6 +2506,16 @@ msgstr "Conectar"
 #, fuzzy
 msgid "Connect Calendar and Contacts"
 msgstr "Conectar calendario y contactos"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Connect Microsoft To Do manually in the desktop app."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Connect Microsoft To Do…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/favorites_sync.rs
@@ -3113,6 +3128,11 @@ msgstr ""
 #, fuzzy
 msgid "Discard"
 msgstr "Descartar"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Disconnect To Do"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs crates/ui-egui/src/reminders.rs
@@ -6283,6 +6303,16 @@ msgstr ""
 #, fuzzy
 msgid "Microsoft Application ID"
 msgstr "Id. de aplicación de Microsoft"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Microsoft To Do"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Microsoft To Do: off (connect manually)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -10847,6 +10877,11 @@ msgid "Stop processing more rules"
 msgstr "Detener el procesamiento de más reglas"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Stop syncing Microsoft To Do. Existing tasks and mail sign-ins are kept."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/sync_panel.rs
 #, fuzzy
 msgid "Stop this Send/Receive; what has arrived stays"
@@ -13515,6 +13550,11 @@ msgstr ""
 #. interface, name
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
 msgid "Violet"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Wait for the current task operation to finish."
 msgstr ""
 
 #. interface

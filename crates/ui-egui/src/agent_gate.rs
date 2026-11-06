@@ -87,6 +87,9 @@ pub fn screen(app: &mut MailApp, req: &ControlRequest, allow: &[Class]) -> Optio
 }
 
 fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, allow: &[Class]) -> Outcome {
+    if app.is_headless() && id.starts_with("ui.") && !matches!(id, "ui.sync" | "ui.cancelSync" | "ui.closeDialog") {
+        return err("this action needs the desktop; headless mode never opens a window or grants owner consent");
+    }
     // The question names the people the window would write to, as the form has them now.
     if id == "ui.eventWindow" && params.is_object() {
         let people = crate::windows::event_window_people(app, &params);
@@ -100,6 +103,9 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
         Verdict::Run => run(app, id, params, allow),
         Verdict::Refuse(why) => err(why),
         Verdict::Ask(class, what) => {
+            if app.is_headless() {
+                return err(format!("owner interaction required in the desktop: {what}; nothing was done"));
+            }
             if app.asking.len() >= MOST {
                 return err("too many questions are waiting for the owner; nothing was done");
             }

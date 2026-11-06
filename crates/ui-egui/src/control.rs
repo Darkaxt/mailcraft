@@ -283,11 +283,16 @@ impl Drop for Driven<'_> {
 }
 
 #[cfg(test)]
+mod headless_tests;
+#[cfg(test)]
 mod lifecycle_tests;
 #[cfg(test)]
 mod tests;
 
 fn dispatch(app: &mut MailApp, ctx: &egui::Context, req: &ControlRequest) -> Outcome {
+    if app.is_headless() && req.method.starts_with("ui.") && !matches!(req.method.as_str(), "ui.inspect" | "ui.alerts" | "ui.parity") {
+        return err("headless mode has no window or owner input; use the desktop for this action");
+    }
     if let Err(why) = app.lifecycle_before_request(&req.method) {
         return err(why);
     }

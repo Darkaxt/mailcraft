@@ -19,6 +19,11 @@ another account is syncing, preserving the original job and FIFO order. The setu
 page distinguishes waiting from downloading. This corrects onboarding behavior;
 the broader live-interoperability and provider-acceptance gaps below remain open.
 
+The native headless mail host omits window/graphics creation while retaining the
+existing mail and save services. Microsoft To Do connection is now manual and off
+by default. Neither change establishes broader provider acceptance or a memory
+bound for the mailbox, content caches and search index.
+
 | # | Gap | B | Evidence | Impact | Hours | Doc |
 |---|---|---|---|---|---|---|
 | 1 | **Limited live interoperability.** MailCraft is in daily use on one Microsoft 365 mailbox. Windows acceptance now also covers Gmail/Workspace OAuth, real app-password authentication, restart/reconnect and explicit conversion with downloaded mail preserved; SMTP authentication was checked without sending. Other providers, self-hosted servers, real outbound delivery for this Google contribution and other desktop platforms still need broader acceptance. Automated tests remain synthetic; no CI job runs against a mail server in a container | B | `crates/net/src/fake.rs`; [Google acceptance scope](google-accounts.md#what-has-been-verified-and-what-has-not) | People on untested servers, platforms or organisation policies | 20–40 | [ROADMAP.md](../ROADMAP.md#the-beta-checklist) |

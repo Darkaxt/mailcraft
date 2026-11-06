@@ -900,6 +900,8 @@ pub struct UiState {
     /// The address of the account whose tasks the list showed (`view.task_account`): an account's
     /// id is that account in its own mailbox only (#632).
     pub task_account_address: String,
+    /// Microsoft To Do is opt-in per account; absent in older settings means off.
+    pub todo_sync_accounts: Vec<String>,
     /// The address of the account whose contacts People showed (`view.people_account`), for the
     /// same reason (#631).
     pub people_account_address: String,
@@ -991,6 +993,7 @@ impl Default for UiState {
             options: fresh_options(),
             view: mailcraft_engine::ViewState::default(),
             task_account_address: String::new(),
+            todo_sync_accounts: Vec::new(),
             people_account_address: String::new(),
             folder_pane_width: 230.0,
             list_width: 380.0,
@@ -1049,6 +1052,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         r#"{"name": "commands"|"event"|"meeting"|"editEvent"|"contact"|"editContact"|"task"|"editTask"|"folder"|"goToDate"|"openCalendar"|"link"|"dateTime"|"wordCount"|"account"|"categories"|"rules"|"junkOptions"|"about"|"contributors"|"testers"|"reportProblem"|"proposeTime"|"forwardMeeting"|"proposals", …} (account: "email"?: string to start with, or "id": number for that account's settings, and with "page": "approval" the page that says what to do when its organisation has to approve MailCraft first (as `ui.approvalHelp` opens it); proposeTime: "id"?: number (an item of the calendar) | "message": number (an invitation in the mail); forwardMeeting: "id"?: number; proposals: "id"?: number | "message": number; junkOptions: "list"?: "safe"|"blocked" (the page it opens on); categories: "account"?: number (whose list it opens on); rules: "folder"?: number, "id"?: number (the New rule filled in to move the mail of that message's sender, default the selected one's, to the folder: Always Move Messages From This Sender) — the first two write to other people only from their own Propose and Send buttons)"#,
     ),
     ("ui.closeDialog", "Close Dialog", "Window", "{}"),
+    (
+        "ui.tasksSync",
+        "Microsoft To Do",
+        "File › Info",
+        r#"{"account": number, "enabled": bool} — off by default; enabling asks for native owner consent, never as part of checking mail"#,
+    ),
     ("ui.theme", "Interface Theme", "File › Options", r#"{"value": "light"|"dark"|"system"}"#),
     ("ui.highContrast", "High Contrast", "File › Options", r#"{"on": true|false}"#),
     ("ui.accent", "Accent Colour", "File › Options", r#"{"accent": "blue"|"teal"|"violet"|"graphite"}"#),
@@ -1952,6 +1961,8 @@ impl MailApp {
     /// Restore preferences saved by [`MailApp::prefs`].
     pub fn apply_prefs(&mut self, ui: UiState) {
         self.ui = ui;
+        self.ui.todo_sync_accounts.truncate(1000);
+        self.ui.todo_sync_accounts.retain(|email| email.len() <= 320);
         self.ui.backstage = false;
         // As in Outlook, a run starts on Home, and File on Info: where the owner last was isn't
         // where they want to start.
@@ -2597,6 +2608,7 @@ impl MailApp {
                 let Some(account) = p.get("account").and_then(Value::as_u64) else { return Some(Err(tl!("`account` is required").to_string())) };
                 self.begin_replies_sign_in(account)
             }
+            "ui.tasksSync" => self.configure_tasks_sync(p),
             "ui.allowTasks" => {
                 if p.get("confirmed").and_then(Value::as_bool) != Some(true) {
                     return Some(Err(tl!("Say that this is meant with \"confirmed\": true.").to_string()));
@@ -3132,7 +3144,7 @@ impl MailApp {
         self.drop_secrets_if_replaced();
         // A mailbox from a file: the owner confirms where it connects to first.
         if self.unconfirmed {
-            if p.get("quiet").and_then(Value::as_bool) == Some(true) {
+            if self.is_headless() || p.get("quiet").and_then(Value::as_bool) == Some(true) {
                 return Err(tl!("This mailbox was opened from a file: confirm its servers first").to_string());
             }
             return self.ask_to_confirm_servers();
@@ -3156,7 +3168,7 @@ impl MailApp {
         if !self.services.can_sync() {
             return Err(cant_connect());
         }
-        let quiet = p.get("quiet").and_then(Value::as_bool).unwrap_or(false);
+        let quiet = self.is_headless() || p.get("quiet").and_then(Value::as_bool).unwrap_or(false);
         // Send/Receive the owner asked for is the time to ask the store again (it may have been
         // locked, or refused): the run goes on when it has answered ([`secret_read`]).
         if !quiet && self.hold_for_secrets(p) {
@@ -4349,34 +4361,39 @@ impl MailApp {
         if self.session.importing_pst() && !matches!(&self.dialog, Some(dialogs::Dialog::ImportPst(d)) if d.is_importing()) {
             mailcraft_engine::import_pst::end_staged(&mut self.session);
         }
-        if !self.styled {
-            theme::install_fonts(ctx);
-            // Mod with -, = and 0 would also scale the whole window; interface size is in Options.
-            ctx.options_mut(|o| o.zoom_with_keyboard = false);
-            // egui closes the window on Mod+Q by itself; here that is Mark as Read. A Mac quits
-            // from its app menu (craft-quit).
-            ctx.options_mut(|o| o.quit_shortcuts.clear());
-            self.styled = true;
-        }
-        // Settled from the main window's input, so every window has the same theme.
-        let preference = self.ui.theme.preference(theme::main_system_theme(ctx));
-        let choice = theme::ThemeChoice { appearance: self.ui.theme, accent: self.ui.accent, high_contrast: self.ui.high_contrast };
-        if self.applied_theme != Some((preference, choice)) {
-            theme::apply(ctx, preference, &choice);
-            self.applied_theme = Some((preference, choice));
-        }
-        let zoom = self.ui.interface_size.zoom_factor();
-        if ctx.zoom_factor() != zoom {
-            ctx.set_zoom_factor(zoom);
+        if !self.is_headless() {
+            if !self.styled {
+                theme::install_fonts(ctx);
+                // Mod with -, = and 0 would also scale the whole window; interface size is in Options.
+                ctx.options_mut(|o| o.zoom_with_keyboard = false);
+                // egui closes the window on Mod+Q by itself; here that is Mark as Read. A Mac quits
+                // from its app menu (craft-quit).
+                ctx.options_mut(|o| o.quit_shortcuts.clear());
+                self.styled = true;
+            }
+            // Settled from the main window's input, so every window has the same theme.
+            let preference = self.ui.theme.preference(theme::main_system_theme(ctx));
+            let choice = theme::ThemeChoice { appearance: self.ui.theme, accent: self.ui.accent, high_contrast: self.ui.high_contrast };
+            if self.applied_theme != Some((preference, choice)) {
+                theme::apply(ctx, preference, &choice);
+                self.applied_theme = Some((preference, choice));
+            }
+            let zoom = self.ui.interface_size.zoom_factor();
+            if ctx.zoom_factor() != zoom {
+                ctx.set_zoom_factor(zoom);
+            }
+            windows::remember_identity(ctx, self.services.window_identity.as_ref());
+            self.apply_background_visibility(ctx);
         }
         if self.ctx.is_none() {
             self.ctx = Some(ctx.clone());
         }
-        windows::remember_identity(ctx, self.services.window_identity.as_ref());
-        self.apply_background_visibility(ctx);
         // Waiting for the mailbox: nothing else happens.
         if self.opening.is_some() {
             opening::logic(self, ctx);
+            if self.is_headless() {
+                self.lifecycle_close_tick(ctx);
+            }
             return;
         }
         opening::after(self, ctx);
@@ -4433,7 +4450,9 @@ impl MailApp {
         self.data_removal_tick();
         if !self.data_removed {
             // Whether a new version is out, when the owner wants that known ([`updates`]).
-            self.updates_tick(ctx);
+            if !self.is_headless() {
+                self.updates_tick(ctx);
+            }
             self.auto_sync();
             // The Inbox by itself every minute, between rounds (#276).
             self.inbox_check_tick();
@@ -4467,6 +4486,10 @@ impl MailApp {
             // Nothing is happening: look again in a while, in case a Send/Receive round is due or
             // something waits to go out.
             ctx.request_repaint_after(std::time::Duration::from_millis(1_500));
+        }
+        if self.is_headless() {
+            self.report_dirty();
+            return;
         }
         let signatures = self.ui.backstage && self.ui.backstage_page == "signatures";
         if std::mem::replace(&mut self.signatures_shown, signatures) && !signatures {

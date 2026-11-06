@@ -117,6 +117,17 @@ visibility/focus (null when unknown), close state and any blocker. A close reply
 is acknowledgement, not proof of process exit; retain the original request and
 observe actual exit. Agents still cannot call the old `app.quit`.
 
+`--headless` requires `--control` and `--control-agents-only`. It starts the
+same single mail owner and authenticated endpoint without a native window or
+graphics initialization. It cannot be combined with files to open or `--hidden`.
+`app.status.lifecycle.mode` reports `headless`, `nativeWindow` is false, and
+visibility/focus are null because no window exists. `interactionRequired` and
+`interaction` describe native owner attention, including a confirmation's command
+and title; they never provide an answer. UI actions and owner consent require the
+desktop. Explicitly canceling a dialog still follows ordinary unsaved-work checks.
+An unreadable mailbox remains uncontinued and unwritten, and can close normally.
+Mailbox progress and the existing request/reply/no-replay contracts are preserved.
+
 `--hidden` requests a hidden, inactive native main window, including while the
 mailbox opens; it changes no saved window preference. Observe actual visibility
 through status rather than inferring it from the launch flag.

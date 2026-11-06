@@ -152,6 +152,10 @@ impl MailApp {
     pub fn is_opening(&self) -> bool {
         self.opening.is_some()
     }
+
+    pub(crate) fn opening_needs_attention(&self) -> bool {
+        self.opening.as_ref().is_some_and(|o| o.held.is_some())
+    }
 }
 
 /// Once a frame while the window waits: answer the control channel, and take the mailbox when it
@@ -160,7 +164,7 @@ pub(crate) fn logic(app: &mut MailApp, ctx: &egui::Context) {
     if app.ctx.is_none() {
         app.ctx = Some(ctx.clone());
     }
-    answer_control(app);
+    answer_control(app, ctx);
     let Some(o) = app.opening.as_mut() else { return };
     o.since.get_or_insert_with(crate::now_ms);
     if o.held.is_none() {
@@ -305,12 +309,25 @@ pub(crate) fn after(app: &mut MailApp, ctx: &egui::Context) {
 
 /// Every request of the control channel while the window waits: `app.status` says how far it
 /// has got, anything else that the mailbox is still opening.
-fn answer_control(app: &mut MailApp) {
+fn answer_control(app: &mut MailApp, ctx: &egui::Context) {
     let Some(rx) = app.control_rx.take() else { return };
     while let Ok(req) = rx.try_recv() {
-        let answer = match (req.method.as_str(), &app.opening) {
-            ("app.status", Some(o)) => json!({"ok": true, "result": o.status()}),
-            _ => json!({"ok": false, "error": STILL_OPENING}),
+        let answer = if app.is_headless() && app.opening_needs_attention() && req.method == "app.lifecycle" {
+            match app.lifecycle_action(ctx, &req.params, req.close_receipt.as_ref()) {
+                Ok(value) => json!({"ok": true, "result": value}),
+                Err(why) => json!({"ok": false, "error": why}),
+            }
+        } else {
+            match (req.method.as_str(), &app.opening) {
+                ("app.status", Some(o)) => {
+                    let mut status = o.status();
+                    if app.is_headless() {
+                        status["lifecycle"] = app.lifecycle_status();
+                    }
+                    json!({"ok": true, "result": status})
+                }
+                _ => json!({"ok": false, "error": STILL_OPENING}),
+            }
         };
         let _ = req.reply.send(answer);
     }

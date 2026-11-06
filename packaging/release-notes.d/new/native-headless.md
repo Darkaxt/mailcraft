@@ -1,0 +1,1 @@
+- Run the live mail owner with `--headless` for authenticated MCP access and synchronization without creating a window or graphics runtime. Existing credentials and save/close protection are retained; interactive consent requires the desktop.

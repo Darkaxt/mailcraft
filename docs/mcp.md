@@ -198,6 +198,28 @@ app's Send/Receive) delivers it.
 
 ## Tools
 
+For mail checks without a window or graphics runtime, start the app with
+`--headless --mailbox my.mailcraft --control 7991 --control-agents-only`, then
+attach the same authenticated bridge. This is one live mail owner using the
+desktop's account, credential, synchronization and save services; it is distinct
+from the file-only `mcp --file` backend. Close the existing owner before changing
+mode. Normal desktop launch remains available.
+
+Headless mode does no UI layout or rendering and does not open a browser, file
+dialog, notification or clipboard. Existing refresh tokens can renew silently;
+an action needing owner consent returns an interaction-required error. It never
+answers that consent or opens the desktop automatically. `status.lifecycle.mode`
+is `headless`, `nativeWindow` is false, and window visibility/focus remain null.
+The launcher can wait for the single endpoint-ready JSON line on stdout, which
+names the native PID and port and contains no key or credentials. Mailbox opening
+still has its own native progress/status; endpoint readiness is not mailbox readiness.
+
+Microsoft To Do is off by default. File › Info offers **Connect Microsoft To Do…**
+as an explicit manual action with the original provider consent. A successful
+connection is remembered per account; **Disconnect To Do** stops synchronization
+without deleting tasks or mail logins. Ordinary mail checks neither probe To Do
+nor open its permission prompt.
+
 For background use, start the desktop app with `--hidden --control 7991
 --control-agents-only` and attach the authenticated bridge. Hidden startup is
 native app behavior, not the operating system's launch-window hint. It does not
@@ -212,12 +234,16 @@ dialog, an owner question or a secondary window is open. `close_app` requests
 normal exit only when there are no open editors, owner questions, active or queued
 mail jobs, sign-in or mailbox-opening operations. It never forces, discards or
 cancels work. Both tools take an empty argument object; there is no force/discard
-parameter. They need the desktop backend, not an in-memory headless session.
+parameter. They need the live app backend, including its native headless mode,
+not an in-memory file-only MCP session. Hiding a headless runtime is a no-op;
+closing uses the same acknowledgement, workflow release and save rules. An
+unreadable headless mailbox reports attention and may close without continuing
+or writing that input.
 
 The close reply acknowledges the request, not process exit. The app waits until
 its native transport has written that reply and this bridge disconnects. For a
 shared managed bridge, end the original workflow first, then use its installed
-lifecycle helper to stop the idle bridge. This leaves the GUI alive for workflow
+lifecycle helper to stop the idle bridge. This leaves the app alive for workflow
 release and requires no desktop input. The app rechecks actual work and uses the
 normal save-and-close path. New application work cancels a close awaiting bridge
 release. A failed reply or save keeps it open. Observe the
