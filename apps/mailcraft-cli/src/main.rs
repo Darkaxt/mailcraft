@@ -50,7 +50,7 @@ USAGE:
                                                 is sent)
   mailcraft-cli commands [--json]               list every command
   mailcraft-cli parity [--markdown]             feature-catalog parity
-  mailcraft-cli mcp [--connect HOST:PORT | --file F | --sample] [--files DIR] [--allow CLASS,...]
+  mailcraft-cli mcp [--connect HOST:PORT | --file F | --sample] [--files DIR] [--allow CLASS,...] [--no-replay]
                                                 MCP server on stdio (headless, or bridged to the app).
                                                 Agents get only what the owner allows: files only
                                                 inside --files DIR; sending, deleting permanently,
@@ -575,18 +575,23 @@ fn run(args: &[String]) -> Result<(), Failure> {
             }
         }
         "mcp" => {
-            positionals("mcp", &rest, &[value("--connect"), value("--file"), flag("--sample"), value("--files"), value("--allow")])?;
+            positionals(
+                "mcp",
+                &rest,
+                &[value("--connect"), value("--file"), flag("--sample"), value("--files"), value("--allow"), flag("--no-replay")],
+            )?;
             let allow = allow_classes(&rest)?;
             let files = match arg_value(&rest, "--files") {
                 Some(dir) => Some(mailcraft_mcp::files::FilesDir::new(std::path::Path::new(&dir)).map_err(|e| format!("mcp: {e}"))?),
                 None => None,
             };
             let backend: Box<dyn mailcraft_mcp::Backend> = match arg_value(&rest, "--connect") {
-                Some(addr) => Box::new(
-                    mailcraft_mcp::Remote::connect(&addr)
+                Some(addr) => {
+                    let remote = mailcraft_mcp::Remote::connect(&addr)
                         .map_err(|e| format!("mcp: can't reach the MailCraft app at {addr}: {e}"))?
-                        .with_allow(allow.clone()),
-                ),
+                        .with_allow(allow.clone());
+                    Box::new(if rest.iter().any(|arg| arg == "--no-replay") { remote.without_replay() } else { remote })
+                }
                 None => {
                     let session = match (arg_value(&rest, "--file"), rest.iter().any(|a| a == "--sample")) {
                         (Some(f), _) => open(&f)?,

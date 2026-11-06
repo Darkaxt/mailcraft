@@ -130,6 +130,33 @@ fn every_request_is_marked_as_an_agents() {
 }
 
 #[test]
+fn coordinated_request_with_lost_reply_is_not_replayed() {
+    let (port, seen) = fake_app(|req| {
+        if req["method"] == "auth.challenge" {
+            Some((prove(req, "k1"), false))
+        } else {
+            None // The command was received; its reply was lost.
+        }
+    });
+    let mut remote = Remote::connect_with(&format!("127.0.0.1:{port}"), fixed_key("k1")).unwrap().without_replay();
+    let error = remote.call("engine.execute", json!({"command": "mail.flag", "params": {"id": 1}})).unwrap_err();
+    assert!(error.contains("outcome unknown; not replayed"), "{error}");
+    let requests: Vec<Value> = seen.try_iter().collect();
+    assert_eq!(requests.len(), 1, "{requests:?}");
+    assert_eq!(requests[0]["method"], "engine.execute");
+}
+
+#[test]
+fn coordinated_unauthorized_request_is_not_resent() {
+    let (port, seen) = fake_app(|req| {
+        Some(if req["method"] == "auth.challenge" { (prove(req, "k1"), false) } else { (json!({"ok": false, "error": "unauthorized"}), true) })
+    });
+    let mut remote = Remote::connect_with(&format!("127.0.0.1:{port}"), fixed_key("k1")).unwrap().without_replay();
+    assert!(remote.call("mailbox.inspect", json!({})).unwrap_err().contains("unauthorized"));
+    assert_eq!(seen.try_iter().count(), 1);
+}
+
+#[test]
 fn reads_the_key_again_on_a_new_connection() {
     // The app restarted with a new key: the old key is refused (and the connection closed).
     let (port, seen) = fake_app(|req| {

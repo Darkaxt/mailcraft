@@ -40,6 +40,8 @@ pub struct Remote {
     /// `agent` field, set here and never from a tool's arguments: the app knows the request is
     /// an agent's, and asks the owner about the rest.
     allow: Vec<mailcraft_engine::agent::Class>,
+    /// Coordinated workflows must retain an unknown result, never resend a request.
+    no_replay: bool,
 }
 
 /// The control key: `env` (`MAILCRAFT_CONTROL_KEY`) when set, else the app's key file for
@@ -100,7 +102,17 @@ impl Remote {
     }
 
     fn connect_with(addr: &str, find_key: KeyFinder) -> std::io::Result<Self> {
-        let mut r = Self { addr: addr.to_string(), conn: None, next_id: 1, send_key: false, key: None, verified: false, find_key, allow: Vec::new() };
+        let mut r = Self {
+            addr: addr.to_string(),
+            conn: None,
+            next_id: 1,
+            send_key: false,
+            key: None,
+            verified: false,
+            find_key,
+            allow: Vec::new(),
+            no_replay: false,
+        };
         r.reconnect()?;
         if let Some(w) = r.key_warning() {
             log::warn!("{w}");
@@ -119,6 +131,13 @@ impl Remote {
     /// What the owner allows the agent without being asked (`--allow`).
     pub fn with_allow(mut self, allow: Vec<mailcraft_engine::agent::Class>) -> Self {
         self.allow = allow;
+        self
+    }
+
+    /// Never reconnect or resend a failed request, including an unauthorized reply.
+    /// The original caller must inspect the outcome and explicitly start new work.
+    pub fn without_replay(mut self) -> Self {
+        self.no_replay = true;
         self
     }
 
@@ -240,6 +259,9 @@ impl Remote {
                 Ok(r) => break r,
                 Err(e) => {
                     self.conn = None;
+                    if self.no_replay {
+                        return Err(format!("MailCraft request outcome unknown; not replayed: {e}"));
+                    }
                     if !first {
                         return Err(unreachable(&self.addr, e));
                     }
@@ -257,7 +279,7 @@ impl Backend for Remote {
         self.next_id += 1;
         let unauthorized = |v: &Value| v.get("error").and_then(Value::as_str) == Some("unauthorized");
         let mut v = self.exchange(id, method, &params)?;
-        if unauthorized(&v) && self.send_key {
+        if unauthorized(&v) && self.send_key && !self.no_replay {
             // A stale key (the app restarted on this port): the app closed the connection; a new
             // one reads the key again. Once.
             self.conn = None;

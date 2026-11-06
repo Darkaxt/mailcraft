@@ -10,6 +10,7 @@ mailcraft-cli mcp --file my.mailcraft      # headless session on a mailbox file 
 mailcraft-cli mcp --sample                 # … or on the sample mailbox
 mailcraft --control 7991 &                 # or: drive the running app…
 mailcraft-cli mcp --connect 127.0.0.1:7991 # …(clicks and keys need --allow input)
+mailcraft-cli mcp --connect 127.0.0.1:7991 --no-replay # coordinated workflows retain uncertain outcomes
 mailcraft-cli mcp --sample --files ~/agent-files --allow send   # what the owner allows, below
 ```
 

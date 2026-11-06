@@ -2104,6 +2104,7 @@ fn main() -> eframe::Result {
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("MailCraft")
+            .with_active(!control_agents_only)
             .with_app_id(APP_ID)
             .with_inner_size([1440.0, 920.0])
             .with_min_inner_size([760.0, 480.0])
