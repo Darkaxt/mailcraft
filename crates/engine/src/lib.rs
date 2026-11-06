@@ -40,6 +40,9 @@ pub mod list;
 pub mod mark;
 #[cfg(test)]
 mod mark_tests;
+mod memory;
+#[cfg(test)]
+mod memory_tests;
 pub mod opening;
 mod picture_fit;
 pub mod sample;

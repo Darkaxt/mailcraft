@@ -220,6 +220,15 @@ connection is remembered per account; **Disconnect To Do** stops synchronization
 without deleting tasks or mail logins. Ordinary mail checks neither probe To Do
 nor open its permission prompt.
 
+For native memory attribution, `execute("file.info", {"memory": true})` adds a
+read-only `memory` object. It counts existing resident payloads, string/buffer
+capacities, shared attachment buffers, configured content budgets and available
+word-index buffers. It does not fetch unloaded mail, build the index or change
+the mailbox. Ordinary `inspect_mailbox` and `file.info` omit this optional work.
+These counters are partial attribution, not total heap or physical memory:
+shared cache/resident counters can overlap, and allocator/container slack,
+other mailbox structures, native services and renderer allocations are excluded.
+
 For background use, start the desktop app with `--hidden --control 7991
 --control-agents-only` and attach the authenticated bridge. Hidden startup is
 native app behavior, not the operating system's launch-window hint. It does not

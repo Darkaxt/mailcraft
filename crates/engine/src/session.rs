@@ -1912,6 +1912,14 @@ impl Session {
         WordIndex::Off
     }
 
+    pub(crate) fn word_memory_profile(&self) -> Value {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(words) = &self.words {
+            return words.memory_profile();
+        }
+        serde_json::json!({"loaded": false})
+    }
+
     /// Wait until the word index holds the mailbox as it is now (started if it wasn't), for as
     /// long as that takes: for the bench and tests, never the window.
     pub fn wait_for_word_index(&mut self) {

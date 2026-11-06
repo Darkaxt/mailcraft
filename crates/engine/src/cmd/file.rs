@@ -33,7 +33,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("file.exportFolder", "Export Folder", "File › Open & Export", export_folder).pure().params(r#"{"id"?: number, "path"?: string} — a folder's messages as .mbox"#),
         CommandSpec::new("file.exportCalendar", "Save Calendar", "File › Save Calendar", export_calendar).pure().params(r#"{"calendar"?: number, "id"?: number (one event), "path"?: string} — .ics"#),
         CommandSpec::new("file.exportContacts", "Export Contacts", "File › Open & Export", export_contacts).pure().params(r#"{"ids"?: [number], "path"?: string} — .vcf"#),
-        CommandSpec::new("file.info", "Info", "File › Info", info).pure(),
+        CommandSpec::new("file.info", "Info", "File › Info", info).pure().params(
+            r#"{"memory"?: bool} — optional read-only resident payload/capacity accounting; does not load content, build the index or report a total process heap"#,
+        ),
         CommandSpec::new("file.options", "Options", "File", options).pure().params(
             r#"{"twelveHour"?: bool, "weekStart"?: "sun"|"mon"|…, "workDays"?: ["mon",…], "workStart"?: 0-23, "workEnd"?: 1-24, "markReadOnOpen"?: bool, "defaultReminder"?: minutes | null, "quoteOnReply"?: bool, "previewLines"?: 0-3, "syncLimit"?: number, "syncMinutes"?: 0-1440 (0: only when asked)}"#,
         ),
@@ -373,9 +375,9 @@ fn export_contacts(s: &mut Session, v: &Value) -> CmdResult {
     Ok(with(r, "contacts", json!(contacts.len())))
 }
 
-fn info(s: &mut Session, _: &Value) -> CmdResult {
+fn info(s: &mut Session, params: &Value) -> CmdResult {
     let mb = &s.mailbox;
-    Ok(json!({
+    let mut result = json!({
         "path": s.path.as_ref().map(|p| p.to_string_lossy().to_string()),
         "dirty": s.dirty,
         "accounts": mb.accounts_in_order().into_iter().map(|a| json!({"id": a.id, "name": a.name, "email": a.email, "kind": a.kind})).collect::<Vec<_>>(),
@@ -390,7 +392,11 @@ fn info(s: &mut Session, _: &Value) -> CmdResult {
         "categories": mb.every_category().len(),
         "size": mb.messages.values().map(|m| m.size()).sum::<u64>(),
         "syncStatus": s.sync_status,
-    }))
+    });
+    if p::bool(params, "memory") == Some(true) {
+        result["memory"] = crate::memory::inspect(s);
+    }
+    Ok(result)
 }
 
 fn weekday(text: &str) -> Result<Weekday, crate::CmdError> {

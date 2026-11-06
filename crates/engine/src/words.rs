@@ -888,6 +888,30 @@ pub struct Words {
     left: usize,
 }
 
+impl Words {
+    /// Inspect existing resident buffers without starting a build, reading content
+    /// or waiting for the background index's mutex.
+    pub(crate) fn memory_profile(&self) -> serde_json::Value {
+        let guard = match self.shared.index.try_lock() {
+            Ok(guard) => guard,
+            Err(std::sync::TryLockError::Poisoned(why)) => why.into_inner(),
+            Err(std::sync::TryLockError::WouldBlock) => return serde_json::json!({"available": false, "busy": true}),
+        };
+        let Some(index) = guard.as_ref() else { return serde_json::json!({"loaded": false}) };
+        serde_json::json!({
+            "loaded": true, "building": self.shared.building.load(Ordering::Relaxed),
+            "words": index.lookup.len(), "slots": index.slots.len(),
+            "wordTextBytes": index.lookup.keys().fold(0u64, |n, word| n.saturating_add(word.len() as u64)),
+            "postingCapacityBytes": index.postings.iter().fold(0u64, |n, p| n.saturating_add(p.bytes.capacity() as u64)),
+            "postingStructCapacityBytes": (index.postings.capacity() as u64).saturating_mul(std::mem::size_of::<Postings>() as u64),
+            "slotCapacityBytes": (index.slots.capacity() as u64).saturating_mul(std::mem::size_of::<Slot>() as u64),
+            "pendingCapacityBytes": index.pending.capacity(),
+            "byIdCapacity": index.by_id.capacity(),
+            "exclusions": "BTree/HashMap node overhead and allocator slack are not counted."
+        })
+    }
+}
+
 struct Shared {
     /// `None` until the file has been read.
     index: std::sync::Mutex<Option<Index>>,
