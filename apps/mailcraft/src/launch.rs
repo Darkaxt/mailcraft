@@ -34,7 +34,7 @@ pub fn start(job: impl FnOnce() -> Arrival + Send + 'static, wake: impl Fn() + S
 /// The mailbox to start with and the file it is kept in (none for the sample, or without
 /// preferences), counting what is read of the file in `progress`, with what the owner is told
 /// first when the file couldn't be read, was damaged or was repaired.
-pub fn first_mailbox(sample: bool, chosen: Option<PathBuf>, progress: &OpenProgress) -> Arrival {
+pub fn first_mailbox(sample: bool, chosen: Option<PathBuf>, progress: &OpenProgress, headless: bool) -> Arrival {
     let now = mailcraft_time::now();
     if sample {
         return Arrival::opened(mailcraft_engine::sample::mailbox(now, mailcraft_time::local_offset_minutes(now)), None);
@@ -49,7 +49,12 @@ pub fn first_mailbox(sample: bool, chosen: Option<PathBuf>, progress: &OpenProgr
         }
         return Arrival::opened(Mailbox::with_local_account("", ""), Some(path));
     }
-    match mailcraft_engine::store::open_for_window(&path, progress) {
+    let opened = if headless {
+        mailcraft_engine::store::open_for_headless(&path, progress)
+    } else {
+        mailcraft_engine::store::open_for_window(&path, progress)
+    };
+    match opened {
         Ok(opened) => {
             if let Some(notice) = opened.notice() {
                 log::warn!("{}: {notice}", path.display());

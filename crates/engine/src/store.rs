@@ -1408,6 +1408,13 @@ pub fn open_for_window(path: &Path, progress: &OpenProgress) -> Result<Opened, S
     open_as(path, progress, Launch { checks_later: true, rows: Some(OPENING_ROWS) })
 }
 
+/// Open without warming display rows: a windowless owner reads body blobs only
+/// when a request needs them. Content validation still runs afterwards through
+/// [`check_content_later`], without retaining the validated payload in memory.
+pub fn open_for_headless(path: &Path, progress: &OpenProgress) -> Result<Opened, String> {
+    open_as(path, progress, Launch { checks_later: true, rows: Some(0) })
+}
+
 /// How a mailbox file is opened: as it always was ([`Launch::default`]), or for a window that
 /// shows it at once ([`open_for_window`]).
 #[derive(Clone, Copy, Debug, Default)]
@@ -2012,8 +2019,29 @@ pub fn read_bodies(path: &Path, bodies: &[crate::session::BodyLater]) -> (Vec<cr
 /// them, and the bodies the budget holds, read ([`bodies_later`], [`read_bodies`]): what an
 /// opening otherwise counts and reads at once. Once only.
 pub fn content_later(path: &Path) -> (crate::session::Missing, Vec<crate::session::BodyRead>) {
+    content_later_as(path, true)
+}
+
+/// Validate the content an opening left for later without warming its body
+/// cache. Reads and checksum checks are identical, but each message's buffers
+/// are released before the next is read. Requests can still fetch them from disk.
+pub fn check_content_later(path: &Path) -> crate::session::Missing {
+    content_later_as(path, false).0
+}
+
+fn content_later_as(path: &Path, warm: bool) -> (crate::session::Missing, Vec<crate::session::BodyRead>) {
     let mut missing = check_parts(path);
-    let (read, failed) = read_bodies(path, &bodies_later(path));
+    let bodies = bodies_later(path);
+    let (read, failed) = if warm {
+        read_bodies(path, &bodies)
+    } else {
+        let mut failed = Vec::new();
+        for body in &bodies {
+            let (_, bad) = read_bodies(path, std::slice::from_ref(body));
+            failed.extend(bad);
+        }
+        (Vec::new(), failed)
+    };
     // (A file that isn't there was counted already, for every message that names it.)
     let gone: HashSet<ContentRef> = missing.refs.iter().copied().collect();
     let damaged: Vec<ContentRef> = failed.into_iter().filter(|r| !gone.contains(r)).collect();

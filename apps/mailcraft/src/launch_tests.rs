@@ -87,7 +87,7 @@ fn a_mailbox_file_opens_on_its_thread_and_counts_what_it_reads_and_writes_nothin
     let before = everything(&tmp.0);
     let progress = Arc::new(OpenProgress::default());
     let (path, counted) = (file.clone(), progress.clone());
-    let rx = start(move || first_mailbox(false, Some(path), &counted), || {});
+    let rx = start(move || first_mailbox(false, Some(path), &counted, false), || {});
     let arrival = rx.recv_timeout(Duration::from_secs(30)).unwrap();
     assert_eq!(arrival.trouble, None);
     assert_eq!(arrival.path.as_deref(), Some(file.as_path()));
@@ -104,7 +104,7 @@ fn a_file_that_isnt_a_mailbox_says_why_and_is_kept_nowhere() {
     let tmp = Temp::new("bad");
     let file = tmp.0.join("mailbox.mailcraft");
     std::fs::write(&file, b"{ this is not a mailbox").unwrap();
-    let arrival = first_mailbox(false, Some(file.clone()), &OpenProgress::default());
+    let arrival = first_mailbox(false, Some(file.clone()), &OpenProgress::default(), false);
     match &arrival.trouble {
         Some(Trouble::Unreadable(why)) => assert!(why.contains("isn't a MailCraft mailbox"), "{why}"),
         other => panic!("{other:?}"),
@@ -117,7 +117,7 @@ fn a_file_that_isnt_a_mailbox_says_why_and_is_kept_nowhere() {
 fn a_mailbox_not_there_yet_starts_empty_where_it_will_be_kept() {
     let tmp = Temp::new("new");
     let file = tmp.0.join("mailbox.mailcraft");
-    let arrival = first_mailbox(false, Some(file.clone()), &OpenProgress::default());
+    let arrival = first_mailbox(false, Some(file.clone()), &OpenProgress::default(), false);
     assert_eq!(arrival.trouble, None);
     assert_eq!(arrival.path.as_deref(), Some(file.as_path()));
     assert!(!file.exists());
@@ -125,9 +125,28 @@ fn a_mailbox_not_there_yet_starts_empty_where_it_will_be_kept() {
 
 #[test]
 fn the_sample_is_kept_nowhere() {
-    let arrival = first_mailbox(true, None, &OpenProgress::default());
+    let arrival = first_mailbox(true, None, &OpenProgress::default(), false);
     assert!(arrival.path.is_none());
     assert!(!arrival.mailbox.messages.is_empty());
+}
+
+#[test]
+fn headless_start_keeps_large_bodies_on_disk_while_desktop_start_warms_inbox_rows() {
+    let tmp = Temp::new("headless-lazy");
+    let file = tmp.0.join("mailbox.mailcraft");
+    let mut original = mailbox(3);
+    for message in original.messages.values_mut() {
+        Arc::make_mut(message).body.text = "An offline message for on-demand reading. ".repeat(128);
+    }
+    mailcraft_engine::store::save(&file, &original).unwrap();
+    let before = everything(&tmp.0);
+    let headless = first_mailbox(false, Some(file.clone()), &OpenProgress::default(), true);
+    assert_eq!(headless.trouble, None);
+    assert!(headless.mailbox.messages.values().all(|m| m.body_is_kept()));
+    let desktop = first_mailbox(false, Some(file), &OpenProgress::default(), false);
+    assert_eq!(desktop.trouble, None);
+    assert!(desktop.mailbox.messages.values().all(|m| !m.body_is_kept() && !m.body.text.is_empty()));
+    assert_eq!(everything(&tmp.0), before);
 }
 
 #[test]

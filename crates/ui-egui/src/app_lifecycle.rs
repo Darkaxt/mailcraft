@@ -111,6 +111,7 @@ impl MailApp {
             self.lifecycle_blocker()
         };
         status["canClose"] = json!(blocker.is_none());
+        status["openingContentPending"] = json!(self.opening_content_pending());
         status["closeBlocker"] = json!(blocker);
         status["interactionRequired"] = json!(!self.asking.is_empty() || self.dialog.is_some() || self.windows.asks());
         status["interaction"] = match &self.dialog {

@@ -208,6 +208,12 @@ pub const WORDS_AFTER_FRAMES: u32 = 5;
 pub const BODY_BATCHES_A_FRAME: usize = 4;
 
 impl MailApp {
+    /// Native diagnostic readiness for background opening checks and body handoff.
+    /// Gate idleness alone does not say whether these receivers have completed.
+    pub(crate) fn opening_content_pending(&self) -> bool {
+        self.later.parts.is_some() || self.later.bodies.is_some()
+    }
+
     /// Say how many bodies and attachments are missing from the mailbox's content folder once
     /// the host's look for them (`rx`) is over, `known` of them having been found while opening
     /// (only when `say`); the bodies among them read as unavailable from then on

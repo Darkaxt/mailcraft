@@ -621,11 +621,13 @@ fn bodies_read_after_the_window_shows_come_into_their_messages_and_their_rows() 
     let (tx, rx) = channel();
     app.check_parts_later(missing_rx, 0, true);
     app.take_bodies_later(rx);
+    assert_eq!(app.lifecycle_status()["openingContentPending"], true);
     tx.send(vec![mailcraft_engine::BodyRead { id, text: Some((r, text.clone())), html: None, hidden: None }]).unwrap();
     let mut h = harness(app);
     h.run_steps(2);
     // Not before what is missing is known: a body found missing is never taken in after it.
     assert!(h.state().session.mailbox.message(id).unwrap().body_is_kept());
+    assert_eq!(h.state().lifecycle_status()["openingContentPending"], true);
     missing_tx.send(mailcraft_engine::Missing::default()).unwrap();
     drop(tx);
     h.run_steps(2);
@@ -634,6 +636,7 @@ fn bodies_read_after_the_window_shows_come_into_their_messages_and_their_rows() 
     assert!(!m.body_is_kept());
     assert!(mailcraft_engine::list::preview(m, 80).starts_with("The figures for the quarter"));
     assert!(h.state().later.bodies.is_none());
+    assert_eq!(h.state().lifecycle_status()["openingContentPending"], false);
 }
 
 #[test]

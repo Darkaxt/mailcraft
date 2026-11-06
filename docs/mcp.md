@@ -229,6 +229,15 @@ These counters are partial attribution, not total heap or physical memory:
 shared cache/resident counters can overlap, and allocator/container slack,
 other mailbox structures, native services and renderer allocations are excluded.
 
+The live app's `--headless` mode keeps saved large body payloads on disk until a
+request needs them. Startup still validates the same content files and reports
+missing or damaged bodies, releasing validation buffers instead of retaining the
+desktop reading cache. On-demand reads, offline files and synchronization use
+the same mailbox; desktop startup continues warming its first Inbox rows.
+`status.lifecycle.openingContentPending` reports whether background opening
+validation or its body handoff is still pending; measure idle resource use after
+it becomes false and synchronization has finished.
+
 For background use, start the desktop app with `--hidden --control 7991
 --control-agents-only` and attach the authenticated bridge. Hidden startup is
 native app behavior, not the operating system's launch-window hint. It does not

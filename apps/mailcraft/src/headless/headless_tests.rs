@@ -36,6 +36,7 @@ fn real_mcp_reads_and_normal_close_need_no_native_window() {
             let status = tool(&mut server, 1, "status").unwrap();
             assert_eq!(status["lifecycle"]["mode"], "headless");
             assert_eq!(status["lifecycle"]["nativeWindow"], false);
+            assert_eq!(status["lifecycle"]["openingContentPending"], false);
             let mailbox = tool(&mut server, 2, "inspect_mailbox").unwrap();
             assert!(mailbox["messages"].as_u64().unwrap() > 0);
             assert!(!mailbox["accounts"].as_array().unwrap().is_empty());

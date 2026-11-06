@@ -1977,6 +1977,7 @@ fn background_saver(ctx: &egui::Context, path: &std::path::Path) -> Option<Box<d
 fn content_later(
     ctx: &egui::Context,
     path: &std::path::Path,
+    warm_bodies: bool,
 ) -> Option<(std::sync::mpsc::Receiver<mailcraft_engine::Missing>, std::sync::mpsc::Receiver<Vec<mailcraft_engine::BodyRead>>)> {
     /// Bodies read and handed over at a time.
     const BATCH: usize = 256;
@@ -1985,7 +1986,11 @@ fn content_later(
     let (wake, path) = (ctx.clone(), path.to_path_buf());
     let spawned = std::thread::Builder::new().name("looking for the mailbox's content".into()).spawn(move || {
         // (What is missing is known once the bodies are read: a damaged file shows only then.)
-        let (missing, bodies) = mailcraft_engine::store::content_later(&path);
+        let (missing, bodies) = if warm_bodies {
+            mailcraft_engine::store::content_later(&path)
+        } else {
+            (mailcraft_engine::store::check_content_later(&path), Vec::new())
+        };
         let _ = missing_tx.send(missing);
         wake.request_repaint();
         let mut bodies = bodies.into_iter();
@@ -2186,7 +2191,7 @@ fn main() -> eframe::Result {
             let progress = std::sync::Arc::new(mailcraft_engine::io::OpenProgress::default());
             let reading = progress.clone();
             let wake = cc.egui_ctx.clone();
-            let arriving = launch::start(move || launch::first_mailbox(sample, mailbox_path, &reading), move || wake.request_repaint());
+            let arriving = launch::start(move || launch::first_mailbox(sample, mailbox_path, &reading, false), move || wake.request_repaint());
             let (file_dialog, dialogs) = file_dialogs::hook(&cc.egui_ctx);
             let ctx = cc.egui_ctx.clone();
             let first_prefs = startup.prefs.clone();

@@ -44,7 +44,7 @@ impl Startup {
                 app.index_words_later();
             }
             let later = match &app.session.path {
-                Some(path) if unchecked => content_later(&ctx, path),
+                Some(path) if unchecked => content_later(&ctx, path, !self.headless),
                 _ => None,
             };
             let later = later.map(|(missing, bodies)| {

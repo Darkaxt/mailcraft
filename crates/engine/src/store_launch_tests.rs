@@ -221,3 +221,104 @@ fn a_body_missing_outright_is_counted_once_though_its_read_fails_too() {
     open_launched(&path, Launch { checks_later: true, rows: Some(1) });
     assert_eq!(content_later(&path).0.count, now.unavailable);
 }
+
+#[test]
+fn headless_open_validates_without_warming_bodies_and_reads_them_on_demand() {
+    let tmp = Temp::new("headless-lazy");
+    let path = tmp.file();
+    let original = mailbox(24);
+    save(&path, &original).unwrap();
+    let disk = fs::read(&path).unwrap();
+    clear_cache();
+    *lock(&shared(&path).state) = State::default();
+    let opened = open_for_headless(&path, &OpenProgress::default()).unwrap();
+    assert!(opened.unchecked);
+    let mut session = Session::new(opened.mailbox);
+    session.path = Some(path.clone());
+    let outside: Vec<_> = original.messages.iter().filter(|(_, m)| body_outside(m) > 0).map(|(id, _)| *id).collect();
+    assert!(!outside.is_empty());
+    assert!(outside.iter().all(|id| session.mailbox.message(*id).unwrap().body_is_kept()));
+    assert_eq!(check_content_later(&path).count, 0);
+    assert!(bodies_later(&path).is_empty(), "validation consumed the warm-up plan without retaining its payload");
+    assert_eq!(cached_bytes(), 0, "validation must not populate the fetched-content cache");
+    assert!(outside.iter().all(|id| session.mailbox.message(*id).unwrap().body_is_kept()));
+    for id in outside {
+        let loaded = session.loaded_message(id).unwrap();
+        let expected = original.message(id).unwrap();
+        assert_eq!(loaded.body, expected.body);
+        assert_eq!(loaded.attachments, expected.attachments);
+        assert!(session.mailbox.message(id).unwrap().body_is_kept(), "read-only requests must not retain every fetched body in the mailbox");
+    }
+    save(&path, &session.mailbox).unwrap();
+    assert_eq!(fs::read(&path).unwrap(), disk, "inspection and validation must not rewrite the mailbox");
+    assert!(whole(&path) == original, "all offline content survives save/reopen");
+}
+
+#[test]
+fn headless_validation_preserves_missing_and_damaged_body_diagnostics() {
+    let tmp = Temp::new("headless-damage");
+    let path = tmp.file();
+    let original = mailbox(24);
+    save(&path, &original).unwrap();
+    clear_cache();
+    let ids: Vec<_> = original.messages.iter().filter(|(_, m)| m.body.text.len() > INLINE_MAX).map(|(id, _)| *id).take(2).collect();
+    let damaged = blob_file(&path, original.message(ids[0]).unwrap().body.text.as_bytes());
+    let mut bytes = fs::read(&damaged).unwrap();
+    bytes[0] ^= 1;
+    fs::write(damaged, bytes).unwrap();
+    fs::remove_file(blob_file(&path, original.message(ids[1]).unwrap().body.text.as_bytes())).unwrap();
+    let normal = open_launched(&path, Launch::default());
+    assert_eq!(normal.unavailable, 2);
+    *lock(&shared(&path).state) = State::default();
+    let opened = open_for_headless(&path, &OpenProgress::default()).unwrap();
+    let missing = check_content_later(&path);
+    assert_eq!(missing.count, normal.unavailable);
+    assert_eq!(check_content_later(&path).count, 0, "diagnostics are consumed once");
+    let mut session = Session::new(opened.mailbox);
+    session.path = Some(path);
+    session.mark_unavailable(&missing.refs);
+    for id in ids {
+        assert_eq!(session.mailbox.message(id).unwrap().body.text, UNAVAILABLE);
+    }
+}
+
+#[test]
+fn headless_lists_load_snippets_only_for_returned_rows_without_loading_attachments() {
+    let tmp = Temp::new("headless-list-snippet");
+    let path = tmp.file();
+    let original = mailbox(24);
+    save(&path, &original).unwrap();
+    clear_cache();
+    *lock(&shared(&path).state) = State::default();
+    let opened = open_for_headless(&path, &OpenProgress::default()).unwrap();
+    let mut session = Session::new(opened.mailbox);
+    session.path = Some(path.clone());
+    assert_eq!(check_content_later(&path).count, 0);
+    let before = fs::read(&path).unwrap();
+    let listed = session.run("mail.list", &json!({"folder": original.inbox().unwrap(), "limit": 1})).unwrap();
+    let row = &listed["messages"][0];
+    let id = row["id"].as_u64().unwrap();
+    let expected = crate::list::preview(original.message(id).unwrap(), 140);
+    assert!(!expected.is_empty());
+    assert_eq!(row["snippet"], expected);
+    for (other, message) in &session.mailbox.messages {
+        if *other != id && body_outside(original.message(*other).unwrap()) > 0 {
+            assert!(message.body_is_kept(), "unrequested row {other} remains lazy");
+        }
+        for attachment in &message.attachments {
+            if attachment.size() > INLINE_MAX {
+                assert!(!attachment.is_loaded(), "list previews do not fetch attachments");
+            }
+        }
+    }
+    assert!(!session.dirty);
+    assert_eq!(fs::read(&path).unwrap(), before);
+    // The same body-only query must find the same rows as a fully loaded opening.
+    let mut loaded = Session::new(original);
+    let query = json!({"folder": loaded.mailbox.inbox().unwrap(), "query": "body:quarter", "limit": 100});
+    let expected = loaded.run("mail.list", &query).unwrap();
+    let actual = session.run("mail.list", &query).unwrap();
+    assert_eq!(actual["total"], expected["total"]);
+    let ids = |result: &serde_json::Value| result["messages"].as_array().unwrap().iter().map(|row| row["id"].clone()).collect::<Vec<_>>();
+    assert_eq!(ids(&actual), ids(&expected));
+}

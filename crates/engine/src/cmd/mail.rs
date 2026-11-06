@@ -619,6 +619,10 @@ fn list_in_view(s: &mut Session, limit: usize) -> CmdResult {
         .iter()
         .take(limit)
         .filter_map(|r| {
+            // A windowless opening keeps bodies on disk. Fetch only the rows
+            // requested here for their snippets, through the same bounded body
+            // cache and unavailable-content handling as mail.get, not attachments.
+            let _ = s.load_where(r.id, |_| false);
             let mut m = message_summary(s, s.mailbox.message(r.id)?);
             if let Some(o) = m.as_object_mut() {
                 if r.conversation() {

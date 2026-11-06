@@ -71,7 +71,7 @@ pub(crate) fn run(
     let reading = progress.clone();
     let wake = ctx.clone();
     let sample = startup.sample;
-    let arriving = launch::start(move || launch::first_mailbox(sample, mailbox, &reading), move || wake.request_repaint());
+    let arriving = launch::start(move || launch::first_mailbox(sample, mailbox, &reading, true), move || wake.request_repaint());
     let prefs = startup.prefs.clone();
     let build = startup.builder(ctx.clone(), None);
     let mut app = MailApp::opening(mailcraft_ui_egui::opening::Opening::new(arriving, progress, build), prefs, crate::system_locale::system_locale());
