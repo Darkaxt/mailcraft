@@ -9194,6 +9194,11 @@ msgstr ""
 msgid "Reported via SimpleLogin: {alias}"
 msgstr ""
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Request Microsoft Rules Permission"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy

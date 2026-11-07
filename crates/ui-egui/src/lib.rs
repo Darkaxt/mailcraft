@@ -1161,6 +1161,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         r#"{"account": number (a Microsoft account), "confirmed": true} — asks the owner, on Microsoft's page in the browser, to let MailCraft read and change the To Do lists and tasks (Tasks.ReadWrite), by itself: an account that signed in before this was asked is not asked with a sign-in. The window asks first, when a tasks run finds the sign-in doesn't cover it, and File › Info has "Ask again". Allowed, the tasks are kept in step at the next look; refused, or when an administrator has to approve first, the window says what to do next. Answers {"pending": "signIn", "account": number}"#,
     ),
     (
+        "ui.requestRulesPermission",
+        "Request Microsoft Rules Permission",
+        "File › Info",
+        r#"{"account": number (an existing Microsoft account)} — explicitly opens Microsoft's rules-permission page (MailboxSettings.ReadWrite), including in headless mode. This requests permission; it never grants it or enables Microsoft To Do. No app confirmation is answered. Other active work or dialogs are preserved; a pending identical request is returned without starting another. Answers {"pending": "signIn", "account": number}. Background checks never start this request themselves. Read lifecycle.permissionsNeeded in status for missing permission and provider outcome."#,
+    ),
+    (
         "ui.allowRules",
         "Allow Keeping Rules on the Server",
         "File › Info",
@@ -2622,6 +2628,10 @@ impl MailApp {
                 }
                 let Some(account) = p.get("account").and_then(Value::as_u64) else { return Some(Err(tl!("`account` is required").to_string())) };
                 self.begin_tasks_sign_in(account)
+            }
+            "ui.requestRulesPermission" => {
+                let Some(account) = p.get("account").and_then(Value::as_u64) else { return Some(Err(tl!("`account` is required").to_string())) };
+                self.request_rules_permission(account)
             }
             "ui.allowRules" => {
                 if p.get("confirmed").and_then(Value::as_bool) != Some(true) {

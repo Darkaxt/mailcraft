@@ -63,6 +63,128 @@ fn add_rule(app: &mut MailApp, owner: Id) -> Id {
     made["id"].as_u64().unwrap()
 }
 
+fn permission_request(app: &mut MailApp, account: Id) -> serde_json::Value {
+    use crate::control::{ControlRequest, Outcome, handle};
+    let request = ControlRequest::new("engine.execute", json!({"command": "ui.requestRulesPermission", "params": {"account": account}}))
+        .0
+        .from_agent(Vec::new());
+    let Outcome::Done(answer) = handle(app, &egui::Context::default(), &request) else {
+        panic!("requesting Microsoft's page must not wait for an invisible app question")
+    };
+    answer
+}
+
+#[test]
+fn headless_rules_permission_is_reported_without_a_modal_or_automatic_browser() {
+    let (mut app, owner, answers, _, sign_ins) = window();
+    add_rule(&mut app, owner);
+    app.start_headless();
+    answers.lock().unwrap().push_back(RulesResult { account: owner, consent_needed: true, ..Default::default() });
+    assert!(app.rules_tick_at(0.0));
+    app.poll_rules();
+    assert!(!app.rules_tick_at(6_000.0));
+    assert!(app.dialog.is_none());
+    assert!(sign_ins.lock().unwrap().is_empty());
+    assert_eq!(app.rules.perm.get(&owner), Some(&Permission::Needed));
+    let status = app.lifecycle_status();
+    assert_eq!(status["canClose"], true);
+    assert_eq!(status["interactionRequired"], false);
+    assert_eq!(status["permissionsNeeded"][0]["account"], owner);
+    assert_eq!(status["permissionsNeeded"][0]["scope"], "MailboxSettings.ReadWrite");
+    assert_eq!(status["permissionsNeeded"][0]["requestCommand"], "ui.requestRulesPermission");
+}
+
+#[test]
+fn headless_rules_permission_request_only_starts_one_rules_authorization() {
+    let (mut app, owner, _, _, sign_ins) = window();
+    let rule = add_rule(&mut app, owner);
+    app.start_headless();
+    app.rules.perm.insert(owner, Permission::Needed);
+    let before = app.session.mailbox.rules.clone();
+    let answer = permission_request(&mut app, owner);
+    assert_eq!(answer["ok"], true, "{answer}");
+    assert_eq!(answer["result"]["pending"], "signIn");
+    assert_eq!(*sign_ins.lock().unwrap(), [(owner, true, false)]);
+    assert_eq!(app.rules.perm.get(&owner), Some(&Permission::Asking));
+    assert_eq!(app.tokens[&owner].refresh, "ref-1");
+    assert_eq!(serde_json::to_value(&app.session.mailbox.rules).unwrap(), serde_json::to_value(&before).unwrap());
+    assert!(app.dialog.is_none() && app.asking.is_empty());
+    assert_eq!(permission_request(&mut app, owner)["ok"], true);
+    assert_eq!(sign_ins.lock().unwrap().len(), 1, "never duplicate a pending provider request");
+    // Only the actual provider callback can let the next server job try again.
+    app.poll_sign_in();
+    assert_eq!(app.rules.perm.get(&owner), None);
+    assert_eq!(app.tokens[&owner].refresh, "ref-2");
+    assert!(app.session.mailbox.rules.iter().find(|r| r.id == rule).unwrap().waiting());
+}
+
+#[test]
+fn headless_rules_permission_request_preserves_other_work_and_offline_state() {
+    let (mut app, owner, _, _, sign_ins) = window();
+    app.start_headless();
+    app.rules.perm.insert(owner, Permission::Needed);
+    assert_eq!(permission_request(&mut app, 999_999)["ok"], false);
+    let google = app.execute("account.add", json!({"email": "lee@example.org", "kind": "imap"})).unwrap()["id"].as_u64().unwrap();
+    assert_eq!(permission_request(&mut app, google)["ok"], false);
+    assert!(app.rules_tick_at(0.0));
+    assert_eq!(permission_request(&mut app, owner)["ok"], false, "preserve an in-flight native rules job");
+    app.poll_rules();
+    app.execute("sync.offline", json!({"value": true})).unwrap();
+    assert_eq!(permission_request(&mut app, owner)["ok"], false);
+    app.execute("sync.offline", json!({"value": false})).unwrap();
+    app.ask_rules(owner);
+    assert_eq!(permission_request(&mut app, owner)["ok"], false);
+    assert!(app.dialog.is_some(), "never dismiss an existing dialog implicitly");
+    app.dialog = None;
+    let oauth = app.session.mailbox.account(owner).unwrap().oauth.clone().unwrap();
+    app.begin_sign_in(owner, oauth, OWNER, String::new(), false, true).unwrap();
+    assert_eq!(permission_request(&mut app, owner)["ok"], false);
+    assert_eq!(*sign_ins.lock().unwrap(), [(owner, false, false)]);
+}
+
+#[test]
+fn headless_rules_permission_refusal_preserves_tokens_and_pending_rules() {
+    let (mut app, owner, _, _, _) = window();
+    let rule = add_rule(&mut app, owner);
+    app.start_headless();
+    app.services.sign_in = Some(Box::new(|_| {
+        let (tx, rx) = mpsc::channel();
+        tx.send(Err("synthetic provider refusal".into())).unwrap();
+        rx
+    }));
+    app.rules.perm.insert(owner, Permission::Needed);
+    assert_eq!(permission_request(&mut app, owner)["ok"], true);
+    app.poll_sign_in();
+    app.rules_tick_at(0.0);
+    app.poll_rules();
+    assert!(matches!(app.rules.perm.get(&owner), Some(Permission::Refused(_))));
+    assert_eq!(app.tokens[&owner].refresh, "ref-1");
+    assert!(app.session.mailbox.rules.iter().find(|r| r.id == rule).unwrap().waiting());
+    assert!(app.dialog.is_none());
+    assert_eq!(app.lifecycle_status()["canClose"], true);
+}
+
+#[test]
+fn headless_rules_permission_rejects_another_identity_without_saving_its_tokens() {
+    let (mut app, owner, _, _, _) = window();
+    add_rule(&mut app, owner);
+    app.start_headless();
+    app.services.sign_in = Some(Box::new(|_| {
+        let (tx, rx) = mpsc::channel();
+        let mut other = tokens("other-access", "other-refresh");
+        other.email = "somebody-else@example.org".into();
+        tx.send(Ok(other)).unwrap();
+        rx
+    }));
+    app.rules.perm.insert(owner, Permission::Needed);
+    assert_eq!(permission_request(&mut app, owner)["ok"], true);
+    app.poll_sign_in();
+    assert_eq!(app.rules.perm.get(&owner), Some(&Permission::Needed));
+    assert_eq!(app.tokens[&owner].refresh, "ref-1");
+    assert!(app.dialog.is_none());
+    assert_eq!(app.lifecycle_status()["canClose"], true);
+}
+
 #[test]
 fn the_servers_rules_are_read_when_due_and_shown() {
     let (mut app, owner, answers, jobs, _) = window();

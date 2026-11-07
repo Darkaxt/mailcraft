@@ -114,6 +114,7 @@ impl MailApp {
         status["openingContentPending"] = json!(self.opening_content_pending());
         status["closeBlocker"] = json!(blocker);
         status["interactionRequired"] = json!(!self.asking.is_empty() || self.dialog.is_some() || self.windows.asks());
+        status["permissionsNeeded"] = json!(self.rules_permissions_needed());
         status["interaction"] = match &self.dialog {
             Some(crate::dialogs::Dialog::Confirm { command, ask, .. }) => json!({"kind": "confirm", "command": command, "title": ask.title}),
             Some(dialog) => json!({"kind": dialog.name()}),
@@ -153,7 +154,7 @@ impl MailApp {
         }
     }
 
-    fn lifecycle_blocker(&self) -> Option<&'static str> {
+    pub(crate) fn lifecycle_blocker(&self) -> Option<&'static str> {
         if (self.opening.is_some() && !(self.is_headless() && self.opening_needs_attention()))
             || self.reading_ahead.is_some()
             || self.after_save.is_some()

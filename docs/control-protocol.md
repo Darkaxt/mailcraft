@@ -1,6 +1,6 @@
 # Control protocol
 
-> **Last reviewed:** 2026-10-13 · **Last updated:** 2026-11-06 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
+> **Last reviewed:** 2026-11-07 · **Last updated:** 2026-11-07 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
 
 Start the app with a control port: `mailcraft --control 7991` (or `MAILCRAFT_CONTROL_PORT=7991`).
 It listens on `127.0.0.1` only. Send one JSON object per line, with the window's key (see
@@ -127,6 +127,15 @@ and title; they never provide an answer. UI actions and owner consent require th
 desktop. Explicitly canceling a dialog still follows ordinary unsaved-work checks.
 An unreadable mailbox remains uncontinued and unwritten, and can close normally.
 Mailbox progress and the existing request/reply/no-replay contracts are preserved.
+
+`lifecycle.permissionsNeeded` reports missing Microsoft rules authorization with
+account, scope, state, reason and request command, without a blocking headless
+dialog. An explicit `engine.execute` of `ui.requestRulesPermission` with
+`{"account": accountId}` starts the existing provider approval page; it does not
+grant permission. This request-only exception works in headless mode, preserves
+other active work and returns an existing identical request rather than starting
+another. Background checks never open that page; only the person can approve at
+Microsoft. Existing account, send and deletion protections are unchanged.
 
 `--hidden` requests a hidden, inactive native main window, including while the
 mailbox opens; it changes no saved window preference. Observe actual visibility

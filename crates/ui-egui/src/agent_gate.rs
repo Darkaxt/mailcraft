@@ -87,7 +87,12 @@ pub fn screen(app: &mut MailApp, req: &ControlRequest, allow: &[Class]) -> Optio
 }
 
 fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, allow: &[Class]) -> Outcome {
-    if app.is_headless() && id.starts_with("ui.") && !matches!(id, "ui.sync" | "ui.cancelSync" | "ui.closeDialog") {
+    // Check before `run` temporarily sets aside an unsaved form. Requesting
+    // provider authorization must preserve every existing owner dialog.
+    if id == "ui.requestRulesPermission" && app.dialog.is_some() {
+        return err("an owner question or dialog is open");
+    }
+    if app.is_headless() && id.starts_with("ui.") && !matches!(id, "ui.sync" | "ui.cancelSync" | "ui.closeDialog" | "ui.requestRulesPermission") {
         return err("this action needs the desktop; headless mode never opens a window or grants owner consent");
     }
     // The question names the people the window would write to, as the form has them now.

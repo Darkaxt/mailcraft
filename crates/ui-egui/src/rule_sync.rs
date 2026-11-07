@@ -13,7 +13,9 @@
 //! asks for; changing them takes `MailboxSettings.ReadWrite`, which no sign-in page asks for.
 //! The first job that has something to send finds its sign-in doesn't cover it
 //! ([`RulesResult::consent_needed`]): nothing of the rules is sent, and the window asks the
-//! owner, by itself, with a question first and then Microsoft's page ([`MailApp::ask_rules`]).
+//! owner, in the desktop, with a question first and then Microsoft's page ([`MailApp::ask_rules`]).
+//! Headless checks report the missing scope; only an explicit permission request opens the
+//! provider's page. The request itself never grants permission.
 //! Until it is allowed the account's rules stay on this computer and run here, and the server's
 //! are still read and shown: only the changes wait. File › Info says where it stands, with a way
 //! to ask again.
@@ -375,7 +377,7 @@ impl MailApp {
             }
         }
         // (Working offline, Microsoft's page can't be had: the question waits.)
-        if self.dialog.is_some() || self.ui.backstage || self.signing_in.is_some() || self.offline() {
+        if self.is_headless() || self.dialog.is_some() || self.ui.backstage || self.signing_in.is_some() || self.offline() {
             return;
         }
         if let Some(account) = self.rules.perm.iter().find(|(_, p)| **p == Permission::Needed).map(|(a, _)| *a) {
@@ -423,6 +425,48 @@ impl MailApp {
         if self.dialog.is_none() && self.signing_in.is_none() {
             self.ask_rules(account);
         }
+    }
+
+    /// Explicit app-owned request for Microsoft's approval page, without an intermediate
+    /// desktop modal. A provider callback, not this command, establishes authorization.
+    pub(crate) fn request_rules_permission(&mut self, account: Id) -> Result<Value, String> {
+        if !self.session.mailbox.keeps_rules(account)
+            || !self
+                .session
+                .mailbox
+                .account(account)
+                .is_some_and(|a| !a.is_shared() && a.oauth.as_ref().is_some_and(|oauth| oauth.provider == mailcraft_model::OAuthProvider::Microsoft))
+        {
+            return Err(tl!("This account has no sign-in with Microsoft").to_string());
+        }
+        if self.signing_in.as_ref().is_some_and(|s| s.account == account && s.rules) {
+            return Ok(json!({"pending": "signIn", "account": account}));
+        }
+        if let Some(why) = self.lifecycle_blocker() {
+            return Err(why.to_string());
+        }
+        self.begin_rules_sign_in(account)
+    }
+
+    /// Read-only diagnostics: deterministic account order, no tokens or provider URLs.
+    pub(crate) fn rules_permissions_needed(&self) -> Vec<Value> {
+        let mut accounts: Vec<_> = self.rules.perm.iter().filter(|(_, p)| !matches!(p, Permission::Given)).collect();
+        accounts.sort_unstable_by_key(|(account, _)| **account);
+        accounts
+            .into_iter()
+            .map(|(account, permission)| {
+                let state = match permission {
+                    Permission::Needed => "needed",
+                    Permission::Asking => "pending",
+                    Permission::Declined => "declined",
+                    Permission::Refused(_) => "refused",
+                    Permission::SignInOver(_) => "signInRequired",
+                    Permission::Given => "given",
+                };
+                json!({"account": account, "scope": "MailboxSettings.ReadWrite", "state": state,
+                "requestCommand": "ui.requestRulesPermission", "reason": self.rules_wait_reason(*account)})
+            })
+            .collect()
     }
 
     /// `ui.allowRules`: Microsoft's page, for changing the rules, because the owner said go ahead.

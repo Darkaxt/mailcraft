@@ -39,6 +39,7 @@ fn headless_refuses_ui_and_owner_questions_instead_of_waiting() {
         ("ui.focus", json!({})),
         ("engine.execute", json!({"command": "ui.dialog", "params": {"name": "account"}})),
         ("engine.execute", json!({"command": "account.remove", "params": {"id": 1}})),
+        ("engine.execute", json!({"command": "ui.allowRules", "params": {"account": 1, "confirmed": true}})),
     ] {
         let answer = request(&mut app, method, params);
         assert_eq!(answer["ok"], false, "{method}: {answer}");

@@ -384,6 +384,9 @@ const SAFE: &[&str] = &[
     "ui.ribbonMode",
     "ui.dialog",
     "ui.closeDialog",
+    // Opens the provider's permission request; only the human can approve there.
+    // Does not answer the desktop's owner question or grant an OAuth scope itself.
+    "ui.requestRulesPermission",
     "ui.tasksSync",
     "ui.theme",
     "ui.highContrast",

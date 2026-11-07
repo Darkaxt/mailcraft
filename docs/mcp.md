@@ -222,14 +222,28 @@ desktop's account, credential, synchronization and save services; it is distinct
 from the file-only `mcp --file` backend. Close the existing owner before changing
 mode. Normal desktop launch remains available.
 
-Headless mode does no UI layout or rendering and does not open a browser, file
-dialog, notification or clipboard. Existing refresh tokens can renew silently;
+Headless background checks do no UI layout or rendering and do not open a browser,
+file dialog, notification or clipboard. Existing refresh tokens can renew silently;
 an action needing owner consent returns an interaction-required error. It never
 answers that consent or opens the desktop automatically. `status.lifecycle.mode`
 is `headless`, `nativeWindow` is false, and window visibility/focus remain null.
 The launcher can wait for the single endpoint-ready JSON line on stdout, which
 names the native PID and port and contains no key or credentials. Mailbox opening
 still has its own native progress/status; endpoint readiness is not mailbox readiness.
+
+Missing Microsoft rules permission appears in `status.lifecycle.permissionsNeeded`
+with the account, scope, state and `requestCommand`; it does not create an invisible
+modal or block an otherwise idle close. Explicitly call
+`execute("ui.requestRulesPermission", {"account": accountId})` to open Microsoft's
+existing authorization page. This request-only action is available through the
+authenticated bridge without a desktop confirmation, including in headless mode.
+Only the person on Microsoft's page can approve. It grants no scope itself,
+enables no To Do integration and exposes no tokens or authorization URL. An
+identical pending request returns its state without opening another page. Other
+active work, sign-ins and dialogs are preserved. A refusal leaves existing
+credentials and pending rule changes intact. Ordinary background checks never
+start this request. Existing account edits and permission-granting actions retain
+their owner protection.
 
 Microsoft To Do is off by default. File › Info offers **Connect Microsoft To Do…**
 as an explicit manual action with the original provider consent. A successful
