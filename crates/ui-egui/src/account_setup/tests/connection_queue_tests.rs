@@ -68,7 +68,7 @@ fn onboarding_during_a_graph_job_keeps_the_existing_progress_and_queues_the_acco
     let first = connected(&mut app, "first@example.org");
     let second = connected(&mut app, "second@example.org");
     let (_held, rx) = mpsc::channel();
-    app.graph_rx = Some((first, false, false, rx));
+    app.graph_rx = Some((first, false, false, app.session.openings(), rx));
     app.session.sync_progress.begin(&[first]);
     app.session.sync_progress.phase(first, SyncPhase::NewMail);
     let original = app.session.sync_progress.accounts[0].clone();
