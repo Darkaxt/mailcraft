@@ -118,6 +118,29 @@ fn rules_ingestion_waits_for_full_body_survives_reopen_and_does_not_repeat_a_cop
 }
 
 #[test]
+fn rules_ingestion_pending_content_preserves_queued_mail_and_locally_edited_drafts() {
+    let (mut s, account, receiving, archive) = fixture();
+    add_rule(&mut s, account, archive, true, false);
+    graph_down::take_page(&mut s.mailbox, &mut ServerIndex::default(), account, &page(), &mut Down::default());
+    let id = s.mailbox.messages.values().next().unwrap().id;
+    assert!(s.mailbox.message(id).unwrap().rules_wait_for_content());
+    let outbox = s.mailbox.folder_of_kind(account, FolderKind::Outbox).unwrap();
+    // A saved pending marker must never override the upstream protections when
+    // the owner has since queued the message or edited its draft locally.
+    s.mailbox.message_mut(id).unwrap().folder = outbox;
+    assert!(graph_down::fetch_queue(&s.mailbox, account, 10, s.now()).is_empty());
+    assert!(super::jmap_down::fetch_queue(&s.mailbox, account, 10, &Default::default()).is_empty());
+    let message = s.mailbox.message_mut(id).unwrap();
+    message.folder = receiving;
+    message.server_draft = Some(mailcraft_model::sync::ServerDraft { pending: true, ..Default::default() });
+    assert!(graph_down::fetch_queue(&s.mailbox, account, 10, s.now()).is_empty());
+    assert!(super::jmap_down::fetch_queue(&s.mailbox, account, 10, &Default::default()).is_empty());
+    s.mailbox.message_mut(id).unwrap().server_draft = None;
+    assert_eq!(graph_down::fetch_queue(&s.mailbox, account, 10, s.now()), ["M1"]);
+    assert_eq!(super::jmap_down::fetch_queue(&s.mailbox, account, 10, &Default::default()), ["M1"]);
+}
+
+#[test]
 fn rules_ingestion_does_not_turn_a_missing_body_exception_into_a_match() {
     let (mut s, account, receiving, archive) = fixture();
     s.run(

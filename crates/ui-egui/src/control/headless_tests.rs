@@ -31,6 +31,15 @@ fn headless_status_and_mail_reads_work_without_window_or_graphics() {
 }
 
 #[test]
+fn headless_logic_does_not_warm_the_desktop_conversation_cache() {
+    let mut app = MailApp::new(Session::new(mailcraft_engine::sample::mailbox(1, 12)), Services::default());
+    app.start_headless();
+    app.logic(&egui::Context::default());
+    assert!(app.session.prepare_conversations(), "headless logic leaves desktop grouping lazy until it is actually requested");
+    assert!(!app.session.prepare_conversations(), "the normal on-demand cache still works");
+}
+
+#[test]
 fn headless_refuses_ui_and_owner_questions_instead_of_waiting() {
     let mut app = MailApp::new(Session::new(mailcraft_engine::sample::mailbox(0, 0)), Services::default());
     app.start_headless();

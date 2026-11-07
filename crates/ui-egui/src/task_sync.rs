@@ -249,7 +249,7 @@ impl MailApp {
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return false };
         let Some(oauth) = owner.oauth.clone() else { return false };
         let kept = self.tokens.get(&account).map(|t| t.refresh.clone()).filter(|r| !r.is_empty());
-        let refresh = kept.or_else(|| self.remembered("refresh", &owner.email)).unwrap_or_default();
+        let refresh = kept.or_else(|| self.remembered("refresh", owner.id)).unwrap_or_default();
         if refresh.is_empty() {
             // (Nothing to renew with: Send/Receive signs in first.)
             return false;
@@ -291,8 +291,7 @@ impl MailApp {
             && !tokens.refresh.is_empty()
             && !self.signed_in_as_other(account, tokens)
         {
-            let address = self.session.mailbox.account(account).map(|a| a.email.clone()).unwrap_or_default();
-            self.remember("refresh", &address, &tokens.refresh);
+            self.remember("refresh", account, &tokens.refresh);
             if let Some(mail) = self.tokens.get_mut(&account) {
                 mail.refresh = tokens.refresh.clone();
             }
@@ -529,18 +528,20 @@ impl MailApp {
         use crate::approval::NO_BROWSER;
         use crate::favorites_sync::{NEEDS_APPROVAL, REFUSED_BY_ORGANISATION, REFUSED_FOR_ACCOUNT};
         self.session.sync_status.clear();
-        let address = self.session.mailbox.account(account).map(|a| a.email.clone()).unwrap_or_default();
         match answer {
             // (Somebody else's tokens are neither used nor remembered, #103.)
             Ok(tokens) if self.signed_in_as_other(account, &tokens) => {
                 self.tasks.perm.insert(account, Permission::Needed);
             }
             Ok(tokens) => {
+                // This address identifies the persisted UI opt-in only; secrets
+                // continue to use upstream's verified account binding below.
+                let address = self.session.mailbox.account(account).map(|a| a.email.trim().to_string()).unwrap_or_default();
                 if !address.is_empty() && !self.tasks_enabled(account) {
                     self.ui.todo_sync_accounts.push(address.clone());
                 }
                 if !tokens.refresh.is_empty() {
-                    self.remember("refresh", &address, &tokens.refresh);
+                    self.remember("refresh", account, &tokens.refresh);
                     if let Some(kept) = self.tokens.get_mut(&account) {
                         kept.refresh = tokens.refresh.clone();
                     }

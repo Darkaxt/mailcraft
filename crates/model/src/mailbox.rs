@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::messages::Messages;
 use crate::sync::{RemoteFlags, same_category};
 use crate::{
     Action, Answers, Calendar, Contact, Event, EwsServer, Id, JmapServer, KeepOffline, Message, ModelError, Rgb, Rule, Signature, Task, ThreadIndex,
@@ -495,7 +496,7 @@ fn read_accounts<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Ve
         // (Only an object has a `kind`; one without says nothing, which is a local account.)
         let unknown = value.get("kind").is_some_and(|kind| AccountKind::deserialize(kind).unwrap_or(AccountKind::Unknown) == AccountKind::Unknown);
         if !unknown {
-            accounts.push(Account::deserialize(&value).map_err(serde::de::Error::custom)?);
+            accounts.push(crate::load_limit::from_value::<Account>(&value).map_err(serde::de::Error::custom)?);
             continue;
         }
         let who = Identity::deserialize(&value).unwrap_or_default();
@@ -1034,8 +1035,8 @@ pub struct Mailbox {
     pub account_order: Vec<Id>,
     #[serde(deserialize_with = "crate::load_limit::capped_vec")]
     pub folders: Vec<Folder>,
-    #[serde(deserialize_with = "crate::load_limit::capped_map")]
-    pub messages: BTreeMap<Id, Arc<Message>>,
+    #[serde(deserialize_with = "crate::load_limit::capped_messages")]
+    pub messages: Messages,
     #[serde(deserialize_with = "crate::load_limit::capped_map")]
     pub contacts: BTreeMap<Id, Arc<Contact>>,
     pub calendars: Vec<Calendar>,
@@ -1145,7 +1146,7 @@ impl Default for Mailbox {
             accounts: Vec::new(),
             account_order: Vec::new(),
             folders: Vec::new(),
-            messages: BTreeMap::new(),
+            messages: Messages::new(),
             contacts: BTreeMap::new(),
             calendars: Vec::new(),
             events: BTreeMap::new(),
@@ -2501,6 +2502,7 @@ impl Mailbox {
                 m.moving_out = Some(crate::sync::MovingOut { account: from_account, id: server.id, folder: server.folder, ..Default::default() });
             }
             m.server = None;
+            crate::auth_results::forget_stamps(m);
             m.lies_in(folder, to_account, uid, synced);
             self.queued.push(Queued::PlaceMessage { account: to_account, message: id, marker, copy: false, from });
             return Ok(true);
@@ -2588,6 +2590,7 @@ impl Mailbox {
             copy.rule_processing = None;
             (copy.server, copy.moving_out, copy.returned) = (None, None, 0);
             copy.placed.clear();
+            crate::auth_results::forget_stamps(&mut copy);
             hold_if_put_in_outbox(&mut copy, self.is_imap_outbox(folder));
             let new = self.add_message(copy)?;
             let marker = self.place_marker(new, &source);
@@ -2755,7 +2758,8 @@ impl Mailbox {
 
     /// Sort a message that has just arrived by the Safe and Blocked Senders lists (#504): from a
     /// blocked sender into the Inbox, it moves to the account's Junk E-mail; from a safe sender
-    /// into Junk E-mail, to the Inbox. The move is noted for the server as the owner's own is.
+    /// into Junk E-mail, to the Inbox, unless the account's own server says it failed its checks
+    /// ([`crate::auth_results::failed_check`]). The move is noted for the server as the owner's own is.
     /// Whether it moved. Never in a shared mailbox, and the callers sort only new mail of a folder
     /// read whole once ([`Folder::read_whole`], Graph's [`ServerFolder::round_ended`]), never a first download:
     /// mail that was here before (or before a list changed) stays where it is.
@@ -2765,7 +2769,11 @@ impl Mailbox {
         let Some(kind) = self.folder(m.folder).map(|f| f.kind) else { return false };
         let to = match (kind, lists.verdict(&m.from.email)) {
             (FolderKind::Inbox, Some(crate::JunkList::Blocked)) => FolderKind::Junk,
-            (FolderKind::Junk, Some(crate::JunkList::Safe)) => FolderKind::Inbox,
+            // The `From:` is the sender's word: a safe sender's mail leaves Junk E-mail only when
+            // the account's own server doesn't say it failed its checks.
+            (FolderKind::Junk, Some(crate::JunkList::Safe)) if crate::auth_results::failed_check(self.account(m.account), m).is_none() => {
+                FolderKind::Inbox
+            }
             _ => return false,
         };
         // The lists are the owner's: a shared mailbox's mail is other people's too, and stays
@@ -3522,9 +3530,22 @@ impl Mailbox {
             n
         }
         let next = &mut self.next_id;
-        let rehomed =
-            rehome(&mut self.messages, next) + rehome(&mut self.contacts, next) + rehome(&mut self.events, next) + rehome(&mut self.tasks, next);
-        let rekeyed = rekey(&mut self.messages, |m| &mut m.id)
+        // (The messages as the others, in their own map: only what is changed is written.)
+        let big: Vec<Id> = self.messages.range(MAX_ID + 1..).map(|(k, _)| *k).collect();
+        for k in &big {
+            if let Some(v) = self.messages.remove(k) {
+                self.messages.insert(*next, v);
+                *next += 1;
+            }
+        }
+        let rehomed = big.len() + rehome(&mut self.contacts, next) + rehome(&mut self.events, next) + rehome(&mut self.tasks, next);
+        let misnamed: Vec<Id> = self.messages.iter().filter(|(k, m)| m.id != **k).map(|(k, _)| *k).collect();
+        for k in &misnamed {
+            if let Some(m) = self.messages.get_mut(k) {
+                Arc::make_mut(m).id = *k;
+            }
+        }
+        let rekeyed = misnamed.len()
             + rekey(&mut self.contacts, |c| &mut c.id)
             + rekey(&mut self.events, |e| &mut e.id)
             + rekey(&mut self.tasks, |t| &mut t.id);
@@ -3669,11 +3690,17 @@ impl Mailbox {
         let folder_account: BTreeMap<Id, Id> = self.folders.iter().map(|f| (f.id, f.account)).collect();
         let fallback = self.inbox();
         let mut homeless = Vec::new();
-        for (id, m) in &mut self.messages {
+        let mut rehoused = Vec::new();
+        for (id, m) in &self.messages {
             match folder_account.get(&m.folder) {
                 Some(a) if *a == m.account => {}
-                Some(a) => Arc::make_mut(m).account = *a,
+                Some(a) => rehoused.push((*id, *a)),
                 None => homeless.push(*id),
+            }
+        }
+        for (id, account) in rehoused {
+            if let Some(m) = self.messages.get_mut(&id) {
+                Arc::make_mut(m).account = account;
             }
         }
         if !homeless.is_empty() {

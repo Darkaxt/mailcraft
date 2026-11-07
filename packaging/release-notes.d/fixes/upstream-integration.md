@@ -1,0 +1,1 @@
+- Preserve lazy headless mail checks and manual-only Microsoft To Do setup when integrating upstream improvements. Deferred rule content fetches respect queued mail and locally edited drafts.

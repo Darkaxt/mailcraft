@@ -18,9 +18,12 @@ pub mod dav;
 mod ews_server;
 mod jmap_server;
 mod junk;
-mod load_limit;
+pub mod load_limit;
 mod mailbox;
 mod message;
+pub mod messages;
+#[cfg(test)]
+mod messages_tests;
 mod offline;
 pub mod pictures;
 pub mod pop;
@@ -34,6 +37,7 @@ mod rule_lifecycle;
 mod rule_text;
 pub mod search;
 pub mod sender_warnings;
+pub mod shown;
 pub mod signature;
 pub mod simple_login;
 #[cfg(test)]
@@ -68,6 +72,7 @@ pub use message::{
     Answers, Attachment, Body, ContentRef, FlagStatus, Importance, KeptBody, MAX_HIDDEN_TEXT, Message, NOT_DOWNLOADED, NOT_DOWNLOADED_NOTE,
     PREVIEW_CHARS, RETURNED_LISTINGS, RuleProcessing, normalize_subject, size_label, size_label_in, text_hash,
 };
+pub use messages::Messages;
 pub use offline::{KeepOffline, OfflineWindow};
 pub use remote::{AccountChoice, Origin};
 pub use rich::{RichBody, RichText};
@@ -151,6 +156,8 @@ mod account_categories_tests;
 #[cfg(test)]
 mod account_order_tests;
 #[cfg(test)]
+mod auth_results_tests;
+#[cfg(test)]
 mod auto_replies_tests;
 #[cfg(test)]
 mod calendar_rights_tests;
@@ -158,6 +165,8 @@ mod calendar_rights_tests;
 mod hidden_text_tests;
 #[cfg(test)]
 mod junk_tests;
+#[cfg(test)]
+mod load_limit_tests;
 #[cfg(test)]
 mod mailbox_tests;
 #[cfg(test)]
@@ -182,6 +191,8 @@ mod search_suggest_tests;
 mod search_tests;
 #[cfg(test)]
 mod sender_warnings_tests;
+#[cfg(test)]
+mod shown_tests;
 #[cfg(test)]
 mod well_known_folder_tests;
 

@@ -101,7 +101,9 @@ pub(crate) fn fetch_queue(mb: &Mailbox, account: Id, most: usize, passed_over: &
         .messages
         .values()
         .map(Arc::as_ref)
-        .filter(|message| message.account == account && message.rules_wait_for_content() && message.unfetched && !message.incomplete)
+        .filter(|message| {
+            message.account == account && message.rules_wait_for_content() && super::graph_down::still_to_fetch(mb, message) && !message.incomplete
+        })
         .filter(|message| {
             message.server.as_ref().is_some_and(|server| {
                 !server.gone
@@ -125,7 +127,7 @@ pub(crate) fn fetch_queue(mb: &Mailbox, account: Id, most: usize, passed_over: &
         newest
             .into_iter()
             .take(BACKGROUND_NEWEST)
-            .filter(|m| m.unfetched && !m.incomplete)
+            .filter(|m| super::graph_down::still_to_fetch(mb, m) && !m.incomplete)
             .filter_map(|m| m.server.as_ref())
             .filter(|s| limit.is_none_or(|limit| s.size <= limit) && !passed_over.contains(&(account, s.id.clone())))
             .filter(|server| !selected.contains(&server.id))

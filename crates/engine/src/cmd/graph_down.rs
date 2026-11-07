@@ -413,7 +413,7 @@ pub fn fetch_queue_passing_over(mb: &Mailbox, account: Id, most: usize, now: Tim
     let mut out: Vec<String> = mb
         .messages
         .values()
-        .filter(|m| m.unfetched && !m.incomplete)
+        .filter(|m| still_to_fetch(mb, m) && !m.incomplete)
         .filter_map(|m| m.moving_out.as_ref().filter(|out| out.account == account && !skip(&out.id)).map(|out| out.id.clone()))
         .take(most)
         .collect();
@@ -427,7 +427,7 @@ fn fetch_queue_of_account(mb: &Mailbox, account: Id, most: usize, now: Timestamp
     let mut waiting: Vec<(i64, &str)> = mb
         .messages
         .values()
-        .filter(|m| m.account == account && m.unfetched && (m.rules_wait_for_content() || window.within(m)))
+        .filter(|m| m.account == account && still_to_fetch(mb, m) && (m.rules_wait_for_content() || window.within(m)))
         .filter_map(|m| {
             m.server.as_ref().filter(|s| !s.gone && limit.is_none_or(|limit| s.size <= limit) && !skip(&s.id)).map(|s| (m.received, s.id.as_str()))
         })
@@ -471,7 +471,7 @@ pub fn full_counts(mb: &Mailbox, account: Id, now: Timestamp) -> FullCounts {
         .filter(|m| m.account == account && (m.server.is_some() || m.unfetched) && (m.rules_wait_for_content() || window.within(m)))
     {
         counts.all = counts.all.saturating_add(1);
-        if m.unfetched {
+        if still_to_fetch(mb, m) {
             let size = m.server.as_ref().map_or(0, |s| s.size);
             counts.waiting = counts.waiting.saturating_add(1);
             counts.large = counts.large.saturating_add(usize::from(limit.is_some_and(|limit| size > limit)));
@@ -490,6 +490,12 @@ pub fn take_fetched(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, id: 
 /// [`take_fetched`], answering which message it was.
 pub fn take_fetched_as(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, id: &str, mime: &[u8]) -> Option<Id> {
     let here = index.find(mb, account, id).or_else(|| moving_out(mb, account, id))?;
+    // Only while it is still what it was when it was asked for (AU3-16): headers only, no change
+    // of the owner's waiting to go up, not queued to be sent. An answer that comes after it was
+    // fetched another way, edited or sent is dropped, so that it never undoes what was done here.
+    if !mb.message(here).is_some_and(|m| still_to_fetch(mb, m)) {
+        return None;
+    }
     let read = crate::mime::parse(mime);
     let m = mb.message_mut(here).ok()?;
     m.message_id = read.message_id;
@@ -515,7 +521,11 @@ pub fn take_fetched_as(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, i
     m.body = read.body;
     m.hidden_text = read.hidden_text;
     m.attachments = read.attachments;
-    m.headers = read.headers;
+    (m.headers, m.fresh_stamps) = (read.headers, read.fresh_stamps);
+    // Fetched to go on to another account's server: this server's stamps stay behind (#781).
+    if m.account != account {
+        mailcraft_model::auth_results::forget_stamps(m);
+    }
     // What it is now is all of it: nothing the mailbox kept on disk of its preview is its body.
     m.kept = None;
     m.unfetched = false;
@@ -542,6 +552,15 @@ pub fn take_fetched_as(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, i
         mb.apply_rules(here);
     }
     Some(here)
+}
+
+/// Whether `m` is one to fetch whole, and may take what was fetched: it is still only its headers
+/// here, has no change of the owner's waiting to go up, and isn't in an Outbox. Only such a message
+/// is asked for, so that one whose answer would be dropped is never asked for again and again.
+pub(crate) fn still_to_fetch(mb: &Mailbox, m: &Message) -> bool {
+    let queued = mb.folder(m.folder).is_some_and(|f| f.kind == FolderKind::Outbox);
+    let edited = m.server_draft.as_ref().is_some_and(|d| d.pending);
+    m.unfetched && !edited && !queued
 }
 
 /// Back to its headers and `preview` (#143): what [`take_fetched`] brought in goes, and the
