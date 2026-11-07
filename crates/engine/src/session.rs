@@ -2993,16 +2993,12 @@ impl Session {
         (taken, gone)
     }
 
-    /// What undoing (`redo`: redoing) would put back besides mail and the like: the accounts, or
-    /// the rules and signatures, as they were; or a draft, taken away or as it was before. For
-    /// the agent gate, which asks the owner first.
+    /// The protected effect of undoing (`redo`: redoing): sending, deleting content or
+    /// restoring a deleting rule. Reversible account and signature metadata need no grant.
     pub fn undo_reverts(&self, redo: bool) -> Option<crate::agent::Class> {
         use crate::agent::Class;
         let step = if redo { self.redo.last() } else { self.history.last() }?;
         let (to, now) = (&step.mailbox, &self.mailbox);
-        if to.accounts != now.accounts {
-            return Some(Class::Accounts);
-        }
         // A send-bearing change to an event that the mailbox hasn't got: the step brings it back.
         let same = |a: &mailcraft_model::remote::EventChange, b: &mailcraft_model::remote::EventChange| {
             b.send && a.account == b.account && a.kind == b.kind && a.event == b.event && a.token == b.token
@@ -3014,9 +3010,8 @@ impl Session {
         if crate::agent::changes_shared_tasks(now, to) {
             return Some(Class::Send);
         }
-        // A to-do the step puts in an account's To Do, or the owner's answer about local to-dos.
-        if crate::agent::places_tasks(now, to) {
-            return Some(Class::Send);
+        if !self.undo_trusted_servers(redo).is_empty() {
+            return Some(Class::Accounts);
         }
         if self.undo_deletes(redo) {
             return Some(Class::Delete);
@@ -3033,10 +3028,18 @@ impl Session {
         {
             return Some(Class::Delete);
         }
-        if to.signatures != now.signatures || to.junk != now.junk || to.junk_accounts != now.junk_accounts {
-            return Some(Class::Settings);
-        }
         None
+    }
+
+    /// Credential trust an undo would grant, named fully for its consent binding.
+    pub(crate) fn undo_trusted_servers(&self, redo: bool) -> Vec<String> {
+        let Some(step) = (if redo { self.redo.last() } else { self.history.last() }) else { return Vec::new() };
+        step.mailbox
+            .accounts
+            .iter()
+            .filter(|next| crate::agent::trusts_new_certificate(self.mailbox.account(next.id), next))
+            .map(|next| format!("{} ({})", next.email, crate::cmd::account::servers_text(next)))
+            .collect()
     }
 
     /// Whether undoing the last step (or redoing, `redo`) would take away contacts, events, tasks,
@@ -3175,6 +3178,9 @@ impl Session {
             self.threads_may_change();
         }
         let compose = self.compose.clone();
+        // New/Open changes the active view, not the saved file's contents.
+        // The command settles a followed writer before replacing, or refuses.
+        let saved_replacement = matches!(id, "file.new" | "file.open") && !crate::agent::replacement_loses_changes(self);
         let composing = self.composing.clone();
         let signature_edit = self.signature_edit.clone();
         let view = self.view.clone();
@@ -3246,7 +3252,7 @@ impl Session {
             (Ok(_), Some(_)) if changes_owners_message(compose.as_ref(), self.compose.as_ref()) => Err(CmdError::Failed(format!(
                 "`{id}` would change the message the owner is writing, which is theirs until they close it; nothing was changed. Ask the owner to make the change, or to close the message first"
             ))),
-            (Ok(_), Some(allow)) if let Some(c) = crate::agent::overstep(&before.mailbox, &self.mailbox, allow) => {
+            (Ok(_), Some(allow)) if let Some(c) = crate::agent::overstep(&before.mailbox, &self.mailbox, allow, saved_replacement) => {
                 Err(CmdError::Failed(crate::agent::needs_owner(id, c, false, "do more than an agent is allowed to; nothing was changed")))
             }
             (r, _) => r,

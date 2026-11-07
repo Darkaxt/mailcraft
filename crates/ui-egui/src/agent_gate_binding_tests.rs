@@ -376,7 +376,14 @@ fn a_yes_reaches_nothing_but_what_the_question_showed_for_every_command() {
             a.execute(command, p).unwrap();
         }
         set_up(&mut a, setup, &i);
-        let (now, rx) = agent(&mut a, &id, params(&text, &i));
+        let p = params(&text, &i);
+        let (now, rx) = agent(&mut a, &id, p.clone());
+        // Binding entries can be conditional: a reversible use of the same
+        // command now runs without an owner question. Destructive forms still
+        // exercise the original stale-question checks below.
+        if matches!(agent::classify(&a.session, &id, &p), Access::Safe) && now.is_some() && a.asking.is_empty() {
+            continue;
+        }
         if now.is_some() || a.asking.is_empty() {
             not_asked.push(format!("{id}: {now:?}"));
             continue;
@@ -393,6 +400,36 @@ fn a_yes_reaches_nothing_but_what_the_question_showed_for_every_command() {
     }
     assert!(not_asked.is_empty(), "these weren't asked about in the sample (give them params or a setup): {not_asked:#?}");
     assert!(reached.is_empty(), "a yes reached what the question didn't show: {reached:#?}");
+}
+
+#[test]
+fn closing_a_read_only_message_window_needs_no_owner_consent() {
+    let mut a = app();
+    let i = ids(&a);
+    a.execute("ui.openWindow", json!({"message": i.message})).unwrap();
+    let (now, _) = agent(&mut a, "ui.closeWindow", json!({"message": i.message}));
+    let answer = now.expect("a reversible close completes without a question");
+    assert_eq!(answer["ok"], true, "{answer}");
+    assert!(a.asking.is_empty());
+    assert_eq!(a.windows.len(), 0);
+}
+
+#[test]
+fn signature_discard_consent_is_bound_to_the_unsaved_text() {
+    let mut a = app();
+    a.execute("signature.set", json!({"name": "Policy fixture", "text": "Saved"})).unwrap();
+    a.execute("signature.open", json!({"name": "Policy fixture"})).unwrap();
+    a.execute("compose.type", json!({"text": "First edit"})).unwrap();
+    let (now, rx) = agent(&mut a, "signature.close", json!({"discard": true}));
+    assert!(now.is_none());
+    assert_eq!(a.asking.len(), 1);
+    a.execute("compose.type", json!({"text": "Later typing"})).unwrap();
+    let before = a.session.signature_edit.clone();
+    answer(&mut a, true);
+    let result = rx.try_recv().unwrap();
+    assert_eq!(result["ok"], false, "{result}");
+    assert!(result["error"].as_str().unwrap().contains("changed since the owner was asked"));
+    assert_eq!(a.session.signature_edit, before);
 }
 
 #[test]
@@ -489,16 +526,16 @@ fn a_contact_deleted_from_the_selection_is_the_one_shown_or_none() {
 }
 
 #[test]
-fn a_sender_put_on_the_safe_senders_is_the_one_shown() {
+fn a_sender_put_on_the_safe_senders_is_applied_without_a_prompt() {
     let mut a = app();
     let i = ids(&a);
     a.execute("mail.select", json!({"id": i.message})).unwrap();
-    let (_, rx) = agent(&mut a, "junk.neverBlockSender", json!({}));
+    let (now, _) = agent(&mut a, "junk.neverBlockSender", json!({}));
+    assert_eq!(now.unwrap()["ok"], true);
+    assert!(a.asking.is_empty());
+    let before = a.session.mailbox.junk_accounts.clone();
     agent(&mut a, "mail.select", json!({"id": i.other}));
-    let before = a.session.mailbox.clone();
-    answer(&mut a, true);
-    assert_eq!(rx.try_recv().unwrap()["ok"], false);
-    assert!(a.session.mailbox == before, "no list changed");
+    assert_eq!(a.session.mailbox.junk_accounts, before, "later selection cannot retarget the completed edit");
 }
 
 #[test]

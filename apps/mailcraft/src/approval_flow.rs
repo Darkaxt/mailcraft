@@ -111,6 +111,65 @@ fn approval_request(tenant: &str, cancel: &Arc<AtomicBool>) -> AdminConsentReque
 }
 
 #[test]
+fn headless_explicit_rules_request_reaches_the_provider_page_without_granting_consent() {
+    let opened = Opened::default();
+    let cancel = Arc::new(AtomicBool::new(false));
+    let request = SignInRequest { account: 42, graph: true, rules: true, mail_write: true, ..sign_in_request(&cancel) };
+    // The existing real OAuth callback parser receives an invented refusal over
+    // loopback. No browser, token exchange, real account or outbound network.
+    let needs = page("error=access_denied&error_description=AADSTS90094%3A+Administrator+consent+is+required.", &opened);
+    assert_eq!(super::sign_in_for_runtime(request, true, &needs), Err(NEEDS_APPROVAL.to_string()));
+    let pages = opened.lock().unwrap();
+    assert_eq!(pages.len(), 1);
+    let sent = asked(&pages[0]);
+    assert!(sent["scope"].contains("MailboxSettings.ReadWrite"));
+    assert!(!sent["scope"].contains("Tasks.ReadWrite"));
+    assert!(sent["redirect_uri"].starts_with("http://localhost:"));
+}
+
+#[test]
+fn headless_background_and_other_authorization_purposes_never_open_a_provider_page() {
+    for purpose in [
+        "ordinary",
+        "quiet",
+        "newAccount",
+        "refresh",
+        "tasks",
+        "favorites",
+        "shared",
+        "sharedSend",
+        "sharedCalendars",
+        "replies",
+        "mailOnly",
+        "google",
+    ] {
+        let opened = Opened::default();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let mut request = SignInRequest { account: 42, graph: true, rules: true, ..sign_in_request(&cancel) };
+        match purpose {
+            "quiet" => request.quiet = true,
+            "newAccount" => request.account = 0,
+            "refresh" => request.refresh = "synthetic-refresh".into(),
+            "tasks" => request.tasks = true,
+            "favorites" => request.favorites = true,
+            "shared" => request.shared = true,
+            "sharedSend" => request.shared_send = true,
+            "sharedCalendars" => request.shared_calendars = true,
+            "replies" => request.replies = true,
+            "mailOnly" => request.mail_only = true,
+            "google" => request.oauth.provider = OAuthProvider::Google,
+            _ => {
+                assert_eq!(purpose, "ordinary", "unknown synthetic authorization purpose");
+                request.rules = false;
+            }
+        }
+        let needs = page("error=access_denied&error_description=AADSTS90094%3A+Administrator+consent+is+required.", &opened);
+        assert!(super::sign_in_for_runtime(request, true, &needs).is_err(), "{purpose}");
+        assert!(opened.lock().unwrap().is_empty(), "{purpose} must remain noninteractive");
+    }
+}
+
+#[test]
 fn a_sign_in_that_ends_on_microsofts_page_is_told_to_the_window_in_its_own_words() {
     let opened = Opened::default();
     let free = || Arc::new(AtomicBool::new(false));

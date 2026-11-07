@@ -70,9 +70,42 @@ fn new(s: &mut Session, v: &Value) -> CmdResult {
     settle(s)?;
     let mailbox =
         if p::bool(v, "sample") == Some(true) { crate::sample::mailbox(s.now(), s.offset_at(s.now())) } else { Mailbox::with_local_account("", "") };
-    s.replace_mailbox(mailbox);
+    replace(s, mailbox, "file.new")?;
     s.path = None;
     Ok(json!({"sample": p::bool(v, "sample") == Some(true)}))
+}
+
+/// Check replacement effects before clearing the current path, history or
+/// native state. A refused candidate must leave the original mailbox bound.
+fn replace(s: &mut Session, mailbox: Mailbox, id: &str) -> Result<(), crate::CmdError> {
+    if let Some(allow) = &s.agent
+        && !allow.contains(&crate::agent::Class::Delete)
+        && has_deleting_rules(&mailbox)
+    {
+        return Err(fail(crate::agent::needs_owner(
+            id,
+            crate::agent::Class::Delete,
+            false,
+            "activate rules that can delete mail; nothing was changed",
+        )));
+    }
+    if let Some(allow) = &s.agent
+        && let Some(class) = crate::agent::overstep(&s.mailbox, &mailbox, allow, !crate::agent::replacement_loses_changes(s))
+    {
+        return Err(fail(crate::agent::needs_owner(id, class, false, "replace the mailbox with protected effects; nothing was changed")));
+    }
+    s.replace_mailbox(mailbox);
+    Ok(())
+}
+
+fn has_deleting_rules(mailbox: &Mailbox) -> bool {
+    mailbox.rules.iter().any(|rule| rule.enabled && crate::agent::rule_can_delete_mail(mailbox, rule))
+}
+
+/// Read the same incoming payload as Open, without activating it or changing
+/// the current mailbox. Its enabled deleting rules need destructive consent.
+pub(crate) fn deleting_rules_in(v: &Value) -> bool {
+    read(v).is_ok_and(|(mailbox, _)| has_deleting_rules(&mailbox))
 }
 
 /// What opening a mailbox file left out, for `file.open` to say.
@@ -178,7 +211,7 @@ fn open(s: &mut Session, v: &Value) -> CmdResult {
     // First, so that opening the file the mailbox is kept in reads what was just written.
     settle(s)?;
     let (mailbox, left) = read(v)?;
-    s.replace_mailbox(mailbox);
+    replace(s, mailbox, "file.open")?;
     // Only a real file is a place to save back to.
     s.path = if v.get("data").is_some() { None } else { p::str(v, "path").map(Into::into) };
     let after = after_opening(s);

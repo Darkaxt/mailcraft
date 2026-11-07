@@ -352,11 +352,12 @@ fn a_question_that_goes_away_counts_as_not_now() {
 }
 
 #[test]
-fn a_programmatic_call_does_not_open_the_question_or_answer_it() {
+fn private_task_placement_is_available_without_enabling_sync_or_opening_a_question() {
     let (app, _, _, _) = first_look_with_local_tasks();
-    // An agent is not let through to answer it.
-    assert_eq!(mailcraft_engine::agent::access("tasks.sendLocal"), Some(mailcraft_engine::agent::Access::Never));
+    // Explicit placement is prompt-free; merely discovering it changes nothing.
+    assert_eq!(mailcraft_engine::agent::access("tasks.sendLocal"), Some(mailcraft_engine::agent::Access::Safe));
     assert_eq!(app.session.mailbox.local_tasks, mailcraft_model::LocalTasks::Unasked);
+    assert!(app.dialog.is_none());
 }
 
 /// Allowed on Microsoft's page, then refused for a while all the same, as a permission given a

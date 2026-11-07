@@ -329,10 +329,10 @@ fn an_account_that_goes_takes_its_choice_with_it() {
 }
 
 #[test]
-fn an_agent_is_asked_before_a_task_goes_to_an_account() {
+fn private_task_placement_needs_no_extra_account_prompt() {
     let (mut s, work, home) = session();
     run(&mut s, "tasks.sendLocal", json!({"account": null}));
-    let ask = Access::Owner(Class::Send);
+    let ask = Access::Safe;
     let new_in = |account: Value| json!({"title": "From an agent", "account": account});
     assert_eq!(classify(&s, "tasks.new", &new_in(json!(home))), ask);
     assert_eq!(classify(&s, "tasks.new", &new_in(json!(0))), Access::Safe);
@@ -356,10 +356,10 @@ fn an_agent_is_asked_before_a_task_goes_to_an_account() {
 }
 
 #[test]
-fn an_agent_is_asked_however_it_names_the_message() {
+fn private_task_placement_still_validates_named_messages() {
     let (mut s, work, home) = session();
     run(&mut s, "tasks.sendLocal", json!({"account": work}));
-    let ask = Access::Owner(Class::Send);
+    let ask = Access::Safe;
     let mut ids = s.mailbox.messages.keys().copied();
     let (message, other) = (ids.next().unwrap(), ids.next().unwrap());
     s.mailbox.message_mut(message).unwrap().account = home;
@@ -388,9 +388,9 @@ fn an_agent_is_asked_however_it_names_the_message() {
 }
 
 #[test]
-fn an_agent_is_asked_before_a_redo_puts_a_task_on_an_account() {
+fn private_task_placement_undo_and_redo_need_no_extra_prompt() {
     let (mut s, work, home) = session();
-    let ask = Access::Owner(Class::Send);
+    let ask = Access::Safe;
     // The owner's answer, which they took back: only they give it.
     run(&mut s, "tasks.sendLocal", json!({"account": work}));
     assert!(s.undo());
@@ -409,9 +409,9 @@ fn an_agent_is_asked_before_a_redo_puts_a_task_on_an_account() {
 }
 
 #[test]
-fn an_agent_gets_no_further_by_moving_the_list() {
+fn private_task_placement_remains_prompt_free_when_the_list_changes() {
     let (mut s, _, home) = session();
-    let ask = Access::Owner(Class::Send);
+    let ask = Access::Safe;
     assert_eq!(classify(&s, "view.taskAccount", &json!({"value": home})), Access::Safe);
     run(&mut s, "view.taskAccount", json!({"value": home}));
     assert_eq!(classify(&s, "tasks.new", &json!({"title": "From an agent"})), ask);

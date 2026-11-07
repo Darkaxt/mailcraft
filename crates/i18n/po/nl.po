@@ -2018,7 +2018,7 @@ msgid "Calibri"
 msgstr "Calibri"
 
 #. interface
-#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs
 #, fuzzy
 msgid "Cancel"
 msgstr "Annuleren"
@@ -3325,7 +3325,7 @@ msgid "Disabled until repaired: {why}"
 msgstr ""
 
 #. command label, interface, ribbon
-#: crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/compose.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Discard"
 msgstr "Verwerpen"
@@ -4443,7 +4443,7 @@ msgid "For an account that signs in with Microsoft: the folders you keep under F
 msgstr "Voor een account dat zich aanmeldt met Microsoft: de mappen die u onder favorieten in Outlook bewaart, in dezelfde volgorde. Ze worden van de server gelezen en daar nooit gewijzigd. Zonder dit worden de favorieten getoond die u in MailCraft markeert."
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/ews_setup.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Vergeten"
@@ -15950,6 +15950,11 @@ msgstr "is geen map: ongemoeid gelaten"
 
 #. name
 #: crates/engine/src/agent.rs
+msgid "it authorizes credential use or server trust"
+msgstr ""
+
+#. name
+#: crates/engine/src/agent.rs
 msgid "it can delete messages or other items"
 msgstr ""
 
@@ -15958,12 +15963,6 @@ msgstr ""
 #, fuzzy
 msgid "it can't take it"
 msgstr "het kan het niet aannemen"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it changes an account or a sign-in"
-msgstr "het wijzigt een account of een aanmelding"
 
 #. name
 #: crates/engine/src/agent.rs
@@ -16044,6 +16043,11 @@ msgid "it opens, replaces or saves the mailbox file"
 msgstr "het opent, vervangt of slaat het postvakbestand op"
 
 #. name
+#: crates/engine/src/agent.rs
+msgid "it sends to or shares changes with other people"
+msgstr ""
+
+#. name
 #: crates/engine/src/cmd/rules.rs
 #, fuzzy
 msgid "it sets more than one importance"
@@ -16066,12 +16070,6 @@ msgstr "het haalt het venster weg bij het bericht dat de eigenaar aan het schrij
 #, fuzzy
 msgid "it took too long"
 msgstr "het duurde te lang"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it writes to other people or reaches out to the web"
-msgstr "het schrijft naar andere mensen of benadert het web"
 
 #. interface
 #: crates/ui-egui/src/opened_message.rs
@@ -18762,6 +18760,14 @@ msgstr "„{subject}” was te groot om te downloaden: alleen de koptekst is hie
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” is niet op de server gevonden, dus het kan niet als bijlage worden doorgestuurd"
+
+#, fuzzy
+#~ msgid "it changes an account or a sign-in"
+#~ msgstr "het wijzigt een account of een aanmelding"
+
+#, fuzzy
+#~ msgid "it writes to other people or reaches out to the web"
+#~ msgstr "het schrijft naar andere mensen of benadert het web"
 
 #, fuzzy
 #~ msgid "it deletes for good"

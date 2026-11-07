@@ -40,6 +40,50 @@ fn headless_logic_does_not_warm_the_desktop_conversation_cache() {
 }
 
 #[test]
+fn headless_reads_and_reversible_settings_edits_need_no_owner_question() {
+    let mut app = MailApp::new(Session::new(mailcraft_engine::sample::mailbox(0, 0)), Services::default());
+    app.start_headless();
+    app.autosave = false;
+    for command in ["junk.list", "file.options"] {
+        let answer = request(&mut app, "engine.execute", json!({"command": command, "params": {}}));
+        assert_eq!(answer["ok"], true, "{answer}");
+    }
+    let before = app.ui.theme.code().to_string();
+    for value in ["dark", "light", before.as_str()] {
+        let answer = request(&mut app, "engine.execute", json!({"command": "ui.theme", "params": {"value": value}}));
+        assert_eq!(answer["ok"], true, "{answer}");
+        assert_eq!(app.ui.theme.code(), value);
+    }
+    let account = app.session.mailbox.accounts[0].id;
+    let before = app.session.mailbox.account(account).unwrap().name.clone();
+    let answer = request(&mut app, "engine.execute", json!({"command": "account.edit", "params": {"id": account, "name": "Personal"}}));
+    assert_eq!(answer["ok"], true, "{answer}");
+    let answer = request(&mut app, "engine.execute", json!({"command": "edit.undo", "params": {}}));
+    assert_eq!(answer["ok"], true, "{answer}");
+    assert_eq!(app.session.mailbox.account(account).unwrap().name, before);
+    assert!(app.dialog.is_none());
+    assert!(app.asking.is_empty());
+    assert!(app.is_headless());
+}
+
+#[test]
+fn headless_remembering_is_prompt_free_but_forgetting_credentials_is_not() {
+    let mut app = MailApp::new(Session::new(mailcraft_engine::sample::mailbox(0, 0)), Services::default());
+    app.start_headless();
+    app.autosave = false;
+    app.ui.remember_sign_in = false;
+    let answer = request(&mut app, "engine.execute", json!({"command": "ui.rememberSignIn", "params": {}}));
+    assert_eq!(answer["ok"], true, "{answer}");
+    assert!(app.ui.remember_sign_in);
+    let answer = request(&mut app, "engine.execute", json!({"command": "ui.rememberSignIn", "params": {}}));
+    assert_eq!(answer["ok"], false, "{answer}");
+    assert!(answer["error"].as_str().unwrap().contains("owner interaction required"));
+    assert!(app.ui.remember_sign_in, "no credential-forgetting operation ran");
+    assert!(app.asking.is_empty());
+    assert!(app.dialog.is_none());
+}
+
+#[test]
 fn headless_refuses_ui_and_owner_questions_instead_of_waiting() {
     let mut app = MailApp::new(Session::new(mailcraft_engine::sample::mailbox(0, 0)), Services::default());
     app.start_headless();

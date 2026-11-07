@@ -240,12 +240,12 @@ fn a_new_kind_of_warning_brings_the_banner_back() {
 }
 
 #[test]
-fn an_agent_may_not_hide_a_warning() {
-    use crate::agent::{Access, Class, Verdict, access, check};
-    assert_eq!(access("mail.dismissWarnings"), Some(Access::Owner(Class::Settings)));
+fn an_agent_can_reversibly_dismiss_a_warning_without_a_settings_prompt() {
+    use crate::agent::{Access, Verdict, access, check};
+    assert_eq!(access("mail.dismissWarnings"), Some(Access::Safe));
     let (s, _) = imap(vec![mail("Lin", "lin@harborwork.example", "Odd")]);
     let params = json!({"ids": [id_of(&s, "Odd")]});
-    assert!(matches!(check(&s, "mail.dismissWarnings", &params, &[]), Verdict::Ask(Class::Settings, _)));
+    assert_eq!(check(&s, "mail.dismissWarnings", &params, &[]), Verdict::Run);
 }
 
 /// Whoever mail in Sent Items went to is known while that mail is there: moved in, moved out,

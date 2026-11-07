@@ -108,7 +108,24 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
     if id == "ui.requestRulesPermission" && app.dialog.is_some() {
         return err("an owner question or dialog is open");
     }
-    if app.is_headless() && id.starts_with("ui.") && !matches!(id, "ui.sync" | "ui.cancelSync" | "ui.closeDialog" | "ui.requestRulesPermission") {
+    if app.is_headless()
+        && id.starts_with("ui.")
+        && !matches!(
+            id,
+            "ui.sync"
+                | "ui.cancelSync"
+                | "ui.closeDialog"
+                | "ui.requestRulesPermission"
+                | "ui.theme"
+                | "ui.highContrast"
+                | "ui.accent"
+                | "ui.language"
+                | "ui.interfaceSize"
+                | "ui.microsoftClientId"
+                | "ui.googleClientId"
+                | "ui.rememberSignIn"
+        )
+    {
         return err("this action needs the desktop; headless mode never opens a window or grants owner consent");
     }
     // The question names the people the window would write to, as the form has them now.
@@ -168,6 +185,13 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
 /// own that `ui.closeWindow` closes, that another mailbox in view (`file.new`, `file.open`)
 /// closes, or that closes with its appointment when that is taken away.
 fn as_the_window_has_it(app: &MailApp, id: &str, mut params: Value) -> Value {
+    if id == "ui.rememberSignIn" {
+        let value = params.get("value").and_then(Value::as_bool).unwrap_or(!app.ui.remember_sign_in);
+        if !params.is_object() {
+            params = json!({});
+        }
+        params["value"] = json!(value);
+    }
     let removes = matches!(id, "calendar.delete" | "calendar.removeCalendar" | "edit.undo" | "edit.redo");
     if !removes && !matches!(id, "ui.closeDialog" | "ui.dialog" | "ui.closeWindow" | "file.new" | "file.open") {
         if let Some(fields) = params.as_object_mut() {
@@ -424,6 +448,12 @@ pub fn expire(app: &mut MailApp, now: f64) {
 pub(crate) fn verbs(class: Class, id: &str) -> (&'static str, &'static str) {
     match class {
         Class::Send => (tl!("Send"), tl!("Don't Send")),
+        Class::Delete if id == "ui.rememberSignIn" => (tl!("Forget"), tl!("Cancel")),
+        Class::Delete
+            if matches!(id, "signature.close" | "compose.discard" | "file.new" | "file.open" | "ui.closeWindow" | "ui.closeDialog" | "ui.dialog") =>
+        {
+            (tl!("Discard"), tl!("Cancel"))
+        }
         Class::Delete if matches!(id, "rules.add" | "rules.edit" | "rules.keepOnServer" | "rules.enable" | "rules.move") => {
             (tl!("Allow"), tl!("Don't Allow"))
         }
@@ -538,7 +568,7 @@ mod tests {
     fn every_window_command_has_a_class() {
         let missing: Vec<&str> = crate::UI_COMMANDS.iter().map(|c| c.0).filter(|id| agent::access(id).is_none()).collect();
         assert!(missing.is_empty(), "classify these for agents in crates/engine/src/agent.rs: {missing:?}");
-        assert_eq!(agent::access("ui.googleClientId"), Some(mailcraft_engine::agent::Access::Never));
+        assert_eq!(agent::access("ui.googleClientId"), Some(mailcraft_engine::agent::Access::Safe));
         // The retired secret setter stays explicitly denied, but is no longer a window command.
         assert_eq!(agent::access("ui.googleClientSecret"), Some(mailcraft_engine::agent::Access::Never));
         assert!(!crate::UI_COMMANDS.iter().any(|command| command.0 == "ui.googleClientSecret"));

@@ -246,7 +246,7 @@ fn an_agent_closing_its_own_message_leaves_the_owners_alone() {
     let mine = open(&mut s, "Mine");
     let agents = as_agent(&mut s, "mail.new", json!({"subject": "The agent's"})).unwrap()["compose"].as_u64().unwrap();
     assert_eq!(crate::agent::classify(&s, "compose.close", &json!({"compose": agents})), crate::agent::Access::Safe);
-    assert_eq!(crate::agent::classify(&s, "compose.close", &json!({"compose": mine})), crate::agent::Access::Asked(crate::agent::Class::Leave));
+    assert_eq!(crate::agent::classify(&s, "compose.close", &json!({"compose": mine})), crate::agent::Access::Safe);
     as_agent(&mut s, "compose.close", json!({"compose": agents})).unwrap();
     assert_eq!(s.compose_id(), Some(mine));
     assert!(s.compose.as_ref().unwrap().owner_changed && s.compose.as_ref().unwrap().dirty);

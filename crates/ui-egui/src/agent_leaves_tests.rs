@@ -65,27 +65,17 @@ fn leaving(_: &MailApp) -> Vec<(&'static str, Value)> {
 }
 
 #[test]
-fn an_agent_waits_for_the_owners_yes_before_it_leaves_their_message() {
+fn an_agent_saves_and_closes_a_message_without_extra_consent() {
     let mut a = app();
     written(&mut a, "Mine");
     for (id, params) in leaving(&a) {
-        let before = (a.session.compose.clone(), a.session.mailbox.clone());
-        let (now, rx) = agent(&mut a, id, params.clone());
-        assert!(now.is_none(), "{id}: asked first");
-        let (class, what) = question(&a).unwrap();
-        assert_eq!(class, Class::Leave, "{id}");
-        assert!(what.contains("\u{201c}Mine\u{201d}") && what.contains("Drafts"), "{id}: {what}");
-        assert_eq!(a.session.compose, before.0, "{id}: nothing happens before the answer");
-        answer(&mut a, false);
-        assert_eq!(rx.try_recv().unwrap()["ok"], false, "{id}");
-        assert_eq!(a.session.compose, before.0, "{id}: no leaves the owner in their message");
-        assert!(a.session.mailbox == before.1, "{id}");
+        let (now, _) = agent(&mut a, id, params.clone());
+        assert_eq!(now.unwrap()["ok"], true, "{id}");
+        assert!(a.asking.is_empty());
     }
-    // Yes: it is saved to Drafts, and the agent's command goes on.
-    let (_, rx) = agent(&mut a, "compose.close", json!({}));
-    answer(&mut a, true);
-    assert_eq!(rx.try_recv().unwrap()["ok"], true);
     assert!(draft_with(&a, "Mine").is_some());
+    let draft = a.session.mailbox.message(draft_with(&a, "Mine").unwrap()).unwrap();
+    assert!(draft.body.text.contains("Half a thought"));
     assert!(a.session.compose.is_none());
 }
 
@@ -117,13 +107,11 @@ fn nothing_allowed_in_advance_takes_the_owners_message_without_their_yes() {
     for (id, params) in leaving(&a) {
         let mut discard = params.clone();
         discard["discard"] = json!(true);
-        for (params, class) in [(params, Class::Leave), (discard, Class::Delete)] {
-            let (now, _) = allowed(&mut a, id, params.clone(), everything.clone());
-            assert!(now.is_none(), "{id} {params}: asked even so");
-            assert_eq!(question(&a).unwrap().0, class, "{id} {params}");
-            answer(&mut a, false);
-            assert_eq!(a.session.compose.as_ref().map(|c| c.subject.as_str()), Some("Mine"), "{id} {params}");
-        }
+        let (now, _) = allowed(&mut a, id, discard.clone(), everything.clone());
+        assert!(now.is_none(), "{id} {discard}: asked even so");
+        assert_eq!(question(&a).unwrap().0, Class::Delete, "{id} {discard}");
+        answer(&mut a, false);
+        assert_eq!(a.session.compose.as_ref().map(|c| c.subject.as_str()), Some("Mine"), "{id} {discard}");
     }
     // The owner's yes in the window is what lets it go.
     let (_, rx) = allowed(&mut a, "compose.close", json!({"discard": true}), everything.clone());
@@ -226,7 +214,7 @@ fn what_the_dialog_holds_is_the_windows_to_say() {
 }
 
 #[test]
-fn a_message_the_owner_wrote_in_is_asked_about_saved_or_not() {
+fn a_saved_message_can_be_closed_without_extra_consent() {
     let everything = Class::ALL.to_vec();
     // Saved by the window as it does every few minutes, or by an agent first.
     for saves in ["window", "agent"] {
@@ -237,10 +225,10 @@ fn a_message_the_owner_wrote_in_is_asked_about_saved_or_not() {
             _ => assert_eq!(agent(&mut a, "compose.saveDraft", json!({})).0.unwrap()["ok"], true),
         }
         let (now, _) = allowed(&mut a, "compose.close", json!({}), everything.clone());
-        assert!(now.is_none(), "{saves}: asked");
-        assert_eq!(question(&a).unwrap().0, Class::Leave, "{saves}");
-        answer(&mut a, false);
-        assert_eq!(a.session.compose.as_ref().map(|c| c.subject.as_str()), Some("Mine"), "{saves}");
+        assert_eq!(now.unwrap()["ok"], true, "{saves}");
+        assert!(a.asking.is_empty());
+        assert!(a.session.compose.is_none());
+        assert!(draft_with(&a, "Mine").is_some());
     }
 }
 
@@ -364,7 +352,7 @@ fn another_mailbox_in_view_asks_before_it_closes_a_changed_appointments_window()
     let (now, rx) = allowed(w.state_mut(), "file.new", json!({}), everything);
     assert!(now.is_none(), "asked even so");
     let (class, what) = question(w.state()).unwrap();
-    assert_eq!(class, Class::Mailbox);
+    assert_eq!(class, Class::Delete);
     assert!(what.contains("(moved)\u{201d} is closed without saving the changes made in it"), "{what}");
     answer(w.state_mut(), false);
     assert_eq!(rx.try_recv().unwrap()["ok"], false);
@@ -728,13 +716,13 @@ fn an_undo_that_would_put_back_an_earlier_draft_of_the_owners_message_is_refused
 }
 
 #[test]
-fn an_agents_undo_doesnt_take_away_what_the_owners_yes_saved() {
+fn an_agents_undo_doesnt_take_away_the_prompt_free_close_saved_draft_without_consent() {
     let mut a = app();
     written(&mut a, "Mine");
-    let (_, rx) = agent(&mut a, "compose.close", json!({}));
-    answer(&mut a, true);
-    assert_eq!(rx.try_recv().unwrap()["ok"], true);
-    assert!(draft_with(&a, "Mine").is_some(), "saved on the owner's yes");
+    let (now, _) = agent(&mut a, "compose.close", json!({}));
+    assert_eq!(now.unwrap()["ok"], true);
+    assert!(a.asking.is_empty());
+    assert!(draft_with(&a, "Mine").is_some(), "saved without losing the owner's work");
     let (now, rx) = agent(&mut a, "edit.undo", json!({}));
     assert!(now.is_none(), "asked first");
     let (class, what) = question(&a).unwrap();

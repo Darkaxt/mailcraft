@@ -342,13 +342,12 @@ fn only_a_microsoft_account_can_be_chosen_and_removing_it_asks_again() {
 }
 
 #[test]
-fn an_agent_cannot_answer_for_the_owner() {
-    // Not even with everything allowed in advance (`mcp --allow send`, H4): the answer is the
-    // owner's own, in the window.
-    use crate::agent::{Access, Class, Verdict, access, check};
-    assert_eq!(access("tasks.sendLocal"), Some(Access::Never));
+fn explicit_private_task_placement_needs_no_consent() {
+    // Manual placement does not opt the host into synchronization or grant OAuth.
+    use crate::agent::{Access, Verdict, access, check};
+    assert_eq!(access("tasks.sendLocal"), Some(Access::Safe));
     let (s, a) = session();
-    assert!(matches!(check(&s, "tasks.sendLocal", &json!({"account": a}), &Class::ALL), Verdict::Refuse(_)));
+    assert_eq!(check(&s, "tasks.sendLocal", &json!({"account": a}), &[]), Verdict::Run);
 }
 
 #[test]
@@ -629,19 +628,19 @@ fn an_agents_command_that_changes_a_shared_to_do_by_another_way_is_undone() {
     let before = s.mailbox.clone();
     let mut after = before.clone();
     after.rename_category(0, "Red category", "Agent was here").unwrap();
-    assert_eq!(overstep(&before, &after, &[]), Some(Class::Send));
-    assert_eq!(overstep(&before, &after, &[Class::Send]), None);
+    assert_eq!(overstep(&before, &after, &[], false), Some(Class::Send));
+    assert_eq!(overstep(&before, &after, &[Class::Send], false), None);
     // A deletion from a shared list, which the server is to be told of.
     let mut gone = before.clone();
     let ours = titled(&s, "Ours").id;
     gone.remove_task(ours).unwrap();
-    assert_eq!(overstep(&before, &gone, &[Class::Delete]), Some(Class::Send));
+    assert_eq!(overstep(&before, &gone, &[Class::Delete], false), Some(Class::Send));
     // The same to a list that isn't shared, and nothing at all: fine.
     let s = categorised(false);
     let mut mine = s.mailbox.clone();
     mine.rename_category(0, "Red category", "Agent was here").unwrap();
-    assert_eq!(overstep(&s.mailbox, &mine, &[]), None);
-    assert_eq!(overstep(&s.mailbox, &s.mailbox, &[]), None);
+    assert_eq!(overstep(&s.mailbox, &mine, &[], false), None);
+    assert_eq!(overstep(&s.mailbox, &s.mailbox, &[], false), None);
     // Run as an agent, the rename is refused and nothing changes.
     let mut s = categorised(true);
     let was = s.mailbox.clone();
@@ -734,7 +733,7 @@ fn a_to_do_taken_out_of_a_shared_list_by_another_way_is_an_overstep() {
     let (s, _, _, ours) = shared_lists();
     let mut after = s.mailbox.clone();
     after.task_mut(ours).unwrap().list = "L1".into();
-    assert_eq!(overstep(&s.mailbox, &after, &[]), Some(Class::Send));
+    assert_eq!(overstep(&s.mailbox, &after, &[], false), Some(Class::Send));
 }
 
 /// A synced to-do "One" deleted here, ready for the job that tells the server.

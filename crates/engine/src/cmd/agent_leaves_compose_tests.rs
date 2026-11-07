@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! An agent doesn't close or throw away the message the owner is writing without asking (#494): a
-//! command that would asks the owner first. A message only the agent changed is the agent's to
-//! leave, headless too: it goes to Drafts first, as #442 made it. A command that starts another
+//! Saving to Drafts and closing needs no consent; discarding the owner's unsaved work still
+//! asks (#494). A message only the agent changed goes to Drafts on close, headless too,
+//! as #442 made it. A command that starts another
 //! message opens it beside the owner's, which stays as it is (#286).
 
 use mailcraft_model::{FolderKind, Id};
@@ -96,10 +96,10 @@ fn an_agent_that_throws_the_owners_message_away_is_asked() {
 }
 
 #[test]
-fn an_agent_that_closes_the_owners_message_is_asked() {
+fn an_agent_can_save_and_close_the_owners_message_without_extra_consent() {
     let s = writing();
     for (id, params) in leaving(&s) {
-        assert_ne!(classify(&s, id, &params), Access::Safe, "{id} {params}: the owner's message would be closed under them");
+        assert_eq!(classify(&s, id, &params), Access::Safe, "{id} {params}: the message is retained in Drafts");
     }
 }
 
@@ -107,7 +107,7 @@ fn an_agent_that_closes_the_owners_message_is_asked() {
 fn the_question_names_the_owners_message_and_what_becomes_of_it() {
     let s = writing();
     for (id, params) in leaving(&s) {
-        assert_eq!(classify(&s, id, &params), Access::Asked(Class::Leave), "{id}");
+        assert_eq!(classify(&s, id, &params), Access::Safe, "{id}");
         let kept = describe(&s, id, &params);
         assert!(kept.contains("\u{201c}Mine\u{201d}") && kept.contains("goes to Drafts first"), "{id}: {kept}");
         let lost = describe(&s, id, &with_discard(params));
@@ -150,17 +150,17 @@ fn the_owners_change_makes_it_theirs_until_it_is_closed() {
     run(&mut s, "mail.select", json!({"id": other}));
     assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     run(&mut s, "compose.type", json!({"text": "and the owner "}));
-    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     // Saved, by the owner or by the window's own saving every few minutes, it is still theirs.
     run(&mut s, "compose.saveDraft", json!({}));
-    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     // What the agent does after that doesn't make it the agent's (and it can't change what is
     // written in it, #577).
     s.agent = Some(Vec::new());
     assert!(s.run("compose.set", &json!({"body": "More by the agent"})).is_err());
     s.agent = None;
     as_agent(&mut s, "compose.saveDraft", json!({}));
-    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     // Closed, the next message is nobody's until somebody writes in it.
     run(&mut s, "compose.close", json!({}));
     as_agent(&mut s, "mail.new", json!({}));
@@ -168,16 +168,16 @@ fn the_owners_change_makes_it_theirs_until_it_is_closed() {
 }
 
 #[test]
-fn an_agent_that_saves_the_owners_message_first_is_asked_even_so() {
+fn a_saved_draft_can_be_closed_without_an_extra_question() {
     let mut s = writing();
     as_agent(&mut s, "compose.saveDraft", json!({}));
     assert!(!s.compose.as_ref().unwrap().dirty);
     let everything = Class::ALL.to_vec();
     for (id, params) in leaving(&s) {
-        assert!(matches!(check(&s, id, &params, &everything), Verdict::Ask(Class::Leave, _)), "{id}");
+        assert_eq!(check(&s, id, &params, &everything), Verdict::Run, "{id}");
         // Nothing unsaved is lost with `discard`: it stays in Drafts, and that is what is said.
         let params = with_discard(params);
-        assert!(matches!(check(&s, id, &params, &everything), Verdict::Ask(Class::Leave, _)), "{id}");
+        assert_eq!(check(&s, id, &params, &everything), Verdict::Run, "{id}");
         assert!(describe(&s, id, &params).contains("stays in Drafts as it was last saved"), "{id}");
     }
 }
@@ -194,10 +194,10 @@ fn discard_and_another_mailbox_ask_the_owner_whatever_is_allowed() {
     // Another mailbox in view closes it, what isn't saved of it saved to Drafts first (#470), or
     // let go of when the agent says so.
     for (id, params) in [("file.new", json!({})), ("file.open", json!({"name": "other.mailcraft", "data": ""}))] {
-        assert_eq!(classify(&s, id, &params), Access::Asked(Class::Mailbox), "{id}");
+        assert_eq!(classify(&s, id, &params), Access::Asked(Class::Delete), "{id}");
         match check(&s, id, &params, &everything) {
-            Verdict::Ask(Class::Mailbox, what) => assert!(
-                what.ends_with("the message \u{201c}Mine\u{201d} that the owner is writing is closed; what isn't saved of it goes to Drafts first"),
+            Verdict::Ask(Class::Delete, what) => assert!(
+                what.contains("\u{201c}Mine\u{201d}") && what.ends_with("all unsaved mailbox changes, including Drafts, are discarded"),
                 "{id}: {what}"
             ),
             other => panic!("{id}: {other:?}"),
@@ -205,17 +205,22 @@ fn discard_and_another_mailbox_ask_the_owner_whatever_is_allowed() {
         let mut discard = params.clone();
         discard["discard"] = json!(true);
         match check(&s, id, &discard, &everything) {
-            Verdict::Ask(Class::Mailbox, what) => {
-                assert!(what.ends_with("the message \u{201c}Mine\u{201d} that the owner is writing is closed without being saved"), "{id}: {what}")
+            Verdict::Ask(Class::Delete, what) => {
+                assert!(
+                    what.contains("\u{201c}Mine\u{201d}") && what.ends_with("all unsaved mailbox changes, including Drafts, are discarded"),
+                    "{id}: {what}"
+                )
             }
             other => panic!("{id}: {other:?}"),
         }
     }
-    // All of it saved: it is closed, no more is said.
+    // Saved to Drafts in memory, but no durable mailbox: replacing it still loses it.
     let mut saved = writing();
     saved.run("compose.saveDraft", &json!({})).unwrap();
     match check(&saved, "file.new", &json!({}), &everything) {
-        Verdict::Ask(Class::Mailbox, what) => assert!(what.ends_with("\u{201c}Mine\u{201d} that the owner is writing is closed"), "{what}"),
+        Verdict::Ask(Class::Delete, what) => {
+            assert!(what.contains("\u{201c}Mine\u{201d}") && what.contains("including Drafts, are discarded"), "{what}")
+        }
         other => panic!("{other:?}"),
     }
     // An appointment's window with changes that aren't saved, as the window names it.
@@ -229,8 +234,8 @@ fn discard_and_another_mailbox_ask_the_owner_whatever_is_allowed() {
     as_agent(&mut s, "compose.set", json!({"subject": "The agent's"}));
     assert_eq!(classify(&s, "compose.discard", &json!({})), Access::Owner(Class::Delete));
     assert_eq!(check(&s, "compose.discard", &json!({}), &[Class::Delete]), Verdict::Run);
-    assert_eq!(classify(&s, "file.new", &json!({})), Access::Owner(Class::Mailbox));
-    assert_eq!(classify(&s, "ui.closeWindow", &json!({})), Access::Owner(Class::Delete));
+    assert_eq!(classify(&s, "file.new", &json!({})), Access::Owner(Class::Delete));
+    assert_eq!(classify(&s, "ui.closeWindow", &json!({})), Access::Safe);
 }
 
 #[test]
@@ -247,12 +252,12 @@ fn people_email_saves_the_owners_message_first_and_opens_beside_it() {
 }
 
 #[test]
-fn nothing_allowed_in_advance_lets_an_agent_leave_the_owners_message() {
+fn saving_and_closing_needs_no_grant_but_discard_still_needs_the_owner() {
     let s = writing();
     assert_eq!(Class::parse("leave"), None);
     let everything = Class::ALL.to_vec();
     for (id, params) in leaving(&s) {
-        assert!(matches!(check(&s, id, &params, &everything), Verdict::Ask(Class::Leave, _)), "{id}");
+        assert_eq!(check(&s, id, &params, &everything), Verdict::Run, "{id}");
         assert_eq!(answered(&s, id, &params, &[], Class::Leave), Verdict::Run, "{id}");
         // Nor throw it away: `--allow delete` is for mail, never for what the owner wrote.
         let params = with_discard(params);
@@ -278,17 +283,19 @@ fn a_draft_in_a_window_opens_beside_the_owners_message() {
 #[test]
 fn another_mailbox_asks_about_an_appointments_window_with_changes() {
     // Nothing is being written; an appointment's window has changes that aren't saved.
-    let s = session();
+    let mut s = session();
+    s.path = Some("saved-fixture.mailcraft".into());
+    s.dirty = false;
     let unsaved = json!({"unsaved": {"form": "appointment", "title": "Lunch", "more": 1}});
     for id in ["file.new", "file.open"] {
-        assert_eq!(classify(&s, id, &unsaved), Access::Asked(Class::Mailbox), "{id}");
+        assert_eq!(classify(&s, id, &unsaved), Access::Asked(Class::Delete), "{id}");
         let what = describe(&s, id, &unsaved);
         assert!(
             what.ends_with("; the appointment \u{201c}Lunch\u{201d} and 1 more window are closed without saving the changes made in them"),
             "{id}: {what}"
         );
         assert!(!what.contains("unsaved"), "{id}: said in words, not as params: {what}");
-        assert_eq!(classify(&s, id, &json!({})), Access::Owner(Class::Mailbox), "{id}");
+        assert_eq!(classify(&s, id, &json!({})), Access::Safe, "{id}");
     }
 }
 
@@ -346,7 +353,7 @@ fn a_message_whose_draft_was_taken_away_is_saved_again_before_an_agent_leaves_it
     undone.unwrap();
     assert!(s.mailbox.message(draft).is_none() && !s.compose.as_ref().unwrap().dirty);
     // The question doesn't say it is in Drafts, and `discard` would throw it away.
-    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     let what = describe(&s, "compose.close", &json!({}));
     assert!(what.ends_with("what isn't saved of it goes to Drafts first"), "{what}");
     assert_eq!(classify(&s, "compose.close", &json!({"discard": true})), Access::Asked(Class::Delete));
@@ -369,7 +376,7 @@ fn moving_the_cursor_in_the_agents_message_doesnt_make_it_the_owners() {
     assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     // Typing does.
     run(&mut s, "compose.type", json!({"text": "and the owner "}));
-    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
 }
 
 #[test]
@@ -385,7 +392,7 @@ fn a_message_in_drafts_only_by_the_background_saves_is_asked_about_as_thrown_awa
     let said = describe(&s, "compose.close", &thrown);
     assert!(said.contains("thrown away") && !said.contains("stays in Drafts"), "{said}");
     // Closed and kept, it stays in Drafts as it was saved.
-    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({})), Access::Safe);
     let said = describe(&s, "compose.close", &json!({}));
     assert!(said.contains("stays in Drafts"), "{said}");
 }
@@ -401,7 +408,7 @@ fn no_agent_saves_the_owners_message_in_the_background() {
     as_agent(&mut s, "compose.saveDraft", json!({"background": true}));
     assert!(s.compose.as_ref().is_some_and(|c| !c.dirty && !c.autosaved));
     // A real draft: closing it, even with `discard`, leaves it in Drafts and is asked as leaving.
-    assert_eq!(classify(&s, "compose.close", &json!({"discard": true})), Access::Asked(Class::Leave));
+    assert_eq!(classify(&s, "compose.close", &json!({"discard": true})), Access::Safe);
     run(&mut s, "compose.close", json!({"discard": true}));
     assert!(draft_with(&s, "Mine").is_some());
 }

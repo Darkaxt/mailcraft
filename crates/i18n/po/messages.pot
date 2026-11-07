@@ -1680,7 +1680,7 @@ msgid "Calibri"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs
 msgid "Cancel"
 msgstr ""
 
@@ -2769,7 +2769,7 @@ msgid "Disabled until repaired: {why}"
 msgstr ""
 
 #. command label, interface, ribbon
-#: crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/compose.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 msgid "Discard"
 msgstr ""
 
@@ -3696,7 +3696,7 @@ msgid "For an account that signs in with Microsoft: the folders you keep under F
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/ews_setup.rs
 msgid "Forget"
 msgstr ""
 
@@ -13279,17 +13279,17 @@ msgstr ""
 
 #. name
 #: crates/engine/src/agent.rs
+msgid "it authorizes credential use or server trust"
+msgstr ""
+
+#. name
+#: crates/engine/src/agent.rs
 msgid "it can delete messages or other items"
 msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/graph_drafts.rs
 msgid "it can't take it"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it changes an account or a sign-in"
 msgstr ""
 
 #. name
@@ -13358,6 +13358,11 @@ msgid "it opens, replaces or saves the mailbox file"
 msgstr ""
 
 #. name
+#: crates/engine/src/agent.rs
+msgid "it sends to or shares changes with other people"
+msgstr ""
+
+#. name
 #: crates/engine/src/cmd/rules.rs
 msgid "it sets more than one importance"
 msgstr ""
@@ -13375,11 +13380,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 msgid "it took too long"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it writes to other people or reaches out to the web"
 msgstr ""
 
 #. interface

@@ -1,0 +1,1 @@
+- Remove blanket consent prompts for reads and reversible edits, including ordinary cross-account filing and saving a composer to Drafts. Protect unsaved signature edits and reject destructive approvals after their target state changes.

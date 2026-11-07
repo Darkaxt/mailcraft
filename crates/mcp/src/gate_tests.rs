@@ -201,19 +201,22 @@ fn never_and_unknown_commands_are_refused() {
 fn what_needs_the_owner_is_refused_headless_unless_allowed() {
     let pol = Policy::default();
     for (cmd, params, class) in [
-        ("account.add", json!({"email": "a@x.example"}), "accounts"),
-        ("file.options", json!({"previewLines": 1}), "settings"),
         (
             "rules.add",
             json!({"name": "r", "conditions": [{"type": "fromContains", "value": "billing@example.org"}], "actions": [{"type": "delete"}]}),
             "delete",
         ),
-        ("file.new", json!({}), "mailbox"),
         ("folder.empty", json!({}), "delete"),
     ] {
         let mut h = Headless::new(sample(), Vec::new());
         let e = err(&mut h, &pol, "execute", json!({"command": cmd, "params": params}));
         assert!(e.as_deref().is_some_and(|e| e.contains(&format!("--allow {class}"))), "{cmd}: {e:?}");
+    }
+    // Read-only and reversible commands have no blanket owner class.
+    for (cmd, params) in [("account.add", json!({"email": "a@x.example"})), ("file.options", json!({"previewLines": 1})), ("file.new", json!({}))] {
+        let session = if cmd == "file.new" { Session::empty() } else { sample() };
+        let mut h = Headless::new(session, Vec::new());
+        assert_eq!(err(&mut h, &pol, "execute", json!({"command": cmd, "params": params})), None, "{cmd}");
     }
     // Into the Outbox is sending.
     let mut h = Headless::new(sample(), Vec::new());
@@ -223,6 +226,68 @@ fn what_needs_the_owner_is_refused_headless_unless_allowed() {
     assert_ne!(h.session.mailbox.message(id).unwrap().folder, outbox);
     // Clicking and typing need a window (and --allow input).
     assert!(err(&mut h, &pol, "click", json!({"x": 1, "y": 1})).is_some());
+}
+
+#[test]
+fn saved_mailbox_replacement_needs_no_consent_and_refused_sending_preserves_its_binding() {
+    let dir = temp("saved-replacement");
+    let path = dir.join("saved.mailcraft");
+    let mut s = Session::empty();
+    let account = s.mailbox.accounts[0].id;
+    let inbox = s.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let id = s
+        .mailbox
+        .add_message(mailcraft_engine::model::Message { account, folder: inbox, subject: "Kept on disk".into(), ..Default::default() })
+        .unwrap();
+    s.mailbox_changed();
+    s.run("mail.flag", &json!({"id": id})).unwrap();
+    s.run("file.save", &json!({"path": path})).unwrap();
+    let original = std::fs::read(&path).unwrap();
+    let mut h = Headless::new(s, Vec::new());
+    let pol = Policy::default();
+
+    // An incoming mailbox with queued Outbox mail cannot bypass send authority.
+    let mut incoming = Session::empty();
+    let account = incoming.mailbox.accounts[0].id;
+    let outbox = incoming.mailbox.folder_of_kind(account, FolderKind::Outbox).unwrap();
+    incoming
+        .mailbox
+        .add_message(mailcraft_engine::model::Message { account, folder: outbox, subject: "Must not send".into(), ..Default::default() })
+        .unwrap();
+    let encoded = incoming.run("file.save", &json!({})).unwrap();
+    let before = h.session.mailbox.clone();
+    let openings = h.session.openings();
+    let undo = h.session.undo_label().unwrap().to_string();
+    let error = err(&mut h, &pol, "execute", json!({"command": "file.open", "params": {"name": "incoming.mailcraft", "data": encoded["data"]}}));
+    assert!(error.is_some_and(|error| error.contains("--allow send")));
+    assert_eq!(h.session.path.as_deref(), Some(path.as_path()));
+    assert_eq!(h.session.mailbox, before);
+    assert_eq!(h.session.openings(), openings);
+    assert_eq!(h.session.undo_label(), Some(undo.as_str()));
+
+    // Opening a file must not silently activate deleting rules either.
+    let mut incoming = Session::empty();
+    let rule = incoming.run("rules.add", &json!({"name": "Delete incoming", "conditions": [{"type": "fromContains", "value": "billing@example.org"}], "actions": [{"type": "delete"}], "server": false})).unwrap()["id"].as_u64().unwrap();
+    let encoded = incoming.run("file.save", &json!({})).unwrap();
+    let params = json!({"name": "incoming.mailcraft", "data": encoded["data"]});
+    assert_eq!(mailcraft_engine::agent::classify(&h.session, "file.open", &params), mailcraft_engine::agent::Access::Owner(Class::Delete));
+    let error = err(&mut h, &pol, "execute", json!({"command": "file.open", "params": params}));
+    assert!(error.is_some_and(|error| error.contains("--allow delete")));
+    assert_eq!(h.session.path.as_deref(), Some(path.as_path()));
+    assert_eq!(h.session.mailbox, before);
+    assert_eq!(h.session.openings(), openings);
+    assert_eq!(h.session.undo_label(), Some(undo.as_str()));
+
+    assert_eq!(err(&mut h, &pol, "execute", json!({"command": "file.new"})), None);
+    assert!(h.session.mailbox.messages.is_empty());
+    assert_eq!(std::fs::read(&path).unwrap(), original, "the saved mailbox remains the rollback source");
+    incoming.run("rules.enable", &json!({"id": rule, "value": false})).unwrap();
+    let encoded = incoming.run("file.save", &json!({})).unwrap();
+    assert_eq!(
+        err(&mut h, &pol, "execute", json!({"command": "file.open", "params": {"name": "incoming.mailcraft", "data": encoded["data"]}})),
+        None
+    );
+    assert!(h.session.mailbox.rules.iter().all(|rule| !rule.enabled));
 }
 
 #[test]
@@ -419,16 +484,16 @@ fn copied_then_accounts_changed(allow: Vec<Class>) -> (Headless, usize) {
 }
 
 #[test]
-fn an_undo_that_reverts_the_accounts_and_takes_mail_names_both_grants_headless() {
+fn an_undo_that_reverts_account_metadata_and_takes_mail_only_needs_delete_headless() {
     let pol = Policy::default();
     let undo = json!({"command": "edit.undo", "params": {}});
-    for allow in [vec![], vec![Class::Accounts], vec![Class::Delete]] {
+    for allow in [vec![], vec![Class::Accounts]] {
         let (mut h, n) = copied_then_accounts_changed(allow.clone());
         let e = err(&mut h, &pol, "execute", undo.clone());
-        assert!(e.as_deref().is_some_and(|e| e.contains("--allow accounts,delete") && e.contains("takes away 1 message")), "{allow:?}: {e:?}");
+        assert!(e.as_deref().is_some_and(|e| e.contains("--allow delete") && e.contains("takes away 1 message")), "{allow:?}: {e:?}");
         assert_eq!(h.session.mailbox.messages.len(), n, "{allow:?}: nothing was taken");
     }
-    let (mut h, n) = copied_then_accounts_changed(vec![Class::Accounts, Class::Delete]);
+    let (mut h, n) = copied_then_accounts_changed(vec![Class::Delete]);
     assert_eq!(err(&mut h, &pol, "execute", undo), None);
     assert_eq!(h.session.mailbox.messages.len(), n - 1);
 }

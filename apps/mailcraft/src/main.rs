@@ -639,12 +639,39 @@ fn run_window(options: eframe::NativeOptions, creator: eframe::AppCreator<'_>) -
 
 /// Sign an account's owner in: quietly with what was kept from last time when there is any, on
 /// the provider's page in the system's browser otherwise.
-fn sign_in(ctx: &egui::Context, request: SignInRequest) -> Result<Tokens, String> {
-    sign_in_with(request, &|url| {
+fn sign_in(ctx: &egui::Context, request: SignInRequest, headless: bool) -> Result<Tokens, String> {
+    sign_in_for_runtime(request, headless, &|url| {
         let opened = open_in_browser(url);
         ctx.request_repaint();
         opened
     })
+}
+
+/// The runtime's browser policy, shared by the real sign-in service and its
+/// loopback-only regression tests.
+fn sign_in_for_runtime(mut request: SignInRequest, headless: bool, open_page: &dyn Fn(&str) -> bool) -> Result<Tokens, String> {
+    // The explicit native request has already checked the existing account and
+    // idle job/dialog state. It asks Microsoft, never approves on the owner's
+    // behalf. Background refresh and every other sign-in stay noninteractive.
+    let explicit_rules = request.account != 0
+        && request.oauth.provider == mailcraft_model::OAuthProvider::Microsoft
+        && request.graph
+        && request.rules
+        && !request.quiet
+        && request.refresh.is_empty()
+        && !request.mail_only
+        && !request.tasks
+        && !request.favorites
+        && !request.shared
+        && !request.shared_send
+        && !request.shared_calendars
+        && !request.replies;
+    if headless && !explicit_rules {
+        request.quiet = true;
+        sign_in_with(request, &|_| false)
+    } else {
+        sign_in_with(request, open_page)
+    }
 }
 
 /// [`sign_in`], with `open_page` in the browser's place: it opens the address it is given, and
@@ -1739,16 +1766,9 @@ fn services(
             rx
         })),
         sync_cancel,
-        sign_in: Some(Box::new(move |mut request| {
+        sign_in: Some(Box::new(move |request| {
             let ctx = sign_in_ctx.clone();
-            background(&sign_in_ctx, "sign-in", move || {
-                if headless {
-                    request.quiet = true;
-                    sign_in_with(request, &|_| false)
-                } else {
-                    sign_in(&ctx, request)
-                }
-            })
+            background(&sign_in_ctx, "sign-in", move || sign_in(&ctx, request, headless))
         })),
         graph: Some(Box::new(move |request| background(&graph_ctx, "microsoft graph", move || graph(request)))),
         // Messages of a Microsoft account fetched whole, a few at a time (R3.2).

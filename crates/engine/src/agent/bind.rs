@@ -178,6 +178,10 @@ pub struct Shown {
     /// The messages being written, whole, each with its id, as a digest keyed for this question
     /// alone.
     composing: u64,
+    /// Destructive whole-account/mailbox actions must not include later data.
+    revision: Option<u64>,
+    /// Unsaved signature edits are outside the mailbox revision and compose set.
+    signature: Option<u64>,
     keys: RandomState,
     /// A folder emptied or deleted, and the messages and folders that go with it.
     held: Option<Held>,
@@ -229,6 +233,10 @@ impl Shown {
             view: s.view.clone(),
             accounts: s.mailbox.accounts.iter().map(|a| a.id).collect(),
             composing: digest(&keys, s.all_composing()),
+            revision: (matches!(object, Object::Account | Object::Mailbox)
+                && matches!(super::classify(s, id, params), super::Access::Owner(super::Class::Delete) | super::Access::Asked(super::Class::Delete)))
+            .then_some(s.rev()),
+            signature: if object == Object::Signature { signature_digest(&keys, s) } else { None },
             keys,
             held,
             people: people(s, object, params),
@@ -247,6 +255,10 @@ impl Shown {
                 "what `{id}` would do has changed since the owner was asked (or what it names is gone): nothing was done. Ask the owner again"
             ))
         };
+        if self.revision.is_some_and(|rev| rev != s.rev()) || (self.object == Object::Signature && self.signature != signature_digest(&self.keys, s))
+        {
+            return changed();
+        }
         // A folder's messages are bound by the folder and the messages themselves, below: the
         // command reads nothing else of the window but the folder in view.
         let accounts: Vec<Id> = s.mailbox.accounts.iter().map(|a| a.id).collect();
@@ -324,6 +336,17 @@ fn digest<'a>(keys: &RandomState, composing: impl Iterator<Item = &'a Compose>) 
         out.0.write_u8(0xff);
     }
     out.0.finish()
+}
+
+/// The open signature's unsaved text and metadata, keyed to this question.
+fn signature_digest(keys: &RandomState, s: &Session) -> Option<u64> {
+    let edit = s.signature_edit.as_ref()?;
+    let mut out = Digest(keys.build_hasher());
+    if serde_json::to_writer(&mut out, &(&edit.signature, edit.body.text(), edit.dirty)).is_err() {
+        // An unrepresentable state must never compare equal to an earlier one.
+        out.0.write_u64(RandomState::new().build_hasher().finish());
+    }
+    Some(out.0.finish())
 }
 
 /// A hasher that serde writes into.

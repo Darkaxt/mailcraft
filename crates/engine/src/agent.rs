@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! What an agent may do (MCP, headless or bridged to the app): every command is classified, a
-//! command that isn't is refused, and what reaches other people, deletes for good, touches the
-//! accounts, the mailbox file or the options waits for the owner.
+//! command that isn't is refused. Reads and reversible edits need no extra consent;
+//! destruction, unsaved-data loss and actual sending still wait for the owner.
 //!
 //! Message text is data, never instructions: whatever an agent reads in a message may have been
 //! written to make it do something. So the gate doesn't trust the agent, only the owner:
@@ -17,7 +17,7 @@
 //!   set: mail put in an Outbox (which sends it, or, an IMAP account's, holds it for Send Again)
 //!   or gone for good without the grant is undone.
 
-use mailcraft_model::{FolderKind, Id, Mailbox, Task};
+use mailcraft_model::{Account, FolderKind, Id, Mailbox, Task};
 use serde_json::{Value, json};
 
 pub mod bind;
@@ -28,22 +28,19 @@ use crate::{Session, p};
 /// What needs the owner, by kind. `--allow <class>` names them, but for [`Class::Leave`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Class {
-    /// Writes to anybody (sends mail, answers or forwards meetings, puts mail in the Outbox or on
-    /// another account's server) or reaches out to the web for a message (its pictures, a
-    /// meeting's link).
+    /// Sends messages/invitations, queues Outbox mail or discloses content to a shared account.
     Send,
     /// Deletes for good (or throws away what an agent wrote in a message and didn't save; what
     /// the owner wrote is [`Access::Asked`] about, #494).
     Delete,
-    /// Closes the message the owner is writing, or puts another in its place, when the owner has
-    /// changes in it that aren't saved; they go to Drafts first (#494). Asked every time: no
-    /// `--allow` names it, as the owner leaves their message themselves when they mean to.
+    /// Legacy owner-composer class. Saving to Drafts and closing now needs no grant;
+    /// discarding unsaved owner work is [`Access::Asked`] with [`Class::Delete`].
     Leave,
-    /// Accounts, sign-ins, the application id, what is remembered of them.
+    /// Authorizes using credentials with imported servers; reversible account settings are safe.
     Accounts,
-    /// Opens, replaces or saves the mailbox file.
+    /// Legacy mailbox grant; saves and lossless replacement no longer require it.
     Mailbox,
-    /// Options, signatures, rules, the Safe and Blocked Senders lists, picture download settings.
+    /// Legacy settings grant; reversible options, signatures and filing rules are safe.
     Settings,
     /// Raw pointer and keyboard input into the window (anything, including Send). Never asked
     /// about: only `--allow input` lets it through.
@@ -73,10 +70,10 @@ impl Class {
     /// What the class is, for a refusal or the docs.
     pub fn what(self) -> &'static str {
         match self {
-            Class::Send => "it writes to other people or reaches out to the web",
+            Class::Send => "it sends to or shares changes with other people",
             Class::Delete => "it can delete messages or other items",
             Class::Leave => "it takes the window off the message the owner is writing",
-            Class::Accounts => "it changes an account or a sign-in",
+            Class::Accounts => "it authorizes credential use or server trust",
             Class::Mailbox => "it opens, replaces or saves the mailbox file",
             Class::Settings => "it changes options, signatures or rules",
             Class::Input => "it clicks or types in the window",
@@ -362,6 +359,9 @@ const SAFE: &[&str] = &[
     "tasks.arrange",
     "tasks.categorize",
     "tasks.fromMessage",
+    // Explicit manual placement in the owner's private To Do; this does not
+    // enable the optional host synchronization feature or approve OAuth.
+    "tasks.sendLocal",
     "category.set",
     "category.rename",
     "category.list",
@@ -386,6 +386,7 @@ const SAFE: &[&str] = &[
     "ui.ribbonMode",
     "ui.dialog",
     "ui.closeDialog",
+    "ui.closeWindow",
     // Opens the provider's permission request; only the human can approve there.
     // Does not answer the desktop's owner question or grant an OAuth scope itself.
     "ui.requestRulesPermission",
@@ -415,6 +416,9 @@ const SAFE: &[&str] = &[
     "ui.openWindow",
     "ui.eventWindow",
     "ui.clearPictureCache",
+    "ui.downloadPictures",
+    "ui.retryPictures",
+    "ui.joinMeeting",
     "ui.selectAllInMessage",
     // (Refused by the window itself unless the owner has the daily check on.)
     "ui.checkForUpdates",
@@ -429,9 +433,6 @@ const SEND: &[&str] = &[
     "mail.sendAgain",
     "calendar.propose",
     "calendar.forward",
-    "ui.downloadPictures",
-    "ui.retryPictures",
-    "ui.joinMeeting",
     "ui.reportProblem",
 ];
 
@@ -450,7 +451,6 @@ const DELETE: &[&str] = &[
     "tasks.delete",
     "category.remove",
     "compose.discard",
-    "ui.closeWindow",
 ];
 
 const ACCOUNTS: &[&str] = &[
@@ -485,6 +485,7 @@ const ACCOUNTS: &[&str] = &[
     "ui.adminConsent",
     "ui.signInAgain",
     "ui.microsoftClientId",
+    "ui.googleClientId",
     "ui.rememberSignIn",
     "ui.graphSwitch",
     "ui.switchToGraph",
@@ -585,9 +586,6 @@ const NEVER: &[&str] = &[
     // Installing a new version, or going back to the one before: only the owner's click.
     "ui.restartToUpdate",
     "ui.goBackVersion",
-    // The owner's own answer to sending the tasks that exist only here to an account's To Do
-    // (#632): an agent never gives it, asked or not.
-    "tasks.sendLocal",
     // Everything MailCraft keeps on this computer, gone (#177): only the owner's own click.
     "ui.removeAllData",
     // Another program (the file manager) started on the owner's screen, as for an attachment
@@ -595,9 +593,8 @@ const NEVER: &[&str] = &[
     "ui.openDataFolder",
     // The redacted log tail, and the clipboard overwritten with it.
     "ui.copyDiagnostics",
-    // Only the owner may configure an OAuth registration; an agent has no route to its
-    // installed-app registration value, even when granted account/settings commands.
-    "ui.googleClientId",
+    // Secret ingress remains private. Public registration identifiers are
+    // reversible app settings; provider approval is still user operated.
     "ui.googleClientSecret",
 ];
 
@@ -611,11 +608,22 @@ pub fn access(id: &str) -> Option<Access> {
     } else if is(DELETE) {
         Access::Owner(Class::Delete)
     } else if is(ACCOUNTS) {
-        Access::Owner(Class::Accounts)
-    } else if is(MAILBOX) {
-        Access::Owner(Class::Mailbox)
-    } else if is(SETTINGS) {
-        Access::Owner(Class::Settings)
+        match id {
+            // These remove stored content or abandon protocol state, rather
+            // than merely changing an account's reversible display/settings.
+            "account.remove"
+            | "account.removeSharedMailbox"
+            | "account.thinOffline"
+            | "account.graphSwitch"
+            | "calendar.removeShared"
+            | "ui.rememberSignIn" => Access::Owner(Class::Delete),
+            // Trusting an imported mailbox's servers permits credential use;
+            // this is an authorization boundary, not an options-page prompt.
+            "ui.confirmServers" => Access::Owner(Class::Accounts),
+            _ => Access::Safe,
+        }
+    } else if is(MAILBOX) || is(SETTINGS) {
+        Access::Safe
     } else if is(NEVER) {
         Access::Never
     } else {
@@ -698,11 +706,6 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
     if shared_task(s, id, params).is_some() || shared_category(s, id, params) {
         return Access::Owner(Class::Send);
     }
-    // A to-do put in another account's To Do than the owner's own would go to is on that server
-    // at once, as mail moved there is (#632).
-    if new_task_onto(s, id, params).is_some() {
-        return Access::Owner(Class::Send);
-    }
     // Rule consent follows email deletion effects, not blanket Settings or
     // cross-account filing. Reading and shadow previews are already SAFE.
     if matches!(
@@ -723,7 +726,41 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
     match id {
         "compose.discard" if writing => return Access::Asked(Class::Delete),
         "ui.closeWindow" if unsaved(params) => return Access::Asked(Class::Delete),
-        "file.new" | "file.open" if owner_writing_any(s) || unsaved(params) => return Access::Asked(Class::Mailbox),
+        "file.new" | "file.open" if unsaved(params) || (owner_writing_any(s) && replacement_loses_changes(s)) => {
+            return Access::Asked(Class::Delete);
+        }
+        "file.new" | "file.open" if replacement_loses_changes(s) => {
+            return Access::Owner(Class::Delete);
+        }
+        "file.open" if crate::cmd::file::deleting_rules_in(params) => return Access::Owner(Class::Delete),
+        "account.graphSwitch" if p::str(params, "answer").is_some_and(|answer| answer.trim().eq_ignore_ascii_case("later")) => {
+            return Access::Safe;
+        }
+        "account.add" if crate::cmd::account::from_params(params).is_some_and(|next| trusts_new_certificate(None, &next)) => {
+            return Access::Owner(Class::Accounts);
+        }
+        "account.edit"
+            if p::id(params, "id")
+                .and_then(|id| s.mailbox.account(id))
+                .is_some_and(|old| crate::cmd::account::edited(old, params).is_some_and(|next| trusts_new_certificate(Some(old), &next))) =>
+        {
+            return Access::Owner(Class::Accounts);
+        }
+        "signature.close" if p::bool(params, "discard") == Some(true) && s.signature_edit.as_ref().is_some_and(|e| e.dirty) => {
+            return Access::Owner(Class::Delete);
+        }
+        "signature.set" | "signature.remove"
+            if s.signature_edit
+                .as_ref()
+                .is_some_and(|e| e.dirty && p::str(params, "name").is_some_and(|name| name.trim().eq_ignore_ascii_case(&e.signature.name))) =>
+        {
+            return Access::Owner(Class::Delete);
+        }
+        "account.setAutomaticReplies" if p::str(params, "status") == Some("disabled") => return Access::Safe,
+        "ui.rememberSignIn" if p::bool(params, "value") == Some(true) => return Access::Safe,
+        "sync.offline" if !p::bool(params, "value").unwrap_or(!s.prefs.offline) && crate::cmd::send_receive::outbox(s) > 0 => {
+            return Access::Owner(Class::Send);
+        }
         _ => {}
     }
     if base != Access::Safe {
@@ -738,7 +775,12 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
         _ if (id.starts_with("calendar.") || id == "people.meeting") && sends => Access::Owner(Class::Send),
         "mail.move" | "mail.copy" | "file.import" => {
             let folder = p::id(params, "folder").or(if id == "file.import" { Some(s.view.folder) } else { None });
-            let onto = id != "file.import" && folder.is_some_and(|f| onto_another_server(s, params, f));
+            // Filing into another private account is reversible. A shared
+            // mailbox also discloses the mail to other people, like sending.
+            let onto = id != "file.import"
+                && folder.is_some_and(|f| {
+                    s.mailbox.folder(f).and_then(|f| s.mailbox.account(f.account)).is_some_and(|a| a.is_shared()) && onto_another_server(s, params, f)
+                });
             if folder.is_some_and(|f| is_outbox(&s.mailbox, f)) || onto { Access::Owner(Class::Send) } else { Access::Safe }
         }
         "mail.delete" => {
@@ -755,7 +797,7 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
             let lost = s.compose_named(params).is_some_and(|c| unsaved_message(s, c)) && p::bool(params, "discard") == Some(true);
             match (writing, lost) {
                 (true, true) => Access::Asked(Class::Delete),
-                (true, false) => Access::Asked(Class::Leave),
+                (true, false) => Access::Safe,
                 (false, true) => Access::Owner(Class::Delete),
                 (false, false) => Access::Safe,
             }
@@ -763,8 +805,6 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
         // An appointment, a contact or a task with changes that aren't saved, in the dialog that
         // this closes or opens another in place of: the changes are lost. The window says which
         // (`unsaved`, from `agent_gate`, never from the agent).
-        // The page that reviews an Exchange server's certificate looks at the server over the network.
-        "ui.dialog" if p::str(params, "page") == Some("certificate") => Access::Owner(Class::Accounts),
         "ui.closeDialog" | "ui.dialog" if params.get("unsaved").is_some_and(|v| !v.is_null()) => Access::Asked(Class::Delete),
         _ => Access::Safe,
     }
@@ -792,6 +832,29 @@ fn owner_writing(s: &Session, params: &Value) -> bool {
 /// Whether the owner wrote in any message being written (#286): another mailbox closes them all.
 fn owner_writing_any(s: &Session) -> bool {
     s.all_composing().any(|c| c.owner_changed)
+}
+
+/// The native mailbox writer settles the current state before New/Open, or
+/// refuses to replace it if that write fails (`cmd::file::settle`). A mailbox
+/// without that durable path would lose its unsaved changes instead.
+pub(crate) fn replacement_loses_changes(s: &Session) -> bool {
+    if s.path.is_none() && s.mailbox != Mailbox::with_local_account("", "") {
+        return true;
+    }
+    if !s.dirty && !s.all_composing().any(|c| c.dirty || draft_gone(s, c)) {
+        return false;
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    if s.path.as_deref().is_some_and(crate::store::followed) {
+        return false;
+    }
+    true
+}
+
+/// A certificate pin outside system trust authorizes credential use with that
+/// server identity. Reversible metadata edits do not grant it implicitly.
+pub(crate) fn trusts_new_certificate(before: Option<&Account>, after: &Account) -> bool {
+    after.ews.as_ref().is_some_and(|next| !next.trusted.is_empty() && before.and_then(|old| old.ews.as_ref()) != Some(next))
 }
 
 /// The draft that `ui.openWindow` would open, which it opens as `mail.editDraft` does.
@@ -841,18 +904,6 @@ fn shared_category(s: &Session, id: &str, params: &Value) -> bool {
     let list = s.mailbox.category_list_owner(p::id(params, "account").unwrap_or(0));
     let on_list = |t: &Task| s.mailbox.category_list_owner(t.origin.account) == list;
     s.mailbox.tasks.values().any(|t| t.categories.iter().any(|c| c.eq_ignore_ascii_case(name)) && on_list(t) && s.mailbox.in_shared_task_list(t))
-}
-
-/// Whether going from `before` to `after` changes the owner's answer about their local to-dos, or
-/// puts a to-do on its way to an account's To Do that it wasn't on its way to, where
-/// [`new_task_onto`] would ask.
-pub(crate) fn places_tasks(before: &Mailbox, after: &Mailbox) -> bool {
-    let home = crate::cmd::tasks_remote::tasks_home(before);
-    let placed = |(k, t): (&Id, &std::sync::Arc<Task>)| {
-        let waiting = t.origin.account != 0 && t.origin.id.is_empty() && !t.local_only && Some(t.origin.account) != home;
-        waiting && before.tasks.get(k).is_none_or(|b| b.origin.account != t.origin.account)
-    };
-    before.local_tasks != after.local_tasks || after.tasks.iter().any(placed)
 }
 
 /// Whether going from `before` to `after` changes what a list shared with other people has, as
@@ -1244,14 +1295,24 @@ pub fn describe(s: &Session, id: &str, params: &Value) -> String {
         fields.remove("unsaved");
     }
     let mut what = what_it_does(s, id, &bare);
+    if id == "file.open" && crate::cmd::file::deleting_rules_in(&bare) {
+        what.push_str("; activates rules that can delete mail");
+    }
+    if matches!(id, "file.new" | "file.open") && replacement_loses_changes(s) && !owner_writing_any(s) {
+        what.push_str("; unsaved changes to the current mailbox are discarded");
+    }
     // Another mailbox in view closes the message the owner is writing (#494); what isn't saved of
     // it goes to Drafts first, unless it is let go of (`discard`, #470).
     if matches!(id, "file.new" | "file.open") && owner_writing_any(s) {
         let unsaved = s.all_composing().any(|c| unsaved_message(s, c));
-        let how = match (unsaved, p::bool(params, "discard") == Some(true)) {
-            (true, true) => " without being saved",
-            (true, false) => "; what isn't saved of it goes to Drafts first",
-            (false, _) => "",
+        let how = if replacement_loses_changes(s) {
+            "; all unsaved mailbox changes, including Drafts, are discarded"
+        } else {
+            match (unsaved, p::bool(params, "discard") == Some(true)) {
+                (true, true) => " without being saved",
+                (true, false) => "; what isn't saved of it goes to Drafts first",
+                (false, _) => "",
+            }
         };
         let owners: Vec<&crate::Compose> = s.all_composing().filter(|c| c.owner_changed).collect();
         match owners.as_slice() {
@@ -1273,6 +1334,11 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
     let label = s.registry.get(id).map(|c| c.label).unwrap_or(id);
     let st = |k: &str| p::str(params, k).unwrap_or("");
     match id {
+        "ui.rememberSignIn" if p::bool(params, "value") != Some(true) => "forget all remembered sign-ins on this computer".to_string(),
+        "signature.close" | "signature.set" | "signature.remove" if classify(s, id, params) == Access::Owner(Class::Delete) => {
+            let name = s.signature_edit.as_ref().map(|edit| edit.signature.name.as_str()).unwrap_or("");
+            format!("{label}: discard unsaved changes to the signature {}", quoted(name))
+        }
         "compose.send" => match s.compose_named(params) {
             Some(c) => {
                 let to: Vec<String> =
@@ -1413,7 +1479,7 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
             let drafts = s.undo_drafts(redo);
             let others: Vec<Id> = s.undo_taken(redo).into_iter().filter(|m| !drafts.contains(m)).collect();
             let what = match s.undo_reverts(redo) {
-                Some(Class::Accounts) => Some("the accounts"),
+                Some(Class::Accounts) => Some("the accounts and their certificate trust"),
                 Some(Class::Send) => {
                     Some("a change to a meeting or to a task in a shared list, which other people see, or to the tasks in an account's To Do")
                 }
@@ -1422,6 +1488,10 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
                 _ => Some("the rules, signatures or Safe and Blocked Senders"),
             };
             let mut does: Vec<String> = what.map(|w| format!("puts {w} back as they were")).into_iter().collect();
+            let trust = s.undo_trusted_servers(redo);
+            if !trust.is_empty() {
+                does.push(format!("authorizes {}", trust.join(", ")));
+            }
             if s.undo_removes_items(redo) {
                 // Gone for good: they don't go to Deleted Items.
                 does.push("takes away contacts, events, tasks, calendars or categories made since, for good".to_string());
@@ -1816,7 +1886,7 @@ fn value_text(v: &Value) -> String {
 
 /// What a command did that its grant didn't cover: mail put into an Outbox (it would be sent),
 /// or messages gone for good. Checked by [`Session::run`](crate::Session::run) for agents.
-pub(crate) fn overstep(before: &Mailbox, after: &Mailbox, allow: &[Class]) -> Option<Class> {
+pub(crate) fn overstep(before: &Mailbox, after: &Mailbox, allow: &[Class], saved_replacement: bool) -> Option<Class> {
     if !allow.contains(&Class::Send) {
         let outboxes: Vec<Id> = after.folders.iter().filter(|f| f.kind == FolderKind::Outbox).map(|f| f.id).collect();
         if !outboxes.is_empty() {
@@ -1829,7 +1899,7 @@ pub(crate) fn overstep(before: &Mailbox, after: &Mailbox, allow: &[Class]) -> Op
             }
         }
     }
-    if !allow.contains(&Class::Delete) {
+    if !allow.contains(&Class::Delete) && !saved_replacement {
         // Drafts are left out here: `edit.undo` and `edit.redo` refuse earlier, drafts too (#473).
         let gone = before.messages.iter().any(|(id, m)| !m.draft && !after.messages.contains_key(id));
         if gone {
@@ -1880,9 +1950,9 @@ mod tests {
         let mut s = Session::new(crate::sample::mailbox(1_791_993_600, 0));
         for (id, want) in [
             ("compose.send", Access::Owner(Class::Send)),
-            ("account.add", Access::Owner(Class::Accounts)),
+            ("account.add", Access::Safe),
             ("mail.deletePermanently", Access::Owner(Class::Delete)),
-            ("file.open", Access::Owner(Class::Mailbox)),
+            ("file.open", Access::Owner(Class::Delete)),
             ("rules.add", Access::Safe),
             ("rules.list", Access::Safe),
             ("rules.preview", Access::Safe),
@@ -1896,8 +1966,8 @@ mod tests {
         }
         assert_eq!(classify(&s, "calendar.respond", &json!({"response": "accept", "send": true})), Access::Owner(Class::Send));
         assert_eq!(classify(&s, "calendar.respond", &json!({"response": "accept"})), Access::Safe);
-        // The review of a server's certificate makes a network contact; the Exchange page waits for Connect.
-        assert_eq!(classify(&s, "ui.dialog", &json!({"name": "account", "id": 3, "page": "certificate"})), Access::Owner(Class::Accounts));
+        // Inspecting a certificate is read-only; it never trusts it or sends a password.
+        assert_eq!(classify(&s, "ui.dialog", &json!({"name": "account", "id": 3, "page": "certificate"})), Access::Safe);
         assert_eq!(classify(&s, "ui.dialog", &json!({"name": "account", "page": "exchange", "email": "ada@example.org"})), Access::Safe);
         let outbox = s.mailbox.folders.iter().find(|f| f.kind == FolderKind::Outbox).map(|f| f.id);
         if let Some(outbox) = outbox {

@@ -43,9 +43,22 @@ doesn't rely on the agent's judgement: every command has a class for agents (`ag
 
 | Class | What | Through MCP |
 |---|---|---|
-| `safe` | reading, searching, flagging, filing, moving within an account or onto this computer, categories, calendar, contacts and tasks (deleting them is `delete`), reading rules and non-mutating previews, creating/editing/enabling/reordering/running ordinary filing rules (including cross-account filing), disabling or removing rule definitions, undo and redo (except the protected effects listed below), writing a message (not sending it), Send/Receive | runs |
-| `owner` | `send`: sending, answering or forwarding a meeting so that people are written to (`"send": true`; also `ui.eventWindow` with `do` `send`, `save` or `saveAndClose`, which the window runs later as the owner; the question lists the people invited), an undo or redo that would bring back such a change, editing, completing, categorising or deleting a to-do in a Microsoft To Do list that is shared with other people, and renaming or deleting a category that such a to-do has (the people the list is shared with see the change; deleting one asks `send` rather than `delete`, as `calendar.delete` with `"send": true` does; also an undo or redo that would change one, and any command that changes one by another way is an overstep; until the account's first tasks download a list counts as not shared; no agent command puts a to-do in a list it names: a new one goes to the default list, which To Do doesn't share; the owner's own changes are as ever), anything put in an Outbox, manual mail moves/copies onto another account's server (filing rules have the action-based policy above), a new to-do that would go to an account's To Do, unless it is the account the owner sent their local tasks to (`tasks.new`, with `account` or not, and `tasks.fromMessage`; which list the window shows doesn't count, since an agent can change that; an agent's to-do doesn't change where the owner's next one goes), an undo or redo that would put one there or change the owner's answer about their local tasks, pictures from the web, joining a meeting's link · `delete`: deleting for good (also a delete in Deleted Items), emptying or deleting a folder, removing an attachment or a calendar, deleting a contact, task, event or category (also an undo or redo that would remove one, or a message: it swaps the whole mailbox; undoing a copy made by a Microsoft or Exchange server instead moves the copy to Deleted Items and does not remove it), creating/editing/enabling/reordering/running rules that delete mail or move it to Deleted Items or descendants, restoring/changing such rules through undo/redo, and activating or reordering server rules with unknown effects (cannot be proven non-deleting); disabling or removing a definition deletes no mail and is safe; discarding a message being written that only an agent wrote in · `accounts`: adding, changing or removing an account, signing in, the application id, remembering sign-ins, moving calendars to an account · `mailbox`: opening, replacing or saving the mailbox file · `settings`: options, signatures, how pictures are downloaded; `edit.undo` and `edit.redo` ask for `accounts`, `send`, `delete` or `settings` (in that order) when the step would restore their protected effects, remove contacts/events/tasks/calendars/categories, or take away a draft or put back an earlier version of one | bridged: the owner is asked in the window; headless: refused, unless the server was started with `--allow` for it |
+| `safe` | reads and searches; flagging and ordinary filing, including between private accounts; reversible account metadata, options and saved signature edits; private calendar, contact and task edits; reading rules and non-mutating previews; creating, editing, enabling, reordering or running non-deleting filing rules; disabling or removing rule definitions; saving the mailbox in place; opening or replacing it when no unsaved work is lost; writing and saving messages without sending; closing a composer after saving to Drafts; Send/Receive; undo and redo without the protected effects below | runs without a consent prompt |
+| `owner`: `delete` | permanently removing messages, attachments, folders, contacts, tasks, events, calendars or categories; deleting an account's content or thinning its offline copy; replacing protocol state; forgetting remembered credentials; discarding unsaved mailbox, message, form or signature edits; rules that delete mail or route it to Deleted Items or descendants, and server-rule changes whose effects cannot be established; undo or redo that removes content or restores deleting rules | bridged: asks about the destructive effect; headless: refused without an existing `delete` grant |
+| `owner`: `send` | actual messages or invitations to other people, Outbox placement, returning online with queued Outbox messages, automatic replies, filing into a shared mailbox, and changes to shared Microsoft To Do content or its categories that disclose changes to other people; undo or redo with those effects | preserves the separate sending/disclosure authorization |
+| `owner`: `accounts` | trusting an imported mailbox's servers to use credentials, trusting a new TLS certificate outside system trust, or undoing a trust revocation | preserves the credential/server-trust authorization |
 | `never` | the host's side of a synchronisation (`sync.*`), file pickers (`ui.open`, `ui.import`, `ui.attach`), putting an agent's text or the owner's selected text on the clipboard (`ui.copyLinkAddress`, `ui.copySelection`), the diagnostics text (`ui.copyDiagnostics`), opening an attachment with another program (`mail.openAttachment`: only the owner's double-click or Open; an agent saves it as `data` with `mail.saveAttachment`) | refused |
+
+Consent follows the command's actual effect, not its options page or account label.
+Public OAuth application identifiers are reversible settings; provider sign-ins and
+permission grants remain user operated, and secrets still use the private ingress.
+Legacy `mailbox` and `settings` grant names remain compatible; ordinary
+reads, saves and reversible edits do not require them. The legacy `leave`
+classification is retained for compatibility, not as a new blanket prompt.
+Manual private task placement
+does not enable Microsoft To Do integration or grant provider permissions. Headless
+app control supports its documented nonvisual preferences, not arbitrary window or
+input actions.
 
 A command without a class is refused; every command MailCraft has carries one, and a test makes
 new commands choose.
@@ -66,7 +79,7 @@ only (never over an existing file, never through a link), never hidden, with the
 command writes (`.eml`, `.mbox`, `.ics`, `.vcf`; for an attachment, any but the kinds the
 attachment opener refuses or asks about first: programs and scripts, web pages (`.html`, `.svg`,
 `.xml`), and Office files that can carry macros, `.docm` and legacy `.doc`, `.xls`, `.ppt`). The mailbox file itself is never named by an agent: `save_mailbox` saves in place
-(class `mailbox`). `screenshot` comes back in the answer; nothing is written.
+(no blanket `mailbox` grant). `screenshot` comes back in the answer; nothing is written.
 
 **`--allow`.** `--allow send`, `delete`, `accounts`, `mailbox`, `settings` or `input`, repeated
 or separated by commas, lets the agent do that class without asking. There is no way to allow
@@ -75,19 +88,22 @@ it skips the question for that class. `input` (raw clicks and keys in the window
 agent could press anything, Send too) is never asked about: without `--allow input`, `click` and
 `key` are refused.
 
-**What the owner is changing.** An agent never takes the window off what the owner is writing or
-changing without the owner's yes in the window, every time: no `--allow` skips this question
-(#494). A message being written that the owner has typed in is theirs until it is closed, saved or
-not (a save by the owner, by the window every few minutes or by an agent doesn't change that;
-moving the cursor in a message only the agent wrote isn't writing in it). Closing it
-(`compose.close`) asks Allow, and what isn't saved goes to Drafts first (all of it when its saved
-draft is gone meanwhile); with `"discard": true` and changes that aren't saved it asks Delete, and
-nothing is saved. Starting another message (`mail.new`, `mail.reply`, `mail.forward`,
+**What the owner is changing.** Saving a composer's contents to Drafts and closing
+it (`compose.close`) needs no consent. If its saved draft has gone meanwhile, all
+of the contents are saved again. Discarding the owner's unsaved work still asks
+every time: no `--allow` skips that question (#494). A save does not transfer
+authorship to the agent, and moving the cursor in an agent's message is not owner
+typing. With `"discard": true` and unsaved changes it asks Delete and saves nothing.
+Starting another message (`mail.new`, `mail.reply`, `mail.forward`,
 `mail.editDraft`, `people.email` and the rest) asks nothing: it opens beside the owner's, which
 stays as it is (see *Several messages being written* below). `compose.discard` (the message and
-its draft) asks Delete; `file.new` and `file.open`, which close every message being written, ask
-`mailbox`, and so do they when an appointment's window has changes
-that aren't saved, for it closes with the mailbox. An appointment, a contact or a task with changes
+its draft) asks Delete. `file.new` and `file.open`, which close every composer,
+need destructive consent when replacing the mailbox would lose unsaved content.
+The native app's followed mailbox writer must durably settle the current changes
+or refuse the replacement; an unpersisted mailbox is not treated as saved. An
+incoming mailbox's enabled deleting rules and queued sending effects are checked before replacing the old
+path and history, so a refusal leaves the original binding intact. An
+appointment, a contact or a task with changes
 that aren't saved, in the dialog that `ui.closeDialog` would close or `ui.dialog` would put another
 in place of, asks Delete, and so does an appointment's window of its own that `ui.closeWindow`
 would close. Taking away an appointment whose window of its own has such changes

@@ -91,10 +91,10 @@ fn the_options_add_remove_and_list_entries() {
 }
 
 #[test]
-fn an_agent_is_asked_before_it_changes_or_reads_a_list() {
-    use crate::agent::{Access, Class, access, describe};
+fn an_agent_can_read_and_reversibly_change_a_list_without_consent() {
+    use crate::agent::{Access, access, describe};
     for id in ["junk.blockSender", "junk.neverBlockSender", "junk.neverBlockDomain", "junk.add", "junk.remove", "junk.list"] {
-        assert_eq!(access(id), Some(Access::Owner(Class::Settings)), "{id}");
+        assert_eq!(access(id), Some(Access::Safe), "{id}");
     }
     let (mut s, a) = local();
     let inbox = s.mailbox.folder_of_kind(a, FolderKind::Inbox).unwrap();
@@ -104,9 +104,9 @@ fn an_agent_is_asked_before_it_changes_or_reads_a_list() {
     let said = describe(&s, "junk.neverBlockDomain", &json!({"ids": [id]}));
     assert!(said.contains("@shop.example") && said.contains("Safe Senders"), "{said}");
     assert!(describe(&s, "junk.add", &json!({"list": "blocked", "entry": "X@Example.org"})).contains("x@example.org"));
-    // Undoing a change to the lists is a change to the settings.
+    // The list edit is reversible without another settings prompt.
     s.run("junk.add", &json!({"list": "safe", "entry": "a@example.org"})).unwrap();
-    assert_eq!(s.undo_reverts(false), Some(Class::Settings));
+    assert_eq!(s.undo_reverts(false), None);
     let _ = s.run("mail.select", &json!({"id": id}));
 }
 
@@ -212,13 +212,14 @@ fn graph_mail_from_a_blocked_sender_goes_to_junk_and_the_move_goes_up() {
     assert!(changes.iter().any(|c| matches!(c, MessageChange::Move { message, .. } if *message == blocked)), "{changes:?}");
 }
 
-/// #504 review: the owner is asked about the list the command changes, and about nothing else.
+/// #504: a command describes the exact list it changes, without a blanket prompt.
 #[test]
-fn the_question_names_the_list_the_command_changes() {
+fn the_description_names_the_list_the_command_changes() {
     use crate::agent::{Class, Verdict, check, describe};
     let (mut s, _) = local();
     let params = json!({"list": " blocked", "entry": "offers@shop.example"});
-    let Verdict::Ask(Class::Settings, said) = check(&s, "junk.add", &params, &[]) else { panic!("asked") };
+    assert_eq!(check(&s, "junk.add", &params, &[]), Verdict::Run);
+    let said = describe(&s, "junk.add", &params);
     assert!(said.contains("Blocked Senders") && !said.contains("Safe Senders"), "{said}");
     s.run("junk.add", &params).unwrap();
     assert_eq!(lists(&s).1, ["offers@shop.example"]);
@@ -481,16 +482,20 @@ fn each_account_has_its_own_lists_and_sorts_by_them_alone() {
 }
 
 #[test]
-fn an_agent_is_asked_about_the_account_whose_list_changes() {
-    use crate::agent::{Class, Verdict, check, describe};
+fn an_agents_list_edit_names_its_account_and_still_validates_it() {
+    use crate::agent::{Verdict, check, describe};
     let (mut s, _) = local();
     let b = second_account(&mut s);
     let params = json!({"account": b, "list": "blocked", "entry": "x@shop.example"});
     let said = describe(&s, "junk.add", &params);
     assert!(said.contains("ada@example.net"), "{said}");
-    assert!(matches!(check(&s, "junk.add", &params, &[]), Verdict::Ask(Class::Settings, _)));
+    assert_eq!(check(&s, "junk.add", &params, &[]), Verdict::Run);
+    s.run("junk.add", &params).unwrap();
+    assert!(s.mailbox.junk_lists(b).unwrap().blocked.contains(&"x@shop.example".to_string()));
     let stranger = json!({"account": 424_242, "list": "safe", "entry": "x@y.example"});
-    assert!(matches!(check(&s, "junk.add", &stranger, &[Class::Settings]), Verdict::Refuse(_)));
+    let before = s.mailbox.junk_accounts.clone();
+    assert!(s.run("junk.add", &stranger).is_err());
+    assert_eq!(s.mailbox.junk_accounts, before);
 }
 
 // #567: mail that comes through Graph goes through the rules after the lists, as IMAP mail does.

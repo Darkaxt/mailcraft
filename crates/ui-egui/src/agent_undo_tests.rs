@@ -54,8 +54,8 @@ fn a_yes_to_putting_the_accounts_back_covers_the_messages_the_question_named() {
     let (now, rx) = agent(&mut a, "edit.undo");
     assert!(now.is_none(), "asked first");
     let q = a.asking.front().unwrap();
-    assert_eq!(q.class, Class::Accounts);
-    assert!(q.what.contains("the accounts") && q.what.contains("takes away 1 message"), "{}", q.what);
+    assert_eq!(q.class, Class::Delete);
+    assert!(q.what.contains("takes away 1 message"), "{}", q.what);
     answer(&mut a, true);
     let reply = rx.try_recv().unwrap();
     assert_eq!(reply["ok"], true, "{reply}");
@@ -112,25 +112,25 @@ fn with_the_accounts_allowed_in_advance_the_question_is_about_delete() {
 }
 
 #[test]
-fn a_yes_to_the_accounts_alone_doesnt_cover_messages_the_step_takes_since() {
-    // Asked when the undo took no mail; by the answer it would: the yes is refused, nothing moves.
+fn undoing_reversible_account_metadata_needs_no_prompt_but_removing_mail_does() {
     let mut a = app();
     let (m, other) = message_and_other_folder(&a);
     a.execute("mail.flag", json!({"ids": [m]})).unwrap();
     rename_an_account(&mut a);
-    let (now, rx) = agent(&mut a, "edit.undo");
-    assert!(now.is_none());
-    let q = a.asking.front().unwrap();
-    assert_eq!(q.class, Class::Accounts);
-    assert!(!q.what.contains("takes away"), "{}", q.what);
-    // Meanwhile the owner copies a message, and the accounts change again.
+    let (now, _) = agent(&mut a, "edit.undo");
+    assert_eq!(now.unwrap()["ok"], true);
+    assert!(a.asking.is_empty());
+    assert!(!a.session.mailbox.accounts.iter().any(|x| x.name.ends_with(" (renamed)")));
+    // A different step removes a copy: that asks about deletion.
     a.execute("mail.copy", json!({"ids": [m], "folder": other})).unwrap();
     rename_an_account(&mut a);
+    let (now, rx) = agent(&mut a, "edit.undo");
+    assert!(now.is_none());
+    assert_eq!(a.asking.front().unwrap().class, Class::Delete);
     let before = a.session.mailbox.clone();
-    answer(&mut a, true);
+    answer(&mut a, false);
     let reply = rx.try_recv().unwrap();
     assert_eq!(reply["ok"], false, "{reply}");
-    assert!(reply["error"].as_str().is_some_and(|e| e.contains("more than the owner was asked about")), "{reply}");
     assert!(a.session.mailbox == before);
 }
 

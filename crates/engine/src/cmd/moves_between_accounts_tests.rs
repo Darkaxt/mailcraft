@@ -1742,8 +1742,8 @@ fn ids_named_wrongly_never_move_or_copy_the_selected_message_onto_another_server
 }
 
 #[test]
-fn an_agent_is_asked_before_it_puts_mail_on_another_accounts_server() {
-    use crate::agent::{Access, Class, classify, describe};
+fn an_agents_private_cross_account_filing_needs_no_send_grant() {
+    use crate::agent::{Access, Verdict, check, classify, describe};
     let (mut s, a, kept) = imap();
     let ms = microsoft(&mut s, OWNER);
     let b = second_imap(&mut s);
@@ -1752,17 +1752,17 @@ fn an_agent_is_asked_before_it_puts_mail_on_another_accounts_server() {
     let two = titled(&s, "Two");
     let mine = kept_here(&mut s, kept, "Mine");
     for command in ["mail.move", "mail.copy"] {
-        // Onto another account's server, from another server or from this computer: as a send.
+        // Ordinary filing between private accounts is reversible, not a send.
         for (id, folder) in [(two, theirs), (two, other), (mine, theirs), (mine, other)] {
-            assert_eq!(classify(&s, command, &json!({"ids": [id], "folder": folder})), Access::Owner(Class::Send), "{command} {id} {folder}");
+            assert_eq!(classify(&s, command, &json!({"ids": [id], "folder": folder})), Access::Safe, "{command} {id} {folder}");
         }
         // Within its account, or onto this computer: as ever.
         for (id, folder) in [(two, archive), (two, kept)] {
             assert_eq!(classify(&s, command, &json!({"ids": [id], "folder": folder})), Access::Safe, "{command} {id} {folder}");
         }
-        // The selection likewise. Named wrongly, the command refuses them.
+        // Agents must still name messages, rather than use the window selection.
         s.run("mail.select", &json!({"ids": [two]})).unwrap();
-        assert_eq!(classify(&s, command, &json!({"folder": theirs})), Access::Owner(Class::Send), "{command}");
+        assert!(matches!(check(&s, command, &json!({"folder": theirs}), &[]), Verdict::Refuse(_)), "{command}");
         assert_eq!(classify(&s, command, &json!({"id": null, "folder": theirs})), Access::Safe, "{command}");
     }
     // The question says what goes where.

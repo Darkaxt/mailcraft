@@ -205,7 +205,7 @@ fn the_calendar_question_names_the_event_and_the_invitees() {
 }
 
 #[test]
-fn undo_filing_rules_is_safe_and_restoring_deleting_rules_or_accounts_requires_consent() {
+fn undo_reversible_metadata_is_safe_and_restoring_deleting_rules_requires_consent() {
     let mut s = sample();
     let archive = folder_of(&s, FolderKind::Archive);
     // An ordinary step: safe.
@@ -226,7 +226,7 @@ fn undo_filing_rules_is_safe_and_restoring_deleting_rules_or_accounts_requires_c
     assert!(s.undo());
     assert!(matches!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Ask(Class::Delete, _)));
     s.run("account.add", &json!({"email":"other@example.org"})).unwrap();
-    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
+    assert_eq!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run);
 }
 
 #[test]
@@ -250,7 +250,7 @@ fn the_account_question_names_a_local_mailbox_and_the_only_account() {
     let only = "remove the account Local mailbox (the only account: leaves an empty mailbox)";
     assert_eq!(describe(&s, "account.remove", &json!({"id": local})), only);
     assert_eq!(describe(&s, "account.edit", &json!({"id": local, "name": "Home"})), "change the account Local mailbox");
-    assert!(matches!(check(&s, "account.remove", &json!({"id": local}), &[]), Verdict::Ask(Class::Accounts, q) if q.contains(only)));
+    assert!(matches!(check(&s, "account.remove", &json!({"id": local}), &[]), Verdict::Ask(Class::Delete, q) if q.contains(only)));
     // Its shared mailboxes go with it: still the only account.
     let shared = s.mailbox.add_account(Account { email: "team@example.org".into(), shared_of: Some(local), ..Default::default() });
     assert_eq!(describe(&s, "account.remove", &json!({"id": local})), only);

@@ -254,10 +254,11 @@ fn an_older_mailbox_and_a_saved_one_keep_the_list() {
 }
 
 #[test]
-fn an_agent_is_asked_first() {
-    for id in ["calendar.openShared", "calendar.removeShared", "calendar.hideListedCopy"] {
-        assert_eq!(access(id), Some(Access::Owner(Class::Accounts)), "{id}");
+fn an_agent_can_open_or_hide_a_calendar_but_removal_needs_delete() {
+    for id in ["calendar.openShared", "calendar.hideListedCopy"] {
+        assert_eq!(access(id), Some(Access::Safe), "{id}");
     }
+    assert_eq!(access("calendar.removeShared"), Some(Access::Owner(Class::Delete)));
     let (s, _) = served();
     let said = crate::agent::describe(&s, "calendar.openShared", &json!({"address": "cy@example.org"}));
     assert!(said.contains("cy@example.org"), "{said}");

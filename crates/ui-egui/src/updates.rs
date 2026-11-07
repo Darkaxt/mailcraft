@@ -948,11 +948,8 @@ mod tests {
         app.ui.update_check = UpdateCheck::On;
         assert_eq!(app.execute(CHECK, json!({})).unwrap()["pending"], "updateCheck");
         assert_eq!(host.asked.load(Ordering::Relaxed), 1);
-        // Turning it on is a setting: the agents' gate asks the owner first.
-        assert_eq!(
-            mailcraft_engine::agent::access("ui.updateCheck"),
-            Some(mailcraft_engine::agent::Access::Owner(mailcraft_engine::agent::Class::Settings))
-        );
+        // This reversible preference needs no blanket settings prompt.
+        assert_eq!(mailcraft_engine::agent::access("ui.updateCheck"), Some(mailcraft_engine::agent::Access::Safe));
         // A build without a host has nothing to check with.
         let mut bare = start(Services::default(), &UiState::default(), NOW);
         assert!(bare.run(CHECK, json!({})).is_err());
@@ -1078,11 +1075,8 @@ mod tests {
         assert_eq!(host.asked.load(Ordering::Relaxed), 1);
         assert!(app.newer_release().is_some());
         assert!(asked.lock().unwrap().is_empty());
-        // The switch is a setting: the agents' gate asks the owner first.
-        assert_eq!(
-            mailcraft_engine::agent::access("ui.updateInstall"),
-            Some(mailcraft_engine::agent::Access::Owner(mailcraft_engine::agent::Class::Settings))
-        );
+        // The reversible switch needs no blanket settings prompt.
+        assert_eq!(mailcraft_engine::agent::access("ui.updateInstall"), Some(mailcraft_engine::agent::Access::Safe));
     }
 
     #[test]
@@ -1237,10 +1231,7 @@ mod tests {
         assert_eq!(app.run("ui.dismissUpdateNotice", json!({"notice": "installsItself"})).unwrap()["install"]["ready"], newer());
         assert!(app.prefs().update_install_told);
         assert!(app.run("ui.dismissUpdateNotice", json!({"notice": "other"})).is_err());
-        assert_eq!(
-            mailcraft_engine::agent::access("ui.dismissUpdateNotice"),
-            Some(mailcraft_engine::agent::Access::Owner(mailcraft_engine::agent::Class::Settings))
-        );
+        assert_eq!(mailcraft_engine::agent::access("ui.dismissUpdateNotice"), Some(mailcraft_engine::agent::Access::Safe));
     }
 
     #[test]

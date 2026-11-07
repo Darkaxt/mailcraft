@@ -76,15 +76,15 @@ fn undo_and_redo_that_bring_back_a_send_ask_for_send() {
 fn a_command_that_adds_a_send_oversteps() {
     let before = sample().mailbox;
     let mut after = before.clone();
-    assert_eq!(overstep(&before, &after, &[]), None);
+    assert_eq!(overstep(&before, &after, &[], false), None);
     after.event_changes.push(a_change(true));
-    assert_eq!(overstep(&before, &after, &[]), Some(Class::Send));
-    assert_eq!(overstep(&before, &after, &[Class::Send]), None);
+    assert_eq!(overstep(&before, &after, &[], false), Some(Class::Send));
+    assert_eq!(overstep(&before, &after, &[Class::Send], false), None);
     // One that was there already is not new.
-    assert_eq!(overstep(&after, &after, &[]), None);
+    assert_eq!(overstep(&after, &after, &[], false), None);
     let mut quiet = before.clone();
     quiet.event_changes.push(a_change(false));
-    assert_eq!(overstep(&before, &quiet, &[]), None);
+    assert_eq!(overstep(&before, &quiet, &[], false), None);
 }
 
 #[test]

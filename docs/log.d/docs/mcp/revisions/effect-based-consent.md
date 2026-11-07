@@ -1,0 +1,1 @@
+| 2026-11-07 | minor | Consent follows destructive effects: reads and reversible account, settings, signature, filing and save/close operations need no blanket grant; unsaved-data loss, sending, provider approval and file boundaries remain protected. |

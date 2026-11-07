@@ -142,7 +142,7 @@ fn an_unsaved_undo_that_takes_mail_asks_for_delete_every_time() {
 }
 
 #[test]
-fn a_step_that_takes_mail_and_reverts_the_accounts_is_described_with_the_accounts() {
+fn a_step_that_takes_mail_and_reverts_account_metadata_needs_delete() {
     let mut s = sample();
     let (m, other) = message_and_other_folder(&s);
     s.run("mail.copy", &json!({"ids": [m], "folder": other})).unwrap();
@@ -151,9 +151,9 @@ fn a_step_that_takes_mail_and_reverts_the_accounts_is_described_with_the_account
         step.mailbox.accounts.pop();
     }
     assert!(s.undo_takes_mail(false));
-    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
+    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Delete, _)));
     let d = describe(&s, "edit.undo", &json!({}));
-    assert!(d.contains("accounts") && d.contains("takes away"), "{d}");
+    assert!(d.contains("takes away"), "{d}");
 }
 
 #[test]
@@ -258,22 +258,21 @@ fn subject(s: &Session, id: Id) -> String {
 }
 
 #[test]
-fn a_step_that_reverts_the_accounts_and_takes_mail_is_asked_as_both() {
-    // The question about the accounts names the messages too, and a yes to it covers them;
-    // Accounts allowed in advance doesn't, so Delete is asked.
+fn a_step_that_reverts_account_metadata_and_takes_mail_only_needs_delete() {
+    // Account metadata is reversible; taking away the copied message needs Delete.
     let mut s = sample();
     let (m, other) = message_and_other_folder(&s);
     s.run("mail.copy", &json!({"ids": [m], "folder": other})).unwrap();
     accounts_changed_since(&mut s);
-    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
-    assert_eq!(also(&s, "edit.undo", &json!({}), Class::Accounts), vec![Class::Delete]);
-    assert_eq!(answered(&s, "edit.undo", &json!({}), &[], Class::Accounts), Verdict::Run);
+    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Delete, _)));
+    assert!(also(&s, "edit.undo", &json!({}), Class::Delete).is_empty());
+    assert_eq!(answered(&s, "edit.undo", &json!({}), &[], Class::Delete), Verdict::Run);
     assert!(matches!(check(&s, "edit.undo", &json!({}), &[Class::Accounts]), Verdict::Ask(Class::Delete, _)));
     assert_eq!(answered(&s, "edit.undo", &json!({}), &[Class::Accounts], Class::Delete), Verdict::Run);
     assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Accounts, Class::Delete]), Verdict::Run);
-    // Run with both in its grant, as the window runs it after the yes: the copy goes.
+    // The destructive grant alone covers the actual effect.
     let before = s.mailbox.messages.len();
-    s.agent = Some(vec![Class::Accounts, Class::Delete]);
+    s.agent = Some(vec![Class::Delete]);
     let r = s.run("edit.undo", &json!({}));
     s.agent = None;
     r.unwrap();
@@ -287,7 +286,7 @@ fn a_step_that_reverts_the_accounts_and_takes_no_mail_asks_nothing_more() {
     let (m, _) = message_and_other_folder(&s);
     s.run("mail.flag", &json!({"ids": [m]})).unwrap();
     accounts_changed_since(&mut s);
-    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
+    assert_eq!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run);
     assert!(also(&s, "edit.undo", &json!({}), Class::Accounts).is_empty());
     assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Accounts]), Verdict::Run);
     // Nor is a step asked as Delete asked for it twice.
@@ -304,9 +303,9 @@ fn an_unsaved_undo_that_reverts_the_accounts_and_takes_mail_is_covered_by_its_ye
     s.run("mail.copy", &json!({"ids": [m], "folder": other})).unwrap();
     accounts_changed_since(&mut s);
     let params = json!({"unsaved": {"form": "appointment", "title": "Lunch"}});
-    assert!(matches!(check(&s, "edit.undo", &params, &[Class::Accounts, Class::Delete]), Verdict::Ask(Class::Accounts, _)));
-    assert_eq!(also(&s, "edit.undo", &params, Class::Accounts), vec![Class::Delete]);
-    assert_eq!(answered(&s, "edit.undo", &params, &[], Class::Accounts), Verdict::Run);
+    assert!(matches!(check(&s, "edit.undo", &params, &[Class::Accounts, Class::Delete]), Verdict::Ask(Class::Delete, _)));
+    assert!(also(&s, "edit.undo", &params, Class::Delete).is_empty());
+    assert_eq!(answered(&s, "edit.undo", &params, &[], Class::Delete), Verdict::Run);
 }
 
 #[test]
@@ -316,7 +315,7 @@ fn the_question_about_the_accounts_names_the_messages_taken_too() {
     s.run("mail.copy", &json!({"ids": [m], "folder": other})).unwrap();
     accounts_changed_since(&mut s);
     let d = describe(&s, "edit.undo", &json!({}));
-    assert!(d.contains("the accounts") && d.contains("takes away 1 message") && d.contains(&subject(&s, m)), "{d}");
+    assert!(d.contains("takes away 1 message") && d.contains(&subject(&s, m)), "{d}");
 }
 
 #[test]
@@ -342,29 +341,28 @@ fn an_undo_that_takes_a_draft_alone_says_only_the_draft() {
 }
 
 #[test]
-fn a_redo_that_reverts_the_accounts_and_deletes_for_good_is_asked_as_both() {
+fn a_redo_that_reverts_account_metadata_and_deletes_for_good_needs_delete() {
     let mut s = sample();
     let (m, _) = message_and_other_folder(&s);
     s.run("mail.deletePermanently", &json!({"ids": [m]})).unwrap();
     assert!(s.undo());
     accounts_changed_since(&mut s);
-    assert!(matches!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
-    assert_eq!(also(&s, "edit.redo", &json!({}), Class::Accounts), vec![Class::Delete]);
+    assert!(matches!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Ask(Class::Delete, _)));
+    assert!(also(&s, "edit.redo", &json!({}), Class::Delete).is_empty());
     assert!(describe(&s, "edit.redo", &json!({})).contains("takes away 1 message"));
     assert!(matches!(check(&s, "edit.redo", &json!({}), &[Class::Accounts]), Verdict::Ask(Class::Delete, _)));
 }
 
 #[test]
 fn a_step_that_reverts_the_accounts_and_removes_a_contact_needs_delete_too() {
-    // Not messages, but gone for good all the same: the yes to the accounts covers it, and the
-    // question says so; Accounts allowed in advance doesn't.
+    // Removing the contact needs Delete; account metadata adds no blanket grant.
     let mut s = sample();
     s.run("people.new", &json!({"first": "Noor", "email": "noor@example.org"})).unwrap();
     accounts_changed_since(&mut s);
-    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
-    assert_eq!(also(&s, "edit.undo", &json!({}), Class::Accounts), vec![Class::Delete]);
+    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Delete, _)));
+    assert!(also(&s, "edit.undo", &json!({}), Class::Delete).is_empty());
     let d = describe(&s, "edit.undo", &json!({}));
-    assert!(d.contains("the accounts") && d.contains("takes away contacts, events, tasks, calendars or categories made since, for good"), "{d}");
+    assert!(d.contains("takes away contacts, events, tasks, calendars or categories made since, for good"), "{d}");
     // Not a restore: nothing says the contact comes back.
     assert!(!d.contains("deleted back"), "{d}");
     assert!(matches!(check(&s, "edit.undo", &json!({}), &[Class::Accounts]), Verdict::Ask(Class::Delete, _)));
