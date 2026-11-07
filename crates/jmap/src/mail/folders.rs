@@ -100,6 +100,7 @@ pub(super) fn listing_with_counts(answer: &Value) -> Option<(FolderListing, Hash
             id: id.to_string(),
             parent: parent.to_string(),
             name,
+            provider_name: String::new(),
             kind,
             total: count(entry, "totalEmails"),
             unread: count(entry, "unreadEmails"),

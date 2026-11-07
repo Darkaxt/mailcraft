@@ -623,6 +623,7 @@ fn ask(graph: &Graph<'_>, span: std::ops::Range<usize>, answers: &mut [Option<Op
 pub(crate) struct Entry {
     pub id: String,
     pub name: String,
+    pub provider_name: String,
     pub children: u64,
     pub unseen: bool,
     /// How many messages it has, and how many are unread (0 when not said).
@@ -635,7 +636,9 @@ pub(crate) struct Entry {
 /// [`Entry`] of one JSON value of a list, or of the answer to a change.
 pub(crate) fn entry_of(value: &Value) -> Option<Entry> {
     let id = id_of(text(value, "id"))?;
-    let name = clean_name(&text(value, "displayName").chars().take(MAX_NAME).collect::<String>())?;
+    let raw_name = text(value, "displayName");
+    let name = clean_name(&raw_name.chars().take(MAX_NAME).collect::<String>())?;
+    let provider_name = if raw_name.chars().take(MAX_NAME + 1).count() <= MAX_NAME { raw_name.to_string() } else { String::new() };
     // A count that isn't given is read as "maybe": the folder is looked into.
     let children = value.get("childFolderCount").map_or(Some(1), Value::as_u64)?;
     let hidden = value.get("isHidden").and_then(Value::as_bool).unwrap_or(false);
@@ -643,7 +646,7 @@ pub(crate) fn entry_of(value: &Value) -> Option<Entry> {
     let count = |name: &str| value.get(name).and_then(Value::as_u64).map(|n| u32::try_from(n).unwrap_or(u32::MAX));
     let (total, unread) = (count("totalItemCount"), count("unreadItemCount"));
     let counted = total.is_some() && unread.is_some();
-    Some(Entry { id, name, children, unseen: hidden || search, total: total.unwrap_or(0), unread: unread.unwrap_or(0), counted })
+    Some(Entry { id, name, provider_name, children, unseen: hidden || search, total: total.unwrap_or(0), unread: unread.unwrap_or(0), counted })
 }
 
 /// Every folder of the mailbox, parents first, a level of the tree at a time. A listing that was
@@ -711,6 +714,7 @@ fn listing(graph: &Graph<'_>, known: &Known) -> Result<FolderListing, (FolderLis
                         id: entry.id,
                         parent: parent.clone(),
                         name: entry.name,
+                        provider_name: entry.provider_name,
                         kind,
                         total: entry.total,
                         unread: entry.unread,
@@ -934,7 +938,16 @@ fn done(known: &Known, reply: &Reply, parent: &str) -> Result<ChangeOutcome, Net
     let json = serde_json::from_slice::<Value>(&reply.body).unwrap_or(Value::Null);
     let entry = entry_of(&json).ok_or_else(|| nonsense("Microsoft Graph's answer about a folder isn't one"))?;
     let kind = known.kinds.get(&entry.id).copied().unwrap_or_default();
-    Ok(ChangeOutcome::Done { folder: GraphFolder { id: entry.id, parent: known.parent_here(parent), name: entry.name, kind, ..Default::default() } })
+    Ok(ChangeOutcome::Done {
+        folder: GraphFolder {
+            id: entry.id,
+            parent: known.parent_here(parent),
+            name: entry.name,
+            provider_name: entry.provider_name,
+            kind,
+            ..Default::default()
+        },
+    })
 }
 
 /// [`done`] for a folder that stayed where it was: the answer says where that is.
@@ -975,7 +988,14 @@ fn child_named(graph: &Graph<'_>, known: &Known, parent: &str, name: &str) -> Re
     graph.list(Doing::Folders, graph.url(&path), &[], MAX_LISTED_FOLDERS, &mut |value| {
         if let Some(entry) = entry_of(value).filter(|entry| found.is_none() && entry.name.to_lowercase() == wanted) {
             let kind = known.kinds.get(&entry.id).copied().unwrap_or_default();
-            found = Some(GraphFolder { id: entry.id, parent: parent.to_string(), name: entry.name, kind, ..Default::default() });
+            found = Some(GraphFolder {
+                id: entry.id,
+                parent: parent.to_string(),
+                name: entry.name,
+                provider_name: entry.provider_name,
+                kind,
+                ..Default::default()
+            });
         }
     })?;
     Ok(found)

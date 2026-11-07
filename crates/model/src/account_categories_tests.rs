@@ -183,15 +183,17 @@ fn a_rule_puts_its_category_on_the_list_of_an_account_with_its_own() {
     mb.account_categories.insert(a, Vec::new());
     mb.rules.push(Rule {
         enabled: true,
-        conditions: vec![Condition::SubjectContains(String::new())],
+        conditions: vec![Condition::SubjectContains("Apply category".into())],
         actions: vec![Action::Categorize("From a rule".into()), Action::Categorize("Unknown".into())],
         ..Default::default()
     });
     let m = message_of(&mut mb, a, &[]);
+    mb.message_mut(m).unwrap().subject = "Apply category".into();
     mb.apply_rules(m);
     assert_eq!(mb.categories_of(a), [tagged("From a rule", RED), tagged("Unknown", GREY_CATEGORY)]);
     // The shared list stays as it was, as it always did for a rule.
     let m = message_of(&mut mb, here, &[]);
+    mb.message_mut(m).unwrap().subject = "Apply category".into();
     mb.apply_rules(m);
     assert!(mb.category("Unknown").is_none());
 }

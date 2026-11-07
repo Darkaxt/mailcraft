@@ -1,0 +1,1 @@
+| 2026-11-06 | Local rules gain explicit regex/case conditions, safe stored exceptions, copy actions, action-failure reporting and destination-folder editing with non-mutating previews; server-owned originals remain intact. |

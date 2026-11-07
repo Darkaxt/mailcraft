@@ -849,7 +849,7 @@ msgid "All Mailboxes"
 msgstr "Alle Postfächer"
 
 #. interface
-#: crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
 #, fuzzy
 msgid "All accounts"
 msgstr "Alle Konten"
@@ -1964,10 +1964,20 @@ msgid "Cancel This Meeting?"
 msgstr "Diese Besprechung absagen?"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Cancel edit"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Cancelled"
 msgstr "Abgesagt"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Case sensitive"
+msgstr ""
 
 #. interface, name
 #: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/tasks_view.rs
@@ -2152,6 +2162,16 @@ msgstr "Namen überprüfen"
 #, fuzzy
 msgid "Check Now"
 msgstr "Jetzt prüfen"
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Check Rule Conflicts"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Check conflicts"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -2496,6 +2516,16 @@ msgid "Confirm servers"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Confirmed"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Conflicting destinations: {confirmed} confirmed; {potential} potential."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Connect"
@@ -2692,6 +2722,11 @@ msgstr "Version, Plattform und das Ende des MailCraft-eigenen Protokolls kopiere
 #, fuzzy
 msgid "Copy to Folder"
 msgstr "In Ordner kopieren"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Copy to folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -3123,6 +3158,11 @@ msgstr ""
 msgid "Direct Replies To"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Disabled until repaired: {why}"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -3509,6 +3549,11 @@ msgid "Edit Event"
 msgstr "Ereignis bearbeiten"
 
 #. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Edit Local Rule"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "Edit Message"
@@ -3532,8 +3577,18 @@ msgid "Edit Task"
 msgstr "Aufgabe bearbeiten"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit rule"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/compose.rs
 msgid "Edit signature as text"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit this local rule"
 msgstr ""
 
 #. ribbon, ribbon location
@@ -3739,6 +3794,16 @@ msgstr "Alles in „{folder}“ wird endgültig gelöscht."
 #, fuzzy
 msgid "Everything the interface does is a command: {commands} of them, covering {percent}% of the feature catalog. The command line, the control channel and the MCP server run the same commands."
 msgstr "Alles, was die Oberfläche tut, ist ein Befehl: {commands} Befehle, die {percent} % des Funktionskatalogs abdecken. Die Befehlszeile, der Steuerkanal und der MCP-Server führen dieselben Befehle aus."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Except"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Exception"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -4308,6 +4373,11 @@ msgstr ""
 #, fuzzy
 msgid "From contains"
 msgstr "Von enthält"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "From contains any of"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -5031,6 +5101,11 @@ msgid "Include the original message when replying"
 msgstr "Beim Antworten die ursprüngliche Nachricht einschließen"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Includes rules for other destination folders. Priority and Stop do not resolve competing destinations. Potential overlaps still require review; matching conflicts leave the message unmoved."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Incoming mail (IMAP)"
@@ -5084,6 +5159,11 @@ msgstr "Bild einfügen"
 #. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Inside My Organization"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Inspect Pending Classification"
 msgstr ""
 
 #. command label
@@ -6218,6 +6298,11 @@ msgstr "Nachrichtenvorschau"
 msgid "Message Preview"
 msgstr "Nachrichtenvorschau"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Message {message}, after {completed} actions: {why}"
+msgstr ""
+
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -6538,6 +6623,16 @@ msgid "Move Up"
 msgstr "Nach oben"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move after {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move before {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Move the Appointments Only"
@@ -6684,6 +6779,11 @@ msgstr "Erforderlich für Outlook.com- und Microsoft 365-Konten"
 #, fuzzy
 msgid "Needs Check for new versions."
 msgstr "Erfordert „Nach neuen Versionen suchen“."
+
+#. interface
+#: crates/ui-egui/src/forms/rules/advanced.rs
+msgid "Nested exceptions cannot be edited here. The original rule was preserved."
+msgstr ""
 
 #. command label, interface
 #: crates/engine/src/cmd/junk.rs crates/ui-egui/src/ribbon.rs
@@ -6847,6 +6947,11 @@ msgstr "Neue Elemente kommen in den hier gewählten Kalender"
 #, fuzzy
 msgid "New mail"
 msgstr "Neue E-Mails"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "New mail from"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/alerts.rs crates/ui-egui/src/compose.rs
@@ -7573,6 +7678,11 @@ msgstr "Sobald ein Administrator genehmigt hat, versuchen Sie es erneut: Dann kl
 msgid "Once it has worked, your system's credential store keeps it for next time. It is never written to the mailbox."
 msgstr "Sobald es funktioniert hat, bewahrt der Anmeldeinformationsspeicher Ihres Systems es für das nächste Mal auf. Es wird nie in das Postfach geschrieben."
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One email address per line"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/meeting.rs
 #, fuzzy
@@ -7584,6 +7694,11 @@ msgstr "Ein Vorkommen einer Serie kann nicht in einem anderen Kalender liegen al
 #, fuzzy
 msgid "One of a series: {rule}"
 msgstr "Teil einer Serie: {rule}"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One sender text per line"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -7649,6 +7764,11 @@ msgid "Only on this computer: {why}"
 msgstr "Nur auf diesem Computer: {why}"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only rules assigned to this destination are shown. Order includes rules for other destinations; a rule can have additional actions."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Only send during this time range:"
 msgstr ""
@@ -7658,6 +7778,11 @@ msgstr ""
 #, fuzzy
 msgid "Only the beginning of this message is here. The rest downloads with the next Send/Receive."
 msgstr "Hier ist nur der Anfang dieser Nachricht. Der Rest wird beim nächsten Senden/Empfangen heruntergeladen."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only the first 100 failure details are shown; the total includes every failure."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
@@ -7912,6 +8037,11 @@ msgstr "Optionen"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "Oder ist es eines davon?"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Order {position}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -8325,6 +8455,11 @@ msgstr ""
 msgid "Postal code"
 msgstr "Postleitzahl"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Potential"
+msgstr ""
+
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/send_receive.rs crates/ui-egui/src/ribbon.rs
 msgid "Preferences"
@@ -8337,16 +8472,31 @@ msgid "Press Send/Receive to download your mail."
 msgstr "Klicken Sie auf Senden/Empfangen, um Ihre E-Mails herunterzuladen."
 
 #. interface, name
-#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "Preview"
 msgstr "Vorschau"
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Preview Rules"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Preview lines in the message list"
 msgstr "Vorschauzeilen in der Nachrichtenliste"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview this rule without changing mail"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -8635,6 +8785,11 @@ msgstr "Eingabe wiederholen"
 #, fuzzy
 msgid "Redo {what}"
 msgstr "{what} wiederholen"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Regex"
+msgstr ""
 
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
@@ -9139,9 +9294,19 @@ msgstr "Regeln und Kategorien"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
+msgid "Rules delivering to {folder}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Rules for"
 msgstr "Regeln für"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Rules for {folder}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -9371,6 +9536,11 @@ msgstr "Nachricht speichern unter…"
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Save Message File As"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Save Rule"
 msgstr ""
 
 #. command label
@@ -9957,6 +10127,11 @@ msgstr ""
 #, fuzzy
 msgid "Send/Receive with Microsoft Graph"
 msgstr "Senden/Empfangen mit Microsoft Graph"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Sender address is one of"
+msgstr ""
 
 #. name
 #: crates/ui-egui/src/forms.rs
@@ -10715,6 +10890,11 @@ msgstr ""
 #, fuzzy
 msgid "Some of the search was checked on this computer"
 msgstr "Ein Teil der Suche wurde auf diesem Computer geprüft"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Some server rules have unsupported parts; their overlap cannot be checked here."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
@@ -12864,6 +13044,11 @@ msgstr ""
 msgid "This rule can't be kept on the server: {why}. It runs on this computer, while MailCraft is open."
 msgstr "Diese Regel kann nicht auf dem Server gespeichert werden: {why}. Sie läuft auf diesem Computer, solange MailCraft geöffnet ist."
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "This rule contains competing Move actions. Use explicit copies if intended."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
 #, fuzzy
@@ -13098,6 +13283,11 @@ msgstr ""
 #. command label
 #: crates/engine/src/cmd/tasks_remote.rs
 msgid "To-do Changes to Send"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "To/Cc address is one of"
 msgstr ""
 
 #. what a command says
@@ -14614,6 +14804,11 @@ msgstr "Tag"
 msgid "everybody at @{domain}"
 msgstr "alle bei @{domain}"
 
+#. name
+#: crates/engine/src/cmd/rules.rs
+msgid "exact address alternatives, regex, explicit case matching, exceptions and copy actions run on this computer"
+msgstr ""
+
 #. folder name
 #: crates/model/src/mailbox.rs
 #, fuzzy
@@ -14751,6 +14946,11 @@ msgstr ""
 msgid "isn't a folder: left alone"
 msgstr ""
 
+#. name
+#: crates/engine/src/agent.rs
+msgid "it can delete messages or other items"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/graph_drafts.rs
 #, fuzzy
@@ -14779,12 +14979,6 @@ msgstr "es klickt oder tippt im Fenster"
 #: crates/ui-egui/src/data_removal.rs
 msgid "it could not be removed"
 msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it deletes for good"
-msgstr "es löscht endgültig"
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -15199,6 +15393,11 @@ msgid "on"
 msgstr "am"
 
 #. what a command says
+#: crates/engine/src/cmd/rules_conflicts.rs
+msgid "one rule cannot move the same message to competing destinations; use explicit copies if intended"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 msgid "only a message you sent can be sent again"
 msgstr ""
@@ -15248,11 +15447,21 @@ msgstr "past"
 msgid "pictures from the web are not downloaded: save the picture and add it from the file"
 msgstr "Bilder aus dem Web werden nicht heruntergeladen: Speichern Sie das Bild und fügen Sie es aus der Datei hinzu"
 
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "preserve the server-owned or unresolved original; make a separate disabled local migration instead"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
 msgid "readOnly"
 msgstr "readOnly"
+
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "repair the rule's definition before enabling it"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs
@@ -16846,6 +17055,13 @@ msgstr[0] "{n} Nachricht in das Konto kopiert: Senden/Empfangen legt sie ohne di
 msgstr[1] "{n} Nachrichten in das Konto kopiert: Senden/Empfangen legt sie ohne die meisten ihrer Kopfzeilen (etwa Received) auf den Microsoft-Server"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message has competing destinations and was left unmoved."
+msgid_plural "{n} messages have competing destinations and were left unmoved."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "{n} message in this conversation:"
@@ -16867,6 +17083,13 @@ msgid "{n} message matched"
 msgid_plural "{n} messages matched"
 msgstr[0] "{n} Nachricht gefunden"
 msgstr[1] "{n} Nachrichten gefunden"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message matched."
+msgid_plural "{n} messages matched."
+msgstr[0] ""
+msgstr[1] ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -16911,6 +17134,13 @@ msgstr[1] "{n} Nachrichten werden endgültig gelöscht."
 #: crates/ui-egui/src/lib.rs
 msgid "{n} message with characters that couldn't be read is being downloaded again."
 msgid_plural "{n} messages with characters that couldn't be read are being downloaded again."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message would match. No mail was changed."
+msgid_plural "{n} messages would match. No mail was changed."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -17102,6 +17332,13 @@ msgstr[1] "{n} Ergebnisse in {scope}"
 #: crates/ui-egui/src/forms.rs
 msgid "{n} rule deleted here is still on the server until MailCraft may change the server's rules (File › Info › Ask again)."
 msgid_plural "{n} rules deleted here are still on the server until MailCraft may change the server's rules (File › Info › Ask again)."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} rule processing problem."
+msgid_plural "{n} rule processing problems."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -17385,6 +17622,10 @@ msgstr "„{subject}“ war zu groß zum Herunterladen: nur die Kopfzeilen sind 
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}“ wurde auf seinem Server nicht gefunden, daher kann die Nachricht nicht als Anlage weitergeleitet werden"
+
+#, fuzzy
+#~ msgid "it deletes for good"
+#~ msgstr "es löscht endgültig"
 
 #~ msgid "Google Desktop Registration Secret"
 #~ msgstr "Google Desktop-Registrierungsgeheimnis"

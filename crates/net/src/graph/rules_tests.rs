@@ -142,6 +142,47 @@ fn a_rule_of_known_parts_is_read_whole() {
 }
 
 #[test]
+fn exact_sender_and_recipient_rule_predicates_preserve_all_transport_alternatives() {
+    let rule = rule_of(&json!({"id":"R-exact", "displayName":"Exact senders", "isEnabled":true,
+        "conditions":{
+            "fromAddresses":[{"emailAddress":{"address":"One@example.org","name":"Ignored name"}},
+                {"emailAddress":{"address":"two@example.org","name":"Also ignored"}}],
+            "sentToAddresses":[{"emailAddress":{"address":"alias@example.org"}}]},
+        "actions":{"markAsRead":true}}))
+    .unwrap();
+    assert!(rule.unknown.is_empty(), "{:?}", rule.unknown);
+    assert!(rule.conditions.contains(&Condition::FromAddresses(vec!["One@example.org".into(), "two@example.org".into()])));
+    assert!(rule.conditions.contains(&Condition::ToAddresses(vec!["alias@example.org".into()])));
+    let mut message = mailcraft_model::Message {
+        from: mailcraft_model::Address::new("not a predicate", "one@example.org"),
+        cc: vec![mailcraft_model::Address::new("", "ALIAS@example.org")],
+        ..Default::default()
+    };
+    assert!(rule.conditions.iter().all(|condition| condition.matches(&message)));
+    message.from.email = "prefix-one@example.org".into();
+    assert!(!rule.conditions.iter().all(|condition| condition.matches(&message)));
+    // Reading an existing server definition does not permit rewriting it with local-only
+    // matching. The upload path still rejects these predicates instead of changing semantics.
+    assert!(rule_body(&rule).is_err());
+}
+
+#[test]
+fn malformed_or_oversized_exact_address_predicates_stay_wholly_unknown() {
+    let good = json!({"emailAddress":{"address":"sender@example.org"}});
+    for addresses in [
+        json!([good.clone(),{"emailAddress":{"name":"No address"}}]),
+        json!(vec![good.clone(); 201]),
+        json!([{"emailAddress":{"address":"bad\u{0}@example.org"}}]),
+        json!([{"emailAddress":{"address":"Name <sender@example.org>"}}]),
+    ] {
+        let rule =
+            rule_of(&json!({"id":"R-bad", "isEnabled":true, "conditions":{"fromAddresses":addresses}, "actions":{"markAsRead":true}})).unwrap();
+        assert!(rule.conditions.is_empty());
+        assert!(rule.unknown.iter().any(|part| part == "fromAddresses"));
+    }
+}
+
+#[test]
 fn parts_this_version_does_not_know_are_named() {
     let rule = rule_of(&json!({
         "id": "A2", "displayName": "Forward", "sequence": 1, "isEnabled": true,

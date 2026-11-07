@@ -50,6 +50,44 @@ impl Rig {
 }
 
 #[test]
+fn exact_provider_names_survive_native_save_reopen_and_whitespace_only_remote_renames() {
+    let mut rig = Rig::new("folder-identity@example.org");
+    let remote = {
+        let mut state = rig.server.state();
+        let inbox = state.well_known("inbox");
+        state.add_folder("Company ", Some(&inbox))
+    };
+    let first = rig.run();
+    assert_eq!(first["errors"], json!([]));
+    let account = rig.account;
+    let inbox = rig.s.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let folder = rig.here("Company").id;
+    let inspect = |s: &mut Session| {
+        let tree = s.run("folder.list", &json!({})).unwrap();
+        let account = tree["accounts"].as_array().unwrap().iter().find(|row| row["id"] == account).unwrap();
+        let inbox = account["folders"].as_array().unwrap().iter().find(|row| row["id"] == inbox).unwrap();
+        let folder = inbox["folders"].as_array().unwrap().iter().find(|row| row["id"] == folder).unwrap();
+        folder["providerIdentity"].clone()
+    };
+    let identity = inspect(&mut rig.s);
+    assert_eq!(identity["id"], remote);
+    assert_eq!(identity["name"], "Company ");
+    assert_eq!(identity["recordedName"], "Company");
+    let saved = mailcraft_engine::io::write_mailbox(&rig.s.mailbox).unwrap();
+    rig.s = Session::at(mailcraft_engine::io::read_mailbox(&saved).unwrap(), 1_800_000_000, 0);
+    assert_eq!(inspect(&mut rig.s), identity);
+    assert_eq!(unpushed(&rig.s, account), 0);
+    assert_eq!(rig.run()["pushed"], 0, "normalization must not rename the provider folder");
+    rig.server.state().rename_folder(&remote, "Company  ");
+    let changed = rig.run();
+    assert_eq!(changed["errors"], json!([]));
+    assert_eq!(changed["updated"], 1, "an exact-name-only change must be persisted");
+    assert_eq!(inspect(&mut rig.s)["name"], "Company  ");
+    assert_eq!(inspect(&mut rig.s)["recordedName"], "Company");
+    assert_eq!(unpushed(&rig.s, account), 0);
+}
+
+#[test]
 fn folders_made_here_are_there_whole_under_their_parent() {
     let mut rig = Rig::new("made-here@example.org");
     let first = rig.run();

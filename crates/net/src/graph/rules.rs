@@ -157,6 +157,28 @@ fn one_word(value: &Value) -> Option<String> {
     }
 }
 
+/// Exact recipient identities from messageRulePredicates.fromAddresses / sentToAddresses.
+/// A malformed or oversized collection stays wholly unknown: never retain just some
+/// alternatives or substitute display-name substring matching.
+/// https://learn.microsoft.com/en-us/graph/api/resources/messagerulepredicates
+fn exact_addresses(value: &Value, sender: bool) -> Option<Condition> {
+    let recipients = value.as_array()?;
+    if recipients.is_empty() || recipients.len() > mailcraft_model::MAX_RULE_SENDERS {
+        return None;
+    }
+    let mut addresses = Vec::with_capacity(recipients.len());
+    for recipient in recipients {
+        let address = recipient.get("emailAddress")?.get("address")?.as_str()?;
+        if address.len() > 254 {
+            return None;
+        }
+        addresses.push(address.to_string());
+    }
+    let condition = if sender { Condition::FromAddresses(addresses) } else { Condition::ToAddresses(addresses) };
+    condition.validate().ok()?;
+    Some(condition)
+}
+
 pub(super) fn rule_of(entry: &Value) -> Option<RemoteRule> {
     let id = text(entry, "id");
     if !valid_id(id) {
@@ -176,6 +198,8 @@ pub(super) fn rule_of(entry: &Value) -> Option<RemoteRule> {
     let conditions = entry.get("conditions").and_then(Value::as_object).unwrap_or(&empty);
     for (name, value) in conditions.iter().filter(|(name, value)| !name.starts_with('@') && said(value)) {
         let condition = match name.as_str() {
+            "fromAddresses" => exact_addresses(value, true),
+            "sentToAddresses" => exact_addresses(value, false),
             "senderContains" => one_word(value).map(Condition::FromContains),
             "recipientContains" => one_word(value).map(Condition::ToContains),
             "subjectContains" => one_word(value).map(Condition::SubjectContains),
@@ -263,6 +287,9 @@ pub(super) fn rule_body(rule: &RemoteRule) -> Result<Value, &'static str> {
             Condition::BodyContains(t) => ("bodyContains", json!([t])),
             Condition::HasAttachment => ("hasAttachments", json!(true)),
             Condition::Importance(i) => ("importance", json!(i.code())),
+            Condition::Text(_) | Condition::Unless(_) | Condition::FromAny(_) | Condition::FromAddresses(_) | Condition::ToAddresses(_) => {
+                return Err("local matching and exceptions are not supported by the server");
+            }
         };
         if conditions.insert(name.into(), value).is_some() {
             return Err("the server's rules have one condition of each kind");
@@ -290,6 +317,7 @@ pub(super) fn rule_body(rule: &RemoteRule) -> Result<Value, &'static str> {
             }
             Action::Flag => return Err("the server's rules can't flag mail"),
             Action::MoveTo(_) => return Err("a folder to move mail to is named by the server's id"),
+            Action::CopyTo(_) => return Err("local copy actions are not supported by the server"),
         }
     }
     if !categories.is_empty() {

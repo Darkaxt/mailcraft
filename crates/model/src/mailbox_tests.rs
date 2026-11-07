@@ -179,14 +179,18 @@ fn rules_run_on_new_mail() {
         },
     ];
     let digest = mb.add_message(mail(inbox, "Weekly Digest", 1)).unwrap();
-    assert_eq!(mb.apply_rules(digest), ["Digest"]);
+    assert_eq!(mb.apply_rules(digest).applied, ["Digest"]);
     let m = mb.message(digest).unwrap();
     assert_eq!((m.folder, m.read, m.flag, m.categories.len()), (news, true, FlagStatus::None, 1));
     let hello = mb.add_message(mail(inbox, "Hello", 2)).unwrap();
-    assert_eq!(mb.apply_rules(hello), ["Flag Bob", "Gone"]);
+    let result = mb.apply_rules(hello);
+    assert_eq!(result.applied, ["Flag Bob"]);
+    assert_eq!(result.failures.len(), 1);
+    assert_eq!((result.failures[0].rule, result.failures[0].completed_actions), (3, 0));
+    assert!(!mb.rules[2].enabled && !mb.rules[2].repair.is_empty());
     let m = mb.message(hello).unwrap();
-    assert_eq!((m.flag, mb.folder(m.folder).map(|f| f.kind)), (FlagStatus::Flagged, Some(FolderKind::Deleted)));
-    assert!(mb.apply_rules(4242).is_empty());
+    assert_eq!((m.flag, m.folder), (FlagStatus::Flagged, inbox), "a missing move destination must not fall through into Delete");
+    assert_eq!(mb.apply_rules(4242).matched, 0);
 }
 
 #[test]

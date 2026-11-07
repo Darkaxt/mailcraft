@@ -203,8 +203,11 @@ fn what_needs_the_owner_is_refused_headless_unless_allowed() {
     for (cmd, params, class) in [
         ("account.add", json!({"email": "a@x.example"}), "accounts"),
         ("file.options", json!({"previewLines": 1}), "settings"),
-        ("rules.list", json!({}), "settings"),
-        ("rules.add", json!({"name": "r", "conditions": [], "actions": [{"type": "flag"}]}), "settings"),
+        (
+            "rules.add",
+            json!({"name": "r", "conditions": [{"type": "fromContains", "value": "billing@example.org"}], "actions": [{"type": "delete"}]}),
+            "delete",
+        ),
         ("file.new", json!({}), "mailbox"),
         ("folder.empty", json!({}), "delete"),
     ] {
@@ -220,6 +223,32 @@ fn what_needs_the_owner_is_refused_headless_unless_allowed() {
     assert_ne!(h.session.mailbox.message(id).unwrap().folder, outbox);
     // Clicking and typing need a window (and --allow input).
     assert!(err(&mut h, &pol, "click", json!({"x": 1, "y": 1})).is_some());
+}
+
+#[test]
+fn ordinary_rule_inventory_and_filing_need_no_settings_grant_headless() {
+    let mut h = Headless::new(sample(), Vec::new());
+    let pol = Policy::default();
+    h.session.mailbox.rules.clear();
+    assert_eq!(err(&mut h, &pol, "execute", json!({"command": "rules.list"})), None);
+    let inbox = h.session.mailbox.folders.iter().find(|f| f.kind == FolderKind::Inbox).unwrap().id;
+    let archive = h.session.mailbox.folders.iter().find(|f| f.kind == FolderKind::Archive).unwrap().id;
+    let id = h.session.mailbox.messages.values().find(|m| m.folder == inbox).unwrap().id;
+    let sender = h.session.mailbox.message(id).unwrap().from.email.clone();
+    assert_eq!(
+        err(
+            &mut h,
+            &pol,
+            "execute",
+            json!({"command": "rules.add", "params": {
+                "name": "File this sender", "conditions": [{"type": "fromAddresses", "value": [sender]}],
+                "actions": [{"type": "moveTo", "value": archive}], "server": false
+            }})
+        ),
+        None
+    );
+    assert_eq!(err(&mut h, &pol, "execute", json!({"command": "rules.run", "params": {"folder": inbox}})), None);
+    assert_eq!(h.session.mailbox.message(id).unwrap().folder, archive);
 }
 
 #[test]

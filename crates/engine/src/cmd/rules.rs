@@ -9,7 +9,7 @@
 //! run: those of its server first, then those of this computer; Move Up and Move Down move a rule
 //! within its list.
 
-use mailcraft_model::{Action, Condition, Id, Importance, Keep, Mailbox, Rule, RuleGone, clean_name};
+use mailcraft_model::{Action, Condition, Id, Importance, Keep, Mailbox, Rule, clean_name};
 use serde_json::{Value, json};
 
 use super::{bad, fail, needs_message};
@@ -20,15 +20,27 @@ use mailcraft_model::MAX_RULES;
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("rules.add", "Create Rule", "Home › Move", add).params(
-            r#"{"name": string, "conditions": [{"type": "fromContains"|"toContains"|"subjectContains"|"bodyContains", "value": string} | {"type": "hasAttachment"} | {"type": "importance", "value": "high"|"normal"|"low"}], "actions": [{"type": "moveTo", "value": folder id} | {"type": "categorize", "value": string} | {"type": "flag"} | {"type": "markRead"} | {"type": "setImportance", "value": string} | {"type": "delete"}], "stop"?: bool, "account"?: number (whose arriving mail it is for; without it, every account's, and kept on this computer), "server"?: bool (false keeps it on this computer; true refuses a rule the server can't keep; default: on the server when it can)} — on a Microsoft account the rule is kept on its server when the server can do all of it (it then runs there, whether MailCraft is open or not; the sender's and recipients' words are looked for in their addresses alone, as the server does); answers {"id", "keep": "server"|"here"}"#,
+            concat!(
+                r#"{"name": string, "account"?: number (absent: every account), "conditions": [Condition], "exceptions"?: [Condition] (any vetoes), "actions": [Action], "enabled"?: bool (default true), "stop"?: bool, "server"?: bool (false: local; true: require server support; absent: server when supported), "runIn"?: folder id (only the new predicate, before consolidation). "#,
+                r#"Condition: {"type":"fromContains"|"toContains"|"subjectContains"|"bodyContains","value":string} | {"type":"fromAny","value":[string]} (up to 200 sender substrings) | {"type":"fromAddresses"|"toAddresses","value":[string]} (up to 200 exact plain transport sender or To/Cc addresses, ASCII case-insensitive, no display-name matching, 254 UTF-8 bytes/address) | {"type":"hasAttachment"} | {"type":"importance","value":"low"|"normal"|"high"} | {"type":"text","value":{"field":"from"|"to"|"subject"|"body","pattern":string,"regex"?:bool,"caseSensitive"?:bool}}. "#,
+                r#"Action: {"type":"moveTo"|"copyTo","value":folder id} | {"type":"categorize","value":string} | {"type":"flag"|"markRead"|"delete"} | {"type":"setImportance","value":string}. At most 20 conditions/exceptions/actions each; legacy text 200 characters, advanced pattern 4096 UTF-8 bytes; oversized values rejected, never truncated. Exact alternatives, advanced matching, exceptions and copies stay local. Adjacent compatible sender filing rules consolidate automatically without mixing substring and exact semantics. Answers {"id" (survivor),"keep":"server"|"here","mergedIds":[retired ids],"execution"?: result}. See docs/local-rules.md."#,
+            ),
         ),
         CommandSpec::new("rules.remove", "Delete Rule", "Home › Move", remove).params(r#"{"id": number} — a rule its server has is deleted there too"#),
+        CommandSpec::new("rules.edit", "Edit Local Rule", "Home › Move", edit)
+            .params(r#"{"id": number, ...rules.add fields} — replace a local rule while preserving its identity, order and enabled state; server-owned originals are never rewritten"#),
+        CommandSpec::new("rules.preview", "Preview Rules", "Home › Move", preview).reads()
+            .params(r#"{"folder"?: number, "id"?: number, "rule"?: rules.add fields, "editing"?: stored id replaced by draft, "limit"?: number} — non-mutating evaluation of an entire folder, with matched total and up to 1000 detailed rows; id and draft rule are mutually exclusive; unavailable content is an explicit failure before any action"#),
+        CommandSpec::new("rules.conflicts", "Check Rule Conflicts", "Home › Move", super::rules_conflicts::inspect).reads()
+            .params(r#"{"id"?: number, "rule"?: rules.add fields} — inspect a stored or draft rule against enabled rules across all destinations; id excludes the edited original. Confirmed competing moves prevent activation; potential regex/complex overlaps remain explicit and actual-message execution is checked before any action. Read-only; copies to multiple destinations are intentional."#),
+        CommandSpec::new("rules.pending", "Inspect Pending Classification", "Home › Move", pending).reads()
+            .params(r#"{"account"?: number, "folder"?: number, "limit"?: number (default 100, max 1000)} — all pending/error totals and bounded message identities with durable classification status and content availability. Read-only; never runs rules or fetches mail."#),
         CommandSpec::new("rules.enable", "Enable Rule", "Home › Move", enable).params(r#"{"id": number, "value"?: bool (default: toggle)}"#),
-        CommandSpec::new("rules.list", "Manage Rules", "Home › Move", list).pure().params(
-            r#"{"account"?: number} — the rules (of that account and those for every account, in the order they run); each says where it is kept: "server", "waiting" (to go to the server), "here" (with why when it can't go there) or "everyAccount""#,
+        CommandSpec::new("rules.list", "Manage Rules", "Home › Move", list).reads().params(
+            r#"{"account"?: number, "destination"?: folder id} — rules in execution order; destination includes disabled move/copy rules for that exact folder identity across accounts. Each includes its full stored rule and where it is kept: server, waiting, here or everyAccount. pendingDeletionCount covers all provider definitions awaiting confirmed removal for the chosen account(s); pendingDeletions contains up to 1000 records, with blocked explaining a definitive refusal and pendingDeletionsTruncated marking omitted details."#,
         ),
         CommandSpec::new("rules.run", "Run Rules Now", "Folder › Clean Up", run)
-            .params(r#"{"folder"?: number (default: the folder in view), "id"?: number (that rule alone)} — the enabled rules for the folder's account, those its server keeps too, over the mail in it; answers {"matched"}"#),
+            .params(r#"{"folder"?: number (default: the folder in view), "id"?: number (that rule alone)} — execute enabled rules for the folder's account, including server rules. Answers examined/matched/applied message counts, failed rule count and first 100 failure details (with truncation flag); each failure includes rule/message ids and completedActions. Invalid local destinations pause the rule before any action. Source removal still waits for safe cross-account placement."#),
         CommandSpec::new("rules.fromMessage", "Always Move Messages From", "Home › Move", from_message)
             .params(r#"{"folder": number, "id"?: number, "server"?: bool (as for `rules.add`)} — a rule moving this sender's mail to the folder, run at once over the mail in the message's folder (not for a shared mailbox's message: its rules are its own); the window opens the New rule builder filled in instead (`ui.dialog` "rules" with "folder")"#)
             .selection(needs_message),
@@ -64,6 +76,7 @@ pub enum NotOnServer {
     /// A Microsoft account kept in step by IMAP: its rules on the server are reached through
     /// Microsoft Graph.
     NotInStep,
+    LocalMatching,
 }
 
 impl NotOnServer {
@@ -80,12 +93,21 @@ impl NotOnServer {
             NotOnServer::TwoImportances => "it sets more than one importance",
             NotOnServer::Names => "it looks for a name, and the server looks at addresses only",
             NotOnServer::NotInStep => "MailCraft reaches this account's rules on the server once it switches to Microsoft Graph",
+            NotOnServer::LocalMatching => {
+                "exact address alternatives, regex, explicit case matching, exceptions and copy actions run on this computer"
+            }
         }
     }
 }
 
 /// Why `rule` can't be kept on the server of `account`, or `None` when it can.
 pub fn server_cannot(mb: &Mailbox, rule: &Rule, account: Id) -> Option<NotOnServer> {
+    if rule.conditions.iter().any(|c| {
+        matches!(c, Condition::Text(_) | Condition::Unless(_) | Condition::FromAny(_) | Condition::FromAddresses(_) | Condition::ToAddresses(_))
+    }) || rule.actions.iter().any(|a| matches!(a, Action::CopyTo(_)))
+    {
+        return Some(NotOnServer::LocalMatching);
+    }
     if !mb.keeps_rules(account) {
         let imap = mb.account(account).is_some_and(|a| a.on_imap_with_microsoft() && !a.is_shared());
         return Some(if imap { NotOnServer::NotInStep } else { NotOnServer::NoServer });
@@ -113,6 +135,7 @@ pub fn server_cannot(mb: &Mailbox, rule: &Rule, account: Id) -> Option<NotOnServ
                     return Some(NotOnServer::FolderNotThere);
                 }
             }
+            Action::CopyTo(_) => return Some(NotOnServer::LocalMatching),
             Action::SetImportance(i) => {
                 if importance.is_some_and(|had| had != *i) {
                     return Some(NotOnServer::TwoImportances);
@@ -154,13 +177,21 @@ pub fn kept(mb: &Mailbox, r: &Rule) -> (&'static str, Option<String>) {
 }
 
 fn text(v: &Value) -> Result<String, CmdError> {
-    let t: String = p::str(v, "value").unwrap_or("").trim().chars().take(200).collect();
+    let t = p::str(v, "value").unwrap_or("").trim().to_string();
+    if t.chars().count() > 200 {
+        return Err(bad("a literal condition supports at most 200 characters; the value was not truncated"));
+    }
     if t.is_empty() { Err(bad("a condition needs a `value`")) } else { Ok(t) }
 }
 
 fn condition(v: &Value) -> Result<Condition, CmdError> {
     Ok(match p::req_str(v, "type")? {
         "fromContains" => Condition::FromContains(text(v)?),
+        "fromAny" | "fromAddresses" | "toAddresses" => {
+            let condition: Condition = serde_json::from_value(v.clone()).map_err(|error| bad(format!("invalid sender alternatives: {error}")))?;
+            condition.validate().map_err(bad)?;
+            condition
+        }
         "toContains" => Condition::ToContains(text(v)?),
         "subjectContains" => Condition::SubjectContains(text(v)?),
         "bodyContains" => Condition::BodyContains(text(v)?),
@@ -168,16 +199,23 @@ fn condition(v: &Value) -> Result<Condition, CmdError> {
         "importance" => {
             Condition::Importance(Importance::parse(p::str(v, "value").unwrap_or("")).ok_or_else(|| bad("importance is low, normal or high"))?)
         }
+        "text" => {
+            let text: mailcraft_model::RuleText = serde_json::from_value(v.get("value").cloned().unwrap_or(Value::Null))
+                .map_err(|error| bad(format!("invalid text condition: {error}")))?;
+            text.validate().map_err(bad)?;
+            Condition::Text(text)
+        }
         other => return Err(bad(format!("unknown condition type \"{other}\""))),
     })
 }
 
 fn action(s: &Session, v: &Value) -> Result<Action, CmdError> {
     Ok(match p::req_str(v, "type")? {
-        "moveTo" => {
+        "moveTo" | "copyTo" => {
             let folder = p::req_id(v, "value")?;
             refuse_send_queue(s, folder)?;
-            Action::MoveTo(s.mailbox.folder(folder).map(|f| f.id).ok_or_else(|| failed!("no folder with id {id}", id = folder))?)
+            let folder = s.mailbox.folder(folder).map(|f| f.id).ok_or_else(|| failed!("no folder with id {id}", id = folder))?;
+            if p::str(v, "type") == Some("copyTo") { Action::CopyTo(folder) } else { Action::MoveTo(folder) }
         }
         "categorize" => Action::Categorize(clean_name(p::str(v, "value").unwrap_or("")).ok_or_else(|| bad("categorize needs a category name"))?),
         "flag" => Action::Flag,
@@ -219,12 +257,16 @@ fn rule_account(s: &Session, v: &Value) -> Result<Id, CmdError> {
 /// The rule `v` asks for, with no id yet (shared by the command and the agent's question).
 pub(crate) fn rule_from_params(s: &Session, v: &Value) -> Result<Rule, CmdError> {
     let name = clean_name(p::req_str(v, "name")?).ok_or_else(|| bad("`name` is empty"))?;
-    let conditions = v
+    for key in ["conditions", "exceptions", "actions"] {
+        if v.get(key).and_then(Value::as_array).is_some_and(|parts| parts.len() > 20) {
+            return Err(bad(format!("`{key}` supports at most 20 parts; none were truncated")));
+        }
+    }
+    let mut conditions = v
         .get("conditions")
         .and_then(Value::as_array)
         .ok_or_else(|| bad("`conditions` (a list) is required"))?
         .iter()
-        .take(20)
         .map(condition)
         .collect::<Result<Vec<_>, _>>()?;
     let actions = v
@@ -232,15 +274,31 @@ pub(crate) fn rule_from_params(s: &Session, v: &Value) -> Result<Rule, CmdError>
         .and_then(Value::as_array)
         .ok_or_else(|| bad("`actions` (a list) is required"))?
         .iter()
-        .take(20)
         .map(|a| action(s, a))
         .collect::<Result<Vec<_>, _>>()?;
     if conditions.is_empty() || actions.is_empty() {
         return Err(bad("a rule needs at least one condition and one action"));
     }
+    let exceptions = match v.get("exceptions") {
+        None => Vec::new(),
+        Some(Value::Array(parts)) => parts.iter().map(condition).collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(bad("`exceptions` must be a list")),
+    };
     let account = rule_account(s, v)?;
-    let mut rule =
-        Rule { id: 0, name, enabled: true, conditions, actions, stop: p::opt_bool(v, "stop")?.unwrap_or(false), account, ..Default::default() };
+    if !exceptions.is_empty() {
+        conditions.push(Condition::Unless(exceptions));
+    }
+    let mut rule = Rule {
+        id: 0,
+        name,
+        enabled: p::opt_bool(v, "enabled")?.unwrap_or(true),
+        conditions,
+        actions,
+        stop: p::opt_bool(v, "stop")?.unwrap_or(false),
+        account,
+        ..Default::default()
+    };
+    rule.validation().map_err(bad)?;
     place(s, &mut rule, v)?;
     Ok(rule)
 }
@@ -266,14 +324,25 @@ fn place(s: &Session, rule: &mut Rule, v: &Value) -> Result<(), CmdError> {
 pub fn server_cannot_draft(s: &Session, v: &Value) -> Option<NotOnServer> {
     let account = p::id(v, "account").filter(|a| s.mailbox.account(*a).is_some())?;
     let parts = |key: &str| v.get(key).and_then(Value::as_array).map(|a| a.iter().take(20).collect::<Vec<_>>()).unwrap_or_default();
-    let conditions = parts("conditions").into_iter().filter_map(|c| condition(c).ok()).collect();
+    let mut conditions: Vec<Condition> = parts("conditions").into_iter().filter_map(|c| condition(c).ok()).collect();
     let actions = parts("actions").into_iter().filter_map(|a| action(s, a).ok()).collect();
+    let exceptions: Vec<Condition> = parts("exceptions").into_iter().filter_map(|c| condition(c).ok()).collect();
+    if !exceptions.is_empty() {
+        conditions.push(Condition::Unless(exceptions));
+    }
     let rule = Rule { conditions, actions, account, ..Default::default() };
     server_cannot(&s.mailbox, &rule, account)
 }
 
 fn add(s: &mut Session, v: &Value) -> CmdResult {
     let mut rule = rule_from_params(s, v)?;
+    super::rules_conflicts::ensure_unambiguous(s, &rule)?;
+    let run_in = p::id_strict(v, "runIn")?;
+    if let Some(folder) = run_in
+        && s.mailbox.folder(folder).is_none()
+    {
+        return Err(failed!("no folder with id {id}", id = folder));
+    }
     if s.mailbox.rules.len() >= MAX_RULES {
         return Err(fail("there are too many rules"));
     }
@@ -281,7 +350,14 @@ fn add(s: &mut Session, v: &Value) -> CmdResult {
     rule.id = id;
     let keep = if rule.keep == Keep::Server { "server" } else { "here" };
     s.mailbox.rules.push(rule);
-    Ok(json!({"id": id, "keep": keep}))
+    // Run precisely the new predicate before a merge widens the stored sender group.
+    let execution = run_in.map(|folder| run_on(s, folder, Some(id))).transpose()?;
+    let (id, merged) = super::rules_merge::consolidate(s, id);
+    let mut result = json!({"id": id, "keep": keep, "mergedIds": merged});
+    if let Some(execution) = execution {
+        result["execution"] = execution;
+    }
+    Ok(result)
 }
 
 fn changeable(s: &Session, id: Id) -> Result<usize, CmdError> {
@@ -292,19 +368,33 @@ fn changeable(s: &Session, id: Id) -> Result<usize, CmdError> {
     Ok(i)
 }
 
+fn edit(s: &mut Session, v: &Value) -> CmdResult {
+    let id = p::req_id(v, "id")?;
+    let index = changeable(s, id)?;
+    let previous = s.mailbox.rules.get(index).ok_or_else(|| failed!("no rule with id {id}", id))?;
+    if previous.on_server() || previous.unanswered || !previous.known() {
+        return Err(fail("preserve the server-owned or unresolved original; make a separate disabled local migration instead"));
+    }
+    let enabled = previous.enabled;
+    let provenance = previous.merged_from.clone();
+    let mut rule = rule_from_params(s, v)?;
+    if rule.keep != Keep::Here {
+        return Err(bad("editing a local rule keeps it here; specify server=false"));
+    }
+    rule.id = id;
+    rule.enabled = enabled;
+    rule.merged_from = provenance;
+    super::rules_conflicts::ensure_unambiguous(s, &rule)?;
+    let slot = s.mailbox.rules.get_mut(index).ok_or_else(|| failed!("no rule with id {id}", id))?;
+    *slot = rule;
+    let (id, merged) = super::rules_merge::consolidate(s, id);
+    Ok(json!({"id": id, "keep": "here", "enabled": enabled, "mergedIds": merged}))
+}
+
 fn remove(s: &mut Session, v: &Value) -> CmdResult {
     let id = p::req_id(v, "id")?;
     let i = changeable(s, id)?;
-    let rule = s.mailbox.rules.remove(i);
-    // The server is told at the next look; until then, a download that still has it doesn't bring
-    // it back. One the server was making, with no answer, is looked for by what it is.
-    if s.mailbox.rule_gone.len() < mailcraft_model::MAX_RULE_GONE {
-        match rule.server.as_ref().filter(|s| !s.id.is_empty()) {
-            Some(server) => s.mailbox.rule_gone.push(RuleGone { account: rule.account, id: server.id.clone(), made: None }),
-            None if rule.unanswered => s.mailbox.rule_gone.push(RuleGone { account: rule.account, id: String::new(), made: Some(Box::new(rule)) }),
-            None => {}
-        }
-    }
+    let _ = s.mailbox.remove_rule_definition(i);
     Ok(json!({"deleted": id}))
 }
 
@@ -312,13 +402,31 @@ fn enable(s: &mut Session, v: &Value) -> CmdResult {
     let id = p::req_id(v, "id")?;
     let value = p::opt_bool(v, "value")?;
     let i = changeable(s, id)?;
+    if let Some(stored) = s.mailbox.rules.get(i)
+        && value.unwrap_or(!stored.enabled)
+    {
+        let mut candidate = stored.clone();
+        candidate.enabled = true;
+        super::rules_conflicts::ensure_unambiguous(s, &candidate)?;
+    }
     let r = s.mailbox.rules.get_mut(i).ok_or_else(|| failed!("no rule with id {id}", id))?;
+    if value.unwrap_or(!r.enabled) && !r.repair.is_empty() {
+        return Err(fail("repair the rule's definition before enabling it"));
+    }
     r.enabled = value.unwrap_or(!r.enabled);
-    Ok(json!({"id": id, "enabled": r.enabled}))
+    let enabled = r.enabled;
+    let (id, merged) = super::rules_merge::consolidate(s, id);
+    Ok(json!({"id": id, "enabled": enabled, "mergedIds": merged}))
 }
 
 fn list(s: &mut Session, v: &Value) -> CmdResult {
     let mb = &s.mailbox;
+    let destination = p::id_strict(v, "destination")?;
+    if let Some(id) = destination
+        && mb.folder(id).is_none()
+    {
+        return Err(failed!("no folder with id {id}", id));
+    }
     let order: Vec<usize> = match p::id_strict(v, "account")? {
         Some(account) => mb.rules_in_order(account),
         None => (0..mb.rules.len()).collect(),
@@ -326,6 +434,7 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
     let rules: Vec<Value> = order
         .into_iter()
         .filter_map(|i| mb.rules.get(i))
+        .filter(|rule| destination.is_none_or(|folder| rule.targets(folder)))
         .map(|r| {
             let (where_kept, why) = kept(mb, r);
             let mut entry = json!({
@@ -349,30 +458,82 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
             entry
         })
         .collect();
-    Ok(json!({"rules": rules}))
+    let account = p::id_strict(v, "account")?;
+    let pending = || mb.rule_gone.iter().filter(|gone| account.is_none_or(|account| gone.account == account));
+    let total = pending().count();
+    let details: Vec<_> = pending().take(1000).collect();
+    Ok(json!({"rules": rules, "pendingDeletionCount": total, "pendingDeletions": details, "pendingDeletionsTruncated": total > details.len()}))
+}
+
+fn pending(s: &mut Session, params: &Value) -> CmdResult {
+    let account = p::id_strict(params, "account")?;
+    let folder = p::id_strict(params, "folder")?;
+    let limit = p::id_strict(params, "limit")?.unwrap_or(100).min(1000) as usize;
+    if account.is_some_and(|id| s.mailbox.account(id).is_none()) || folder.is_some_and(|id| s.mailbox.folder(id).is_none()) {
+        return Err(bad("unknown account or folder"));
+    }
+    let mut total = 0usize;
+    let mut waiting = 0usize;
+    let mut messages = Vec::new();
+    for message in
+        s.mailbox.messages.values().filter(|message| account.is_none_or(|id| message.account == id) && folder.is_none_or(|id| message.folder == id))
+    {
+        let Some(state) = message.rule_processing.as_deref() else { continue };
+        total += 1;
+        waiting += usize::from(message.rules_wait_for_content());
+        if messages.len() < limit {
+            messages.push(json!({"id":message.id,"account":message.account,"folder":message.folder,"state":state,
+                "unfetched":message.unfetched,"incomplete":message.incomplete,"notDownloaded":message.not_downloaded}));
+        }
+    }
+    Ok(json!({"total":total,"waitingForContent":waiting,"failed":total - waiting,"messages":messages,
+        "detailsTruncated":total > messages.len(),"mutated":false}))
+}
+
+/// Conditions and cross-account copies must see available on-disk content too.
+fn reads_content(mailbox: &Mailbox, account: Id) -> bool {
+    mailbox.rules.iter().any(|rule| {
+        (rule.enabled || rule.server.as_ref().is_some_and(|server| server.synced_enabled))
+            && rule.is_for(account)
+            && (rule.reads_body()
+                || rule.actions.iter().any(|action| match action {
+                    Action::CopyTo(folder) => mailbox.folder(*folder).is_some_and(|folder| folder.account != account),
+                    _ => false,
+                }))
+    })
 }
 
 /// Run every enabled rule for the folder's account on the messages of `folder`, those its server
 /// has among them, or the rule `only` alone; answers how many messages a rule acted on.
-fn run_on(s: &mut Session, folder: Id, only: Option<Id>) -> usize {
+fn run_on(s: &mut Session, folder: Id, only: Option<Id>) -> CmdResult {
     let ids: Vec<Id> = s.mailbox.messages_in(folder).map(|m| m.id).collect();
     let account = s.mailbox.folder(folder).map_or(0, |f| f.account);
     // A rule that reads the body reads it whole: one kept on disk is brought in first (one that
     // can't be read says so in its place, and is matched as that).
-    let reads_bodies = s.mailbox.rules.iter().any(|r| {
-        r.enabled && r.is_for(account) && only.is_none_or(|o| o == r.id) && r.conditions.iter().any(|c| matches!(c, Condition::BodyContains(_)))
-    });
-    ids.into_iter()
-        .filter(|id| {
-            if reads_bodies {
-                let _ = s.load_where(*id, |_| false);
+    let reads_bodies = reads_content(&s.mailbox, account);
+    let (mut matched, mut failed, mut applied) = (0usize, 0usize, 0usize);
+    let mut conflicting_messages = 0usize;
+    let mut failures = Vec::new();
+    for id in &ids {
+        if reads_bodies {
+            s.load_where(*id, |_| false)?;
+        }
+        let result = match only {
+            Some(rule) => s.mailbox.run_rule(*id, rule),
+            None => s.mailbox.run_rules(*id, true),
+        };
+        matched += usize::from(result.matched > 0);
+        conflicting_messages += usize::from(result.conflicts);
+        applied += usize::from(!result.applied.is_empty());
+        failed += result.failures.len();
+        for failure in result.failures {
+            if failures.len() < 100 {
+                failures.push(failure);
             }
-            match only {
-                Some(rule) => s.mailbox.run_rule(*id, rule),
-                None => !s.mailbox.run_rules(*id, true).is_empty(),
-            }
-        })
-        .count()
+        }
+    }
+    Ok(json!({"examined": ids.len(), "matched": matched, "applied": applied, "failed": failed, "conflictingMessages":conflicting_messages,
+        "failures": failures, "failureDetailsTruncated": failed > failures.len(), "dryRun": false}))
 }
 
 fn run(s: &mut Session, v: &Value) -> CmdResult {
@@ -386,8 +547,79 @@ fn run(s: &mut Session, v: &Value) -> CmdResult {
     {
         return Err(failed!("no rule with id {id}", id = rule));
     }
-    let matched = run_on(s, folder, only);
-    Ok(json!({"matched": matched}))
+    run_on(s, folder, only)
+}
+
+fn preview(s: &mut Session, v: &Value) -> CmdResult {
+    let folder = p::id_strict(v, "folder")?.unwrap_or(s.view.folder);
+    let account = s.mailbox.folder(folder).ok_or_else(|| failed!("no folder with id {id}", id = folder))?.account;
+    let mut only = p::id_strict(v, "id")?;
+    let editing = p::id_strict(v, "editing")?;
+    if only.is_some() && v.get("rule").is_some() {
+        return Err(bad("choose an id or an unsaved rule, not both"));
+    }
+    let draft = v.get("rule").map(|rule| rule_from_params(s, rule)).transpose()?;
+    if let Some(id) = only
+        && !s.mailbox.rules.iter().any(|rule| rule.id == id)
+    {
+        return Err(failed!("no rule with id {id}", id));
+    }
+    let limit = p::id_strict(v, "limit")?.unwrap_or(100).min(1000) as usize;
+    let ids: Vec<_> = s.mailbox.messages_in(folder).map(|message| message.id).collect();
+    let mut shadow = s.mailbox.clone();
+    shadow.messages.clear();
+    shadow.pending.clear();
+    shadow.queued.clear();
+    if let Some(mut rule) = draft {
+        rule.id = 0;
+        shadow.rules.retain(|stored| Some(stored.id) != editing);
+        shadow.rules.push(rule);
+        only = Some(0);
+    }
+    let reads_body = reads_content(&shadow, account);
+    let mut matched = 0usize;
+    let mut failed = 0usize;
+    let mut conflicting_messages = 0usize;
+    let mut failures = Vec::new();
+    let mut messages = Vec::new();
+    for id in &ids {
+        let Some(message) = s.mailbox.message(*id) else { continue };
+        let message = if reads_body { s.loaded_message_where(*id, |_| false)? } else { std::sync::Arc::new(message.clone()) };
+        shadow.messages.insert(*id, message);
+        let result = match only {
+            Some(rule) => shadow.run_rule(*id, rule),
+            None => shadow.run_rules(*id, true),
+        };
+        failed += result.failures.len();
+        conflicting_messages += usize::from(result.conflicts);
+        for failure in result.failures {
+            if failures.len() < 100 {
+                failures.push(failure);
+            }
+        }
+        if result.matched > 0 {
+            matched += 1;
+            if messages.len() < limit
+                && let Some(after) = shadow.message(*id)
+            {
+                let copies: Vec<Value> = shadow
+                    .messages
+                    .values()
+                    .filter(|message| message.id != *id)
+                    .map(|message| json!({"account": message.account, "folder": message.folder}))
+                    .collect();
+                messages.push(json!({"id": id, "sourceAccount": account, "sourceFolder": folder,
+                    "destinationAccount": after.account, "destinationFolder": after.folder, "read": after.read,
+                    "copyDestinations": copies}));
+            }
+        }
+        shadow.messages.clear();
+        shadow.pending.clear();
+        shadow.queued.clear();
+    }
+    Ok(json!({"examined": ids.len(), "matched": matched, "messages": messages, "failed": failed, "conflictingMessages":conflicting_messages,
+        "failures": failures, "failureDetailsTruncated": failed > failures.len(),
+        "detailsTruncated": matched > messages.len(), "mutated": false}))
 }
 
 /// The rule `rules.fromMessage` makes from `v`, with no id yet, and the folder the message is in
@@ -421,14 +653,18 @@ pub(crate) fn rule_from_message(s: &Session, v: &Value) -> Result<(Rule, Id), Cm
 
 fn from_message(s: &mut Session, v: &Value) -> CmdResult {
     let (mut rule, source) = rule_from_message(s, v)?;
+    super::rules_conflicts::ensure_unambiguous(s, &rule)?;
     if s.mailbox.rules.len() >= MAX_RULES {
         return Err(fail("there are too many rules"));
     }
     let id = s.mailbox.alloc_id();
     rule.id = id;
     s.mailbox.rules.push(rule);
-    let matched = run_on(s, source, Some(id));
-    Ok(json!({"id": id, "matched": matched}))
+    let mut result = run_on(s, source, Some(id))?;
+    let (id, merged) = super::rules_merge::consolidate(s, id);
+    result["id"] = json!(id);
+    result["mergedIds"] = json!(merged);
+    Ok(result)
 }
 
 /// The list a rule is in, in the rules of `account`: those for its server, or those of this
@@ -481,7 +717,8 @@ fn move_rule(s: &mut Session, v: &Value) -> CmdResult {
     if server {
         renumber(&mut s.mailbox, account);
     }
-    Ok(json!({"id": id, "moved": true}))
+    let (id, merged) = super::rules_merge::consolidate(s, id);
+    Ok(json!({"id": id, "moved": true, "mergedIds": merged}))
 }
 
 /// Give the rules the server of `account` has the places they now stand in: the same numbers as

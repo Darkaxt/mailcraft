@@ -97,6 +97,23 @@ pub(crate) fn known(mb: &Mailbox, account: Id, only: Option<&[String]>, most: us
 pub(crate) fn fetch_queue(mb: &Mailbox, account: Id, most: usize, passed_over: &HashSet<(Id, String)>) -> Vec<String> {
     let Some(inbox) = mb.folder_of_kind(account, FolderKind::Inbox) else { return Vec::new() };
     let limit = mb.account(account).and_then(|a| a.download_in_full.limit());
+    let mut pending: Vec<&Message> = mb
+        .messages
+        .values()
+        .map(Arc::as_ref)
+        .filter(|message| message.account == account && message.rules_wait_for_content() && message.unfetched && !message.incomplete)
+        .filter(|message| {
+            message.server.as_ref().is_some_and(|server| {
+                !server.gone
+                    && is_id(&server.id)
+                    && limit.is_none_or(|limit| server.size <= limit)
+                    && !passed_over.contains(&(account, server.id.clone()))
+            })
+        })
+        .collect();
+    pending.sort_unstable_by_key(|message| message.id);
+    let mut out: Vec<String> = pending.into_iter().filter_map(|message| message.server.as_ref().map(|server| server.id.clone())).take(most).collect();
+    let selected: HashSet<String> = out.iter().cloned().collect();
     let mut newest: Vec<&Message> = mb
         .messages
         .values()
@@ -104,15 +121,18 @@ pub(crate) fn fetch_queue(mb: &Mailbox, account: Id, most: usize, passed_over: &
         .filter(|m| m.account == account && m.folder == inbox && m.server.as_ref().is_some_and(|s| !s.gone && is_id(&s.id)))
         .collect();
     newest.sort_unstable_by_key(|m| Reverse((m.received, m.id)));
-    newest
-        .into_iter()
-        .take(BACKGROUND_NEWEST)
-        .filter(|m| m.unfetched && !m.incomplete)
-        .filter_map(|m| m.server.as_ref())
-        .filter(|s| limit.is_none_or(|limit| s.size <= limit) && !passed_over.contains(&(account, s.id.clone())))
-        .take(most)
-        .map(|s| s.id.clone())
-        .collect()
+    out.extend(
+        newest
+            .into_iter()
+            .take(BACKGROUND_NEWEST)
+            .filter(|m| m.unfetched && !m.incomplete)
+            .filter_map(|m| m.server.as_ref())
+            .filter(|s| limit.is_none_or(|limit| s.size <= limit) && !passed_over.contains(&(account, s.id.clone())))
+            .filter(|server| !selected.contains(&server.id))
+            .take(most.saturating_sub(out.len()))
+            .map(|s| s.id.clone()),
+    );
+    out
 }
 
 /// `text` on one line: words parted by one space (a control character parts them too), `most`

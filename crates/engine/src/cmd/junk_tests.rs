@@ -598,17 +598,18 @@ fn graph_mail_goes_through_the_rules_after_the_lists() {
 }
 
 #[test]
-fn graph_s_first_round_of_a_folder_runs_no_rules() {
-    let (mut s, account, [inbox, ..]) = graph_with_rule(false);
+fn graph_s_first_and_fresh_rounds_classify_newly_discovered_received_mail() {
+    let (mut s, account, [_, _, archive]) = graph_with_rule(false);
     apply_graph_mail(&mut s, graph_page(account, "F-in", &["offers@shop.example"])).unwrap();
-    assert_eq!(folder_of(&s, "offers@shop.example"), Some(inbox));
-    // Nor does a folder read afresh.
-    let (mut s, account, [inbox, ..]) = graph_with_rule(true);
+    assert_eq!(folder_of(&s, "offers@shop.example"), Some(archive));
+    // New to this mailbox also qualifies during a fresh read. Replaying a known
+    // identity still preserves the owner's existing filing, as the adjacent tests prove.
+    let (mut s, account, [_, _, archive]) = graph_with_rule(true);
     let mut afresh = graph_page(account, "F-in", &["offers@shop.example"]);
     afresh.pages[0].afresh = true;
     apply_graph_mail(&mut s, afresh).unwrap();
-    assert_eq!(folder_of(&s, "offers@shop.example"), Some(inbox));
-    assert!(graph_mail_request(&s, account).unwrap().messages.is_empty());
+    assert_eq!(folder_of(&s, "offers@shop.example"), Some(archive));
+    assert!(graph_mail_request(&s, account).unwrap().messages.iter().any(|change| matches!(change,MessageChange::Move {to,..} if to == "F-arch")));
 }
 
 #[test]
@@ -713,15 +714,15 @@ fn every_page_of_a_later_round_goes_through_the_lists_and_the_rules() {
 }
 
 #[test]
-fn no_page_of_a_first_round_or_of_a_round_read_afresh_is_sorted() {
+fn initial_and_refreshed_pages_classify_new_mail_without_changing_the_junk_list_policy() {
     let (mut s, account, [inbox, _, archive]) = graph_with_rule(false);
     apply_graph_mail(&mut s, inbox_page(account, &["one@shop.example"], false, false)).unwrap();
     apply_graph_mail(&mut s, inbox_page(account, &["two@shop.example"], true, false)).unwrap();
-    // Read afresh (the server no longer took the link): none of its pages either.
+    // Read afresh: newly discovered mail is classified on every page too.
     apply_graph_mail(&mut s, inbox_page(account, &["three@shop.example"], false, true)).unwrap();
     apply_graph_mail(&mut s, inbox_page(account, &["four@shop.example"], true, false)).unwrap();
     for old in ["one@shop.example", "two@shop.example", "three@shop.example", "four@shop.example"] {
-        assert_eq!(folder_of(&s, old), Some(inbox), "{old}");
+        assert_eq!(folder_of(&s, old), Some(archive), "{old}");
     }
     // What comes after each is new mail.
     apply_graph_mail(&mut s, inbox_page(account, &["five@shop.example"], false, false)).unwrap();
@@ -729,7 +730,8 @@ fn no_page_of_a_first_round_or_of_a_round_read_afresh_is_sorted() {
     // A mailbox whose save was damaged reads its folders from the start again: a first round.
     crate::store::forget_how_far_fetched(&mut s.mailbox);
     apply_graph_mail(&mut s, inbox_page(account, &["six@shop.example"], false, false)).unwrap();
-    assert_eq!(folder_of(&s, "six@shop.example"), Some(inbox));
+    assert_eq!(folder_of(&s, "six@shop.example"), Some(archive));
+    assert_ne!(inbox, archive);
 }
 
 // #606 review: what else the rules do to Graph mail, and a page or a run that is not as usual.

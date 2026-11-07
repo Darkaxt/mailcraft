@@ -882,7 +882,7 @@ msgid "All Mailboxes"
 msgstr "Alle postvakken"
 
 #. interface
-#: crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
 #, fuzzy
 msgid "All accounts"
 msgstr "Alle accounts"
@@ -2070,10 +2070,20 @@ msgid "Cancel This Meeting?"
 msgstr "Deze vergadering annuleren?"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Cancel edit"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Cancelled"
 msgstr "Geannuleerd"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Case sensitive"
+msgstr ""
 
 #. interface, name
 #: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/tasks_view.rs
@@ -2273,6 +2283,16 @@ msgstr "Namen controleren"
 #, fuzzy
 msgid "Check Now"
 msgstr "Nu controleren"
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Check Rule Conflicts"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Check conflicts"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -2626,6 +2646,16 @@ msgid "Confirm servers"
 msgstr "Servers bevestigen"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Confirmed"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Conflicting destinations: {confirmed} confirmed; {potential} potential."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Connect"
@@ -2828,6 +2858,11 @@ msgstr "Kopieer de versie, het platform en het einde van het eigen logboek van M
 #, fuzzy
 msgid "Copy to Folder"
 msgstr "Kopiëren naar map"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Copy to folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -3274,6 +3309,11 @@ msgstr "Diagram"
 msgid "Direct Replies To"
 msgstr "Antwoorden rechtstreeks naar"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Disabled until repaired: {why}"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -3673,6 +3713,11 @@ msgid "Edit Event"
 msgstr "Gebeurtenis bewerken"
 
 #. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Edit Local Rule"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "Edit Message"
@@ -3697,10 +3742,20 @@ msgid "Edit Task"
 msgstr "Taak bewerken"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit rule"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/compose.rs
 #, fuzzy
 msgid "Edit signature as text"
 msgstr "Handtekening bewerken als tekst"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit this local rule"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/edit.rs crates/ui-egui/src/ribbon.rs
@@ -3919,6 +3974,16 @@ msgstr "Alles in „{folder}” wordt definitief verwijderd."
 #, fuzzy
 msgid "Everything the interface does is a command: {commands} of them, covering {percent}% of the feature catalog. The command line, the control channel and the MCP server run the same commands."
 msgstr "Alles wat de interface doet, is een opdracht: {commands} opdrachten, die {percent}% van de functiecatalogus dekken. De opdrachtregel, het besturingskanaal en de MCP-server voeren dezelfde opdrachten uit."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Except"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Exception"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -4517,6 +4582,11 @@ msgstr "Van afzender"
 #, fuzzy
 msgid "From contains"
 msgstr "Van bevat"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "From contains any of"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -5286,6 +5356,11 @@ msgid "Include the original message when replying"
 msgstr "Het oorspronkelijke bericht opnemen bij het beantwoorden"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Includes rules for other destination folders. Priority and Stop do not resolve competing destinations. Potential overlaps still require review; matching conflicts leave the message unmoved."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Incoming mail (IMAP)"
@@ -5344,6 +5419,11 @@ msgstr "Afbeelding invoegen"
 #, fuzzy
 msgid "Inside My Organization"
 msgstr "Binnen mijn organisatie"
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Inspect Pending Classification"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/view.rs
@@ -6528,6 +6608,11 @@ msgstr ""
 msgid "Message Preview"
 msgstr "Berichtvoorbeeld"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Message {message}, after {completed} actions: {why}"
+msgstr ""
+
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -6855,6 +6940,16 @@ msgid "Move Up"
 msgstr "Omhoog"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move after {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move before {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Move the Appointments Only"
@@ -7003,6 +7098,11 @@ msgstr "Nodig voor accounts van Outlook.com en Microsoft 365"
 #, fuzzy
 msgid "Needs Check for new versions."
 msgstr "Controleren op nieuwe versies is nodig."
+
+#. interface
+#: crates/ui-egui/src/forms/rules/advanced.rs
+msgid "Nested exceptions cannot be edited here. The original rule was preserved."
+msgstr ""
 
 #. command label, interface
 #: crates/engine/src/cmd/junk.rs crates/ui-egui/src/ribbon.rs
@@ -7169,6 +7269,11 @@ msgstr "Nieuwe items gaan naar de agenda die hier is gekozen"
 #, fuzzy
 msgid "New mail"
 msgstr "Nieuwe e-mail"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "New mail from"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/alerts.rs crates/ui-egui/src/compose.rs
@@ -7917,6 +8022,11 @@ msgstr "Zodra een beheerder heeft goedgekeurd, probeert u het opnieuw: de aanmel
 msgid "Once it has worked, your system's credential store keeps it for next time. It is never written to the mailbox."
 msgstr "Zodra het heeft gewerkt, bewaart de referentieopslag van uw systeem het voor de volgende keer. Het wordt nooit naar het postvak geschreven."
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One email address per line"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/meeting.rs
 #, fuzzy
@@ -7928,6 +8038,11 @@ msgstr "Eén exemplaar van een reeks kan niet in een andere agenda staan dan de 
 #, fuzzy
 msgid "One of a series: {rule}"
 msgstr "Eén van een reeks: {rule}"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One sender text per line"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -7996,6 +8111,11 @@ msgid "Only on this computer: {why}"
 msgstr "Alleen op deze computer: {why}"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only rules assigned to this destination are shown. Order includes rules for other destinations; a rule can have additional actions."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Only send during this time range:"
@@ -8006,6 +8126,11 @@ msgstr "Alleen tijdens deze periode verzenden:"
 #, fuzzy
 msgid "Only the beginning of this message is here. The rest downloads with the next Send/Receive."
 msgstr "Alleen het begin van dit bericht is hier. De rest wordt gedownload bij de volgende Verzenden/ontvangen."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only the first 100 failure details are shown; the total includes every failure."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
@@ -8280,6 +8405,11 @@ msgstr "Opties"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "Of is het een van deze?"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Order {position}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -8720,6 +8850,11 @@ msgstr "Loskoppelen"
 msgid "Postal code"
 msgstr "Postcode"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Potential"
+msgstr ""
+
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/send_receive.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -8733,16 +8868,31 @@ msgid "Press Send/Receive to download your mail."
 msgstr "Druk op Verzenden/ontvangen om uw e-mail te downloaden."
 
 #. interface, name
-#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "Preview"
 msgstr "Voorbeeld"
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Preview Rules"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Preview lines in the message list"
 msgstr "Voorbeeldregels in de berichtenlijst"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview this rule without changing mail"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -9046,6 +9196,11 @@ msgstr "Typen opnieuw"
 #, fuzzy
 msgid "Redo {what}"
 msgstr "{what} opnieuw"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Regex"
+msgstr ""
 
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
@@ -9579,9 +9734,19 @@ msgstr "Regels en categorieën"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
+msgid "Rules delivering to {folder}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Rules for"
 msgstr "Regels voor"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Rules for {folder}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -9816,6 +9981,11 @@ msgstr "Bericht opslaan als…"
 #, fuzzy
 msgid "Save Message File As"
 msgstr "Berichtbestand opslaan als"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Save Rule"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/signature.rs
@@ -10432,6 +10602,11 @@ msgstr "Verzenden/ontvangen met JMAP"
 #, fuzzy
 msgid "Send/Receive with Microsoft Graph"
 msgstr "Verzenden/ontvangen met Microsoft Graph"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Sender address is one of"
+msgstr ""
 
 #. name
 #: crates/ui-egui/src/forms.rs
@@ -11227,6 +11402,11 @@ msgstr "Een deel ervan staat er nog, zoals hierboven vermeld. MailCraft wordt af
 #, fuzzy
 msgid "Some of the search was checked on this computer"
 msgstr "Een deel van de zoekopdracht is op deze computer gecontroleerd"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Some server rules have unsupported parts; their overlap cannot be checked here."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
@@ -13514,6 +13694,11 @@ msgstr "Hiermee verwijdert u alles wat MailCraft op deze computer bewaart: de e-
 msgid "This rule can't be kept on the server: {why}. It runs on this computer, while MailCraft is open."
 msgstr "Deze regel kan niet op de server worden bewaard: {why}. Hij wordt op deze computer uitgevoerd, zolang MailCraft open is."
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "This rule contains competing Move actions. Use explicit copies if intended."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
 #, fuzzy
@@ -13777,6 +13962,11 @@ msgstr "Om een andere server of gebruikersnaam te gebruiken, verwijdert u het ac
 #, fuzzy
 msgid "To-do Changes to Send"
 msgstr "To-dowijzigingen om te verzenden"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "To/Cc address is one of"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs
@@ -15379,6 +15569,11 @@ msgstr "dag"
 msgid "everybody at @{domain}"
 msgstr "iedereen bij @{domain}"
 
+#. name
+#: crates/engine/src/cmd/rules.rs
+msgid "exact address alternatives, regex, explicit case matching, exceptions and copy actions run on this computer"
+msgstr ""
+
 #. folder name
 #: crates/model/src/mailbox.rs
 #, fuzzy
@@ -15524,6 +15719,11 @@ msgstr "is geen map waarin MailCraft de gegevens bewaart: ongemoeid gelaten"
 msgid "isn't a folder: left alone"
 msgstr "is geen map: ongemoeid gelaten"
 
+#. name
+#: crates/engine/src/agent.rs
+msgid "it can delete messages or other items"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/graph_drafts.rs
 #, fuzzy
@@ -15553,12 +15753,6 @@ msgstr "het klikt of typt in het venster"
 #, fuzzy
 msgid "it could not be removed"
 msgstr "het kon niet worden verwijderd"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it deletes for good"
-msgstr "het verwijdert definitief"
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -15985,6 +16179,11 @@ msgid "on"
 msgstr "op"
 
 #. what a command says
+#: crates/engine/src/cmd/rules_conflicts.rs
+msgid "one rule cannot move the same message to competing destinations; use explicit copies if intended"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "only a message you sent can be sent again"
@@ -16038,11 +16237,21 @@ msgstr "voorbij"
 msgid "pictures from the web are not downloaded: save the picture and add it from the file"
 msgstr "afbeeldingen van het web worden niet gedownload: sla de afbeelding op en voeg die toe vanuit het bestand"
 
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "preserve the server-owned or unresolved original; make a separate disabled local migration instead"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
 msgid "readOnly"
 msgstr "alleen-lezen"
+
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "repair the rule's definition before enabling it"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs
@@ -17699,6 +17908,13 @@ msgstr[0] "{n} bericht naar het account gekopieerd: Verzenden/ontvangen zet het 
 msgstr[1] "{n} berichten naar het account gekopieerd: Verzenden/ontvangen zet ze op de server van Microsoft, zonder de meeste kopregels (zoals Received)"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message has competing destinations and was left unmoved."
+msgid_plural "{n} messages have competing destinations and were left unmoved."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "{n} message in this conversation:"
@@ -17721,6 +17937,13 @@ msgid "{n} message matched"
 msgid_plural "{n} messages matched"
 msgstr[0] "{n} bericht komt overeen"
 msgstr[1] "{n} berichten komen overeen"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message matched."
+msgid_plural "{n} messages matched."
+msgstr[0] ""
+msgstr[1] ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -17765,6 +17988,13 @@ msgstr[1] "{n} berichten worden definitief verwijderd."
 #: crates/ui-egui/src/lib.rs
 msgid "{n} message with characters that couldn't be read is being downloaded again."
 msgid_plural "{n} messages with characters that couldn't be read are being downloaded again."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message would match. No mail was changed."
+msgid_plural "{n} messages would match. No mail was changed."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -17967,6 +18197,13 @@ msgid "{n} rule deleted here is still on the server until MailCraft may change t
 msgid_plural "{n} rules deleted here are still on the server until MailCraft may change the server's rules (File › Info › Ask again)."
 msgstr[0] "{n} regel die hier is verwijderd, staat nog op de server tot MailCraft de regels van de server mag wijzigen (Bestand › Info › Opnieuw vragen)."
 msgstr[1] "{n} regels die hier zijn verwijderd, staan nog op de server tot MailCraft de regels van de server mag wijzigen (Bestand › Info › Opnieuw vragen)."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} rule processing problem."
+msgid_plural "{n} rule processing problems."
+msgstr[0] ""
+msgstr[1] ""
 
 #. interface
 #: crates/ui-egui/src/sync_panel.rs
@@ -18257,6 +18494,10 @@ msgstr "„{subject}” was te groot om te downloaden: alleen de koptekst is hie
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” is niet op de server gevonden, dus het kan niet als bijlage worden doorgestuurd"
+
+#, fuzzy
+#~ msgid "it deletes for good"
+#~ msgstr "het verwijdert definitief"
 
 #, fuzzy
 #~ msgid "MailCraft couldn't find the settings for this address. Check the servers below before you connect."

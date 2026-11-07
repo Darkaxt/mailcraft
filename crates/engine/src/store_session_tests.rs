@@ -21,6 +21,105 @@ fn file_index(m: &Message) -> usize {
 }
 
 #[test]
+fn nonadjacent_sender_group_survives_native_save_reopen_and_files_both_sources() {
+    let tmp = Temp::new("nonadjacent-sender-group");
+    let path = tmp.file();
+    let mb = Mailbox::with_local_account("Owner", "owner@example.org");
+    let account = mb.accounts[0].id;
+    let inbox = mb.inbox().unwrap();
+    let target = mb.folder_of_kind(account, mailcraft_model::FolderKind::Archive).unwrap();
+    let mut s = Session::new(mb);
+    let mut ids = Vec::new();
+    for (sender, actions) in [
+        ("billing@example.org", json!([{"type":"moveTo","value":target}])),
+        ("other@example.org", json!([{"type":"flag"}])),
+        ("news@example.org", json!([{"type":"moveTo","value":target}])),
+    ] {
+        let made = s
+            .run(
+                "rules.add",
+                &json!({"name":sender,"account":account,"server":false,
+            "conditions":[{"type":"fromAddresses","value":[sender]}],"actions":actions,"stop":true}),
+            )
+            .unwrap();
+        ids.push(made["id"].as_u64().unwrap());
+    }
+    assert_eq!(ids[0], ids[2]);
+    let expected = s.mailbox.rules.clone();
+    assert_eq!(expected.len(), 2);
+    assert_eq!(expected[0].merged_from.len(), 2);
+    save(&path, &s.mailbox).unwrap();
+    clear_cache();
+    let mut reopened = session_without_bodies(&path);
+    assert_eq!(reopened.mailbox.rules, expected);
+    let messages: Vec<_> = ["billing@example.org", "news@example.org", "other@example.org"]
+        .into_iter()
+        .map(|sender| reopened.mailbox.add_message(Message { folder: inbox, from: Address::new("Company", sender), ..Default::default() }).unwrap())
+        .collect();
+    let before = serde_json::to_value(&reopened.mailbox).unwrap();
+    assert_eq!(reopened.run("rules.preview", &json!({"folder":inbox,"id":ids[0]})).unwrap()["matched"], 2);
+    assert_eq!(serde_json::to_value(&reopened.mailbox).unwrap(), before);
+    reopened.run("rules.run", &json!({"folder":inbox})).unwrap();
+    save(&path, &reopened.mailbox).unwrap();
+    clear_cache();
+    let final_session = session_without_bodies(&path);
+    assert_eq!(final_session.mailbox.rules, expected);
+    for id in &messages[..2] {
+        assert_eq!(final_session.mailbox.message(*id).unwrap().folder, target);
+    }
+    let other = final_session.mailbox.message(messages[2]).unwrap();
+    assert_eq!(other.folder, inbox);
+    assert_eq!(other.flag, mailcraft_model::FlagStatus::Flagged);
+}
+
+#[test]
+fn filing_preview_and_execution_read_the_stored_body_for_a_cross_account_copy() {
+    let tmp = Temp::new("rule-copy-stored-body");
+    let path = tmp.file();
+    let mb = mailbox(24);
+    let id = with_text_and_file(&mb);
+    let original = mb.message(id).unwrap().clone();
+    save(&path, &mb).unwrap();
+    clear_cache();
+    let mut s = session_without_bodies(&path);
+    assert!(s.mailbox.message(id).unwrap().body_is_kept());
+    let account = s.run("account.add", &json!({"email":"filing-target@example.org"})).unwrap()["id"].as_u64().unwrap();
+    let target = s.mailbox.folder_of_kind(account, mailcraft_model::FolderKind::Inbox).unwrap();
+    let rule = s
+        .run(
+            "rules.add",
+            &json!({"name":"Copy complete mail","account":original.account,"server":false,
+        "conditions":[{"type":"subjectContains","value":original.subject}],
+        "actions":[{"type":"copyTo","value":target}]}),
+        )
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let before = serde_json::to_value(&s.mailbox).unwrap();
+    let preview = s.run("rules.preview", &json!({"folder":original.folder,"id":rule})).unwrap();
+    assert_eq!(preview["matched"], 1);
+    assert_eq!(preview["failed"], 0);
+    assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), before);
+    let executed = s.run("rules.run", &json!({"folder":original.folder,"id":rule})).unwrap();
+    assert_eq!(executed["applied"], 1);
+    assert_eq!(executed["failed"], 0);
+    let copied = s.mailbox.messages_in(target).next().unwrap();
+    assert_eq!(copied.body, original.body);
+    assert_eq!(copied.hidden_text, original.hidden_text);
+    assert_eq!(s.mailbox.messages_in(target).count(), 1);
+    assert!(s.mailbox.message(id).is_some());
+    assert_eq!(copied.filing_source_account, original.account);
+    assert_eq!(s.mailbox.message(id).unwrap().filing_source_account, 0, "a copy does not rewrite its source's history");
+    let copied_id = copied.id;
+    save(&path, &s.mailbox).unwrap();
+    clear_cache();
+    let mut reopened = session_without_bodies(&path);
+    let observed = reopened.run("mail.get", &json!({"id":copied_id})).unwrap();
+    assert_eq!(observed["account"], account);
+    assert_eq!(observed["filingSourceAccount"], original.account);
+}
+
+#[test]
 fn undo_after_a_sweep_brings_back_the_files_of_a_message_read_before_it_was_deleted() {
     let tmp = Temp::new("undo-viewed");
     let path = tmp.file();

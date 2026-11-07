@@ -30,6 +30,8 @@ pub mod remote_rules;
 pub mod remote_tasks;
 pub mod rich;
 mod rule;
+mod rule_lifecycle;
+mod rule_text;
 pub mod search;
 pub mod sender_warnings;
 pub mod signature;
@@ -61,12 +63,14 @@ pub use mailbox::{
 pub use mailcraft_time as time;
 pub use message::{
     Answers, Attachment, Body, ContentRef, FlagStatus, Importance, KeptBody, MAX_HIDDEN_TEXT, Message, NOT_DOWNLOADED, NOT_DOWNLOADED_NOTE,
-    PREVIEW_CHARS, RETURNED_LISTINGS, normalize_subject, size_label, size_label_in, text_hash,
+    PREVIEW_CHARS, RETURNED_LISTINGS, RuleProcessing, normalize_subject, size_label, size_label_in, text_hash,
 };
 pub use offline::{KeepOffline, OfflineWindow};
 pub use remote::{AccountChoice, Origin};
 pub use rich::{RichBody, RichText};
-pub use rule::{Action, Condition, Keep, MAX_RULE_GONE, Rule, RuleGone, ServerRule};
+pub use rule::{Action, Condition, Keep, MAX_RULE_SENDERS, Rule, RuleExecution, RuleExecutionFailure, RuleGone, RuleMergeSource, ServerRule};
+pub use rule_text::{RuleField, RuleText};
+pub mod rule_conflicts;
 pub use signature::Signature;
 pub use task::{LocalTasks, MAX_TASK_GONE, SharedTaskList, SharedTaskLists, Task, TaskFields, TaskGone, TaskPatch};
 pub use thread_index::{ThreadIndex, ThreadKey};

@@ -2870,7 +2870,19 @@ impl Session {
         if gone || !self.undo_drafts(redo).is_empty() || self.undo_takes_mail(redo) {
             return Some(Class::Delete);
         }
-        if to.rules != now.rules || to.signatures != now.signatures || to.junk != now.junk || to.junk_accounts != now.junk_accounts {
+        if to.rules != now.rules
+            && to.rules.iter().enumerate().any(|(position, rule)| {
+                crate::agent::rule_can_delete_mail(to, rule)
+                    && now
+                        .rules
+                        .iter()
+                        .position(|current| current.id == rule.id)
+                        .is_none_or(|old| old != position || now.rules.get(old) != Some(rule))
+            })
+        {
+            return Some(Class::Delete);
+        }
+        if to.signatures != now.signatures || to.junk != now.junk || to.junk_accounts != now.junk_accounts {
             return Some(Class::Settings);
         }
         None

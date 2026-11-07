@@ -781,6 +781,7 @@ fn the_report_never_writes_over_a_file() {
     params["dryRun"] = json!(false);
     let target = dir.join("target.txt");
     std::fs::write(&target, "the owner's").unwrap();
+    #[cfg(unix)]
     let name = std::path::Path::new(&first).file_name().unwrap().to_string_lossy().replace(".txt", " (2).txt");
     #[cfg(unix)]
     std::os::unix::fs::symlink(&target, dir.join(&name)).unwrap();

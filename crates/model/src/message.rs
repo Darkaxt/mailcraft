@@ -168,12 +168,39 @@ pub struct Body {
     pub html: Option<String>,
 }
 
+/// Durable automatic-classification work; absent on processed or older mail.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum RuleProcessing {
+    WaitingForContent,
+    ConflictingDestinations,
+    Failed { rule: Id, error: String },
+}
+
+impl RuleProcessing {
+    pub fn problem(&self, message: Id) -> Option<String> {
+        match self {
+            Self::WaitingForContent => None,
+            Self::ConflictingDestinations => Some(format!("message {message}: conflicting filing destinations; no rule actions executed")),
+            Self::Failed { rule, error } => Some(format!("message {message}, rule #{rule}: {error}")),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Message {
     pub id: Id,
     pub account: Id,
     pub folder: Id,
+    /// Account observed before the first cross-account filing/copy by this mailbox. Zero:
+    /// unknown (including already-filed historical mail). This is local filing provenance,
+    /// not a claim about earlier delivery, an authorization or an outbound mail header.
+    #[serde(skip_serializing_if = "is_zero_u64")]
+    pub filing_source_account: Id,
+    /// Ordinary mail retains one pointer, rather than an error string per message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule_processing: Option<Box<RuleProcessing>>,
     /// `Message-ID` without angle brackets.
     pub message_id: String,
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -393,10 +420,17 @@ fn is_zero_u64(n: &u64) -> bool {
 }
 
 impl Message {
+    pub fn rules_wait_for_content(&self) -> bool {
+        matches!(self.rule_processing.as_deref(), Some(RuleProcessing::WaitingForContent))
+    }
     /// It lies in `folder` of `account` from now on: the message `uid` of that folder's server
     /// mailbox (0: none yet), of which the server last said `synced`. A copy of it that was
     /// expected where it lay is no longer what it waits for ([`Message::placed`], #451).
     pub fn lies_in(&mut self, folder: Id, account: Id, uid: u32, synced: Option<RemoteFlags>) {
+        if self.folder != folder || self.account != account {
+            // An explicit relocation supersedes pending automatic classification.
+            self.rule_processing = None;
+        }
         (self.folder, self.account, self.uid, self.synced) = (folder, account, uid, synced);
         self.placed.clear();
     }

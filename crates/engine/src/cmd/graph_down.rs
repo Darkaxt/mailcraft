@@ -8,8 +8,8 @@
 //! changes nothing.
 //!
 //! - **A new message** comes as its headers and preview, not **fetched**. Once its folder's first
-//!   round has ended, it is sorted by the Safe and Blocked Senders lists, and mail arriving in the
-//!   Inbox then goes through the rules (#567), on every page of a later round.
+//!   round has ended, it is sorted by the Safe and Blocked Senders lists. Every newly discovered
+//!   received message goes through local classification, including initial and historical pages.
 //! - **A message the server has changed** takes the server's read, flag, categories and
 //!   importance, but for a property changed here since the server last said (ADR 0003): that
 //!   goes up with R3.3, and nothing changed here is overwritten by coming down.
@@ -73,6 +73,7 @@ impl ServerIndex {
 /// What taking in pages did.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Down {
+    pub rule_failures: Vec<String>,
     pub new: usize,
     pub changed: usize,
     pub gone: usize,
@@ -89,13 +90,9 @@ pub fn take_page(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, page: &
     // ended (#504), on every page of a later round (#567): never its first download, nor a round
     // read afresh. (A folder of a file from before #567 has only `caught_up` to say so.)
     let sorting = !page.afresh && mb.folder(folder).and_then(|f| f.server.as_ref()).is_some_and(|s| s.round_ended || s.caught_up);
-    // Then the rules (#567), on what arrives in the Inbox and only when the lists sort. Never in a
-    // shared mailbox: the rules, like the lists, are the owner's.
-    let inbox = mb.folder(folder).is_some_and(|f| f.kind == FolderKind::Inbox);
     // (Of a Microsoft or Exchange server account alone, as the repair that puts right what an
     // earlier version kept: a JMAP server's Sent folder is read through here too.)
     let sent_items = mb.folder(folder).is_some_and(|f| f.kind == FolderKind::Sent) && mb.keeps_drafts_on_server(account);
-    let ruling = sorting && mb.account(account).is_some_and(|a| !a.is_shared());
     // The server's copies of messages being moved out of the account are not new mail.
     let mut moving_out: HashSet<String> =
         mb.messages.values().filter_map(|m| m.moving_out.as_ref().filter(|out| out.account == account).map(|out| out.id.clone())).collect();
@@ -184,9 +181,11 @@ pub fn take_page(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, page: &
                     // list sends to Junk E-mail isn't the rules' to file, and a safe sender's taken
                     // out of Junk E-mail goes through them as any mail arriving in the Inbox does.
                     // A move goes up as the owner's own does (R3.3).
-                    let sorted = sorting && mb.sort_junk(m);
-                    if ruling && inbox != sorted {
-                        mb.apply_rules(m);
+                    if sorting {
+                        mb.sort_junk(m);
+                    }
+                    if mb.can_classify_received(m) {
+                        down.rule_failures.extend(mb.apply_rules(m).failures.iter().map(|failure| failure.describe()));
                         // Out of the account: should the page list it again, that is the same
                         // message (#606 review).
                         if mb.message(m).is_some_and(|m| m.account != account) {
@@ -264,7 +263,9 @@ fn update(mb: &mut Mailbox, account: Id, id: Id, folder: Id, server_folder: &str
     // Where the server last had it, as this mailbox has that folder: a message still there here
     // follows the server; one moved here since stays where it was put (that move goes up, R3.3).
     let was_here = mb.folder_by_server(account, &last.folder);
-    let follows = last.gone || was_here.is_none_or(|was| m.folder == was);
+    // A fresh listing temporarily marks even present mail gone. That must not cancel a
+    // local move still waiting to go up; only the last known folder decides ownership.
+    let follows = was_here.is_none_or(|was| m.folder == was);
     let in_drafts = mb.folder(folder).is_some_and(|f| f.kind == FolderKind::Drafts);
     let Ok(m) = mb.message_mut(id) else { return false };
     let now = &there.server;
@@ -294,6 +295,9 @@ fn update(mb: &mut Mailbox, account: Id, id: Id, folder: Id, server_folder: &str
         m.importance = now.importance;
     }
     if follows {
+        if m.folder != folder {
+            m.rule_processing = None;
+        }
         m.folder = folder;
     }
     if m.unfetched {
@@ -423,7 +427,7 @@ fn fetch_queue_of_account(mb: &Mailbox, account: Id, most: usize, now: Timestamp
     let mut waiting: Vec<(i64, &str)> = mb
         .messages
         .values()
-        .filter(|m| m.account == account && m.unfetched && window.within(m))
+        .filter(|m| m.account == account && m.unfetched && (m.rules_wait_for_content() || window.within(m)))
         .filter_map(|m| {
             m.server.as_ref().filter(|s| !s.gone && limit.is_none_or(|limit| s.size <= limit) && !skip(&s.id)).map(|s| (m.received, s.id.as_str()))
         })
@@ -461,7 +465,11 @@ pub fn full_counts(mb: &Mailbox, account: Id, now: Timestamp) -> FullCounts {
     let limit = keeps_whole(mb, account);
     let window = OfflineWindow::of(mb, now);
     let mut counts = FullCounts::default();
-    for m in mb.messages.values().filter(|m| m.account == account && (m.server.is_some() || m.unfetched) && window.within(m)) {
+    for m in mb
+        .messages
+        .values()
+        .filter(|m| m.account == account && (m.server.is_some() || m.unfetched) && (m.rules_wait_for_content() || window.within(m)))
+    {
         counts.all = counts.all.saturating_add(1);
         if m.unfetched {
             let size = m.server.as_ref().map_or(0, |s| s.size);
@@ -511,6 +519,8 @@ pub fn take_fetched_as(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, i
     // What it is now is all of it: nothing the mailbox kept on disk of its preview is its body.
     m.kept = None;
     m.unfetched = false;
+    m.incomplete = read.incomplete;
+    m.not_downloaded = read.not_downloaded;
     m.attachments_on_server = false;
     // Its size is that of the MIME brought (#300), which the fetch caps and which is measured
     // here: kept for when it is back to its preview, and taken anew at every fetch, so that a
@@ -525,6 +535,11 @@ pub fn take_fetched_as(mb: &mut Mailbox, index: &mut ServerIndex, account: Id, i
         if !sd.pending {
             sd.synced = Some(state);
         }
+    }
+    if m.rules_wait_for_content() {
+        // Only a message explicitly waiting for this content is classified here. Ordinary
+        // reads, re-downloads and a replayed fetch do not execute its rules again.
+        mb.apply_rules(here);
     }
     Some(here)
 }

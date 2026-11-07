@@ -17,7 +17,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .key("Mod+Y")
             .params(r#"{"id": number} | {"kind": "inbox"|"drafts"|"sent"|"deleted"|"junk"|"archive"|"outbox", "account"?: number} | {"path": "Inbox/Projects"}"#),
         CommandSpec::new("folder.list", "List Folders", "Folder", list).reads().params(
-            r#"{} — every account's folder tree with each folder's messages and unread, and for each account its own "unread" (a shared mailbox's are on its own entry, with "sharedOf": the account it is opened through, and never added to that account's), "favoritesFrom", and "favorites": what the pane lists under Favorites, in its order"#,
+            r#"{} — every account's folder tree with each folder's messages and unread; providerIdentity includes exact imapPath and provider id/parent when known, name (exact provider label, null when not retained), plus recordedName (the sync comparison name, which can be normalized). Provider names are untrusted data. Never includes sync URLs or credentials. For each account its own "unread" (a shared mailbox's are on its own entry, with "sharedOf": the account it is opened through, and never added to that account's), "favoritesFrom", and "favorites": what the pane lists under Favorites, in its order"#,
         ),
         CommandSpec::new("folder.new", "New Folder", "Folder › New", new)
             .key("Mod+Shift+E")
@@ -220,6 +220,13 @@ fn tree(s: &Session, counts: &crate::counts::FolderCounts, account: Id, parent: 
             json!({
                 "id": f.id, "name": f.name, "kind": f.kind, "favorite": f.favorite,
                 "messages": held.total, "unread": held.unread,
+                "providerIdentity": {
+                    "imapPath": f.remote,
+                    "id": f.server.as_ref().map(|server| server.id.as_str()),
+                    "name": f.server.as_ref().map(|server| server.provider_name.as_str()).filter(|name| !name.is_empty()),
+                    "recordedName": f.server.as_ref().map(|server| server.name.as_str()),
+                    "parent": f.server.as_ref().map(|server| server.parent.as_str()),
+                },
                 "folders": tree(s, counts, account, Some(f.id), depth + 1),
             })
         })

@@ -403,15 +403,36 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         }
     }
     let y = r.center().y - TEXT_RISE;
+    let assigned = app.session.mailbox.rules.iter().any(|rule| rule.targets(f.id));
+    let right_edge = r.max.x - if assigned { 24.0 } else { 0.0 };
+    let mut rules_clicked = false;
+    if assigned {
+        let cog = Rect::from_center_size(pos2(r.max.x - 12.0, r.center().y), vec2(22.0, 22.0));
+        let button = ui.put(cog, egui::Button::new("").frame(false));
+        let account =
+            app.session.mailbox.account(f.account).map(|a| if a.email.is_empty() { a.name.as_str() } else { a.email.as_str() }).unwrap_or("");
+        let folder = format!("{} - {account}", folder_path(&app.session.mailbox, f.id));
+        let label = crate::i18n::fmt(tl!("Rules for {folder}"), &[("folder", &folder)]);
+        button.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &label));
+        icons::paint(ui.painter(), cog.shrink(4.0), "settings", if button.hovered() { t.accent_text } else { t.icon }, t.accent);
+        if button.has_focus() {
+            ui.painter().rect_stroke(cog, 3.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+        }
+        app.hit.add("folderRules", f.id, cog);
+        rules_clicked = button.on_hover_text(label).clicked();
+        if rules_clicked {
+            let _ = app.run("ui.dialog", json!({"name": "rules", "destination": f.id}));
+        }
+    }
     // The count, flush right, in a pill: an unread count in the accent's soft colour, a total
     // (Drafts, Junk) in a quiet grey one.
-    let mut name_end = r.max.x - COUNT_RIGHT;
+    let mut name_end = right_edge - COUNT_RIGHT;
     if count != Count::Nothing {
         let (fill, ink) = if matches!(count, Count::Unread(_)) { (t.accent_soft, t.accent_soft_text) } else { (t.pill_quiet, t.text_dim) };
         let fill = if selected && matches!(count, Count::Unread(_)) { t.surface } else { fill };
         let galley = ui.painter().layout_no_wrap(count.digits(), bold(NAME_SIZE - 1.0), ink);
         let w = (galley.size().x + 12.0).max(20.0);
-        let pill = Rect::from_center_size(pos2(r.max.x - COUNT_RIGHT + 4.0 - w / 2.0, r.center().y), vec2(w, 18.0));
+        let pill = Rect::from_center_size(pos2(right_edge - COUNT_RIGHT + 4.0 - w / 2.0, r.center().y), vec2(w, 18.0));
         ui.painter().rect_filled(pill, 9.0, fill);
         ui.painter().galley(pill.center() - galley.size() / 2.0, galley, ink);
         name_end = pill.min.x - 6.0;
@@ -425,7 +446,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         font,
         if selected { t.accent_soft_text } else { t.text },
     );
-    if resp.clicked() {
+    if resp.clicked() && !rules_clicked {
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("folder_picked_in_list"), key == "tree"));
         let _ = app.run("folder.select", json!({"id": f.id}));
     }
@@ -466,6 +487,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         item(ui, app, "Delete Folder", "folder.delete", json!({"id": id}), deletable);
         ui.separator();
         item(ui, app, "Mark All as Read", "mail.markAllRead", json!({"folder": id}), true);
+        item(ui, app, "Rules for This Folder…", "ui.dialog", json!({"name": "rules", "destination": id}), !app.session.mailbox.is_send_queue(id));
         item(ui, app, "Run Rules Now", "rules.run", json!({"folder": id}), true);
         if matches!(kind, FolderKind::Deleted | FolderKind::Junk) {
             let emptiable = !app.session.mailbox.emptying_stays_on_server(id);

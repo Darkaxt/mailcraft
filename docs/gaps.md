@@ -5,6 +5,10 @@
 The ranked list of shortfalls and rough edges. The direction is in [`ROADMAP.md`](../ROADMAP.md):
 where MailCraft stands, the beta checklist and the steps to it, and what comes after beta; the order
 of the work to beta is the roadmap reset there, and this list stays the record of what falls short.
+
+The fork's [local rules](local-rules.md) add regex/case matching, flat exceptions,
+copy actions, destination-folder editing and non-mutating previews. This does not
+establish complete Outlook rule import or support every server-side condition/action.
 One entry per shortfall, ranked by how much it stops an Outlook user from switching
 (**B** = blocks beta). Each says what's missing, the evidence, who it hurts, a rough estimate of
 focused work, and which document tracks it: `ROADMAP.md` (the beta checklist, or after beta) or a

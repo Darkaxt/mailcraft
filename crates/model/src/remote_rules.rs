@@ -80,7 +80,13 @@ impl RemoteRule {
             kept
         };
         let mut conditions = Vec::new();
+        let mut invalid_addresses = false;
         for condition in std::mem::take(&mut self.conditions).into_iter().take(MAX_PARTS) {
+            if matches!(&condition, Condition::FromAddresses(_) | Condition::ToAddresses(_)) && condition.validate().is_err() {
+                // Keep an explicit unknown part rather than narrowing the alternative list.
+                invalid_addresses = true;
+                continue;
+            }
             let tidied = match condition {
                 Condition::FromContains(t) => Condition::FromContains(words(&t)),
                 Condition::ToContains(t) => Condition::ToContains(words(&t)),
@@ -92,6 +98,9 @@ impl RemoteRule {
             if !empty {
                 conditions.push(tidied);
             }
+        }
+        if invalid_addresses {
+            note("(invalid exact address alternatives)");
         }
         self.conditions = conditions;
         let mut actions = Vec::new();

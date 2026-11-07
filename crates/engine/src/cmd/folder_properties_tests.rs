@@ -14,6 +14,33 @@ use crate::Session;
 /// Wednesday 2026-10-14 16:00 UTC.
 const NOW: i64 = 1_791_993_600;
 
+#[test]
+fn folder_inventory_preserves_exact_provider_paths_and_recorded_names_without_exposing_sync_state() {
+    let mut s = Session::at(Mailbox::with_local_account("", "owner@example.org"), NOW, 0);
+    let account = s.mailbox.accounts[0].id;
+    let id = s.mailbox.add_folder(account, None, "Miles & More ").unwrap();
+    let folder = s.mailbox.folder_mut(id).unwrap();
+    folder.remote = "INBOX/Online Services/Travels/Miles & More ".into();
+    folder.server = Some(ServerFolder {
+        id: "provider-id".into(),
+        name: "Miles & More ".into(),
+        provider_name: "Miles & More ".into(),
+        parent: "provider-parent".into(),
+        delta: "private-sync-cursor".into(),
+        sync_state: "private-other-cursor".into(),
+        ..Default::default()
+    });
+    let reply = s.run("folder.list", &json!({})).unwrap();
+    let row = reply["accounts"][0]["folders"].as_array().unwrap().iter().find(|row| row["id"] == id).unwrap();
+    assert_eq!(row["name"], "Miles & More");
+    assert_eq!(row["providerIdentity"]["imapPath"], "INBOX/Online Services/Travels/Miles & More ");
+    assert_eq!(row["providerIdentity"]["recordedName"], "Miles & More ");
+    assert_eq!(row["providerIdentity"]["name"], "Miles & More ");
+    assert_eq!(row["providerIdentity"]["id"], "provider-id");
+    assert!(!reply.to_string().contains("private-sync-cursor"));
+    assert!(!reply.to_string().contains("private-other-cursor"));
+}
+
 fn run(s: &mut Session, params: Value) -> Value {
     s.run("folder.properties", &params).unwrap_or_else(|e| panic!("folder.properties {params}: {e}"))
 }

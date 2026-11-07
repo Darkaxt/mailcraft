@@ -1323,6 +1323,7 @@ fn send(s: &mut Session, _: &Value) -> CmdResult {
         let _ = if as_draft { s.mailbox.forget_message(d) } else { s.mailbox.remove_message(d) };
     }
     let mut delivered = 0;
+    let mut rule_failures = Vec::new();
     if !queued {
         let locals: Vec<(Id, String)> = s
             .mailbox
@@ -1338,12 +1339,15 @@ fn send(s: &mut Session, _: &Value) -> CmdResult {
             let Some(inbox) = s.mailbox.folder_of_kind(local, FolderKind::Inbox) else { continue };
             let copy = Message { id: 0, folder: inbox, read: false, bcc: Vec::new(), answers: None, ..m.clone() };
             let cid = s.mailbox.add_message(copy)?;
-            s.mailbox.apply_rules(cid);
+            rule_failures.extend(s.mailbox.apply_rules(cid).failures);
             delivered += 1;
         }
     }
     s.compose = None;
-    Ok(json!({"id": id, "queued": queued, "delivered": delivered}))
+    if !rule_failures.is_empty() {
+        s.sync_status = rule_failures.iter().map(|failure| failure.describe()).collect::<Vec<_>>().join("; ");
+    }
+    Ok(json!({"id": id, "queued": queued, "delivered": delivered, "ruleFailures": rule_failures}))
 }
 
 fn save_draft(s: &mut Session, _: &Value) -> CmdResult {

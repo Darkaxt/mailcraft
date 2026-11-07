@@ -46,6 +46,8 @@ pub(crate) struct Touched {
     changed_folders: BTreeSet<Id>,
     pending_added: HashSet<String>,
     pending_removed: HashSet<String>,
+    rules: Option<Vec<mailcraft_model::Rule>>,
+    rule_gone: Option<Vec<mailcraft_model::RuleGone>>,
 }
 
 /// The accounts of `mb` kept in step through Graph.
@@ -135,6 +137,12 @@ pub(crate) fn touched(before: &Mailbox, after: &Mailbox) -> Touched {
         t.pending_added = is.difference(&was).cloned().collect();
         t.pending_removed = was.difference(&is).cloned().collect();
     }
+    if before.rules != after.rules {
+        t.rules = Some(after.rules.clone());
+    }
+    if before.rule_gone != after.rule_gone {
+        t.rule_gone = Some(after.rule_gone.clone());
+    }
     t
 }
 
@@ -188,12 +196,16 @@ impl Said {
 /// step with `now`; `touched` is what the change being undone did. Answers the mailbox and what
 /// couldn't be undone, in words.
 pub(crate) fn keep_in_step(mut out: Mailbox, touched: &Touched, now: &Mailbox) -> (Mailbox, Vec<String>) {
+    let known_folders: HashSet<Id> = out.folders.iter().map(|folder| folder.id).collect();
+    let was_deleted = out.deleted_destination_folders();
+    rules(&mut out, touched, now);
     // Ids are never given out twice, whatever the undo brings back.
     out.ids_after(now);
     returned(&mut out, now);
     let g: BTreeSet<Id> = graph_accounts(now).intersection(&graph_accounts(&out)).copied().collect();
     leave_alone(&mut out, touched, now, &g);
     if g.is_empty() {
+        removed_destinations(&mut out, &known_folders, &was_deleted);
         return (out, Vec::new());
     }
     let mut said = Said::default();
@@ -217,7 +229,58 @@ pub(crate) fn keep_in_step(mut out: Mailbox, touched: &Touched, now: &Mailbox) -
     // What the server last gave of these is the server's, not the owner's to undo.
     server_lists(&mut out, now, &g);
     out.favorites_from_server = now.favorites_from_server.clone();
+    removed_destinations(&mut out, &known_folders, &was_deleted);
     (out, said.lines())
+}
+
+/// A folder undo must not rewind unrelated provider rule downloads or deletion receipts.
+/// Restore only definitions changed by that step; new or independently changed ones survive.
+fn rules(out: &mut Mailbox, touched: &Touched, now: &Mailbox) {
+    if let Some(after) = &touched.rules {
+        let target_ids: HashSet<Id> = out.rules.iter().map(|rule| rule.id).collect();
+        out.rules.retain_mut(|target| {
+            let previous = after.iter().find(|rule| rule.id == target.id);
+            let current = now.rules.iter().find(|rule| rule.id == target.id);
+            if previous == Some(target) || current != previous {
+                if let Some(current) = current {
+                    *target = current.clone();
+                } else {
+                    return false;
+                }
+            }
+            true
+        });
+        out.rules
+            .extend(now.rules.iter().filter(|rule| !target_ids.contains(&rule.id) && !after.iter().any(|previous| previous.id == rule.id)).cloned());
+    } else {
+        out.rules = now.rules.clone();
+    }
+    if let Some(after) = &touched.rule_gone {
+        let same = |a: &mailcraft_model::RuleGone, b: &mailcraft_model::RuleGone| {
+            a.account == b.account && a.id == b.id && a.made.as_ref().map(|rule| rule.id) == b.made.as_ref().map(|rule| rule.id)
+        };
+        // Remove only the intents this step added. An independently changed refusal is retained.
+        let added: Vec<_> = after.iter().filter(|gone| !out.rule_gone.iter().any(|target| same(gone, target))).collect();
+        out.rule_gone.retain(|target| !after.iter().any(|previous| previous == target) || now.rule_gone.iter().any(|current| same(current, target)));
+        out.rule_gone.extend(
+            now.rule_gone.iter().filter(|gone| !added.contains(gone)).filter(|gone| !after.iter().any(|previous| same(gone, previous))).cloned(),
+        );
+        for current in &now.rule_gone {
+            if let Some(target) = out.rule_gone.iter_mut().find(|target| same(current, target)) {
+                *target = current.clone();
+            } else if added.iter().any(|previous| same(current, previous) && current != *previous) {
+                out.rule_gone.push(current.clone());
+            }
+        }
+    } else {
+        out.rule_gone = now.rule_gone.clone();
+    }
+}
+
+fn removed_destinations(out: &mut Mailbox, known: &HashSet<Id>, was_deleted: &HashSet<Id>) {
+    let mut gone: Vec<Id> = known.iter().filter(|id| out.folder(**id).is_none()).copied().collect();
+    gone.extend(out.deleted_destination_folders().difference(was_deleted).copied());
+    out.remove_rules_for_deleted_folders(&gone);
 }
 
 /// Each account's list of categories in `out` with what reads have done to it since kept: a name
@@ -565,7 +628,7 @@ fn fields(t: &Message, a: &Message, c: &Arc<Message>, now: &Mailbox, g: &BTreeSe
             })*
         };
     }
-    back!(folder, read, flag, flag_due, importance, pinned, answered, forwarded, draft, held, placed);
+    back!(folder, filing_source_account, read, flag, flag_due, importance, pinned, answered, forwarded, draft, held, placed);
     // Categories as a list that others add to too (R3 spec S17): what the change added is taken
     // off and what it took off is put back; one added in Outlook meanwhile stays.
     if t.categories != a.categories {

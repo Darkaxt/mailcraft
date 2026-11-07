@@ -39,7 +39,7 @@ use std::collections::{HashMap, HashSet};
 use mailcraft_model::remote_rules::{
     MAX_RULE_OPS, MAX_SERVER_RULES, RemoteRule, RuleOp, RuleOpKind, RuleOutcome, RuleResult, RulesDownload, RulesUpload, RulesUploaded,
 };
-use mailcraft_model::{Action, Condition, Id, Keep, MAX_RULE_GONE, MAX_RULES, Mailbox, Rule, RuleGone, ServerRule};
+use mailcraft_model::{Action, Condition, Id, Keep, MAX_RULES, Mailbox, Rule, RuleGone, ServerRule};
 use serde_json::{Value, json};
 
 use super::remote::{Merged, owner};
@@ -111,7 +111,7 @@ fn upload_of(mailbox: &Mailbox, account: Id) -> Result<Vec<RuleOp>, CmdError> {
         return Err(bad("that account doesn't keep its rules on its server"));
     }
     let mut ops: Vec<RuleOp> = Vec::new();
-    for gone in mailbox.rule_gone.iter().filter(|gone| gone.account == account && !gone.id.is_empty()) {
+    for gone in mailbox.rule_gone.iter().filter(|gone| gone.account == account && !gone.id.is_empty() && gone.blocked.is_empty()) {
         ops.push(RuleOp { kind: RuleOpKind::Delete, id: gone.id.clone(), ..Default::default() });
     }
     let mine = || mailbox.rules.iter().filter(move |r| r.account == account);
@@ -368,11 +368,14 @@ pub fn merge_rules(mailbox: &mut Mailbox, download: &RulesDownload) -> Result<Me
     }
     // Read whole, the server doesn't have the rules whose answer was lost: they are sent again.
     if download.complete && download.rules.len() <= MAX_SERVER_RULES {
+        let before = mailbox.rule_gone.len();
+        mailbox.rule_gone.retain(|gone| gone.account != account || gone.id.is_empty() || seen.contains(&gone.id));
         for rule in mailbox.rules.iter_mut().filter(|r| r.account == account && r.unanswered && r.waiting()) {
             rule.unanswered = false;
             merged.updated += 1;
         }
         mailbox.rule_gone.retain(|g| !(g.account == account && g.made.is_some()));
+        merged.checked |= before != mailbox.rule_gone.len();
     }
     // What the server no longer has: only when the download says it showed every rule there is.
     if download.complete && download.rules.len() <= MAX_SERVER_RULES {
@@ -419,12 +422,18 @@ pub fn apply_rule_outcomes(mailbox: &mut Mailbox, uploaded: &RulesUploaded) -> R
         let at = mailbox.rules.iter().position(|r| r.id == outcome.rule && r.account == account);
         let name = at.and_then(|i| mailbox.rules.get(i)).map(|r| r.name.clone()).unwrap_or_default();
         match (outcome.kind, outcome.result) {
-            (RuleOpKind::Delete, RuleResult::Done | RuleResult::Gone | RuleResult::Refused) => {
+            (RuleOpKind::Delete, RuleResult::Done | RuleResult::Gone) => {
                 mailbox.rule_gone.retain(|g| !(g.account == account && g.id == outcome.id));
-                if outcome.result == RuleResult::Refused {
-                    merged.say(format!("A deleted rule couldn't be deleted from the server{why}"));
-                }
                 merged.removed += 1;
+            }
+            (RuleOpKind::Delete, RuleResult::Refused) => {
+                for gone in mailbox.rule_gone.iter_mut().filter(|gone| gone.account == account && gone.id == outcome.id) {
+                    gone.blocked = if outcome.error.is_empty() { "the server refused deletion".into() } else { outcome.error.clone() };
+                }
+                merged.say(format!(
+                    "A deleted rule couldn't be deleted from the server{why}; the unresolved deletion is retained without automatic replay"
+                ));
+                failed += 1;
             }
             (RuleOpKind::Create, RuleResult::Done) => {
                 let (enabled, sequence) = (outcome.enabled.unwrap_or(true), outcome.sequence.unwrap_or(0));
@@ -450,8 +459,8 @@ pub fn apply_rule_outcomes(mailbox: &mut Mailbox, uploaded: &RulesUploaded) -> R
                 } else {
                     // Deleted here while it was being made: the server is told to delete it.
                     forget_made(mailbox, account, outcome.rule);
-                    if mailbox.rule_gone.len() < MAX_RULE_GONE {
-                        mailbox.rule_gone.push(RuleGone { account, id: outcome.id.clone(), made: None });
+                    if !mailbox.rule_gone.iter().any(|gone| gone.account == account && gone.id == outcome.id) {
+                        mailbox.rule_gone.push(RuleGone { account, id: outcome.id.clone(), ..Default::default() });
                     }
                 }
             }
@@ -537,10 +546,14 @@ fn download_of<T: serde::de::DeserializeOwned>(v: &Value, name: &str) -> Result<
 /// Take in the rules a host downloaded ([`merge_rules`]). Not an undo step, as `sync.applyTasks`.
 pub fn apply_rules(s: &mut Session, download: &RulesDownload) -> Result<Merged, CmdError> {
     let lost: Vec<Id> = s.mailbox.rules.iter().filter(|r| r.unanswered && r.waiting()).map(|r| r.id).collect();
+    let pending: Vec<_> = s.mailbox.rule_gone.iter().filter(|gone| !gone.id.is_empty()).map(|gone| (gone.account, gone.id.clone())).collect();
     let merged = merge_rules(&mut s.mailbox, download)?;
     // A rule whose answer was lost, taken as the server's: going back to a mailbox from before
     // would have it made again.
-    if s.mailbox.rules.iter().any(|r| lost.contains(&r.id) && r.on_server()) {
+    // A complete read confirming a pending deletion is the same irreversible boundary as
+    // a DELETE acknowledgement. Undo must not recreate only its stale local server record.
+    let confirmed_deletion = pending.iter().any(|(account, id)| !s.mailbox.rule_gone.iter().any(|gone| gone.account == *account && gone.id == *id));
+    if confirmed_deletion || s.mailbox.rules.iter().any(|r| lost.contains(&r.id) && r.on_server()) {
         s.forget_history();
     }
     if merged.changed() {

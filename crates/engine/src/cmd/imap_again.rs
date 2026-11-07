@@ -78,6 +78,7 @@ pub fn wanted(mb: &Mailbox, account: Id) -> HashMap<Id, Vec<u32>> {
 /// the same list and stays.
 pub fn take_again(mb: &mut Mailbox, id: Id, read: Message) {
     let Ok(m) = mb.message_mut(id) else { return };
+    let waiting = m.rules_wait_for_content();
     (m.refetch, m.refetched) = (false, true);
     if m.draft {
         return;
@@ -102,6 +103,13 @@ pub fn take_again(mb: &mut Mailbox, id: Id, read: Message) {
     m.hidden_text = read.hidden_text;
     // What it is now is all of it: nothing the mailbox kept on disk of its preview is its body.
     m.kept = None;
+    if waiting {
+        m.attachments = read.attachments;
+        m.incomplete = read.incomplete;
+        m.not_downloaded = read.not_downloaded;
+        m.unfetched = false;
+        mb.apply_rules(id);
+    }
 }
 
 /// Take in what a folder's delta says of messages downloaded again. `by_uid` finds a message of

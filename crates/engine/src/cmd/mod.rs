@@ -100,6 +100,18 @@ mod reply_to_first_tests;
 #[cfg(test)]
 mod resend_reply_to_tests;
 pub mod rules;
+pub mod rules_conflicts;
+#[cfg(test)]
+mod rules_conflicts_tests;
+#[cfg(test)]
+mod rules_ingestion_tests;
+#[cfg(test)]
+mod rules_lifecycle_tests;
+#[cfg(test)]
+mod rules_local_tests;
+mod rules_merge;
+#[cfg(test)]
+mod rules_merge_tests;
 pub mod rules_remote;
 #[cfg(test)]
 mod rules_remote_tests;
@@ -335,6 +347,8 @@ pub fn message_summary(s: &Session, m: &Message) -> Value {
     json!({
         "id": m.id,
         "folder": m.folder,
+        "account": m.account,
+        "filingSourceAccount": (m.filing_source_account != 0).then_some(m.filing_source_account),
         "from": m.from.full(),
         "to": mailcraft_model::format_list(&m.to),
         "subject": m.subject,

@@ -21,6 +21,59 @@ fn rule_to(folder: Id) -> Value {
 }
 
 #[test]
+fn read_only_rule_inspection_and_preview_need_no_settings_grant() {
+    let mut s = sample();
+    let inbox = folder_of(&s, FolderKind::Inbox);
+    let archive = folder_of(&s, FolderKind::Archive);
+    let rule = s.run("rules.add", &rule_to(archive)).unwrap()["id"].as_u64().unwrap();
+    let before = serde_json::to_value(&s.mailbox).unwrap();
+    for (id, params) in [("rules.list", json!({"destination": archive})), ("rules.preview", json!({"folder": inbox, "id": rule}))] {
+        assert_eq!(check(&s, id, &params, &[]), Verdict::Run, "{id}");
+        let command = s.registry.get(id).unwrap();
+        assert!(command.reads && !command.mutates, "{id} must remain read-only");
+        s.run(id, &params).unwrap();
+        assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), before);
+    }
+    let described = s.registry.describe();
+    for id in ["rules.add", "rules.edit", "rules.enable", "rules.remove", "rules.move", "rules.keepOnServer", "rules.fromMessage", "rules.run"] {
+        assert_eq!(classify(&s, id, &json!({})), Access::Safe, "{id}");
+        let command = described.as_array().unwrap().iter().find(|command| command["id"] == id).unwrap();
+        assert_eq!(command["agent"], "safe", "discovery must agree with ordinary filing behavior: {id}");
+        assert!(command.get("needs").is_none());
+    }
+}
+
+#[test]
+fn deleting_rules_require_consent_but_can_be_read_previewed_disabled_and_removed() {
+    let mut s = sample();
+    let inbox = folder_of(&s, FolderKind::Inbox);
+    let archive = folder_of(&s, FolderKind::Archive);
+    let mut definition = rule_to(archive);
+    definition["actions"] = json!([{"type":"delete"}]);
+    assert!(matches!(check(&s, "rules.add", &definition, &[]), Verdict::Ask(Class::Delete, _)));
+    let id = s.run("rules.add", &definition).unwrap()["id"].as_u64().unwrap();
+    for (command, params) in [
+        ("rules.enable", json!({"id": id, "value": true})),
+        ("rules.move", json!({"id": id, "direction": "up"})),
+        ("rules.run", json!({"id": id, "folder": inbox})),
+    ] {
+        assert!(matches!(check(&s, command, &params, &[]), Verdict::Ask(Class::Delete, _)), "{command}");
+    }
+    for (command, params) in [
+        ("rules.list", json!({})),
+        ("rules.preview", json!({"id": id, "folder": inbox})),
+        ("rules.enable", json!({"id": id, "value": false})),
+        ("rules.remove", json!({"id": id})),
+    ] {
+        assert_eq!(check(&s, command, &params, &[]), Verdict::Run, "{command}");
+    }
+    definition["id"] = json!(id);
+    assert!(matches!(check(&s, "rules.edit", &definition, &[]), Verdict::Ask(Class::Delete, _)));
+    definition["actions"] = json!([{"type":"moveTo", "value": archive}]);
+    assert_eq!(check(&s, "rules.edit", &definition, &[]), Verdict::Run, "removing a deleting action is safe");
+}
+
+#[test]
 fn a_rule_never_moves_mail_to_an_outbox() {
     let mut s = sample();
     let out = folder_of(&s, FolderKind::Outbox);
@@ -93,7 +146,9 @@ fn agents_are_asked_before_deleting_contacts_tasks_events_and_categories() {
 
 #[test]
 fn a_question_is_shown_in_full_or_refused() {
-    let s = sample();
+    let mut s = sample();
+    s.run("rules.add", &json!({"name":"Deletion guard", "conditions":[{"type":"subjectContains","value":"sample"}], "actions":[{"type":"delete"}]}))
+        .unwrap();
     // A key that sorts first can't push the real params out of sight.
     let junk = "z".repeat(250);
     let params = json!({"0": junk, "data": "visible-end", "name": "x"});
@@ -102,7 +157,7 @@ fn a_question_is_shown_in_full_or_refused() {
     // Too long to show: refused, not cut.
     let huge = json!({"0": "z".repeat(MAX_QUESTION * 2)});
     assert!(matches!(check(&s, "rules.run", &huge, &[]), Verdict::Refuse(_)));
-    assert!(matches!(check(&s, "rules.run", &params, &[]), Verdict::Ask(Class::Settings, _)));
+    assert!(matches!(check(&s, "rules.run", &params, &[]), Verdict::Ask(Class::Delete, _)));
     // Every recipient is counted, however many.
     let mut s = sample();
     let many: Vec<String> = (0..40).map(|i| format!("p{i}@example.org")).collect();
@@ -150,21 +205,28 @@ fn the_calendar_question_names_the_event_and_the_invitees() {
 }
 
 #[test]
-fn undo_that_would_revert_rules_or_accounts_asks() {
+fn undo_filing_rules_is_safe_and_restoring_deleting_rules_or_accounts_requires_consent() {
     let mut s = sample();
     let archive = folder_of(&s, FolderKind::Archive);
     // An ordinary step: safe.
     let m = *s.mailbox.messages.keys().next().unwrap();
     s.run("mail.flag", &json!({"id": m})).unwrap();
     assert_eq!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run);
-    // The owner's own rule: undoing it is for the owner.
+    // Filing-rule history needs no blanket Settings grant.
     s.run("rules.add", &rule_to(archive)).unwrap();
-    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Settings, _)));
-    assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Settings]), Verdict::Run);
-    assert!(describe(&s, "edit.undo", &json!({})).contains("rules, signatures or Safe and Blocked Senders"));
+    assert_eq!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run);
     // After the undo, redo would put the rule back.
     assert!(s.undo());
-    assert!(matches!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Ask(Class::Settings, _)));
+    assert_eq!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Run);
+    assert!(s.redo());
+    let mut deletion = rule_to(archive);
+    deletion["actions"] = json!([{"type":"delete"}]);
+    s.run("rules.add", &deletion).unwrap();
+    assert_eq!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run);
+    assert!(s.undo());
+    assert!(matches!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Ask(Class::Delete, _)));
+    s.run("account.add", &json!({"email":"other@example.org"})).unwrap();
+    assert!(matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Ask(Class::Accounts, _)));
 }
 
 #[test]

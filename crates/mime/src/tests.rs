@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use mailcraft_model::{Address, Attachment, Body, FlagStatus, Importance, Message};
+use mailcraft_model::{Address, Attachment, Body, FlagStatus, Importance, Message, RuleProcessing};
 use proptest::prelude::*;
 
 use crate::{WriteOptions, parse, parse_mbox, write, write_mbox, written_message_id};
@@ -523,6 +523,8 @@ fn message() -> impl Strategy<Value = Message> {
             id: 7,
             account: 3,
             folder: 5,
+            filing_source_account: 9,
+            rule_processing: Some(Box::new(RuleProcessing::WaitingForContent)),
             uid: 11,
             draft: true,
             pinned: true,
@@ -602,6 +604,8 @@ proptest! {
         prop_assert_eq!((back.importance, back.read, back.flag, back.answered), (want.importance, want.read, want.flag, want.answered));
         prop_assert_eq!(&back.categories, &want.categories);
         prop_assert_eq!(&back.headers, &want.headers);
+        prop_assert_eq!(back.filing_source_account, 0, "filing provenance is local, not an email header");
+        prop_assert!(back.rule_processing.is_none(), "local rule processing must not enter exported email");
         prop_assert_eq!(back, want);
     }
 

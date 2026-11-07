@@ -732,7 +732,7 @@ msgid "All Mailboxes"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
 msgid "All accounts"
 msgstr ""
 
@@ -1722,8 +1722,18 @@ msgid "Cancel This Meeting?"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Cancel edit"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 msgid "Cancelled"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Case sensitive"
 msgstr ""
 
 #. interface, name
@@ -1888,6 +1898,16 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "Check Now"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Check Rule Conflicts"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Check conflicts"
 msgstr ""
 
 #. interface
@@ -2186,6 +2206,16 @@ msgid "Confirm servers"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Confirmed"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Conflicting destinations: {confirmed} confirmed; {potential} potential."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/calendar_view.rs
 msgid "Connect"
 msgstr ""
@@ -2352,6 +2382,11 @@ msgstr ""
 #. command label, interface
 #: crates/engine/src/cmd/mail.rs crates/ui-egui/src/ribbon.rs
 msgid "Copy to Folder"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Copy to folder"
 msgstr ""
 
 #. interface
@@ -2723,6 +2758,11 @@ msgstr ""
 msgid "Direct Replies To"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Disabled until repaired: {why}"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 msgid "Discard"
@@ -3055,6 +3095,11 @@ msgid "Edit Event"
 msgstr ""
 
 #. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Edit Local Rule"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/compose.rs
 msgid "Edit Message"
 msgstr ""
@@ -3075,8 +3120,18 @@ msgid "Edit Task"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit rule"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/compose.rs
 msgid "Edit signature as text"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit this local rule"
 msgstr ""
 
 #. ribbon, ribbon location
@@ -3256,6 +3311,16 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Everything the interface does is a command: {commands} of them, covering {percent}% of the feature catalog. The command line, the control channel and the MCP server run the same commands."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Except"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Exception"
 msgstr ""
 
 #. interface
@@ -3749,6 +3814,11 @@ msgstr ""
 #. name
 #: crates/ui-egui/src/forms.rs
 msgid "From contains"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "From contains any of"
 msgstr ""
 
 #. interface
@@ -4403,6 +4473,11 @@ msgid "Include the original message when replying"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Includes rules for other destination folders. Priority and Stop do not resolve competing destinations. Potential overlaps still require review; matching conflicts leave the message unmoved."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Incoming mail (IMAP)"
 msgstr ""
@@ -4450,6 +4525,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Inside My Organization"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Inspect Pending Classification"
 msgstr ""
 
 #. command label
@@ -5436,6 +5516,11 @@ msgstr ""
 msgid "Message Preview"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Message {message}, after {completed} actions: {why}"
+msgstr ""
+
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/ribbon.rs
 msgid "Messages"
@@ -5709,6 +5794,16 @@ msgid "Move Up"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move after {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move before {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "Move the Appointments Only"
 msgstr ""
@@ -5831,6 +5926,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/updates.rs
 msgid "Needs Check for new versions."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms/rules/advanced.rs
+msgid "Nested exceptions cannot be edited here. The original rule was preserved."
 msgstr ""
 
 #. command label, interface
@@ -5960,6 +6060,11 @@ msgstr ""
 #. interface, name
 #: crates/model/src/sync/progress.rs crates/ui-egui/src/alerts.rs
 msgid "New mail"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "New mail from"
 msgstr ""
 
 #. interface
@@ -6584,6 +6689,11 @@ msgstr ""
 msgid "Once it has worked, your system's credential store keeps it for next time. It is never written to the mailbox."
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One email address per line"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/meeting.rs
 msgid "One occurrence of a series can't be in another calendar than the rest of the series."
@@ -6592,6 +6702,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/forms.rs
 msgid "One of a series: {rule}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One sender text per line"
 msgstr ""
 
 #. interface
@@ -6650,6 +6765,11 @@ msgid "Only on this computer: {why}"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only rules assigned to this destination are shown. Order includes rules for other destinations; a rule can have additional actions."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Only send during this time range:"
 msgstr ""
@@ -6657,6 +6777,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading.rs
 msgid "Only the beginning of this message is here. The rest downloads with the next Send/Receive."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only the first 100 failure details are shown; the total includes every failure."
 msgstr ""
 
 #. interface
@@ -6884,6 +7009,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Or is it one of these?"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Order {position}"
 msgstr ""
 
 #. interface
@@ -7250,6 +7380,11 @@ msgstr ""
 msgid "Postal code"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Potential"
+msgstr ""
+
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/send_receive.rs crates/ui-egui/src/ribbon.rs
 msgid "Preferences"
@@ -7261,13 +7396,28 @@ msgid "Press Send/Receive to download your mail."
 msgstr ""
 
 #. interface, name
-#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/signatures.rs
 msgid "Preview"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Preview Rules"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview folder"
 msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Preview lines in the message list"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview this rule without changing mail"
 msgstr ""
 
 #. interface
@@ -7522,6 +7672,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/chrome.rs
 msgid "Redo {what}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Regex"
 msgstr ""
 
 #. ribbon
@@ -7957,7 +8112,17 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
+msgid "Rules delivering to {folder}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
 msgid "Rules for"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Rules for {folder}"
 msgstr ""
 
 #. interface
@@ -8149,6 +8314,11 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Save Message File As"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Save Rule"
 msgstr ""
 
 #. command label
@@ -8661,6 +8831,11 @@ msgstr ""
 #. command label
 #: crates/engine/src/cmd/graph_mail.rs
 msgid "Send/Receive with Microsoft Graph"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Sender address is one of"
 msgstr ""
 
 #. name
@@ -9321,6 +9496,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/mail_view/server_rows.rs
 msgid "Some of the search was checked on this computer"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Some server rules have unsupported parts; their overlap cannot be checked here."
 msgstr ""
 
 #. interface
@@ -11241,6 +11421,11 @@ msgstr ""
 msgid "This rule can't be kept on the server: {why}. It runs on this computer, while MailCraft is open."
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "This rule contains competing Move actions. Use explicit copies if intended."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
 msgid "This series is still on its way to the account's server. Change one of its days once it is there (in a moment)."
@@ -11444,6 +11629,11 @@ msgstr ""
 #. command label
 #: crates/engine/src/cmd/tasks_remote.rs
 msgid "To-do Changes to Send"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "To/Cc address is one of"
 msgstr ""
 
 #. what a command says
@@ -12782,6 +12972,11 @@ msgstr ""
 msgid "everybody at @{domain}"
 msgstr ""
 
+#. name
+#: crates/engine/src/cmd/rules.rs
+msgid "exact address alternatives, regex, explicit case matching, exceptions and copy actions run on this computer"
+msgstr ""
+
 #. folder name
 #: crates/model/src/mailbox.rs
 msgctxt "folder"
@@ -12905,6 +13100,11 @@ msgstr ""
 msgid "isn't a folder: left alone"
 msgstr ""
 
+#. name
+#: crates/engine/src/agent.rs
+msgid "it can delete messages or other items"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/graph_drafts.rs
 msgid "it can't take it"
@@ -12928,11 +13128,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/data_removal.rs
 msgid "it could not be removed"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it deletes for good"
 msgstr ""
 
 #. interface
@@ -13291,6 +13486,11 @@ msgid "on"
 msgstr ""
 
 #. what a command says
+#: crates/engine/src/cmd/rules_conflicts.rs
+msgid "one rule cannot move the same message to competing destinations; use explicit copies if intended"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 msgid "only a message you sent can be sent again"
 msgstr ""
@@ -13335,9 +13535,19 @@ msgstr ""
 msgid "pictures from the web are not downloaded: save the picture and add it from the file"
 msgstr ""
 
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "preserve the server-owned or unresolved original; make a separate disabled local migration instead"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/calendar/invitation.rs
 msgid "readOnly"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "repair the rule's definition before enabling it"
 msgstr ""
 
 #. what a command says
@@ -14740,6 +14950,13 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message has competing destinations and was left unmoved."
+msgid_plural "{n} messages have competing destinations and were left unmoved."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 msgid "{n} message in this conversation:"
 msgid_plural "{n} messages in this conversation:"
@@ -14757,6 +14974,13 @@ msgstr[1] ""
 #: crates/ui-egui/src/forms.rs
 msgid "{n} message matched"
 msgid_plural "{n} messages matched"
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message matched."
+msgid_plural "{n} messages matched."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -14799,6 +15023,13 @@ msgstr[1] ""
 #: crates/ui-egui/src/lib.rs
 msgid "{n} message with characters that couldn't be read is being downloaded again."
 msgid_plural "{n} messages with characters that couldn't be read are being downloaded again."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message would match. No mail was changed."
+msgid_plural "{n} messages would match. No mail was changed."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -14973,6 +15204,13 @@ msgstr[1] ""
 #: crates/ui-egui/src/forms.rs
 msgid "{n} rule deleted here is still on the server until MailCraft may change the server's rules (File › Info › Ask again)."
 msgid_plural "{n} rules deleted here are still on the server until MailCraft may change the server's rules (File › Info › Ask again)."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} rule processing problem."
+msgid_plural "{n} rule processing problems."
 msgstr[0] ""
 msgstr[1] ""
 

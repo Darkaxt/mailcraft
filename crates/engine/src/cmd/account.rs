@@ -1801,7 +1801,22 @@ fn take_in(mb: &mut Mailbox, account: Id, on_server: &mut OnServer, mut delta: F
         delta.refetched.clear();
         delta.refetch_done.clear();
     } else {
+        let resuming: Vec<(Id, u32)> = delta
+            .refetched
+            .iter()
+            .filter_map(|message| on_server.by_uid.get(&(folder, message.uid)).map(|id| (*id, message.uid)))
+            .filter(|(id, _)| mb.message(*id).is_some_and(Message::rules_wait_for_content))
+            .collect();
         super::imap_again::take_in(mb, &mut delta, |uid| on_server.by_uid.get(&(folder, uid)).copied());
+        for (id, uid) in resuming {
+            if let Some(problem) = mb.message(id).and_then(|message| message.rule_processing.as_deref()).and_then(|state| state.problem(id)) {
+                counts.notes.push(problem);
+            }
+            if !mb.message(id).is_some_and(|message| message.folder == folder && message.uid == uid) {
+                on_server.by_uid.remove(&(folder, uid));
+                on_server.leaving.insert((folder, uid));
+            }
+        }
     }
     let inbox = delta.kind == FolderKind::Inbox;
     let junk = delta.kind == FolderKind::Junk;
@@ -1849,15 +1864,17 @@ fn take_in(mb: &mut Mailbox, account: Id, on_server: &mut OnServer, mut delta: F
             // The Safe and Blocked Senders lists first (#504): mail a list sends to Junk E-mail
             // isn't the rules' to file, and a safe sender's taken out of Junk E-mail goes through
             // them as any mail arriving in the Inbox does.
-            let sorted = sorting && uid > old_seen && mb.sort_junk(id);
-            if inbox != sorted {
-                mb.apply_rules(id);
+            if sorting && uid > old_seen {
+                mb.sort_junk(id);
             }
-            // A list or a rule that moved it away has noted the move.
-            if uid != 0 && !mb.message(id).is_some_and(|m| m.folder == folder && m.uid == uid) {
-                on_server.by_uid.remove(&(folder, uid));
-                on_server.leaving.insert((folder, uid));
-            }
+        }
+        if mb.can_classify_received(id) {
+            counts.notes.extend(mb.apply_rules(id).failures.iter().map(|failure| failure.describe()));
+        }
+        // Rules in custom/archived receiving folders require the same leaving-UID evidence.
+        if uid != 0 && !mb.message(id).is_some_and(|m| m.folder == folder && m.uid == uid) {
+            on_server.by_uid.remove(&(folder, uid));
+            on_server.leaving.insert((folder, uid));
         }
         counts.new += usize::from(arriving);
     }

@@ -128,7 +128,13 @@ pub fn graph_inbox_request(s: &Session, account: Id) -> Option<GraphMailRequest>
         email: a.email.clone(),
         shared,
         links,
-        inbox_pass: Some(GraphFolder { id, name: inbox.name.clone(), kind: FolderKind::Inbox, ..Default::default() }),
+        inbox_pass: Some(GraphFolder {
+            id,
+            name: inbox.name.clone(),
+            provider_name: inbox.server.as_ref().map(|server| server.provider_name.clone()).unwrap_or_default(),
+            kind: FolderKind::Inbox,
+            ..Default::default()
+        }),
         ..Default::default()
     })
 }
@@ -278,6 +284,12 @@ pub fn apply_graph_fetch(s: &mut Session, result: GraphFetchResult) -> CmdResult
     let window = mailcraft_model::OfflineWindow::of(&s.mailbox, s.now());
     let outside: Vec<Id> = taken.iter().copied().filter(|id| s.mailbox.message(*id).is_some_and(|m| !window.within(m))).collect();
     s.kept_for_now.extend(outside);
+    let mut errors = result.errors.clone();
+    errors.extend(
+        taken
+            .iter()
+            .filter_map(|id| s.mailbox.message(*id).and_then(|message| message.rule_processing.as_deref()).and_then(|state| state.problem(*id))),
+    );
     let taken = taken.len();
     // Gone before it could be fetched: a message being moved out of the account stays as it is.
     let incomplete = graph_up::missing(&mut s.mailbox, account, &result.missing);
@@ -291,7 +303,7 @@ pub fn apply_graph_fetch(s: &mut Session, result: GraphFetchResult) -> CmdResult
     s.sync_progress.counted_as(&s.mailbox, account, counts, now);
     let graph_down::FullCounts { all, waiting, large } = counts;
     Ok(
-        json!({"fetched": taken, "missing": result.missing.len(), "failed": result.failed.len(), "waiting": waiting, "large": large, "all": all, "errors": result.errors, "offline": result.offline, "busyFor": result.busy_for}),
+        json!({"fetched": taken, "missing": result.missing.len(), "failed": result.failed.len(), "waiting": waiting, "large": large, "all": all, "errors": errors, "offline": result.offline, "busyFor": result.busy_for}),
     )
 }
 
@@ -407,6 +419,7 @@ pub fn apply_graph_mail(s: &mut Session, result: GraphMailResult) -> CmdResult {
     }
     s.graph_index = index;
     // The conversations of mail listed before they were asked for (#795).
+    errors.extend(down.rule_failures.iter().cloned());
     let threaded = super::thread_ids::take(&mut s.mailbox, account, &result.threads);
     // A rule moved new mail out of the account (#567). An undo of a step from before goes back to
     // a mailbox that never had it, and keeps only the Microsoft accounts' mail as it is now: once
@@ -541,6 +554,7 @@ pub(super) fn change_done(mb: &mut Mailbox, account: Id, change: &FolderChange, 
             f.server = Some(ServerFolder {
                 id: there.id.clone(),
                 name: there.name.clone(),
+                provider_name: there.provider_name.clone(),
                 parent: there.parent.clone(),
                 delta: String::new(),
                 caught_up: false,
@@ -561,6 +575,9 @@ pub(super) fn change_done(mb: &mut Mailbox, account: Id, change: &FolderChange, 
             match change {
                 FolderChange::Rename { .. } => server.name = there.name.clone(),
                 _ => server.parent = there.parent.clone(),
+            }
+            if !there.provider_name.is_empty() || matches!(change, FolderChange::Rename { .. }) {
+                server.provider_name.clone_from(&there.provider_name);
             }
             taken.pushed += 1;
             None
@@ -592,6 +609,7 @@ pub(super) fn change_done(mb: &mut Mailbox, account: Id, change: &FolderChange, 
 /// Take in every folder the server listed, by server id (a JMAP server's too: its mailboxes are
 /// known by their ids as Graph's folders are).
 pub(super) fn take_listing(mb: &mut Mailbox, account: Id, listing: &FolderListing, taken: &mut Taken) {
+    let was_deleted = mb.deleted_destination_folders();
     release_outbox(mb, account, listing, taken);
     // A deletion an earlier version queued of a folder that is the server's own: the server
     // keeps it, and would be asked every run (#756).
@@ -629,6 +647,7 @@ pub(super) fn take_listing(mb: &mut Mailbox, account: Id, listing: &FolderListin
                     server: Some(ServerFolder {
                         id: there.id.clone(),
                         name,
+                        provider_name: there.provider_name.clone(),
                         parent: there.parent.clone(),
                         well_known: there.well_known,
                         ..Default::default()
@@ -656,6 +675,8 @@ pub(super) fn take_listing(mb: &mut Mailbox, account: Id, listing: &FolderListin
         mb.remove_folders(&gone);
         taken.removed += super::graph_switch::sweep_unlisted(mb, account);
     }
+    let deleted: Vec<Id> = mb.deleted_destination_folders().difference(&was_deleted).copied().collect();
+    mb.remove_rules_for_deleted_folders(&deleted);
 }
 
 /// The Outbox here is the queue mail is sent from; it follows no folder of the server (AU2-V2).
@@ -744,6 +765,7 @@ fn update(mb: &mut Mailbox, id: Id, there: &GraphFolder, name: &str, parent_here
     f.server = Some(ServerFolder {
         id: there.id.clone(),
         name: name.to_string(),
+        provider_name: there.provider_name.clone(),
         parent: there.parent.clone(),
         delta: last.delta,
         caught_up: last.caught_up,

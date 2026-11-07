@@ -241,11 +241,11 @@ fn a_held_key_deletes_one_rule() {
                 app,
             );
         h.run_steps(6);
-        // The dialog's ×, then the first rule's switch, up, down and Delete.
-        for _ in 0..5 {
-            h.key_press(egui::Key::Tab);
-            h.run_steps(2);
-        }
+        // Focus the actual action; adding editor controls must not turn this
+        // regression check into a dependency on an old tab count.
+        use egui_kittest::kittest::Queryable as _;
+        h.query_all_by_label("Delete this rule").next().unwrap().focus();
+        h.run_steps(2);
         let key = |pressed, repeat| egui::Event::Key { key: held, physical_key: None, pressed, repeat, modifiers: egui::Modifiers::NONE };
         h.event(key(true, false));
         h.step();

@@ -145,8 +145,12 @@ fn on_list(names: &[String], name: &str) -> bool {
 pub struct ServerFolder {
     /// The server's id of the folder (Graph's immutable id).
     pub id: String,
-    /// Its name, as the server last said.
+    /// The sync comparison name, which can be normalized; a local rename is compared with it.
     pub name: String,
+    /// Exact provider label last retained, independently of display/rename comparisons.
+    /// Empty means unknown (including older files), never a truncated identity.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub provider_name: String,
     /// The server id of the folder it lies in, as the server last said; empty for one at the top
     /// of the mailbox.
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -1713,6 +1717,7 @@ impl Mailbox {
             return;
         }
         let gone: HashSet<Id> = gone.iter().copied().collect();
+        self.remove_rules_for_deleted_folders(&gone.iter().copied().collect::<Vec<_>>());
         self.folders.retain(|f| !gone.contains(&f.id));
         for f in &mut self.folders {
             if f.parent.is_some_and(|p| gone.contains(&p)) {
@@ -1825,7 +1830,10 @@ impl Mailbox {
         if self.name_taken(f.account, parent, &f.name, Some(id)) {
             return Err(invalid(format!("a folder named \"{}\" already exists there", f.name)));
         }
+        let was_deleted = self.deleted_destination_folders();
         self.folder_mut(id)?.parent = parent;
+        let deleted: Vec<Id> = self.deleted_destination_folders().difference(&was_deleted).copied().collect();
+        self.remove_rules_for_deleted_folders(&deleted);
         Ok(())
     }
 
@@ -1851,6 +1859,8 @@ impl Mailbox {
         }
         let deleted = self.folder_of_kind(f.account, FolderKind::Deleted);
         let in_deleted = deleted.is_some_and(|d| self.subtree(d).contains(&id));
+        let redirected = self.subtree(id);
+        self.remove_rules_for_deleted_folders(&redirected);
         match deleted {
             Some(d) if !in_deleted => {
                 // A name already used in Deleted Items gets a number.
@@ -2118,6 +2128,7 @@ impl Mailbox {
         if m.folder == folder {
             return Ok(());
         }
+        let from_account = m.account;
         // Moved in from another mailbox and not made on this account's server yet, it is mail from
         // elsewhere still: not into an Outbox that would send it, as straight from there (#704).
         if m.account == account
@@ -2132,13 +2143,20 @@ impl Mailbox {
         }
         let into_outbox = self.is_imap_outbox(folder);
         if self.move_between_accounts(id, folder, account, &remote, fresh)? {
-            hold_if_put_in_outbox(self.message_mut(id)?, into_outbox);
+            let m = self.message_mut(id)?;
+            if m.filing_source_account == 0 && from_account != account {
+                m.filing_source_account = from_account;
+            }
+            hold_if_put_in_outbox(m, into_outbox);
             return Ok(());
         }
         let (uid, synced) = self.imap_side(id, folder, account, &remote, fresh)?;
         let m = self.message_mut(id)?;
         // (The UID belonged to the old folder.)
         m.lies_in(folder, account, uid, synced);
+        if m.filing_source_account == 0 && from_account != account {
+            m.filing_source_account = from_account;
+        }
         hold_if_put_in_outbox(m, into_outbox);
         Ok(())
     }
@@ -2563,7 +2581,11 @@ impl Mailbox {
             }
             let source = m.server.as_ref().map(|s| s.id.clone()).unwrap_or_default();
             let mut copy = m.clone();
+            if copy.filing_source_account == 0 && from_account != to_account {
+                copy.filing_source_account = from_account;
+            }
             (copy.id, copy.folder, copy.account, copy.uid, copy.synced) = (0, folder, to_account, 0, None);
+            copy.rule_processing = None;
             (copy.server, copy.moving_out, copy.returned) = (None, None, 0);
             copy.placed.clear();
             hold_if_put_in_outbox(&mut copy, self.is_imap_outbox(folder));
@@ -2580,7 +2602,11 @@ impl Mailbox {
         }
         let server = m.server.clone().filter(|s| from_account == to_account && !s.gone && self.keeps_changes_for_server(from_account));
         let mut copy = m.clone();
+        if copy.filing_source_account == 0 && from_account != to_account {
+            copy.filing_source_account = from_account;
+        }
         copy.id = 0;
+        copy.rule_processing = None;
         copy.folder = folder;
         copy.uid = 0;
         copy.synced = None;
@@ -2848,16 +2874,154 @@ impl Mailbox {
     ///
     /// A rule its account's server has doesn't act: the server ran it before the mail came here.
     /// It is still matched, so that one that stops later rules stops those of this computer too.
-    pub fn apply_rules(&mut self, id: Id) -> Vec<String> {
+    pub fn apply_rules(&mut self, id: Id) -> crate::RuleExecution {
+        if !self.can_classify_received(id) {
+            if self.message(id).is_some_and(crate::Message::rules_wait_for_content)
+                && let Ok(message) = self.message_mut(id)
+            {
+                message.rule_processing = None;
+            }
+            return crate::RuleExecution::default();
+        }
+        if self.rule_requiring_content(id, false).is_some() {
+            if let Ok(message) = self.message_mut(id) {
+                message.rule_processing = Some(Box::new(crate::RuleProcessing::WaitingForContent));
+            }
+            return crate::RuleExecution::default();
+        }
         self.run_rules(id, false)
+    }
+
+    /// Full content is required before any action when an applicable body condition or
+    /// cross-account copy could depend on information the preview does not contain.
+    fn rule_requiring_content(&self, id: Id, now: bool) -> Option<&Rule> {
+        let message = self.message(id)?;
+        if !(message.unfetched
+            || message.incomplete
+            || message.not_downloaded != 0
+            || message.body_is_kept()
+            || message.kept.as_ref().is_some_and(|kept| kept.failed))
+        {
+            return None;
+        }
+        let mut importance = message.importance;
+        for index in self.rules_in_order(message.account) {
+            let Some(rule) = self.rules.get(index) else { continue };
+            let addresses = self.rule_reads_addresses(rule);
+            let could_match =
+                rule.may_match_headers(message, addresses, now, importance) || rule.may_match_headers(message, addresses, now, message.importance);
+            if could_match
+                && (rule.reads_body()
+                    || rule.actions.iter().any(|action| match action {
+                        Action::CopyTo(folder) => self.folder(*folder).is_some_and(|folder| folder.account != message.account),
+                        Action::MoveTo(folder) if message.incomplete || message.not_downloaded != 0 => {
+                            self.folder(*folder).is_some_and(|folder| folder.account != message.account)
+                        }
+                        _ => false,
+                    }))
+            {
+                return Some(rule);
+            }
+            if (now || !rule.on_server())
+                && rule.matches_at_importance(message, addresses, importance)
+                && self.validate_rule_actions(&rule.actions).is_ok()
+            {
+                for action in &rule.actions {
+                    if let Action::SetImportance(next) = action {
+                        importance = *next;
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// A newly discovered received message, in any ordinary receiving folder. Drafts, sent
+    /// mail, trash and junk (including their children) remain under their existing semantics.
+    pub fn can_classify_received(&self, id: Id) -> bool {
+        let Some(message) = self.message(id) else { return false };
+        if message.draft
+            || self.account(message.account).is_none_or(|account| account.is_shared())
+            || self.junk_lists(message.account).is_some_and(|lists| lists.verdict(&message.from.email) == Some(crate::JunkList::Blocked))
+        {
+            return false;
+        }
+        let mut next = Some(message.folder);
+        for _ in 0..self.folders.len() {
+            let Some(folder) = next.and_then(|id| self.folder(id)) else { return next.is_none() };
+            if matches!(folder.kind, FolderKind::Drafts | FolderKind::Sent | FolderKind::Deleted | FolderKind::Junk | FolderKind::Outbox) {
+                return false;
+            }
+            next = folder.parent;
+            if next.is_none() {
+                return true;
+            }
+        }
+        false
     }
 
     /// [`Mailbox::apply_rules`], or with `now` every rule acts (Run Rules Now, which runs the rules
     /// the server has here too, as Outlook does).
-    pub fn run_rules(&mut self, id: Id, now: bool) -> Vec<String> {
-        let mut ran = Vec::new();
+    pub fn run_rules(&mut self, id: Id, now: bool) -> crate::RuleExecution {
+        if self.message(id).is_some_and(|message| message.rule_processing.is_some())
+            && let Ok(message) = self.message_mut(id)
+        {
+            message.rule_processing = None;
+        }
+        let result = self.run_rules_selected(id, now, None);
+        let issue = if result.conflicts {
+            Some(crate::RuleProcessing::ConflictingDestinations)
+        } else {
+            result.failures.first().map(|failure| crate::RuleProcessing::Failed { rule: failure.rule, error: failure.error.clone() })
+        };
+        if (issue.is_some() || self.message(id).is_some_and(|message| message.rule_processing.is_some()))
+            && let Ok(message) = self.message_mut(id)
+        {
+            message.rule_processing = issue.map(Box::new);
+        }
+        result
+    }
+
+    fn run_rules_selected(&mut self, id: Id, now: bool, only: Option<Id>) -> crate::RuleExecution {
+        let mut ran = crate::RuleExecution::default();
         let Some(account) = self.message(id).map(|m| m.account) else { return ran };
-        let order: Vec<Rule> = self.rules_in_order(account).into_iter().filter_map(|i| self.rules.get(i).cloned()).collect();
+        if let Some(rule) = self.rule_requiring_content(id, now) {
+            ran.failures.push(crate::RuleExecutionFailure {
+                rule: rule.id,
+                name: rule.name.clone(),
+                message: id,
+                completed_actions: 0,
+                error: "complete message content is unavailable; no rule actions executed".into(),
+            });
+            return ran;
+        }
+        let conflicting = self.conflicting_filing_rules(id, now);
+        if !conflicting.is_empty() {
+            ran.conflicts = true;
+            ran.matched = conflicting.len();
+            let names = conflicting
+                .iter()
+                .take(2)
+                .map(|rule| format!("{} (#{}): {:?}", rule.name, rule.id, crate::rule_conflicts::move_destinations(rule)))
+                .collect::<Vec<_>>()
+                .join("; ");
+            if let Some(rule) = conflicting.first() {
+                ran.failures.push(crate::RuleExecutionFailure {
+                    rule: rule.id,
+                    name: rule.name.clone(),
+                    message: id,
+                    completed_actions: 0,
+                    error: format!("conflicting filing destinations among {} matching rules; no rule actions executed: {names}", conflicting.len()),
+                });
+            }
+            return ran;
+        }
+        let order: Vec<Rule> = self
+            .rules_in_order(account)
+            .into_iter()
+            .filter_map(|i| self.rules.get(i).cloned())
+            .filter(|rule| only.is_none_or(|id| rule.id == id))
+            .collect();
         for mut rule in order {
             let Some(m) = self.message(id) else { break };
             // New mail: a rule its server has ran there as the server last had it, which is what
@@ -2865,12 +3029,49 @@ impl Mailbox {
             if let Some(server) = rule.server.as_ref().filter(|s| !now && !s.id.is_empty()) {
                 rule.enabled = server.synced_enabled;
             }
+            if rule.enabled
+                && rule.known()
+                && !rule.on_server()
+                && !rule.unanswered
+                && let Err(error) = rule.validation()
+            {
+                let error = format!("invalid rule definition: {error}");
+                if let Some(stored) = self.rules.iter_mut().find(|stored| stored.id == rule.id) {
+                    stored.enabled = false;
+                    stored.repair.clone_from(&error);
+                }
+                ran.failures.push(crate::RuleExecutionFailure { rule: rule.id, name: rule.name.clone(), message: id, completed_actions: 0, error });
+                continue;
+            }
             if !rule.matches_as(m, self.rule_reads_addresses(&rule)) {
                 continue;
             }
+            ran.matched += 1;
             if now || !rule.on_server() {
-                self.act(id, &rule.actions);
-                ran.push(rule.name.clone());
+                match self.act(id, &rule.actions) {
+                    Ok(()) => ran.applied.push(rule.name.clone()),
+                    Err((completed_actions, error)) => {
+                        let incomplete = rule.actions.iter().any(|action| {
+                            matches!(action,
+                            Action::MoveTo(folder) | Action::CopyTo(folder) if self.folder(*folder).is_none() || self.is_send_queue(*folder))
+                        });
+                        if incomplete
+                            && !rule.on_server()
+                            && !rule.unanswered
+                            && let Some(stored) = self.rules.iter_mut().find(|stored| stored.id == rule.id)
+                        {
+                            stored.enabled = false;
+                            stored.repair = error.to_string();
+                        }
+                        ran.failures.push(crate::RuleExecutionFailure {
+                            rule: rule.id,
+                            name: rule.name.clone(),
+                            message: id,
+                            completed_actions,
+                            error: error.to_string(),
+                        });
+                    }
+                }
             }
             if rule.stop {
                 break;
@@ -2881,32 +3082,36 @@ impl Mailbox {
 
     /// Run the one rule `rule` on a message now (a rule just made, run over the mail already in a
     /// folder, as Outlook offers): whether it acted. A rule for another account's mail doesn't.
-    pub fn run_rule(&mut self, id: Id, rule: Id) -> bool {
-        let Some(m) = self.message(id) else { return false };
-        let Some(rule) = self.rules.iter().find(|r| r.id == rule && r.is_for(m.account)).cloned() else { return false };
-        if !rule.matches_as(m, self.rule_reads_addresses(&rule)) {
-            return false;
+    pub fn run_rule(&mut self, id: Id, rule: Id) -> crate::RuleExecution {
+        self.run_rules_selected(id, true, Some(rule))
+    }
+
+    pub(crate) fn validate_rule_actions(&self, actions: &[Action]) -> Result<(), ModelError> {
+        // A missing destination makes the rule incomplete. Nothing in that rule
+        // acts, including a later Delete, until its destinations are repaired.
+        for action in actions {
+            if let Action::MoveTo(folder) | Action::CopyTo(folder) = action {
+                if self.folder(*folder).is_none() {
+                    return Err(not_found("folder", *folder));
+                }
+                if self.is_send_queue(*folder) {
+                    return Err(invalid(INTO_OUTBOX));
+                }
+            }
         }
-        self.act(id, &rule.actions);
-        true
+        Ok(())
     }
 
     /// Do what a rule says to a message.
-    fn act(&mut self, id: Id, actions: &[Action]) {
-        for action in actions {
-            match action {
-                Action::MoveTo(folder) => {
-                    // A rule pointing at a folder that is gone does nothing, and none puts
-                    // mail into a send queue (the next Send/Receive would send it).
-                    if !self.is_send_queue(*folder) {
-                        let _ = self.move_message(id, *folder);
-                    }
-                }
-                Action::Delete => {
-                    let _ = self.delete_message(id);
-                }
+    fn act(&mut self, id: Id, actions: &[Action]) -> Result<(), (usize, ModelError)> {
+        self.validate_rule_actions(actions).map_err(|error| (0, error))?;
+        for (completed, action) in actions.iter().enumerate() {
+            let result = match action {
+                Action::MoveTo(folder) => self.move_message(id, *folder),
+                Action::CopyTo(folder) => self.copy_message(id, *folder).map(|_| ()),
+                Action::Delete => self.delete_message(id).map(|_| ()),
                 change => {
-                    let Ok(m) = self.message_mut(id) else { break };
+                    let m = self.message_mut(id).map_err(|error| (completed, error))?;
                     match change {
                         Action::Categorize(c) if !m.has_category(c) => {
                             m.categories.push(c.clone());
@@ -2918,9 +3123,12 @@ impl Mailbox {
                         Action::SetImportance(i) => m.importance = *i,
                         _ => {}
                     }
+                    Ok(())
                 }
-            }
+            };
+            result.map_err(|error| (completed, error))?;
         }
+        Ok(())
     }
 
     // ---- contacts, events, tasks ----

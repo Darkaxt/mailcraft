@@ -132,6 +132,44 @@ fn renamed_moved_and_deleted_there_is_so_here_with_its_id_and_its_mail() {
 }
 
 #[test]
+fn rules_lifecycle_confirmed_remote_folder_changes_remove_redirects_but_partial_absence_does_not() {
+    use mailcraft_model::{Action, Condition, Rule};
+    let (mut s, account) = session();
+    take(&mut s, account, listed(server(), true));
+    let sales = s.mailbox.folder_by_server(account, "sa").unwrap();
+    let child = s.mailbox.folder_by_server(account, "ab").unwrap();
+    let projects = s.mailbox.folder_by_server(account, "pr").unwrap();
+    let local = s.run("account.add", &json!({"email":"other@example.org"})).unwrap()["id"].as_u64().unwrap();
+    for (id, target) in [(900, sales), (901, child), (902, projects)] {
+        s.mailbox.rules.push(Rule {
+            id,
+            account: local,
+            name: format!("Rule {id}"),
+            enabled: true,
+            conditions: vec![Condition::SubjectContains("invoice".into())],
+            actions: vec![Action::CopyTo(target)],
+            ..Default::default()
+        });
+    }
+    let mut part = server();
+    part.retain(|folder| folder.id != "pr");
+    take(&mut s, account, listed(part, false));
+    assert_eq!(s.mailbox.rules.len(), 3, "incomplete absence is not deletion");
+    let mut moved = server();
+    moved.iter_mut().find(|folder| folder.id == "sa").unwrap().parent = "de".into();
+    take(&mut s, account, listed(moved.clone(), false));
+    assert_eq!(
+        s.mailbox.rules.iter().map(|rule| rule.id).collect::<Vec<_>>(),
+        [902],
+        "a known parent move removes subtree redirects across accounts"
+    );
+    moved.retain(|folder| folder.id != "pr");
+    take(&mut s, account, listed(moved, true));
+    assert!(s.mailbox.rules.is_empty());
+    assert!(s.mailbox.folder(projects).is_none());
+}
+
+#[test]
 fn a_listing_that_was_cut_short_removes_nothing() {
     let (mut s, account) = session();
     take(&mut s, account, listed(server(), true));

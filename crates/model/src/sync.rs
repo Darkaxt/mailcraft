@@ -1128,6 +1128,10 @@ pub struct GraphFolder {
     pub parent: String,
     /// Its name, whole: it may hold `/` or `\`, and is never split into a path.
     pub name: String,
+    /// Unmodified provider label when retained within the reader's limit. Empty means
+    /// unknown, never a truncated identity. Separate from normalized display/comparison names.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub provider_name: String,
     /// Which special folder it is, when the server says it is one of them.
     pub kind: FolderKind,
     /// How many messages it has, and how many of them are unread, as the server counts them:

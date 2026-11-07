@@ -72,7 +72,7 @@ impl Class {
     pub fn what(self) -> &'static str {
         match self {
             Class::Send => "it writes to other people or reaches out to the web",
-            Class::Delete => "it deletes for good",
+            Class::Delete => "it can delete messages or other items",
             Class::Leave => "it takes the window off the message the owner is writing",
             Class::Accounts => "it changes an account or a sign-in",
             Class::Mailbox => "it opens, replaces or saves the mailbox file",
@@ -137,6 +137,20 @@ const SAFE: &[&str] = &[
     "mail.collapseConversation",
     "mail.get",
     "mail.list",
+    // Read-only rule inventory and isolated shadow evaluation, never execution.
+    "rules.list",
+    "rules.preview",
+    "rules.conflicts",
+    "rules.pending",
+    // Default filing behavior; classify requires Delete only for deleting effects.
+    "rules.add",
+    "rules.edit",
+    "rules.remove",
+    "rules.enable",
+    "rules.run",
+    "rules.fromMessage",
+    "rules.move",
+    "rules.keepOnServer",
     "mail.delete",
     "mail.archive",
     "mail.move",
@@ -481,14 +495,6 @@ const SETTINGS: &[&str] = &[
     // Work Offline: turned off, what waits in the Outbox goes out.
     "sync.offline",
     "calendar.deleteAnsweredRequests",
-    "rules.add",
-    "rules.remove",
-    "rules.enable",
-    "rules.list",
-    "rules.run",
-    "rules.fromMessage",
-    "rules.move",
-    "rules.keepOnServer",
     // Junk E-mail Options (#504): what the lists send to Junk E-mail or let through.
     "junk.blockSender",
     "junk.neverBlockSender",
@@ -687,20 +693,13 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
     if new_task_onto(s, id, params).is_some() {
         return Access::Owner(Class::Send);
     }
-    // A rule that files mail into another account's folder puts it on that server, as a move
-    // there does (#451).
-    if rules_onto_another_server(s, id, params) {
-        return Access::Owner(Class::Send);
-    }
-    if server_rule_deletes(s, id, params) {
-        return Access::Owner(Class::Delete);
-    }
-    // A rule its server has is deleted there, where undo doesn't reach and MailCraft may not be
-    // able to make it again (#566), as `tasks.delete`; so is one that went to be made there and
-    // had no answer, which the server may have.
-    let there = |x: &mailcraft_model::Rule| x.on_server() || x.unanswered;
-    if id == "rules.remove" && p::id(params, "id").is_some_and(|r| s.mailbox.rules.iter().any(|x| x.id == r && there(x))) {
-        return Access::Owner(Class::Delete);
+    // Rule consent follows email deletion effects, not blanket Settings or
+    // cross-account filing. Reading and shadow previews are already SAFE.
+    if matches!(
+        id,
+        "rules.add" | "rules.edit" | "rules.enable" | "rules.remove" | "rules.move" | "rules.keepOnServer" | "rules.run" | "rules.fromMessage"
+    ) {
+        return if rule_change_deletes_mail(s, id, params) { Access::Owner(Class::Delete) } else { Access::Safe };
     }
     // What the owner is writing or changing is theirs to let go of, whatever `--allow` says
     // (#494): Discard throws the message away with its draft; a window closed with changes in its
@@ -896,7 +895,7 @@ fn folder_onto_server(s: &Session, folder: Id, from: Option<Id>) -> Option<Id> {
 /// [`folder_onto_server`] of a rule's moves.
 fn rule_onto_server(s: &Session, r: &mailcraft_model::Rule, from: Option<Id>) -> Option<Id> {
     r.actions.iter().find_map(|a| match a {
-        mailcraft_model::Action::MoveTo(f) => folder_onto_server(s, *f, from),
+        mailcraft_model::Action::MoveTo(f) | mailcraft_model::Action::CopyTo(f) => folder_onto_server(s, *f, from),
         _ => None,
     })
 }
@@ -905,28 +904,32 @@ fn rule_onto_server(s: &Session, r: &mailcraft_model::Rule, from: Option<Id>) ->
 /// it runs there whether MailCraft is open or not, undo doesn't reach it, and the agent couldn't
 /// delete it again itself (#566). What a rule with parts not known here does isn't known: it may
 /// delete mail, or send it away.
-fn server_rule_deletes(s: &Session, id: &str, params: &Value) -> bool {
+pub(crate) fn rule_can_delete_mail(mailbox: &Mailbox, rule: &mailcraft_model::Rule) -> bool {
+    // Unknown server effects remain preserved, not certified as ordinary filing.
+    !rule.known()
+        || rule.actions.iter().any(|action| match action {
+            mailcraft_model::Action::Delete => true,
+            mailcraft_model::Action::MoveTo(id) => {
+                mailbox.folders.iter().filter(|f| f.kind == FolderKind::Deleted).any(|f| mailbox.subtree(f.id).contains(id))
+            }
+            _ => false,
+        })
+}
+
+fn rule_change_deletes_mail(s: &Session, id: &str, params: &Value) -> bool {
     let named = || p::id(params, "id").and_then(|r| s.mailbox.rules.iter().find(|x| x.id == r));
-    // Moving mail into Deleted Items, or a folder under it, is deleting it.
-    let binned = |id: &Id| s.mailbox.folders.iter().filter(|f| f.kind == FolderKind::Deleted).any(|f| s.mailbox.subtree(f.id).contains(id));
-    let deletes = |r: &mailcraft_model::Rule| {
-        !r.known()
-            || r.actions.iter().any(|a| match a {
-                mailcraft_model::Action::Delete => true,
-                mailcraft_model::Action::MoveTo(f) => binned(f),
-                _ => false,
-            })
-    };
-    let there = |r: &mailcraft_model::Rule| r.keep == mailcraft_model::Keep::Server;
+    let deletes = |rule: &mailcraft_model::Rule| rule_can_delete_mail(&s.mailbox, rule);
     match id {
-        "rules.add" => crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| there(&r) && deletes(&r)),
-        "rules.fromMessage" => crate::cmd::rules::rule_from_message(s, params).is_ok_and(|(r, _)| there(&r) && deletes(&r)),
-        "rules.keepOnServer" => named().is_some_and(|r| !there(r) && deletes(r)),
-        // Moving a server rule that deletes mail changes where it runs among the others there.
-        "rules.move" => named().is_some_and(|r| there(r) && deletes(r)),
-        // Read as the command reads it, as `rules_onto_another_server` does.
-        "rules.enable" => {
-            p::opt_bool(params, "value").is_ok_and(|value| named().is_some_and(|r| value.unwrap_or(!r.enabled) && there(r) && deletes(r)))
+        "rules.add" | "rules.edit" => crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| deletes(&r)),
+        "rules.fromMessage" => crate::cmd::rules::rule_from_message(s, params).is_ok_and(|(r, _)| deletes(&r)),
+        "rules.keepOnServer" => named().is_some_and(|r| r.keep != mailcraft_model::Keep::Server && deletes(r)),
+        "rules.move" => named().is_some_and(deletes),
+        "rules.enable" => p::opt_bool(params, "value").is_ok_and(|value| named().is_some_and(|r| value.unwrap_or(!r.enabled) && deletes(r))),
+        "rules.run" => {
+            let (Ok(folder), Ok(only)) = (p::id_strict(params, "folder"), p::id_strict(params, "id")) else { return false };
+            s.mailbox.folder(folder.unwrap_or(s.view.folder)).is_some_and(|folder| {
+                s.mailbox.rules.iter().any(|rule| rule.enabled && rule.is_for(folder.account) && only.is_none_or(|id| id == rule.id) && deletes(rule))
+            })
         }
         _ => false,
     }
@@ -944,7 +947,9 @@ fn rules_onto_another_server(s: &Session, id: &str, params: &Value) -> bool {
     match id {
         // A rule for one account files that account's new mail; one for every account, every
         // account's.
-        "rules.add" => crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| rule_onto_server(s, &r, one_account(&r)).is_some()),
+        "rules.add" | "rules.edit" => {
+            crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| rule_onto_server(s, &r, one_account(&r)).is_some())
+        }
         "rules.fromMessage" => crate::cmd::rules::rule_from_message(s, params).is_ok_and(|(r, _)| rule_onto_server(s, &r, one_account(&r)).is_some()),
         // Read as the commands read them: what they refuse does nothing, and needs no question.
         "rules.enable" => p::opt_bool(params, "value").is_ok_and(|value| {
@@ -1386,6 +1391,10 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
             format!("{verb} {}, which also puts {what} back as they were", quoted(label.unwrap_or("the last change")))
         }
         "rules.add" => rule_text(s, params),
+        "rules.edit" => match crate::cmd::rules::rule_from_params(s, params) {
+            Ok(rule) => format!("replace the local rule {} with {}", quoted(&rule.name), rule_words(s, &rule)),
+            Err(_) => "edit a rule that can't be made as asked".to_string(),
+        },
         "rules.fromMessage" => match crate::cmd::rules::rule_from_message(s, params) {
             Ok((r, _)) => {
                 let folder = r.actions.iter().find_map(|a| if let mailcraft_model::Action::MoveTo(f) = a { Some(*f) } else { None });
@@ -1715,6 +1724,11 @@ fn rule_words(s: &Session, r: &mailcraft_model::Rule) -> String {
                 }
             }
             mailcraft_model::Action::MoveTo(_) => "move it to a folder that is gone".to_string(),
+            mailcraft_model::Action::CopyTo(folder) => {
+                let account = s.mailbox.folder(*folder).and_then(|folder| s.mailbox.account(folder.account));
+                let who = account.map(|account| clip(&account.email, 80)).unwrap_or_default();
+                format!("copy it into {} ({who})", plain(&s.mailbox.folder_path(*folder)))
+            }
             other => plain(&other.describe()),
         })
         .collect();
@@ -1816,8 +1830,11 @@ mod tests {
             ("account.add", Access::Owner(Class::Accounts)),
             ("mail.deletePermanently", Access::Owner(Class::Delete)),
             ("file.open", Access::Owner(Class::Mailbox)),
-            ("rules.add", Access::Owner(Class::Settings)),
-            ("rules.list", Access::Owner(Class::Settings)),
+            ("rules.add", Access::Safe),
+            ("rules.list", Access::Safe),
+            ("rules.preview", Access::Safe),
+            ("rules.edit", Access::Safe),
+            ("rules.run", Access::Safe),
             ("sync.apply", Access::Never),
             ("mail.flag", Access::Safe),
             ("nope.nothing", Access::Never),

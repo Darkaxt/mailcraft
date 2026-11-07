@@ -154,6 +154,7 @@ fn moved_from_an_imap_account_into_a_microsoft_account_the_original_goes_once_th
     s.mailbox.message_mut(two).unwrap().read = true;
     s.run("mail.move", &json!({"ids": [two], "folder": theirs})).unwrap();
     assert_eq!(at(&s, two), (ms, theirs, 0));
+    assert_eq!(s.mailbox.message(two).unwrap().filing_source_account, a);
     let asked = graph_mail_request(&s, ms).unwrap();
     assert!(matches!(asked.places.as_slice(), [p] if p.message == two && p.moved && p.to == "in"), "{:?}", asked.places);
     // Nothing goes from the IMAP server until the copy is there, however saved this is.
@@ -164,6 +165,7 @@ fn moved_from_an_imap_account_into_a_microsoft_account_the_original_goes_once_th
     assert_eq!(ops(&s, a), [delete(2)]);
     deleted(&mut s, a, &[2]);
     assert!(s.mailbox.pending.is_empty() && ops(&s, a).is_empty(), "{:?}", s.mailbox.pending);
+    assert_eq!(s.run("mail.get", &json!({"id":two})).unwrap()["filingSourceAccount"], a, "source acknowledgement must not erase filing origin");
 
     // Moved on in the Microsoft account before it was made: the copy is made where it is now, and
     // the original still goes only once it is.
@@ -295,6 +297,50 @@ fn a_move_out_of_an_imap_account_is_kept_when_the_mailbox_is_opened_again() {
     let mut opened: mailcraft_model::Mailbox = serde_json::from_value(serde_json::to_value(&s.mailbox).unwrap()).unwrap();
     assert_eq!(opened.repair(), Vec::<String>::new());
     assert_eq!(opened.pending, s.mailbox.pending);
+}
+
+#[test]
+fn local_regex_rule_filing_waits_for_destination_persistence_and_survives_reopen() {
+    let (mut s, source, _) = imap();
+    let target = microsoft(&mut s, OWNER);
+    let inbox = s.mailbox.folder_of_kind(source, FolderKind::Inbox).unwrap();
+    let destination = s.mailbox.folder_of_kind(target, FolderKind::Inbox).unwrap();
+    let one = titled(&s, "One");
+    let rule = s
+        .run(
+            "rules.add",
+            &json!({"name": "File one", "account": source, "server": false,
+        "conditions": [{"type": "text", "value": {"field": "subject", "pattern": "^One$", "regex": true, "caseSensitive": true}}],
+        "actions": [{"type": "moveTo", "value": destination}]}),
+        )
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let snapshot = serde_json::to_value(&s.mailbox).unwrap();
+    assert_eq!(s.run("rules.preview", &json!({"folder": inbox, "id": rule})).unwrap()["matched"], 1);
+    assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), snapshot);
+    assert_eq!(s.run("rules.run", &json!({"folder": inbox, "id": rule})).unwrap()["matched"], 1);
+    assert_eq!(at(&s, one), (target, destination, 0));
+    s.note_saved();
+    assert!(ops(&s, source).is_empty(), "saving alone never authorizes source deletion");
+    let mut reopened: mailcraft_model::Mailbox = serde_json::from_value(serde_json::to_value(&s.mailbox).unwrap()).unwrap();
+    assert!(reopened.repair().is_empty());
+    s = Session::new(reopened);
+    assert_eq!(s.mailbox.message(one).unwrap().filing_source_account, source);
+    assert_eq!(graph_mail_request(&s, target).unwrap().places.len(), 1);
+    placed(&mut s, target, OWNER, &[made("AAkA-rule-one")]);
+    assert_eq!(ops(&s, source), [delete(1)]);
+    assert_eq!(s.run("rules.run", &json!({"folder": inbox, "id": rule})).unwrap()["matched"], 0);
+    assert!(graph_mail_request(&s, target).unwrap().places.is_empty(), "already placed mail is not duplicated");
+    deleted(&mut s, source, &[1]);
+    let third = s.run("account.add", &json!({"email":"another-local@example.org"})).unwrap()["id"].as_u64().unwrap();
+    let third_inbox = s.mailbox.folder_of_kind(third, FolderKind::Inbox).unwrap();
+    s.run("mail.move", &json!({"id":one,"folder":third_inbox})).unwrap();
+    assert_eq!(
+        s.mailbox.message(one).unwrap().filing_source_account,
+        source,
+        "later filing does not recolor the original source as the last storage account"
+    );
 }
 
 #[test]
@@ -1695,29 +1741,28 @@ fn an_agent_is_asked_before_it_puts_mail_on_another_accounts_server() {
 }
 
 #[test]
-fn an_agent_is_asked_before_a_rule_puts_mail_on_another_accounts_server() {
-    use crate::agent::{Access, Class, classify, describe};
+fn filing_rules_work_without_owner_prompts_across_accounts_and_keep_precise_descriptions() {
+    use crate::agent::{Access, classify, describe};
     let (mut s, a, kept) = imap();
     let b = second_imap(&mut s);
     let (inbox, other) = (s.mailbox.folder_of_kind(a, FolderKind::Inbox).unwrap(), s.mailbox.folder_of_kind(b, FolderKind::Inbox).unwrap());
     let two = titled(&s, "Two");
     let rule = |folder: Id| json!({"name": "R", "conditions": [{"type": "subjectContains", "value": "two"}], "actions": [{"type": "moveTo", "value": folder}]});
-    // Made, made from a message, switched on or run: into another account's folder, as a send;
-    // onto this computer, a change of rules as ever.
-    assert_eq!(classify(&s, "rules.add", &rule(other)), Access::Owner(Class::Send));
-    assert_eq!(classify(&s, "rules.add", &rule(kept)), Access::Owner(Class::Settings));
-    assert_eq!(classify(&s, "rules.fromMessage", &json!({"id": two, "folder": other})), Access::Owner(Class::Send));
-    assert_eq!(classify(&s, "rules.fromMessage", &json!({"id": two, "folder": kept})), Access::Owner(Class::Settings));
+    // Filing between configured accounts is a permitted rule operation.
+    assert_eq!(classify(&s, "rules.add", &rule(other)), Access::Safe);
+    assert_eq!(classify(&s, "rules.add", &rule(kept)), Access::Safe);
+    assert_eq!(classify(&s, "rules.fromMessage", &json!({"id": two, "folder": other})), Access::Safe);
+    assert_eq!(classify(&s, "rules.fromMessage", &json!({"id": two, "folder": kept})), Access::Safe);
     // Made from a message of the account it files into: the rule is for that account's mail
     // alone (#566), which stays on its server.
-    assert_eq!(classify(&s, "rules.fromMessage", &json!({"id": two, "folder": inbox})), Access::Owner(Class::Settings));
+    assert_eq!(classify(&s, "rules.fromMessage", &json!({"id": two, "folder": inbox})), Access::Safe);
     let made = s.run("rules.add", &rule(other)).unwrap()["id"].as_u64().unwrap();
-    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox})), Access::Owner(Class::Send));
-    assert_eq!(classify(&s, "rules.run", &json!({"folder": other})), Access::Owner(Class::Settings));
+    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox})), Access::Safe);
+    assert_eq!(classify(&s, "rules.run", &json!({"folder": other})), Access::Safe);
     s.run("rules.enable", &json!({"id": made, "value": false})).unwrap();
-    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox})), Access::Owner(Class::Settings));
-    assert_eq!(classify(&s, "rules.enable", &json!({"id": made})), Access::Owner(Class::Send));
-    assert_eq!(classify(&s, "rules.enable", &json!({"id": made, "value": false})), Access::Owner(Class::Settings));
+    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox})), Access::Safe);
+    assert_eq!(classify(&s, "rules.enable", &json!({"id": made})), Access::Safe);
+    assert_eq!(classify(&s, "rules.enable", &json!({"id": made, "value": false})), Access::Safe);
     // The question says where the mail goes.
     let what = describe(&s, "rules.add", &rule(other));
     assert!(what.contains("onto the server of blake@other.example, into"), "{what}");
@@ -1731,10 +1776,10 @@ fn an_agent_is_asked_before_a_rule_puts_mail_on_another_accounts_server() {
     let own = json!({"name": "Own", "account": b, "conditions": [{"type": "subjectContains", "value": "two"}], "actions": [{"type": "moveTo", "value": other}]});
     let own = s.run("rules.add", &own).unwrap()["id"].as_u64().unwrap();
     s.run("rules.enable", &json!({"id": own, "value": false})).unwrap();
-    assert_eq!(classify(&s, "rules.enable", &json!({"id": own})), Access::Owner(Class::Settings));
+    assert_eq!(classify(&s, "rules.enable", &json!({"id": own})), Access::Safe);
     s.run("rules.enable", &json!({"id": own, "value": true})).unwrap();
-    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox, "id": own})), Access::Owner(Class::Settings));
-    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox, "id": made})), Access::Owner(Class::Send));
+    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox, "id": own})), Access::Safe);
+    assert_eq!(classify(&s, "rules.run", &json!({"folder": inbox, "id": made})), Access::Safe);
     // The question for one rule names where that rule files, not the other rules' places: with
     // many, it would be too long to be asked.
     for n in 0..40 {

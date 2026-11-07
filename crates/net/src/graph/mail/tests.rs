@@ -29,6 +29,19 @@ fn tree(listing: &FolderListing) -> Vec<(String, String)> {
 }
 
 #[test]
+fn folder_identity_retains_the_exact_provider_name_apart_from_the_display_name() {
+    let server = StandIn::start().unwrap();
+    let id = server.state().add_folder("Company ", None);
+    let listing = run(&server, vec![]).listing.unwrap();
+    let folder = listing.folders.iter().find(|folder| folder.id == id).unwrap();
+    assert_eq!(folder.name, "Company");
+    assert_eq!(serde_json::to_value(folder).unwrap()["providerName"], "Company ");
+    let oversized = entry_of(&json!({"id":"oversized", "displayName":"x".repeat(MAX_NAME + 1)})).unwrap();
+    assert_eq!(oversized.name.chars().count(), mailcraft_model::MAX_NAME);
+    assert!(oversized.provider_name.is_empty(), "a truncated label must not masquerade as an exact identity");
+}
+
+#[test]
 fn every_folder_is_listed_whole_under_its_parent() {
     let server = StandIn::start().unwrap();
     let mut state = server.state();

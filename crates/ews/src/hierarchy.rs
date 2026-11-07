@@ -142,6 +142,7 @@ fn read_folder(change: &Node) -> Option<GraphFolder> {
         id: id.as_str().to_owned(),
         parent: parent.map(|p| p.as_str().to_owned()).unwrap_or_default(),
         name,
+        provider_name: String::new(),
         kind: FolderKind::Custom,
         total: total.unwrap_or(0),
         unread: unread.unwrap_or(0),
