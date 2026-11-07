@@ -34,11 +34,13 @@ impl Cond {
             let values: Vec<_> = self.text.split('\n').map(|value| if kind == When::FromAny { value } else { value.trim() }).collect();
             return json!({"type": kind.code(), "value": values});
         }
-        if self.advanced || self.regex || self.case_sensitive {
+        if self.advanced || self.regex || self.case_sensitive || matches!(kind, When::OriginalFrom | When::ReceivingAlias) {
             let field = match kind {
                 When::From => "from",
                 When::To => "to",
                 When::Subject => "subject",
+                When::OriginalFrom => "originalFrom",
+                When::ReceivingAlias => "receivingAlias",
                 _ => "body",
             };
             json!({"type": "text", "value": {"field": field, "pattern": self.text,
@@ -87,6 +89,8 @@ impl Cond {
                     RuleField::To => When::To,
                     RuleField::Subject => When::Subject,
                     RuleField::Body => When::Body,
+                    RuleField::OriginalFrom => When::OriginalFrom,
+                    RuleField::ReceivingAlias => When::ReceivingAlias,
                 };
                 row.text.clone_from(&text.pattern);
                 row.regex = text.regex;

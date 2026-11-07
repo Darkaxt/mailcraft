@@ -48,6 +48,8 @@ pub fn proven_overlap(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
         }
     }
     let mut senders = vec![String::new()];
+    let mut aliases = vec!["witness@example.org".to_string()];
+    let mut originals = vec![Address::new("", "witness@example.org")];
     for condition in left.conditions.iter().chain(&right.conditions) {
         match condition {
             Condition::FromContains(text) => senders.push(text.clone()),
@@ -63,14 +65,41 @@ pub fn proven_overlap(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
                 RuleField::To => message.to.push(Address::new("", &text.pattern)),
                 RuleField::Subject => append(&mut message.subject, &text.pattern),
                 RuleField::Body => append(&mut message.body.text, &text.pattern),
+                RuleField::ReceivingAlias => {
+                    if crate::search::is_address(&text.pattern) {
+                        aliases.push(text.pattern.clone());
+                    }
+                }
+                RuleField::OriginalFrom => originals.push(if crate::search::is_address(&text.pattern) {
+                    Address::new("", &text.pattern)
+                } else {
+                    Address::new(&text.pattern, "witness@example.org")
+                }),
             },
             _ => {}
         }
     }
-    senders.into_iter().take(64).any(|sender| {
-        message.from = Address::new("", sender);
-        left.matches_as(&message, mailbox.rule_reads_addresses(left)) && right.matches_as(&message, mailbox.rule_reads_addresses(right))
-    })
+    let mut examined = 0;
+    for alias in &aliases {
+        for original in &originals {
+            message.headers = vec![
+                ("X-SimpleLogin-Type".into(), "Forward".into()),
+                ("X-SimpleLogin-Envelope-To".into(), alias.clone()),
+                ("X-SimpleLogin-Original-From".into(), original.full()),
+            ];
+            for sender in &senders {
+                if examined >= 64 {
+                    return false;
+                }
+                examined += 1;
+                message.from = Address::new("", sender);
+                if left.matches_as(&message, mailbox.rule_reads_addresses(left)) && right.matches_as(&message, mailbox.rule_reads_addresses(right)) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 fn append(value: &mut String, text: &str) {

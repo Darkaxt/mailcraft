@@ -25,6 +25,7 @@ macro_rules! failed {
 }
 
 pub mod agent;
+pub mod aliases;
 pub mod arrivals;
 pub mod catalog;
 pub mod cmd;

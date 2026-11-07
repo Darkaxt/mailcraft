@@ -820,6 +820,11 @@ msgstr "Dopo"
 msgid "After you accept, tentatively accept or decline a meeting request in the mail, or take a cancelled meeting out of your calendar, the message goes to Deleted Items. Left off, it stays where it is and says what you answered."
 msgstr "Dopo aver accettato, accettato con riserva o rifiutato una convocazione di riunione nella posta, o aver tolto dal calendario una riunione annullata, il messaggio viene spostato in Posta eliminata. Se l'opzione è disattivata, resta dov'è e indica la risposta data."
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Aliases"
+msgstr ""
+
 #. interface, name
 #: crates/engine/src/session.rs crates/model/src/offline.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/keep_offline.rs
 #, fuzzy
@@ -3838,6 +3843,11 @@ msgstr "Espandi conversazione"
 
 #. command label
 #: crates/ui-egui/src/lib.rs
+msgid "Expand or Collapse Alias Filters"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Expand or Collapse Calendar Group"
 msgstr "Espandi o comprimi gruppo di calendari"
@@ -4317,6 +4327,11 @@ msgstr[0] "Inoltrato a {n} persona"
 msgstr[1] "Inoltrato a {n} persone"
 
 #. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Forwarding metadata is incomplete"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Forward…"
@@ -4681,6 +4696,11 @@ msgstr ""
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 msgid "Have replies sent to other addresses"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Header-reported identity"
 msgstr ""
 
 #. interface
@@ -5164,8 +5184,18 @@ msgid "Inside My Organization"
 msgstr ""
 
 #. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Inspect Message Identities"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/rules.rs
 msgid "Inspect Pending Classification"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Inspect SimpleLogin Aliases"
 msgstr ""
 
 #. command label
@@ -5826,7 +5856,7 @@ msgid "Made in another program or on the web, with parts MailCraft can't show"
 msgstr "Creata in un altro programma o sul web, con parti che MailCraft non può mostrare"
 
 #. command label, interface, name, ribbon location
-#: crates/engine/src/cmd/compose.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/view.rs crates/engine/src/session.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+#: crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/view.rs crates/engine/src/session.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Mail"
 msgstr "Posta"
@@ -6308,7 +6338,7 @@ msgid "Message {message}, after {completed} actions: {why}"
 msgstr ""
 
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Messages"
 msgstr "Messaggi"
@@ -6491,6 +6521,16 @@ msgstr ""
 #: crates/ui-egui/src/menubar.rs
 msgid "Minimize"
 msgstr "Contrai"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Missing, duplicate or invalid forwarding headers are not assigned to an alias."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Missing, duplicate or invalid forwarding headers are preserved as gaps. No address is guessed from the reverse alias."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8066,6 +8106,11 @@ msgid "Organizer: {name}"
 msgstr "Organizzatore: {name}"
 
 #. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
+msgid "Original sender unavailable"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Other"
@@ -8710,6 +8755,11 @@ msgstr ""
 msgid "Real name"
 msgstr "Nome reale"
 
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Receiving alias contains"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/graph_down.rs
 #, fuzzy
@@ -9102,6 +9152,11 @@ msgid "Reply by Email"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Reply through: {address}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/compose.rs
 msgid "Reply to"
 msgstr ""
@@ -9127,6 +9182,16 @@ msgstr ""
 #. command label, interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/lib.rs
 msgid "Report a Problem"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Reported sender contains"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Reported via SimpleLogin: {alias}"
 msgstr ""
 
 #. interface
@@ -10373,6 +10438,11 @@ msgstr "Mostra contatti di"
 msgid "Show Contributors"
 msgstr "Mostra collaboratori"
 
+#. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Show Mail for Alias"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/calendar_settings.rs crates/ui-egui/src/calendar_view.rs
 #, fuzzy
@@ -10823,6 +10893,26 @@ msgstr "Accede con {provider}"
 #. interface
 #: crates/ui-egui/src/ews_setup.rs
 msgid "Signs in with: {how}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "SimpleLogin aliases"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "SimpleLogin forwarding metadata is incomplete"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "SimpleLogin receiving aliases reported in downloaded messages. Filters span this account's folders; no mail is moved."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "SimpleLogin: {alias}"
 msgstr ""
 
 #. name
@@ -11973,6 +12063,11 @@ msgstr "L'organizzatore ha modificato questa riunione."
 #, fuzzy
 msgid "The organizer of this meeting doesn't take proposals of another time."
 msgstr "L'organizzatore di questa riunione non accetta proposte di un altro orario."
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "The original sender is reported by retained message headers, not authenticated by MailCraft. The actual transport and reply addresses remain unchanged."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -13372,6 +13467,11 @@ msgid "Translate"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Transport sender"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup/help.rs
 #, fuzzy
 msgid "Trouble on that page? Sign in for mail only"
@@ -13538,6 +13638,11 @@ msgstr "Da leggere/Letto"
 #, fuzzy
 msgid "Unread: {n}"
 msgstr "Da leggere: {n}"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Unresolved alias metadata: {count}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -15163,7 +15268,7 @@ msgid "no account with id {account}"
 msgstr ""
 
 #. what a command says
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/signature.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/signature.rs
 #, fuzzy
 msgid "no account with id {id}"
 msgstr "nessun account con id {id}"
@@ -15237,7 +15342,7 @@ msgid "no message is being written"
 msgstr "nessun messaggio in fase di scrittura"
 
 #. what a command says
-#: crates/engine/src/cmd/attach_item.rs crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/mail_source.rs crates/engine/src/cmd/mod.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/save_all.rs crates/engine/src/cmd/tasks.rs crates/engine/src/session.rs
+#: crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/attach_item.rs crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/mail_source.rs crates/engine/src/cmd/mod.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/save_all.rs crates/engine/src/cmd/tasks.rs crates/engine/src/session.rs
 #, fuzzy
 msgid "no message with id {id}"
 msgstr "nessun messaggio con id {id}"
@@ -15627,6 +15732,11 @@ msgstr ""
 #. what a command says
 #: crates/engine/src/cmd/ews_mail.rs
 msgid "the Inbox of this account hasn't been read yet"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/aliases.rs
+msgid "the account has no Inbox to anchor its alias view"
 msgstr ""
 
 #. what a command says

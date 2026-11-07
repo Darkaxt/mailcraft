@@ -1106,6 +1106,7 @@ pub struct Session {
     /// What each folder holds, as of the revision and message count it was counted at
     /// ([`Session::folder_counts`]).
     pub(crate) counts_cache: Option<((u64, usize), Arc<crate::counts::FolderCounts>)>,
+    pub(crate) aliases_cache: Option<((u64, usize), Arc<crate::aliases::Inventory>)>,
     /// The conversation last asked for ([`Session::conversation`]), as of the revision, message
     /// count and message it was worked out for.
     conversation_cache: Option<((u64, usize, Id), Arc<Vec<Id>>)>,
@@ -1251,6 +1252,7 @@ impl Session {
             rev: 0,
             list_cache: None,
             counts_cache: None,
+            aliases_cache: None,
             conversation_cache: None,
             threads_cache: Default::default(),
             list_builds: 0,

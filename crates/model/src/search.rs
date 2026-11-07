@@ -57,6 +57,9 @@ enum Kind {
         address: String,
         words: Vec<String>,
     },
+    /// Explicit forwarding identity; never narrowed by the transport word index.
+    ReceivingAlias(String),
+    OriginalFrom(String),
     Category(String),
     HasAttachment,
     Unread,
@@ -313,6 +316,21 @@ fn keyword_kind(body: &str) -> Option<Kind> {
         "from" => address_in(FROM, &v),
         "to" => address_in(TO, &v),
         "cc" => address_in(CC, &v),
+        "alias" => {
+            if is_address(&v) {
+                Kind::ReceivingAlias(address_key(&v))
+            } else {
+                Kind::Never
+            }
+        }
+        "originalfrom" => {
+            if is_address(&v) {
+                Kind::OriginalFrom(address_key(&v))
+            } else {
+                Kind::Never
+            }
+        }
+        "transportfrom" => address_in(FROM, &v),
         "subject" => words_in(SUBJECT, &v),
         "body" => words_in(BODY, &v),
         "category" | "categories" => Kind::Category(v),
@@ -413,8 +431,25 @@ const MAX_SUGGESTED_NAME: usize = 256;
 
 /// The keywords offered while the start of one is typed: each once, without the other names it
 /// may be written by (`categories:`).
-const OFFERED: &[&str] =
-    &["from", "to", "cc", "subject", "body", "category", "attachment", "has", "is", "importance", "before", "after", "on", "received"];
+const OFFERED: &[&str] = &[
+    "from",
+    "to",
+    "cc",
+    "subject",
+    "body",
+    "category",
+    "attachment",
+    "has",
+    "is",
+    "importance",
+    "before",
+    "after",
+    "on",
+    "received",
+    "alias",
+    "originalfrom",
+    "transportfrom",
+];
 
 /// What `is:` and `has:` take.
 const IS_VALUES: &[&str] = &["unread", "read", "flagged", "important"];
@@ -823,6 +858,15 @@ fn scan(s: &str) -> Vec<Scanned> {
 }
 
 impl Query {
+    /// One positive receiving-alias restriction, for the native virtual-folder selection.
+    pub fn receiving_alias(&self) -> Option<&str> {
+        let mut aliases = self.terms.iter().filter_map(|term| match &term.kind {
+            Kind::ReceivingAlias(alias) if !term.negate => Some(alias.as_str()),
+            _ => None,
+        });
+        let first = aliases.next()?;
+        aliases.all(|alias| alias == first).then_some(first)
+    }
     pub fn parse(s: &str) -> Query {
         let terms = scan(s)
             .into_iter()
@@ -985,6 +1029,12 @@ impl Query {
                 Kind::Address { fields, address, .. } => {
                     let is = |a: &crate::Address| address_key(&a.email) == *address;
                     (fields & FROM != 0 && is(&m.from)) || (fields & TO != 0 && m.to.iter().any(is)) || (fields & CC != 0 && m.cc.iter().any(is))
+                }
+                Kind::ReceivingAlias(address) => {
+                    m.simple_login().and_then(|identity| identity.receiving_alias).is_some_and(|alias| address_key(&alias) == *address)
+                }
+                Kind::OriginalFrom(address) => {
+                    m.simple_login().and_then(|identity| identity.original_from).is_some_and(|original| address_key(&original.email) == *address)
                 }
                 Kind::Category(x) => m.categories.iter().any(|c| contains_ci(c, x)),
                 Kind::HasAttachment => m.has_attachments(),

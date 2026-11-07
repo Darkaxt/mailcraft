@@ -14,6 +14,8 @@
 pub mod backend;
 pub mod files;
 pub mod server;
+#[cfg(test)]
+mod simple_login_tests;
 pub mod tools;
 
 pub use backend::{Backend, Remote};

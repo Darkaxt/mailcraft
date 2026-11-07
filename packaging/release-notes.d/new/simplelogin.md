@@ -1,0 +1,1 @@
+- Inspect SimpleLogin's reported original sender and receiving alias while preserving private reply routing. Account-scoped alias filters work across downloaded folders, with explicit metadata gaps, separate search/rule fields and read-only MCP inspection.

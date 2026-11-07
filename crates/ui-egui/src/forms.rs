@@ -5734,10 +5734,12 @@ pub(crate) mod rules {
         Body,
         Attachment,
         Importance,
+        OriginalFrom,
+        ReceivingAlias,
     }
 
     impl When {
-        const ALL: [When; 9] = [
+        const ALL: [When; 11] = [
             When::From,
             When::FromAny,
             When::FromAddresses,
@@ -5747,6 +5749,8 @@ pub(crate) mod rules {
             When::Body,
             When::Attachment,
             When::Importance,
+            When::OriginalFrom,
+            When::ReceivingAlias,
         ];
 
         fn label(self) -> &'static str {
@@ -5760,6 +5764,8 @@ pub(crate) mod rules {
                 When::Body => "Body contains",
                 When::Attachment => "Has an attachment",
                 When::Importance => "Importance is",
+                When::OriginalFrom => "Reported sender contains",
+                When::ReceivingAlias => "Receiving alias contains",
             }
         }
 
@@ -5789,6 +5795,7 @@ pub(crate) mod rules {
                 When::Body => "bodyContains",
                 When::Attachment => "hasAttachment",
                 When::Importance => "importance",
+                When::OriginalFrom | When::ReceivingAlias => "text",
             }
         }
 

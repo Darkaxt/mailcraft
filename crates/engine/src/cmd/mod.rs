@@ -9,6 +9,9 @@ mod account_order_tests;
 mod agent_leaves_compose_tests;
 #[cfg(test)]
 mod agent_owners_message_tests;
+pub mod aliases;
+#[cfg(test)]
+mod aliases_tests;
 #[cfg(test)]
 mod answered_tests;
 pub mod auto_replies;
@@ -158,6 +161,7 @@ pub fn registry() -> Registry {
     v.extend(help::specs());
     v.extend(edit::specs());
     v.extend(mail::specs());
+    v.extend(aliases::specs());
     v.extend(compose::specs());
     v.extend(format::specs());
     v.extend(picture::specs());
@@ -349,6 +353,7 @@ pub fn message_summary(s: &Session, m: &Message) -> Value {
         "folder": m.folder,
         "account": m.account,
         "filingSourceAccount": (m.filing_source_account != 0).then_some(m.filing_source_account),
+        "simpleLogin": m.simple_login(),
         "from": m.from.full(),
         "to": mailcraft_model::format_list(&m.to),
         "subject": m.subject,

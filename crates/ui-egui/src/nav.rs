@@ -687,6 +687,9 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             // (Counted once per change to the mailbox, not at every frame: `Session::folder_counts`.)
             let counts = app.session.folder_counts();
+            let aliases = app.session.aliases();
+            let alias_query = mailcraft_model::search::Query::parse(&app.session.view.search);
+            let selected_alias = (app.session.view.scope == mailcraft_engine::Scope::Mailbox).then(|| alias_query.receiving_alias()).flatten();
             let count = |f: &Folder| {
                 let held = counts.folder(f.id);
                 Count::of(f.kind, held.total, held.unread)
@@ -738,7 +741,7 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                     favorites_note(app, ui, *account, note);
                 }
                 for f in &favorites {
-                    folder_row(app, ui, f, 0, false, "fav", count(f), favorite_selected && f.id == current);
+                    folder_row(app, ui, f, 0, false, "fav", count(f), selected_alias.is_none() && favorite_selected && f.id == current);
                 }
             }
             // Where each of the owner's accounts starts, for a drag of one.
@@ -753,8 +756,21 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                 if !head(app, ui, *account, if name.is_empty() { tl!("Mailbox") } else { name }) {
                     continue;
                 }
+                if let Some(observed) = aliases.accounts.get(account) {
+                    let current_account = app.session.mailbox.folder(current).map(|folder| folder.account);
+                    alias_rows(app, ui, *account, observed, if current_account == Some(*account) { selected_alias } else { None });
+                }
                 for (f, depth, has_children) in rows {
-                    folder_row(app, ui, f, *depth, *has_children, "tree", count(f), !favorite_selected && f.id == current);
+                    folder_row(
+                        app,
+                        ui,
+                        f,
+                        *depth,
+                        *has_children,
+                        "tree",
+                        count(f),
+                        selected_alias.is_none() && !favorite_selected && f.id == current,
+                    );
                 }
             }
             let end = ui.cursor().min.y;
@@ -764,6 +780,98 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
         account_ghost(app, ui);
     });
     app.ui.folder_pane_width = shown.response.rect.width();
+}
+
+/// Virtual alias filters belong to an account; they never become move/drop destinations.
+fn alias_rows(app: &mut MailApp, ui: &mut Ui, account: Id, observed: &mailcraft_engine::aliases::AccountAliases, selected: Option<&str>) {
+    let t = Tokens::get(ui.ctx());
+    let expanded = app.ui.expanded_alias_accounts.contains(&account);
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::click());
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("SimpleLogin aliases")));
+    app.hit.add("aliasHeading", account, rect);
+    if response.hovered() {
+        ui.painter().rect_filled(highlight(rect), 6.0, t.hover_nav);
+    }
+    if response.has_focus() {
+        ui.painter().rect_stroke(highlight(rect), 3.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    chevron(ui.painter(), pos2(rect.min.x + CHEVRON_X, rect.center().y), ROW_CHEVRON, expanded, t.text);
+    paint_clipped(
+        ui.painter(),
+        pos2(rect.min.x + NAME_LEFT, rect.center().y - TEXT_RISE),
+        (rect.width() - NAME_LEFT - 12.0).max(0.0),
+        tl!("Aliases"),
+        regular(NAME_SIZE),
+        t.text,
+    );
+    if response
+        .on_hover_text(tl!("SimpleLogin receiving aliases reported in downloaded messages. Filters span this account's folders; no mail is moved."))
+        .clicked()
+    {
+        let _ = app.execute("ui.toggleAliases", json!({"account": account}));
+    }
+    if !expanded {
+        return;
+    }
+    // Keep long alias collections usable without laying out their every row each frame.
+    egui::ScrollArea::vertical().id_salt(("aliasRows", account)).max_height(8.0 * ROW_H).auto_shrink([false, true]).show_rows(
+        ui,
+        ROW_H,
+        observed.aliases.len(),
+        |ui, range| {
+            for alias in observed.aliases.get(range).unwrap_or_default() {
+                let active = selected.is_some_and(|selected| selected.eq_ignore_ascii_case(&alias.address));
+                let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::click());
+                let key = egui::Id::unique(("aliasFilter", account, &alias.address)).value();
+                app.hit.add("aliasFilter", key, rect);
+                response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &alias.address));
+                let row = highlight(rect);
+                if active {
+                    ui.painter().rect_filled(row, 6.0, t.accent_soft);
+                    ui.painter().rect_filled(Rect::from_center_size(pos2(row.min.x + 1.5, row.center().y), vec2(3.0, 14.0)), 1.5, t.selection_edge);
+                } else if response.hovered() {
+                    ui.painter().rect_filled(row, 6.0, t.hover_nav);
+                }
+                if response.has_focus() {
+                    ui.painter().rect_stroke(row, 3.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+                }
+                let mut end = rect.max.x - COUNT_RIGHT;
+                if alias.unread > 0 {
+                    let galley = ui.painter().layout_no_wrap(alias.unread.to_string(), bold(NAME_SIZE - 1.0), t.accent_soft_text);
+                    let width = (galley.size().x + 12.0).max(20.0);
+                    let pill = Rect::from_center_size(pos2(end + 4.0 - width / 2.0, rect.center().y), vec2(width, 18.0));
+                    ui.painter().rect_filled(pill, 9.0, if active { t.surface } else { t.accent_soft });
+                    ui.painter().galley(pill.center() - galley.size() / 2.0, galley, t.accent_soft_text);
+                    end = pill.min.x - 6.0;
+                }
+                let start = rect.min.x + NAME_LEFT + INDENT;
+                paint_clipped(
+                    ui.painter(),
+                    pos2(start, rect.center().y - TEXT_RISE),
+                    (end - start).max(0.0),
+                    &alias.address,
+                    if active { bold(NAME_SIZE) } else { regular(NAME_SIZE) },
+                    if active { t.accent_soft_text } else { t.text },
+                );
+                let tip = format!(
+                    "{}\n{}: {}\n{}: {}",
+                    alias.address,
+                    tl!("Messages"),
+                    alias.total,
+                    tl!("Original sender unavailable"),
+                    alias.missing_original
+                );
+                if response.on_hover_text(tip).clicked() {
+                    let _ = app.run("view.alias", json!({"account": account, "alias": alias.address}));
+                }
+            }
+        },
+    );
+    if observed.unresolved_alias > 0 {
+        let label = crate::i18n::fmt(tl!("Unresolved alias metadata: {count}"), &[("count", &observed.unresolved_alias.to_string())]);
+        ui.label(egui::RichText::new(label).font(regular(NAME_SIZE)).color(t.orange))
+            .on_hover_text(tl!("Missing, duplicate or invalid forwarding headers are not assigned to an alias."));
+    }
 }
 
 /// What the window calls a folder: in English always its own name; in another interface language,

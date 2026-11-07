@@ -17,6 +17,8 @@ pub enum RuleField {
     To,
     Subject,
     Body,
+    OriginalFrom,
+    ReceivingAlias,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,6 +93,8 @@ impl RuleText {
             RuleField::To => message.to.iter().chain(&message.cc).any(person),
             RuleField::Subject => text(&message.subject),
             RuleField::Body => text(&message.body.text) || text(&message.hidden_text),
+            RuleField::OriginalFrom => message.simple_login().and_then(|identity| identity.original_from).is_some_and(|original| person(&original)),
+            RuleField::ReceivingAlias => message.simple_login().and_then(|identity| identity.receiving_alias).is_some_and(|alias| text(&alias)),
         }
     }
 
@@ -100,6 +104,8 @@ impl RuleText {
             RuleField::To => "recipient",
             RuleField::Subject => "subject",
             RuleField::Body => "body",
+            RuleField::OriginalFrom => "SimpleLogin reported sender",
+            RuleField::ReceivingAlias => "SimpleLogin receiving alias",
         };
         let mode = if self.regex { "matches regex" } else { "contains" };
         let case = if self.case_sensitive { "case sensitive" } else { "case insensitive" };

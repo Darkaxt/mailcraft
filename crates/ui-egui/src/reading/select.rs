@@ -420,6 +420,8 @@ pub(super) enum Field {
     Sender,
     Address,
     Date,
+    Forwarding,
+    ReplyRoute,
     To,
     Cc,
     Bcc,

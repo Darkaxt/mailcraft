@@ -5,6 +5,11 @@
 MailCraft speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio, so
 agents can read, file and write mail and keep a calendar.
 
+[SimpleLogin identity and alias inspection](simplelogin.md) use `mail.identity`,
+`aliases.list`, `view.alias` and `ui.toggleAliases` through the existing `execute`
+tool. They preserve transport/reply routing and distinguish reported headers
+from authenticated identities. Alias inventory is paged with complete totals.
+
 The [local rule guide](local-rules.md) describes destination-folder management,
 regex/case conditions, exceptions and previews. Listing, `rules.conflicts`,
 `rules.pending` and non-mutating previews work through read-only MCP access.

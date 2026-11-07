@@ -171,6 +171,8 @@ mod shared_calendars;
 mod shared_calendars_tests;
 mod shared_mailboxes;
 mod signatures;
+#[cfg(test)]
+mod simple_login_ui_tests;
 mod symbol;
 mod sync_panel;
 pub mod task_sync;
@@ -913,6 +915,8 @@ pub struct UiState {
     pub sync_panel_height: f32,
     /// Folders shown collapsed in the folder pane.
     pub collapsed_folders: Vec<Id>,
+    /// Accounts whose observed SimpleLogin alias filters are expanded.
+    pub expanded_alias_accounts: Vec<Id>,
     /// Mailbox files opened lately, most recent first.
     pub recent: Vec<String>,
     /// The application (client) id Microsoft knows this installation by, for accounts that sign
@@ -1000,6 +1004,7 @@ impl Default for UiState {
             sync_panel_width: sync_panel::WIDTH,
             sync_panel_height: 0.0,
             collapsed_folders: Vec::new(),
+            expanded_alias_accounts: Vec::new(),
             recent: Vec::new(),
             microsoft_client_id: String::new(),
             google_client_id: String::new(),
@@ -1259,6 +1264,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.import", "Import", "File › Open & Export", "{}"),
     ("ui.attach", "Attach File", "Message › Include", "{}"),
     ("ui.toggleFolder", "Expand or Collapse Folder", "Folder", r#"{"id": number}"#),
+    ("ui.toggleAliases", "Expand or Collapse Alias Filters", "Folder", r#"{"account": number} — changes only the alias section's expanded state"#),
     (
         "ui.openWindow",
         "Open in a Window of Its Own",
@@ -1972,6 +1978,7 @@ impl MailApp {
         self.ui.list_width = if self.ui.list_width.is_finite() { self.ui.list_width.clamp(240.0, 900.0) } else { 380.0 };
         (self.ui.sync_panel_width, self.ui.sync_panel_height) = sync_panel::sane_size(self.ui.sync_panel_width, self.ui.sync_panel_height);
         self.ui.collapsed_folders.truncate(10_000);
+        self.ui.expanded_alias_accounts.truncate(1000);
         self.ui.recent.truncate(20);
         self.ui.confirmed_mailboxes.truncate(200);
         self.ui.collapsed_calendar_groups.truncate(200);
@@ -2700,6 +2707,19 @@ impl MailApp {
                 files::open(self, "attach");
                 Ok(json!({"pending": "attach"}))
             }
+            "ui.toggleAliases" => (|| {
+                mailcraft_engine::p::only(p, &["account"]).map_err(|error| error.to_string())?;
+                let account = mailcraft_engine::p::req_id(p, "account").map_err(|error| error.to_string())?;
+                if self.session.mailbox.account(account).is_none() {
+                    return Err("no account with that id".to_string());
+                }
+                let expanded = !self.ui.expanded_alias_accounts.contains(&account);
+                self.ui.expanded_alias_accounts.retain(|identity| *identity != account);
+                if expanded {
+                    self.ui.expanded_alias_accounts.push(account);
+                }
+                Ok(json!({"account": account, "expanded": expanded}))
+            })(),
             "ui.toggleFolder" => {
                 let Some(id) = p.get("id").and_then(Value::as_u64) else { return Some(Err("missing `id`".into())) };
                 match self.ui.collapsed_folders.iter().position(|x| *x == id) {

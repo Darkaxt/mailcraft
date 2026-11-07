@@ -4,6 +4,30 @@ use super::*;
 use crate::people_view::testing;
 use mailcraft_model::{Condition, RuleField, RuleText};
 
+#[test]
+fn simple_login_predicates_roundtrip_through_the_destination_editor_without_widening() {
+    let (mut session, source, _, destination) = fixture();
+    for field in ["originalFrom", "receivingAlias"] {
+        let created = session
+            .run(
+                "rules.add",
+                &json!({"name":"Identity filing","account":source,"server":false,"enabled":false,
+            "conditions":[{"type":"text","value":{"field":field,"pattern":"^billing@example\\.org$","regex":true,"caseSensitive":true}}],
+            "actions":[{"type":"moveTo","value":destination}]}),
+            )
+            .unwrap();
+        let id = created["id"].as_u64().unwrap();
+        let original = session.mailbox.rules.iter().find(|rule| rule.id == id).unwrap().clone();
+        let mut form = RulesForm::new(&session, &json!({"destination":destination}));
+        form.edit_rule(&session.mailbox, id);
+        let (command, params) = form.command();
+        assert_eq!(command, "rules.edit");
+        assert_eq!(params["conditions"][0]["value"]["field"], field);
+        session.run(command, &params).unwrap();
+        assert_eq!(session.mailbox.rules.iter().find(|rule| rule.id == id).unwrap(), &original);
+    }
+}
+
 fn fixture() -> (Session, Id, Id, Id) {
     let mut session = Session::empty();
     let source = session.run("account.add", &json!({"email": "source@example.org"})).unwrap()["id"].as_u64().unwrap();

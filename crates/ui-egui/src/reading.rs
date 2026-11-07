@@ -395,6 +395,8 @@ pub(crate) fn header_date_on_own_line(row: f32, date: f32) -> bool {
 
 fn header(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place, pictures: impl FnOnce(&mut MailApp, &mut Ui, &Tokens)) {
     let t = Tokens::get(ui.ctx());
+    let forwarding = m.simple_login();
+    let shown_sender = forwarding.as_ref().and_then(|identity| identity.original_from.as_ref()).unwrap_or(&m.from);
     // The texts that can be selected are laid out here and painted once the pointer has had its
     // say ([`select::header`]).
     let mut fields = select::Fields::default();
@@ -446,24 +448,25 @@ fn header(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place, pictur
                     // keeps its room.
                     let external = warnings::external(app, m);
                     let tag_w = if external { warnings::external_tag_width(ui, &t) } else { 0.0 };
-                    let address_text = format!("<{}>", m.from.email);
-                    let name_text = m.from.display();
+                    let address_text = format!("<{}>", shown_sender.email);
+                    let name_text = shown_sender.display();
                     let name_nat = ui.painter().layout_no_wrap(name_text.to_string(), semibold(13.0), t.text).size().x;
-                    let address_nat = if m.from.name.is_empty() {
+                    let address_nat = if shown_sender.name.is_empty() {
                         0.0
                     } else {
                         ui.painter().layout_no_wrap(address_text.clone(), regular(11.5), t.text_dim).size().x
                     };
-                    let gap = ui.spacing().item_spacing.x;
+                    let gap = if shown_sender.name.is_empty() { 0.0 } else { 6.0 };
                     let (name_w, address_w) = header_widths(room - tag_w - gap, name_nat, address_nat);
-                    let looks_like_address = mailcraft_model::confusables::as_seen(&m.from.name, 1_000).contains('@');
+                    let looks_like_address = mailcraft_model::confusables::as_seen(&shown_sender.name, 1_000).contains('@');
                     let name =
                         egui::RichText::new(name_text.to_string()).font(semibold(13.0)).color(if looks_like_address { t.orange } else { t.text });
                     ui.scope(|ui| {
                         ui.set_max_width(name_w);
                         fields.add(ui, select::Field::Sender, egui::Label::new(name).truncate());
                     });
-                    if !m.from.name.is_empty() {
+                    if !shown_sender.name.is_empty() {
+                        ui.add_space(gap);
                         let address = egui::RichText::new(address_text).font(regular(11.5)).color(t.text_dim);
                         ui.scope(|ui| {
                             ui.set_max_width(address_w);
@@ -495,6 +498,27 @@ fn header(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place, pictur
                             });
                         });
                     });
+                }
+                if let Some(identity) = &forwarding {
+                    let context = match (&identity.original_from, &identity.receiving_alias) {
+                        (Some(_), Some(alias)) => crate::i18n::fmt(tl!("Reported via SimpleLogin: {alias}"), &[("alias", alias)]),
+                        (_, Some(alias)) => crate::i18n::fmt(tl!("SimpleLogin: {alias}"), &[("alias", alias)]),
+                        _ => tl!("SimpleLogin forwarding metadata is incomplete").to_string(),
+                    };
+                    fields.add(ui, select::Field::Forwarding,
+                        egui::Label::new(egui::RichText::new(context).font(regular(11.5)).color(t.text_dim)).truncate());
+                    let reply = if m.reply_to.is_empty() { vec![m.from.clone()] } else { m.reply_to.clone() };
+                    let route = crate::i18n::fmt(tl!("Reply through: {address}"), &[("address", &mailcraft_model::format_list(&reply))]);
+                    fields.add(ui, select::Field::ReplyRoute,
+                        egui::Label::new(egui::RichText::new(route).font(regular(11.5)).color(t.text_dim)).truncate());
+                    let provenance = format!("{}\n{}: {}", tl!("The original sender is reported by retained message headers, not authenticated by MailCraft. The actual transport and reply addresses remain unchanged."),
+                        tl!("Transport sender"), m.from.full());
+                    ui.label(egui::RichText::new(tl!("Header-reported identity")).font(regular(11.0)).color(t.text_dim)).on_hover_text(provenance);
+                    if !identity.issues.is_empty() {
+                        ui.label(egui::RichText::new(if identity.original_from.is_none() { tl!("Original sender unavailable") }
+                            else { tl!("Forwarding metadata is incomplete") }).font(regular(11.0)).color(t.orange))
+                            .on_hover_text(tl!("Missing, duplicate or invalid forwarding headers are preserved as gaps. No address is guessed from the reverse alias."));
+                    }
                 }
                 // (`said` is the line in the interface language, with `{names}` still to fill.)
                 let mut line = |ui: &mut Ui, field: select::Field, said: &str, list: &[mailcraft_model::Address]| {

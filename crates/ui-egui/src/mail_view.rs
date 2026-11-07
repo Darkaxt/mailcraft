@@ -938,7 +938,9 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
         let names: Vec<&str> = m.to.iter().map(|a| a.display()).collect();
         if names.is_empty() { tl!("(no recipients)").to_string() } else { names.join("; ") }
     } else {
-        m.from.display().to_string()
+        m.simple_login()
+            .and_then(|identity| identity.original_from)
+            .map_or_else(|| m.from.display().to_string(), |sender| sender.display().to_string())
     };
     // The picture (or the initials) of who wrote it, or of who it went to.
     let pictured = app.ui.sender_images && !one;

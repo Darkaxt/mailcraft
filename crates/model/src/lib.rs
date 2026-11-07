@@ -35,6 +35,9 @@ mod rule_text;
 pub mod search;
 pub mod sender_warnings;
 pub mod signature;
+pub mod simple_login;
+#[cfg(test)]
+mod simple_login_tests;
 pub mod sync;
 mod task;
 pub mod thread_index;
