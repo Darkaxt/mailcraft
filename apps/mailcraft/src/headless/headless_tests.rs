@@ -127,6 +127,12 @@ fn real_mcp_reads_and_normal_close_need_no_native_window() {
             let filed_message = tool_args(&mut server, 37, "execute", json!({"command":"mail.get","params":{"id":message_id}})).unwrap();
             assert_eq!(filed_message["account"], destination_account);
             assert_eq!(filed_message["filingSourceAccount"], account);
+            let filing_state = tool_args(&mut server, 38, "execute", json!({"command":"mail.filingStatus","params":{"id":message_id}})).unwrap();
+            assert_eq!(filing_state["account"], destination_account);
+            assert_eq!(filing_state["folder"], archive);
+            assert_eq!(filing_state["filingSourceAccount"], account);
+            assert_eq!(filing_state["serverLookupPerformed"], false);
+            assert!(filing_state["recordedServer"].is_null());
             definition.as_object_mut().unwrap().remove("id");
             definition["actions"] = json!([{"type":"delete"}]);
             let denied = tool_args(&mut server, 11, "execute", json!({"command":"rules.add","params":definition})).unwrap_err();

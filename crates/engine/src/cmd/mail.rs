@@ -5,7 +5,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
-use mailcraft_model::{FlagStatus, FolderKind, Id, Queued, ThreadKey};
+use mailcraft_model::{FlagStatus, FolderKind, Id, Pending, Queued, ThreadKey};
 use serde_json::{Value, json};
 
 use super::{bad, deliver, done, fail, message_json, message_summary, needs_message, needs_movable, select_after_removal, targets, targets_whole};
@@ -35,6 +35,9 @@ pub fn specs() -> Vec<CommandSpec> {
             .selection(can_collapse)
             .params(CONVERSATION),
         CommandSpec::new("mail.get", "Get Message", "Mail", get).reads().params(r#"{"id"?: number} (default: the selected message). An `id` or `ids` that names nothing (null, text, 0, a fraction) is refused"#),
+        CommandSpec::new("mail.filingStatus", "Inspect Filing State", "Mail", filing_status).reads().params(
+            r#"{"id": number} — read stored placement/source-removal state for exactly one message, without fetching content, running sync or changing selection. Recorded provider ids are the last native server observation, not a new server lookup; pending placement is not a confirmed remote copy."#,
+        ),
         CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number, "folder"?: number | "Inbox/Projects", "query"?: string} — the message list in view; with `folder` or `query` the list of that folder or search, read without moving the window to it"#),
         CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_movable),
         CommandSpec::new("mail.deletePermanently", "Delete Permanently", "Home › Delete", delete_permanently)
@@ -570,6 +573,46 @@ fn collapse(s: &mut Session, v: &Value) -> CmdResult {
         s.keep_selected(&rows);
     }
     Ok(json!({"open": false, "id": row.id}))
+}
+
+fn filing_status(s: &mut Session, v: &Value) -> CmdResult {
+    let id = p::req_id(v, "id")?;
+    let message = s.mailbox.message(id).ok_or_else(|| failed!("no message with id {id}", id))?;
+    let placement: Vec<Value> = s
+        .mailbox
+        .queued
+        .iter()
+        .filter_map(|change| match change {
+            Queued::PlaceMessage { account, message, copy, .. } if *message == id => Some(json!({"type": "place", "account": account, "copy": copy})),
+            Queued::CopyMessage { account, copy, .. } if *copy == id => Some(json!({"type": "copy", "account": account})),
+            _ => None,
+        })
+        .collect();
+    let sources: Vec<Value> = s
+        .mailbox
+        .pending
+        .iter()
+        .filter_map(|change| match change {
+            Pending::Move { account, message, from, uid, to, .. } if *message == id => {
+                Some(json!({"account": account, "imapPath": from, "uid": uid, "to": to}))
+            }
+            _ => None,
+        })
+        .collect();
+    Ok(json!({
+        "id": id, "messageId": message.message_id, "account": message.account, "folder": message.folder,
+        "filingSourceAccount": (message.filing_source_account != 0).then_some(message.filing_source_account),
+        "recordedServer": message.server.as_ref().map(|server| json!({"id": server.id, "folder": server.folder, "gone": server.gone})),
+        "imap": {"uid": message.uid, "flagsRecorded": message.synced.is_some()},
+        "pendingDestination": placement,
+        "pendingImapSource": sources,
+        "movingOut": message.moving_out,
+        "imapPlacementMarkerPending": !message.placed.is_empty(),
+        "content": {"unfetched": message.unfetched, "incomplete": message.incomplete, "notDownloaded": message.not_downloaded,
+            "readFailed": message.kept.as_deref().is_some_and(|kept| kept.failed)},
+        "mailboxDirty": s.dirty,
+        "serverLookupPerformed": false,
+    }))
 }
 
 fn get(s: &mut Session, v: &Value) -> CmdResult {

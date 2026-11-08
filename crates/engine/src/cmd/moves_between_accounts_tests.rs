@@ -155,6 +155,14 @@ fn moved_from_an_imap_account_into_a_microsoft_account_the_original_goes_once_th
     s.run("mail.move", &json!({"ids": [two], "folder": theirs})).unwrap();
     assert_eq!(at(&s, two), (ms, theirs, 0));
     assert_eq!(s.mailbox.message(two).unwrap().filing_source_account, a);
+    let before_inspection = serde_json::to_value(&s.mailbox).unwrap();
+    let pending = s.run("mail.filingStatus", &json!({"id":two})).unwrap();
+    assert_eq!(pending["filingSourceAccount"], a);
+    assert!(pending["recordedServer"].is_null());
+    assert_eq!(pending["pendingDestination"].as_array().unwrap().len(), 1);
+    assert_eq!(pending["pendingImapSource"][0]["account"], a);
+    assert_eq!(pending["serverLookupPerformed"], false);
+    assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), before_inspection);
     let asked = graph_mail_request(&s, ms).unwrap();
     assert!(matches!(asked.places.as_slice(), [p] if p.message == two && p.moved && p.to == "in"), "{:?}", asked.places);
     // Nothing goes from the IMAP server until the copy is there, however saved this is.
@@ -162,10 +170,22 @@ fn moved_from_an_imap_account_into_a_microsoft_account_the_original_goes_once_th
     assert_eq!((ops(&s, a), known(&s, a)), (vec![], vec![1, 2, 3, 4]));
     placed(&mut s, ms, OWNER, &[made("AAkA2")]);
     assert_eq!(s.mailbox.message(two).and_then(|m| m.server.as_ref()).map(|x| x.id.as_str()), Some("AAkA2"));
+    let destination = s.run("mail.filingStatus", &json!({"id":two})).unwrap();
+    assert_eq!(destination["recordedServer"]["id"], "AAkA2");
+    assert_eq!(destination["recordedServer"]["folder"], "in");
+    assert_eq!(destination["pendingDestination"], json!([]));
+    assert_eq!(destination["pendingImapSource"][0]["uid"], 2);
     assert_eq!(ops(&s, a), [delete(2)]);
     deleted(&mut s, a, &[2]);
     assert!(s.mailbox.pending.is_empty() && ops(&s, a).is_empty(), "{:?}", s.mailbox.pending);
     assert_eq!(s.run("mail.get", &json!({"id":two})).unwrap()["filingSourceAccount"], a, "source acknowledgement must not erase filing origin");
+    let finished = s.run("mail.filingStatus", &json!({"id":two})).unwrap();
+    assert_eq!(finished["pendingImapSource"], json!([]));
+    assert_eq!(finished["filingSourceAccount"], a);
+    assert_eq!(finished["recordedServer"]["id"], "AAkA2");
+    for params in [json!({}), json!({"id":null}), json!({"id":"two"}), json!({"id":0}), json!({"id":0.5})] {
+        assert!(s.run("mail.filingStatus", &params).is_err());
+    }
 
     // Moved on in the Microsoft account before it was made: the copy is made where it is now, and
     // the original still goes only once it is.

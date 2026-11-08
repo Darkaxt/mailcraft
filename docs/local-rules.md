@@ -157,6 +157,15 @@ history. Historical mail with no such observation stays unknown; no source is
 guessed from display names or recipient text. Later filing preserves the recorded
 source, and native mail inspection exposes both identities.
 
+`mail.filingStatus {"id": number}` inspects one message's recorded provider
+identity, pending destination placement and pending source removal without loading
+its body, fetching mail, running synchronization or changing the selection. A
+pending placement does not confirm a remote copy. `recordedServer` is the last
+native provider observation, not a new server lookup; `serverLookupPerformed`
+is false. The source account remains separate from the current storage account.
+The response contains no credentials or placement replay token. Actual save
+completion and provider acknowledgements remain separate migration criteria.
+
 Regex, explicit case matching, exceptions and copy actions run locally while
 MailCraft is open, including its headless mail runtime. Server-owned originals
 remain intact and are not rewritten as simpler local definitions. Unknown server

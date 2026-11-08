@@ -5189,6 +5189,11 @@ msgid "Inside My Organization"
 msgstr ""
 
 #. command label
+#: crates/engine/src/cmd/mail.rs
+msgid "Inspect Filing State"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/aliases.rs
 msgid "Inspect Message Identities"
 msgstr ""

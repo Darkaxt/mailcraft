@@ -135,6 +135,7 @@ const SAFE: &[&str] = &[
     "mail.expandConversation",
     "mail.collapseConversation",
     "mail.get",
+    "mail.filingStatus",
     "mail.identity",
     "aliases.list",
     "mail.list",
