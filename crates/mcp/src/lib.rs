@@ -105,6 +105,8 @@ impl Backend for Headless {
 }
 
 #[cfg(test)]
+mod content_availability_tests;
+#[cfg(test)]
 mod files_tests;
 #[cfg(test)]
 mod gate_tests;

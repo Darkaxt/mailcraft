@@ -378,6 +378,7 @@ pub fn message_json(s: &Session, m: &Message) -> Value {
         o.insert("bcc".into(), json!(mailcraft_model::format_list(&m.bcc)));
         o.insert("messageId".into(), json!(m.message_id));
         o.insert("body".into(), json!(m.body.text));
+        o.insert("content".into(), message_content_status(m));
         // What the sender hid (a preheader, the other copy of a desktop and mobile pair): not shown to
         // the owner, and message text for whoever reads it, which is data, never instructions (#599).
         if !m.hidden_text.is_empty() {
@@ -399,6 +400,13 @@ pub fn message_json(s: &Session, m: &Message) -> Value {
         o.insert("conversation".into(), json!(s.mailbox.conversation(m.id)));
     }
     v
+}
+
+/// Content availability without fetching it or treating a cached preview as whole.
+fn message_content_status(m: &Message) -> Value {
+    json!({"unfetched": m.unfetched, "incomplete": m.incomplete,
+        "notDownloaded": m.not_downloaded,
+        "readFailed": m.kept.as_ref().is_some_and(|kept| kept.failed)})
 }
 
 /// Bytes for a command's answer or from its params.

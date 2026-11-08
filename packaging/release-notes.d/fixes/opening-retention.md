@@ -1,0 +1,1 @@
+- Wait for startup content validation before retiring older cached mail, avoiding false missing-content warnings. Report content availability and refuse to present a cached preview as a full MCP message read. Request missing source content through the connected app without opening a window or replacing another foreground download.

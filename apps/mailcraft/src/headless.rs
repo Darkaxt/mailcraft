@@ -138,3 +138,5 @@ fn pump(app: &mut MailApp, ctx: &egui::Context, wakes: Arc<Wake>, guard: Option<
 
 #[cfg(test)]
 mod headless_tests;
+#[cfg(test)]
+mod opening_retention_tests;

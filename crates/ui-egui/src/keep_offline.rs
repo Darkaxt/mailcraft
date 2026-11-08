@@ -70,6 +70,12 @@ impl MailApp {
 
     /// Each frame: take mail outside its window back when it is due.
     pub(crate) fn offline_tick(&mut self) {
+        // Opening checks and body handoff still own the content they read. A
+        // retention save can otherwise remove those files beneath that check
+        // and report its obsolete references as missing or damaged.
+        if self.opening_content_pending() {
+            return;
+        }
         let opening = self.session.openings();
         let due = self.thinning.now || self.thinning.opening != Some(opening) || now_ms() - self.thinning.at >= DAY_MS;
         if !due {

@@ -165,6 +165,11 @@ native provider observation, not a new server lookup; `serverLookupPerformed`
 is false. The source account remains separate from the current storage account.
 The response contains no credentials or placement replay token. Actual save
 completion and provider acknowledgements remain separate migration criteria.
+Content availability is separate too: an old message can retain its confirmed
+destination while the account's offline policy keeps only its headers and preview.
+Inspect `content` explicitly and request the full message through the connected
+app before claiming a full read. Startup retention waits for opening content
+checks and body handoff, so it cannot remove files those checks are still using.
 
 Regex, explicit case matching, exceptions and copy actions run locally while
 MailCraft is open, including its headless mail runtime. Server-owned originals

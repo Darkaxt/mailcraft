@@ -608,8 +608,7 @@ fn filing_status(s: &mut Session, v: &Value) -> CmdResult {
         "pendingImapSource": sources,
         "movingOut": message.moving_out,
         "imapPlacementMarkerPending": !message.placed.is_empty(),
-        "content": {"unfetched": message.unfetched, "incomplete": message.incomplete, "notDownloaded": message.not_downloaded,
-            "readFailed": message.kept.as_deref().is_some_and(|kept| kept.failed)},
+        "content": super::message_content_status(message),
         "mailboxDirty": s.dirty,
         "serverLookupPerformed": false,
     }))

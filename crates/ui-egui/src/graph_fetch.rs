@@ -233,6 +233,30 @@ fn take_in(app: &mut MailApp, result: GraphFetchResult) -> Result<Value, mailcra
 }
 
 impl MailApp {
+    /// Download a source requested through the agent dispatcher without scheduling
+    /// an owner command or replacing another foreground download. The caller observes
+    /// the existing native job and reads the result once its content is available.
+    pub(crate) fn fetch_source_for_agent(&mut self, id: &str, params: &Value) -> Option<Result<Value, String>> {
+        if id != "mail.viewSource" {
+            return None;
+        }
+        let message = needs_whole(self, id, params)?;
+        if self.fetching.then.is_some()
+            || self.fetching.held.is_some()
+            || self.fetching.now.as_ref().is_some_and(|(messages, ..)| messages.as_slice() != [message])
+        {
+            return Some(Err("Another foreground download is still active; observe its completion before requesting this source.".into()));
+        }
+        let account = self.session.mailbox.message(message)?.account;
+        if !self.fetch_now(account, &[message]) {
+            return Some(Err(
+                "The complete message is not available locally and its native download could not start; inspect connectivity and account status."
+                    .into(),
+            ));
+        }
+        Some(Ok(json!({"pending": "download", "message": message})))
+    }
+
     /// A command that needs its message whole waits for it to be fetched, and then runs. A forward
     /// of several messages (#360) is judged first (as many as one message carries, none that
     /// stands in for a message for good) and waits for each of them, an account's at a time and a

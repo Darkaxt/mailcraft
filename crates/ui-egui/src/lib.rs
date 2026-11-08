@@ -2239,6 +2239,10 @@ impl MailApp {
         if let Some(r) = self.ui_command(id, &params) {
             return r;
         }
+        // Agent source reads may download content, but never open an owner dialog.
+        if let Some(r) = self.fetch_source_for_agent(id, &params) {
+            return r;
+        }
         // (The main window's: the reading pane's message being written, #286.)
         let composing = windows::compose_window::pane_compose(self).is_some();
         // An account that goes takes what was remembered for it along.
