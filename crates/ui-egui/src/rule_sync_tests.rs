@@ -143,6 +143,41 @@ fn headless_rules_permission_request_preserves_other_work_and_offline_state() {
 }
 
 #[test]
+fn headless_rules_authorization_can_be_cancelled_without_consuming_a_late_answer() {
+    use crate::control::{ControlRequest, Outcome, handle};
+    let (mut app, owner, _, _, sign_ins) = window();
+    add_rule(&mut app, owner);
+    app.start_headless();
+    app.rules.perm.insert(owner, Permission::Needed);
+    let before = app.session.mailbox.rules.clone();
+    assert_eq!(permission_request(&mut app, owner)["ok"], true);
+    let cancel = app.signing_in.as_ref().unwrap().cancel.clone();
+    // The fake provider's successful answer is already queued. Explicit cancel
+    // must discard it rather than save its tokens or authorize pending writes.
+    let request = ControlRequest::new("engine.execute", json!({"command": "ui.cancelSignIn", "params": {}})).0.from_agent(Vec::new());
+    let Outcome::Done(answer) = handle(&mut app, &egui::Context::default(), &request) else {
+        panic!("headless cancellation must finish without an owner question")
+    };
+    assert_eq!(answer["ok"], true, "{answer}");
+    assert_eq!(answer["result"]["cancelled"], owner);
+    assert!(cancel.load(std::sync::atomic::Ordering::Relaxed));
+    assert!(!app.signing_in());
+    app.poll_sign_in();
+    assert_eq!(app.tokens[&owner].refresh, "ref-1");
+    assert_eq!(app.rules.perm.get(&owner), Some(&Permission::Needed));
+    assert_eq!(app.lifecycle_status()["canClose"], true);
+    assert_eq!(app.lifecycle_status()["permissionsNeeded"][0]["state"], "needed");
+    assert_eq!(serde_json::to_value(&app.session.mailbox.rules).unwrap(), serde_json::to_value(&before).unwrap());
+    assert!(app.dialog.is_none() && app.asking.is_empty());
+    // A new explicit request is possible, but cancellation starts none itself.
+    assert_eq!(sign_ins.lock().unwrap().len(), 1);
+    assert_eq!(permission_request(&mut app, owner)["ok"], true);
+    assert_eq!(sign_ins.lock().unwrap().len(), 2);
+    app.poll_sign_in();
+    assert_eq!(app.tokens[&owner].refresh, "ref-2");
+}
+
+#[test]
 fn headless_rules_permission_refusal_preserves_tokens_and_pending_rules() {
     let (mut app, owner, _, _, _) = window();
     let rule = add_rule(&mut app, owner);

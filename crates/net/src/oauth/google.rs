@@ -64,7 +64,7 @@ pub fn sign_in_google_at(
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
 ) -> Result<Tokens, NetError> {
-    sign_in_google_refused(endpoints, oauth, client_secret, login_hint, open, cancel, SIGN_IN_TIMEOUT).map_err(|refused| refused.error)
+    sign_in_google_refused(endpoints, oauth, client_secret, login_hint, open, cancel, None).map_err(|refused| refused.error)
 }
 
 pub(super) fn sign_in_google_refused(
@@ -74,7 +74,7 @@ pub(super) fn sign_in_google_refused(
     login_hint: &str,
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
-    patience: Duration,
+    patience: Option<Duration>,
 ) -> Result<Tokens, Refused> {
     let (id, secret) = registration(oauth, client_secret)?;
     Url::parse(&endpoints.authorize)?;

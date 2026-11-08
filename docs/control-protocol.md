@@ -95,6 +95,14 @@ sends, with what the owner allowed with `--allow` (`send`, `delete`, `accounts`,
 - `ui.click`, `ui.move`, `ui.drag`, `ui.key`, `ui.text` need `input`, and are refused while a
   question is up; `app.quit` is refused; `ui.screenshot` takes no `path` and answers `data`.
 
+Native provider sign-in and explicit consent keep their loopback callback listener ready
+until the provider returns a validated answer or `ui.cancelSignIn` explicitly cancels the
+request. There is no overall app deadline for finishing the provider's page. Individual
+HTTP requests remain bounded; PKCE, callback state and provider token checks are unchanged.
+Closing a browser tab alone does not cancel a native sign-in; inspect its state and use the
+cancel command before starting another request. A callback from an expired or cancelled
+request must not be replayed into a later sign-in.
+
 A request without `agent` is the owner's own script, as before, unless the window was started
 with `--control-agents-only` (or `MAILCRAFT_CONTROL_AGENTS_ONLY=1`): then every request is an
 agent's and allowed nothing in advance, whether it has an `agent` field or not and whatever its

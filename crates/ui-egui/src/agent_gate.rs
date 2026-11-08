@@ -114,6 +114,7 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
             id,
             "ui.sync"
                 | "ui.cancelSync"
+                | "ui.cancelSignIn"
                 | "ui.closeDialog"
                 | "ui.requestRulesPermission"
                 | "ui.theme"

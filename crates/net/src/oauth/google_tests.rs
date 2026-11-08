@@ -140,7 +140,7 @@ fn google_cancelled_and_mismatched_state_never_reach_token_server() {
         "one@example.org",
         &open,
         &AtomicBool::new(false),
-        Duration::from_millis(300),
+        Some(Duration::from_millis(300)),
     );
     assert!(matches!(rejected, Err(Refused { error: NetError::SignInTimedOut, .. })));
     assert_eq!(server.asked(), 0);
@@ -154,7 +154,7 @@ fn google_cancelled_and_mismatched_state_never_reach_token_server() {
             flag.store(true, Ordering::Relaxed);
         });
     };
-    let cancelled = google::sign_in_google_refused(&endpoint(&server), &google(), STAND_IN_SECRET, "one@example.org", &open, &cancel, PATIENCE);
+    let cancelled = google::sign_in_google_refused(&endpoint(&server), &google(), STAND_IN_SECRET, "one@example.org", &open, &cancel, Some(PATIENCE));
     assert!(matches!(cancelled, Err(Refused { error: NetError::SignInCancelled, .. })));
     assert_eq!(server.asked(), 0);
 }
@@ -177,9 +177,16 @@ fn google_denied_consent_never_exchanges_a_code() {
     let error = sign_in_google_at(&endpoint(&server), &google(), STAND_IN_SECRET, "one@example.org", &open, &AtomicBool::new(false)).unwrap_err();
     assert!(error.is_refused_sign_in());
     assert_eq!(server.asked(), 0);
-    let classified =
-        google::sign_in_google_refused(&endpoint(&server), &google(), STAND_IN_SECRET, "one@example.org", &open, &AtomicBool::new(false), PATIENCE)
-            .map_err(SignInEnd::from);
+    let classified = google::sign_in_google_refused(
+        &endpoint(&server),
+        &google(),
+        STAND_IN_SECRET,
+        "one@example.org",
+        &open,
+        &AtomicBool::new(false),
+        Some(PATIENCE),
+    )
+    .map_err(SignInEnd::from);
     assert_eq!(classified, Err(SignInEnd::Declined));
     assert_eq!(server.asked(), 0);
 }

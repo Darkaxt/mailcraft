@@ -70,8 +70,6 @@ use serde_json::Value;
 use crate::NetError;
 use crate::http::{self, Answer, Url};
 
-/// How long the owner has to finish on the provider's page.
-const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 /// Canonical, non-sensitive reason that Google's refresh grant was revoked or expired.
 /// A provider's error description is never used to decide whether to discard a token.
 pub const GOOGLE_REFRESH_REVOKED: &str = "Google's previous authorization has expired or been revoked";
@@ -306,7 +304,7 @@ impl Endpoints {
 ///
 /// `open` is given the address of the page and opens it in the owner's browser (it must not
 /// wait for the sign-in). `login_hint` (the account's address) fills in who is signing in.
-/// Blocks for as long as the owner takes, five minutes at most; setting `cancel` ends the wait
+/// Blocks until the provider answers or the owner cancels; setting `cancel` ends the wait
 /// within a fraction of a second.
 ///
 /// The page also asks the owner to agree to what Microsoft Graph is asked for later, so that
@@ -341,7 +339,7 @@ pub fn sign_in_at(endpoints: &Endpoints, oauth: &OAuth, login_hint: &str, open: 
     if oauth.provider == OAuthProvider::Google {
         return sign_in_google_at(endpoints, oauth, GOOGLE_DESKTOP_SECRET, login_hint, open, cancel);
     }
-    sign_in_within(endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_within(endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`sign_in_at`], saying how a sign-in that brought no tokens ended ([`SignInEnd`]): what the
@@ -354,10 +352,9 @@ pub fn sign_in_explained(
     cancel: &AtomicBool,
 ) -> Result<Tokens, SignInEnd> {
     if oauth.provider == OAuthProvider::Google {
-        return google::sign_in_google_refused(endpoints, oauth, GOOGLE_DESKTOP_SECRET, login_hint, open, cancel, SIGN_IN_TIMEOUT)
-            .map_err(SignInEnd::from);
+        return google::sign_in_google_refused(endpoints, oauth, GOOGLE_DESKTOP_SECRET, login_hint, open, cancel, None).map_err(SignInEnd::from);
     }
-    sign_in_refused(endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT).map_err(SignInEnd::from)
+    sign_in_refused(endpoints, oauth, login_hint, open, cancel, None).map_err(SignInEnd::from)
 }
 
 /// How a sign-in on the provider's page ended without tokens ([`sign_in_explained`]).
@@ -392,15 +389,15 @@ impl From<Refused> for SignInEnd {
     }
 }
 
-/// [`sign_in_at`], waiting no longer than `patience` for the owner (each time, should the
-/// sign-in be tried a second time).
+/// [`sign_in_at`], with an optional explicit wait bound for finite protocol tests.
+/// Production owner interaction has no overall deadline; cancellation remains explicit.
 fn sign_in_within(
     endpoints: &Endpoints,
     oauth: &OAuth,
     login_hint: &str,
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
-    patience: Duration,
+    patience: Option<Duration>,
 ) -> Result<Tokens, NetError> {
     sign_in_refused(endpoints, oauth, login_hint, open, cancel, patience).map_err(|refused| refused.error)
 }
@@ -412,7 +409,7 @@ fn sign_in_refused(
     login_hint: &str,
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
-    patience: Duration,
+    patience: Option<Duration>,
 ) -> Result<Tokens, Refused> {
     let (mut consent, lesser) = (endpoints.consent.trim(), endpoints.lesser.trim());
     let mut outcome = attempt(endpoints, consent, oauth, login_hint, open, cancel, patience);
@@ -574,7 +571,7 @@ impl From<Refused> for AdminRefusal {
 /// admin-consent page in the owner's browser: for an owner who is an administrator, or has one
 /// beside them. `open` is given the address of the page (it must not wait); the page comes back
 /// to a loopback port of this machine with a yes or a no and nothing else, and `Ok` is the yes.
-/// Blocks for as long as that takes, five minutes at most; setting `cancel` ends the wait.
+/// Blocks until the provider answers or the owner cancels; setting `cancel` ends the wait.
 ///
 /// What is asked for is what [`admin_consent_url`] asks for, and `tenant` is as there. No tokens come of it: the account is signed in afterwards, as any other
 /// ([`sign_in`]). Should Microsoft not take the permissions of several services on one page, it
@@ -583,11 +580,17 @@ impl From<Refused> for AdminRefusal {
 /// Nothing of what comes back is believed about who anybody is: the directory the page names
 /// is not read at all.
 pub fn admin_consent(oauth: &OAuth, tenant: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<(), AdminRefusal> {
-    admin_consent_within(oauth, tenant, open, cancel, SIGN_IN_TIMEOUT)
+    admin_consent_within(oauth, tenant, open, cancel, None)
 }
 
-/// [`admin_consent`], waiting no longer than `patience` for each page.
-fn admin_consent_within(oauth: &OAuth, tenant: &str, open: &dyn Fn(&str), cancel: &AtomicBool, patience: Duration) -> Result<(), AdminRefusal> {
+/// [`admin_consent`], with an optional explicit wait bound for finite protocol tests.
+fn admin_consent_within(
+    oauth: &OAuth,
+    tenant: &str,
+    open: &dyn Fn(&str),
+    cancel: &AtomicBool,
+    patience: Option<Duration>,
+) -> Result<(), AdminRefusal> {
     let all = admin_scope();
     match ask_administrator(oauth, tenant, &all, open, cancel, patience) {
         // The page won't have what it was asked for together: once more, a page for each service.
@@ -603,7 +606,14 @@ fn admin_consent_within(oauth: &OAuth, tenant: &str, open: &dyn Fn(&str), cancel
 }
 
 /// One go at an administrator's approval of `scope`: the page, and the wait for its answer.
-fn ask_administrator(oauth: &OAuth, tenant: &str, scope: &str, open: &dyn Fn(&str), cancel: &AtomicBool, patience: Duration) -> Result<(), Refused> {
+fn ask_administrator(
+    oauth: &OAuth,
+    tenant: &str,
+    scope: &str,
+    open: &dyn Fn(&str),
+    cancel: &AtomicBool,
+    patience: Option<Duration>,
+) -> Result<(), Refused> {
     let client_id = client_id(oauth)?;
     let page = admin_consent_page(oauth, tenant)?;
     if cancel.load(Ordering::Relaxed) {
@@ -632,7 +642,7 @@ pub fn sign_in_for_favorites(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str
     let plain = Endpoints::for_resource(oauth, Resource::Graph);
     let scope = format!("{MICROSOFT_GRAPH} {MICROSOFT_GRAPH_EXTRAS} {MICROSOFT_GRAPH_FAVORITES} {SIGN_IN_SCOPE}");
     let endpoints = Endpoints { scope, consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`sign_in_for_favorites`] at `endpoints`, waiting no longer than `patience` for the owner.
@@ -642,7 +652,7 @@ fn sign_in_for_favorites_within(
     login_hint: &str,
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
-    patience: Duration,
+    patience: Option<Duration>,
 ) -> Result<Tokens, FavoritesRefusal> {
     attempt(endpoints, "", oauth, login_hint, open, cancel, patience).map_err(|refused| match (refused.policy, refused.about) {
         (Policy::Approval, _) => FavoritesRefusal::Approval,
@@ -666,7 +676,7 @@ fn shared_scope() -> String {
 pub fn sign_in_for_shared(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::GraphMail);
     let endpoints = Endpoints { scope: shared_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`refresh_graph_mail`] for a Graph run of a shared mailbox (#70): the tokens are asked for
@@ -698,7 +708,7 @@ fn shared_send_scope() -> String {
 pub fn sign_in_for_shared_send(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::GraphMail);
     let endpoints = Endpoints { scope: shared_send_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`refresh_graph_shared`] for a run of a shared mailbox that has mail to send (#70): the tokens
@@ -731,7 +741,7 @@ fn shared_calendar_scope() -> String {
 pub fn sign_in_for_shared_calendars(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::GraphMail);
     let endpoints = Endpoints { scope: shared_calendar_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`refresh_graph_shared`] for a Graph run of a shared mailbox's calendars (#70): the tokens are
@@ -789,7 +799,7 @@ fn opened_calendars_scope() -> String {
 pub fn sign_in_for_opened_calendars(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::Graph);
     let endpoints = Endpoints { scope: opened_calendars_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`refresh_graph_shared_calendars`] for a calendar job of an account with calendars opened by
@@ -821,7 +831,7 @@ fn tasks_scope() -> String {
 pub fn sign_in_for_tasks(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::Graph);
     let endpoints = Endpoints { scope: tasks_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`refresh_graph`] for a to-do job (#248): the tokens are asked for with `Tasks.ReadWrite`,
@@ -893,7 +903,7 @@ fn rules_scope() -> String {
 pub fn sign_in_for_rules(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::GraphMail);
     let endpoints = Endpoints { scope: rules_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// [`refresh_graph_mail`] for a rules job with changes to send (#566): the tokens are asked for
@@ -925,7 +935,7 @@ fn replies_scope() -> String {
 pub fn sign_in_for_replies(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
     let plain = Endpoints::for_resource(oauth, Resource::Graph);
     let endpoints = Endpoints { scope: replies_scope(), consent: String::new(), lesser: String::new(), ..plain };
-    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT)
+    sign_in_for_favorites_within(&endpoints, oauth, login_hint, open, cancel, None)
 }
 
 /// Tokens for changing the automatic replies (and reading them back): asked for with
@@ -957,7 +967,7 @@ fn attempt(
     login_hint: &str,
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
-    patience: Duration,
+    patience: Option<Duration>,
 ) -> Result<Tokens, Refused> {
     let client_id = client_id(oauth)?;
     tenant(oauth)?;
@@ -1730,7 +1740,7 @@ impl Redirect {
 
     /// Wait for the browser to come back with the code that goes with `state`, answering what
     /// else turns up (a favicon, a stranger) on the way.
-    fn wait(&self, state: &str, cancel: &AtomicBool, patience: Duration) -> Result<String, Refused> {
+    fn wait(&self, state: &str, cancel: &AtomicBool, patience: Option<Duration>) -> Result<String, Refused> {
         self.wait_for(state, cancel, patience, judge)
     }
 
@@ -1739,16 +1749,29 @@ impl Redirect {
         &self,
         state: &str,
         cancel: &AtomicBool,
-        patience: Duration,
+        patience: Option<Duration>,
         judge: impl Fn(&[u8], &str) -> (&'static Page, Option<Result<T, Refused>>),
     ) -> Result<T, Refused> {
         let started = Instant::now();
+        self.wait_for_elapsed(state, cancel, patience, || started.elapsed(), judge)
+    }
+
+    /// The same event loop with its elapsed clock supplied, so a protocol test can
+    /// exercise a late browser return without making the owner wait in real time.
+    fn wait_for_elapsed<T>(
+        &self,
+        state: &str,
+        cancel: &AtomicBool,
+        patience: Option<Duration>,
+        elapsed: impl Fn() -> Duration,
+        judge: impl Fn(&[u8], &str) -> (&'static Page, Option<Result<T, Refused>>),
+    ) -> Result<T, Refused> {
         let mut visitors: Vec<Visitor> = Vec::new();
         loop {
             if cancel.load(Ordering::Relaxed) {
                 return Err(NetError::SignInCancelled.into());
             }
-            if started.elapsed() >= patience {
+            if patience.is_some_and(|limit| elapsed() >= limit) {
                 return Err(NetError::SignInTimedOut.into());
             }
             self.admit(&mut visitors);
@@ -1787,7 +1810,7 @@ pub fn sign_in_google_explained_at(
     open: &dyn Fn(&str),
     cancel: &AtomicBool,
 ) -> Result<Tokens, SignInEnd> {
-    google::sign_in_google_refused(endpoints, oauth, client_secret, login_hint, open, cancel, SIGN_IN_TIMEOUT).map_err(SignInEnd::from)
+    google::sign_in_google_refused(endpoints, oauth, client_secret, login_hint, open, cancel, None).map_err(SignInEnd::from)
 }
 
 mod google;

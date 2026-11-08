@@ -2712,6 +2712,9 @@ impl MailApp {
             "ui.cancelSignIn" => match self.signing_in.take() {
                 Some(s) => {
                     s.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+                    if s.rules {
+                        self.rules.perm.insert(s.account, rule_sync::Permission::Needed);
+                    }
                     self.session.sync_status = tl!("Sign-in cancelled").to_string();
                     Ok(json!({"cancelled": s.account}))
                 }

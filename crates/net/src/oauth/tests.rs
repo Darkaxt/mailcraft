@@ -276,7 +276,7 @@ fn pages(browser: &Browser, n: usize) -> Vec<String> {
 }
 
 fn sign_in_to(endpoints: &Endpoints, hint: &str, open: &dyn Fn(&str)) -> Result<Tokens, NetError> {
-    sign_in_within(endpoints, &oauth(), hint, open, &AtomicBool::new(false), PATIENCE)
+    sign_in_within(endpoints, &oauth(), hint, open, &AtomicBool::new(false), Some(PATIENCE))
 }
 
 fn auth(result: Result<Tokens, NetError>) -> String {
@@ -491,7 +491,7 @@ fn a_browser_with_more_headers_than_are_read_still_signs_in() {
     // Nothing is believed of a first line that never ends, however it starts.
     let endless = format!("GET /?code=the-code&state={{state}}&junk={}", "x".repeat(2 * MAX_REQUEST));
     let (open, _) = browser_asking(&[&endless]);
-    let result = sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &AtomicBool::new(false), Duration::from_millis(600));
+    let result = sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &AtomicBool::new(false), Some(Duration::from_millis(600)));
     assert_eq!(result, Err(NetError::SignInTimedOut));
     assert_eq!(server.asked(), 1);
 }
@@ -532,7 +532,7 @@ fn a_sign_in_can_be_called_off() {
     // Before it starts: the owner isn't sent anywhere.
     let (open, browser) = browser_asking(&["GET /?code=the-code&state={state}"]);
     let cancel = AtomicBool::new(true);
-    assert_eq!(sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &cancel, PATIENCE), Err(NetError::SignInCancelled));
+    assert_eq!(sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &cancel, Some(PATIENCE)), Err(NetError::SignInCancelled));
     assert_eq!(sign_in(&oauth(), "", &open, &cancel), Err(NetError::SignInCancelled));
     assert_eq!(browser.lock().unwrap().url, "");
 
@@ -547,7 +547,7 @@ fn a_sign_in_can_be_called_off() {
         });
     };
     let started = Instant::now();
-    assert_eq!(sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &cancel, PATIENCE), Err(NetError::SignInCancelled));
+    assert_eq!(sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &cancel, Some(PATIENCE)), Err(NetError::SignInCancelled));
     assert!((Duration::from_millis(100)..Duration::from_secs(10)).contains(&started.elapsed()), "{:?}", started.elapsed());
     assert_eq!(server.asked(), 0);
 }
@@ -558,7 +558,7 @@ fn a_sign_in_nobody_finishes_times_out() {
     let opened = Mutex::new(String::new());
     let open = |url: &str| *opened.lock().unwrap() = url.to_string();
     let started = Instant::now();
-    let result = sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &AtomicBool::new(false), Duration::from_millis(300));
+    let result = sign_in_within(&endpoints_of(&server), &oauth(), "", &open, &AtomicBool::new(false), Some(Duration::from_millis(300)));
     assert_eq!(result, Err(NetError::SignInTimedOut));
     assert!((Duration::from_millis(300)..Duration::from_secs(10)).contains(&started.elapsed()), "{:?}", started.elapsed());
     // Told apart from a sign-in that was called off, in words too.
@@ -567,6 +567,47 @@ fn a_sign_in_nobody_finishes_times_out() {
     // The port is closed again: a browser that comes back late finds nobody.
     let port = port_of(&fields(opened.lock().unwrap().split_once('?').unwrap().1)["redirect_uri"]);
     assert!(TcpStream::connect(("127.0.0.1", port)).is_err());
+    assert_eq!(server.asked(), 0);
+}
+
+#[test]
+fn an_owner_can_return_after_five_minutes_without_losing_the_callback_listener() {
+    let elapsed = || Duration::from_secs(6 * 60);
+    let redirect = Redirect::listen().unwrap();
+    let port = redirect.port;
+    let browser = std::thread::spawn(move || {
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        stream.set_read_timeout(Some(PATIENCE)).unwrap();
+        stream.write_all(b"GET /?code=late-code&state=owner-state HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        let mut page = String::new();
+        stream.read_to_string(&mut page).unwrap();
+        page
+    });
+    let answer = redirect.wait_for_elapsed("owner-state", &AtomicBool::new(false), None, elapsed, judge).unwrap();
+    assert_eq!(answer, "late-code");
+    assert!(browser.join().unwrap().contains("You can close this tab"));
+    drop(redirect);
+    assert!(TcpStream::connect(("127.0.0.1", port)).is_err());
+
+    // The same elapsed time really did exceed the old client deadline. Explicit
+    // finite test bounds still exercise the error path without a six-minute sleep.
+    let finite = Redirect::listen().unwrap();
+    let outcome = finite.wait_for_elapsed("owner-state", &AtomicBool::new(false), Some(Duration::from_secs(5 * 60)), elapsed, judge);
+    assert!(matches!(outcome, Err(Refused { error: NetError::SignInTimedOut, .. })));
+}
+
+#[test]
+fn a_production_sign_in_wait_ends_on_explicit_cancel_without_exchanging_a_token() {
+    let server = FakeHttp::answering(ok(TOKENS));
+    let cancel = AtomicBool::new(false);
+    let port = Mutex::new(0);
+    let open = |url: &str| {
+        let parameters = fields(url.split_once('?').unwrap().1);
+        *port.lock().unwrap() = port_of(&parameters["redirect_uri"]);
+        cancel.store(true, Ordering::Relaxed);
+    };
+    assert_eq!(sign_in_at(&endpoints_of(&server), &oauth(), "", &open, &cancel), Err(NetError::SignInCancelled));
+    assert!(TcpStream::connect(("127.0.0.1", *port.lock().unwrap())).is_err());
     assert_eq!(server.asked(), 0);
 }
 
@@ -786,12 +827,12 @@ fn only_a_refusal_of_the_scopes_is_asked_about_twice() {
         *opened.lock().unwrap() += 1;
         cancel.store(true, Ordering::Relaxed);
     };
-    let called_off = sign_in_within(&endpoints_with_consent(&server), &oauth(), "", &open, &cancel, PATIENCE);
+    let called_off = sign_in_within(&endpoints_with_consent(&server), &oauth(), "", &open, &cancel, Some(PATIENCE));
     assert_eq!((called_off, *opened.lock().unwrap()), (Err(NetError::SignInCancelled), 1));
     // Nor is one that nobody finishes.
     let opened = Mutex::new(0);
     let open = |_: &str| *opened.lock().unwrap() += 1;
-    let unfinished = sign_in_within(&endpoints_with_consent(&server), &oauth(), "", &open, &AtomicBool::new(false), Duration::from_millis(200));
+    let unfinished = sign_in_within(&endpoints_with_consent(&server), &oauth(), "", &open, &AtomicBool::new(false), Some(Duration::from_millis(200)));
     assert_eq!((unfinished, *opened.lock().unwrap()), (Err(NetError::SignInTimedOut), 1));
     // None of it ever got as far as a code.
     assert_eq!(server.asked(), 0);
@@ -816,7 +857,8 @@ fn the_favorites_permissions_are_asked_for_by_themselves_and_never_with_a_sign_i
     let server = FakeHttp::answering(ok(granted));
     let wanted = format!("{GRAPH_SCOPES} {FAVORITES_SCOPES} offline_access openid profile email");
     let endpoints = Endpoints { scope: wanted.clone(), ..endpoints_of(&server) };
-    let ask = |open: &dyn Fn(&str)| sign_in_for_favorites_within(&endpoints, &oauth(), "ada@example.org", open, &AtomicBool::new(false), PATIENCE);
+    let ask =
+        |open: &dyn Fn(&str)| sign_in_for_favorites_within(&endpoints, &oauth(), "ada@example.org", open, &AtomicBool::new(false), Some(PATIENCE));
     let (open, visits) = browser_answering(&["GET /?code=the-code&state={state}"]);
     let tokens = ask(&open).unwrap();
     assert_eq!((tokens.access.as_str(), tokens.refresh.as_str()), ("graph-access", "newer-refresh"));
@@ -943,7 +985,7 @@ fn a_page_that_will_not_have_everything_is_asked_for_what_was_asked_before() {
     // A sign-in that is called off or never finished is not started over.
     let opened = Mutex::new(0);
     let open = |_: &str| *opened.lock().unwrap() += 1;
-    let unfinished = sign_in_within(&wide(&server), &oauth(), "", &open, &AtomicBool::new(false), Duration::from_millis(200));
+    let unfinished = sign_in_within(&wide(&server), &oauth(), "", &open, &AtomicBool::new(false), Some(Duration::from_millis(200)));
     assert_eq!((unfinished, *opened.lock().unwrap()), (Err(NetError::SignInTimedOut), 1));
 }
 
@@ -1678,7 +1720,7 @@ const APPLICATION: &str = "0f6c8d2a-1b3e-4c5d-9e7f-a1b2c3d4e5f6";
 
 fn approval(tenant: &str, open: &dyn Fn(&str)) -> Result<(), AdminRefusal> {
     let settings = OAuth { client_id: APPLICATION.into(), ..oauth() };
-    admin_consent_within(&settings, tenant, open, &AtomicBool::new(false), PATIENCE)
+    admin_consent_within(&settings, tenant, open, &AtomicBool::new(false), Some(PATIENCE))
 }
 
 #[test]
@@ -1833,7 +1875,7 @@ fn an_approval_nobody_gives_times_out_or_is_called_off() {
     assert!(opened.lock().unwrap().is_empty());
     // Nobody comes back: said as that, and the port is closed again.
     let started = Instant::now();
-    let late = admin_consent_within(&settings, "", &open, &AtomicBool::new(false), Duration::from_millis(300));
+    let late = admin_consent_within(&settings, "", &open, &AtomicBool::new(false), Some(Duration::from_millis(300)));
     assert_eq!(late, Err(AdminRefusal::TimedOut));
     assert!((Duration::from_millis(300)..Duration::from_secs(10)).contains(&started.elapsed()), "{:?}", started.elapsed());
     let port = port_of(&fields(opened.lock().unwrap()[0].split_once('?').unwrap().1)["redirect_uri"]);
@@ -1848,7 +1890,7 @@ fn an_approval_nobody_gives_times_out_or_is_called_off() {
             flag.store(true, Ordering::Relaxed);
         });
     };
-    assert_eq!(admin_consent_within(&settings, "", &open, &cancel, PATIENCE), Err(AdminRefusal::Cancelled));
+    assert_eq!(admin_consent_within(&settings, "", &open, &cancel, Some(PATIENCE)), Err(AdminRefusal::Cancelled));
     // Settings that can't work are refused before anybody is sent anywhere.
     let nobody = |url: &str| assert!(url.is_empty(), "nobody is to be sent anywhere");
     let free = AtomicBool::new(false);
@@ -1891,7 +1933,7 @@ fn a_page_that_will_not_have_several_services_is_asked_service_by_service() {
 
 /// How a sign-in at `endpoints` ended, with the "browser" `open`.
 fn ended(endpoints: &Endpoints, open: &dyn Fn(&str)) -> SignInEnd {
-    let outcome = sign_in_refused(endpoints, &oauth(), "ada@example.org", open, &AtomicBool::new(false), PATIENCE);
+    let outcome = sign_in_refused(endpoints, &oauth(), "ada@example.org", open, &AtomicBool::new(false), Some(PATIENCE));
     SignInEnd::from(outcome.unwrap_err())
 }
 
@@ -1932,9 +1974,9 @@ fn how_a_sign_in_ended_is_told_apart() {
 
     // Nothing came back at all: the page was closed, or left.
     let quiet = |_: &str| {};
-    let late = sign_in_refused(&endpoints, &oauth(), "", &quiet, &AtomicBool::new(false), Duration::from_millis(200));
+    let late = sign_in_refused(&endpoints, &oauth(), "", &quiet, &AtomicBool::new(false), Some(Duration::from_millis(200)));
     assert_eq!(SignInEnd::from(late.unwrap_err()), SignInEnd::TimedOut);
-    let off = sign_in_refused(&endpoints, &oauth(), "", &quiet, &AtomicBool::new(true), PATIENCE);
+    let off = sign_in_refused(&endpoints, &oauth(), "", &quiet, &AtomicBool::new(true), Some(PATIENCE));
     assert_eq!(SignInEnd::from(off.unwrap_err()), SignInEnd::Cancelled);
     assert_eq!(sign_in_explained(&endpoints, &oauth(), "", &quiet, &AtomicBool::new(true)), Err(SignInEnd::Cancelled));
     // The token endpoint's no is never a no given on a page.
@@ -1943,7 +1985,7 @@ fn how_a_sign_in_ended_is_told_apart() {
     assert!(matches!(ended(&endpoints_of(&refusing), &open), SignInEnd::Other(NetError::Proto(ProtoError::Auth(_)))));
     // And a sign-in that goes through is as it always was.
     let (open, _) = browser_answering(&["GET /?code=the-code&state={state}"]);
-    let tokens = sign_in_refused(&endpoints, &oauth(), "", &open, &AtomicBool::new(false), PATIENCE).unwrap();
+    let tokens = sign_in_refused(&endpoints, &oauth(), "", &open, &AtomicBool::new(false), Some(PATIENCE)).unwrap();
     assert_eq!(tokens.access, "acc-ess.tok_en");
     assert_eq!(server.asked(), 1);
 }
@@ -2034,7 +2076,7 @@ proptest! {
             *opened.lock().unwrap() = url.to_string();
             cancel.store(true, Ordering::Relaxed);
         };
-        prop_assert_eq!(admin_consent_within(&settings, &tenant, &open, &cancel, PATIENCE), Err(AdminRefusal::Cancelled));
+        prop_assert_eq!(admin_consent_within(&settings, &tenant, &open, &cancel, Some(PATIENCE)), Err(AdminRefusal::Cancelled));
         let url = opened.lock().unwrap().clone();
         let (address, query) = url.split_once('?').unwrap();
         let link = admin_consent_url(&settings, &tenant).unwrap();
