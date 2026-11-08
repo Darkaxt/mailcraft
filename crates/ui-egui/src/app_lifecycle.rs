@@ -98,7 +98,7 @@ impl MailApp {
 
     pub fn headless_save_failed(&mut self, why: &str) {
         self.lifecycle.closing = false;
-        self.lifecycle.blocked = Some("the mailbox save failed; the app stays open");
+        self.lifecycle.blocked = Some("changes could not be saved; the app stays open");
         self.close_anyway = true;
         self.quit_requested = false;
         self.status(why.to_string());
@@ -188,7 +188,7 @@ impl MailApp {
         {
             Some("native synchronization, sign-in or another job is active or queued")
         } else if self.close_anyway {
-            Some("the mailbox save failed; resolve it before closing")
+            Some("changes could not be saved; resolve them before closing")
         } else {
             None
         }

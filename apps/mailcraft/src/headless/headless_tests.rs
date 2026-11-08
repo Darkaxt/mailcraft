@@ -28,6 +28,9 @@ fn tool_args(server: &mut Server, id: usize, name: &str, arguments: Value) -> Re
 
 #[test]
 fn real_mcp_reads_and_normal_close_need_no_native_window() {
+    let settings = super::preferences_tests::Settings::new("mcp-close");
+    let desktop = json!({"listWidth":610,"futureLayout":"preserved","options":{"offline":false}});
+    std::fs::write(&settings.0, serde_json::to_vec(&desktop).unwrap()).unwrap();
     let mut session = Session::new(mailcraft_engine::sample::mailbox(0, 0));
     // This fixture proves a new filing definition; competing definitions are exercised below.
     session.mailbox.rules.clear();
@@ -144,6 +147,8 @@ fn real_mcp_reads_and_normal_close_need_no_native_window() {
             let idle = tool(&mut server, 38, "status").unwrap();
             assert_eq!(idle["lifecycle"]["interactionRequired"], false);
             assert_eq!(idle["lifecycle"]["canClose"], true);
+            let offline = tool_args(&mut server, 39, "execute", json!({"command":"sync.offline","params":{"value":true}})).unwrap();
+            assert_eq!(offline["offline"], true);
         }));
         let close = tool(&mut server, 12, "close_app").unwrap();
         assert_eq!(close["pending"], "bridgeRelease");
@@ -154,7 +159,8 @@ fn real_mcp_reads_and_normal_close_need_no_native_window() {
     app.autosave = false;
     app.auto_sync = false;
     app.start_headless();
-    pump(&mut app, &ctx, wake, None);
+    let initial = app.session.prefs.clone();
+    pump(&mut app, &ctx, wake, None, Some((&settings.0, &initial)));
     client.join().unwrap();
     assert!(app.is_headless());
     assert!(app.dialog.is_none());
@@ -165,4 +171,7 @@ fn real_mcp_reads_and_normal_close_need_no_native_window() {
         app.session.mailbox.queued.iter().any(|item| matches!(item, mailcraft_model::Queued::PlaceMessage {message, ..} if *message == message_id))
     );
     assert!(app.session.mailbox.rules.is_empty());
+    let mut expected = desktop;
+    expected["options"]["offline"] = json!(true);
+    assert_eq!(settings.read(), expected, "normal MCP close durably saves the changed option only");
 }

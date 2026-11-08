@@ -260,6 +260,12 @@ The launcher can wait for the single endpoint-ready JSON line on stdout, which
 names the native PID and port and contains no key or credentials. Mailbox opening
 still has its own native progress/status; endpoint readiness is not mailbox readiness.
 
+Normal headless close saves changed engine preferences, including offline mode,
+using the same private atomic storage as the desktop. It preserves the desktop's
+layout, navigation and unrelated settings. An unchanged background check does not
+rewrite preferences. If changed preferences cannot be saved, lifecycle status
+reports the failure and the native owner remains running.
+
 Missing Microsoft rules permission appears in `status.lifecycle.permissionsNeeded`
 with the account, scope, state and `requestCommand`; it does not create an invisible
 modal or block an otherwise idle close. Explicitly call

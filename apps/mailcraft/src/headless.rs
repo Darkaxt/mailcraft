@@ -4,7 +4,7 @@
 //! Existing mailbox services wake it for work; their requested schedules govern
 //! waiting. A scheduled wake never cancels work or changes its outcome.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
@@ -73,6 +73,8 @@ pub(crate) fn run(
     let sample = startup.sample;
     let arriving = launch::start(move || launch::first_mailbox(sample, mailbox, &reading, true), move || wake.request_repaint());
     let prefs = startup.prefs.clone();
+    let initial_options = prefs.as_ref().map_or_else(|| mailcraft_ui_egui::UiState::default().options, |ui| ui.options.clone());
+    let prefs_path = crate::prefs_path();
     let build = startup.builder(ctx.clone(), None);
     let mut app = MailApp::opening(mailcraft_ui_egui::opening::Opening::new(arriving, progress, build), prefs, crate::system_locale::system_locale());
     app.start_headless();
@@ -93,16 +95,64 @@ pub(crate) fn run(
             log::warn!("headless startup notification was not delivered; the native runtime remains available: {why}");
         }
     }
-    pump(&mut app, &ctx, wakes, guard.as_ref());
+    pump(&mut app, &ctx, wakes, guard.as_ref(), prefs_path.as_deref().map(|path| (path, &initial_options)));
     key_file.remove();
     if let Some(guard) = &guard {
         guard.close();
     }
-    // Desktop layout/preferences are not changed by a windowless mail check.
     Ok(())
 }
 
-fn pump(app: &mut MailApp, ctx: &egui::Context, wakes: Arc<Wake>, guard: Option<&single_instance::Guard>) {
+/// Persist changed engine options without writing the windowless host's layout
+/// or navigation over the desktop's settings. Unknown JSON fields stay intact.
+fn save_options_at(app: &MailApp, initial: &mailcraft_engine::Prefs, path: &Path) -> Result<(), String> {
+    if !crate::prefs_enabled() || app.data_removed || app.is_opening() || &app.session.prefs == initial {
+        return Ok(());
+    }
+    if crate::PREFS_LEFT_IN_PLACE.load(std::sync::atomic::Ordering::Relaxed) {
+        return Err("the unreadable settings were preserved; changed preferences could not be saved".into());
+    }
+    let save = || -> std::io::Result<()> {
+        let initial = serde_json::to_value(initial).map_err(std::io::Error::other)?;
+        let current = serde_json::to_value(&app.session.prefs).map_err(std::io::Error::other)?;
+        let mut saved = match std::fs::read(path) {
+            Ok(bytes) => serde_json::from_slice::<serde_json::Value>(&bytes).map_err(std::io::Error::other)?,
+            Err(why) if why.kind() == std::io::ErrorKind::NotFound => serde_json::json!({"options": initial.clone()}),
+            Err(why) => return Err(why),
+        };
+        let root = saved.as_object_mut().ok_or_else(|| std::io::Error::other("settings are not an object"))?;
+        let options = root.entry("options").or_insert_with(|| serde_json::json!({}));
+        let options = options.as_object_mut().ok_or_else(|| std::io::Error::other("saved options are not an object"))?;
+        if let (Some(before), Some(after)) = (initial.as_object(), current.as_object()) {
+            for key in before.keys().filter(|key| !after.contains_key(*key)) {
+                options.remove(key);
+            }
+            for (key, value) in after.iter().filter(|(key, value)| before.get(*key) != Some(*value)) {
+                options.insert(key.clone(), value.clone());
+            }
+        }
+        if let Some(dir) = path.parent() {
+            mailcraft_engine::store::create_private_dir_all(dir)?;
+        }
+        mailcraft_engine::store::write_atomic(path, &serde_json::to_vec_pretty(&saved).map_err(std::io::Error::other)?)
+    };
+    save().map_err(|why| format!("headless preferences could not be saved ({:?}); settings were left in place", why.kind()))
+}
+
+fn pump(
+    app: &mut MailApp,
+    ctx: &egui::Context,
+    wakes: Arc<Wake>,
+    guard: Option<&single_instance::Guard>,
+    preferences: Option<(&Path, &mailcraft_engine::Prefs)>,
+) {
+    // The first logic pass follows the interface language for unchosen clock
+    // and week settings. That initialization is not an explicit preference edit.
+    let preferences = preferences.map(|(path, initial)| {
+        let mut initial = initial.clone();
+        initial.follow_language(app.language());
+        (path, initial)
+    });
     let started = Instant::now();
     loop {
         // The context supplies the existing command/job scheduler; no UI is laid
@@ -127,7 +177,8 @@ fn pump(app: &mut MailApp, ctx: &egui::Context, wakes: Arc<Wake>, guard: Option<
         let delay = output.viewport_output.get(&egui::ViewportId::ROOT).map_or(Duration::MAX, |v| v.repaint_delay);
         output.textures_delta.clear();
         if app.headless_close_ready() {
-            match app.save_on_exit() {
+            let saved = app.save_on_exit().and_then(|()| preferences.as_ref().map_or(Ok(()), |(path, initial)| save_options_at(app, initial, path)));
+            match saved {
                 Ok(()) => break,
                 Err(why) => app.headless_save_failed(&why),
             }
@@ -140,3 +191,5 @@ fn pump(app: &mut MailApp, ctx: &egui::Context, wakes: Arc<Wake>, guard: Option<
 mod headless_tests;
 #[cfg(test)]
 mod opening_retention_tests;
+#[cfg(test)]
+mod preferences_tests;
