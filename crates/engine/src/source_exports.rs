@@ -204,9 +204,8 @@ mod native {
             let mut nonce = [0u8; 16];
             ring::rand::SystemRandom::new().fill(&mut nonce).map_err(|_| io::Error::other("the export boundary could not be generated"))?;
             let nonce = nonce.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
-            // This is a private file export, never a send: preserve every known
-            // recipient field, including a retained Bcc field.
-            let options = mailcraft_mime::WriteOptions { include_bcc: true, offset_minutes: self.offset_minutes };
+            // Preserve Save Message As's established draft-only Bcc contract.
+            let options = mailcraft_mime::WriteOptions { include_bcc: self.message.draft, offset_minutes: self.offset_minutes };
             mailcraft_mime::write_to(&self.message, &options, &nonce, &mut |part| self.open(part), output)
         }
 

@@ -108,13 +108,29 @@ fn complete_eml_chunks_reopen_all_known_headers_bodies_and_attachments() {
     let reopened = mailcraft_mime::parse(&bytes);
     assert_eq!(reopened.subject, original.subject);
     assert_eq!(reopened.from, original.from);
-    assert_eq!(reopened.bcc, original.bcc);
+    assert!(reopened.bcc.is_empty());
     assert_eq!(reopened.reply_to, original.reply_to);
     assert_eq!(reopened.body, original.body);
     assert!(reopened.headers.contains(&("X-Receipt-Id".into(), "receipt-123".into())));
     assert_eq!(reopened.attachments[0].name, "receipt.pdf");
     assert_eq!(reopened.attachments[0].data, original.attachments[0].data);
     close(&mut session, "mail.exportEml", id, token);
+}
+
+#[test]
+fn source_eml_snapshots_preserve_bcc_only_for_drafts_like_save_message_as() {
+    let (mut session, id) = fixture();
+    for draft in [false, true] {
+        Arc::make_mut(session.mailbox.messages.get_mut(&id).unwrap()).draft = draft;
+        let token = ready(&mut session, "mail.exportEml", id);
+        let answer = session.run("mail.exportEml", &json!({"id":id,"token":token})).unwrap();
+        assert_eq!(answer["eof"], true);
+        let bytes = crate::cmd::base64_decode(answer["data"].as_str().unwrap()).unwrap();
+        let reopened = mailcraft_mime::parse(&bytes);
+        assert_eq!(!reopened.bcc.is_empty(), draft);
+        assert_eq!(String::from_utf8_lossy(&bytes).contains("blind@example.org"), draft);
+        close(&mut session, "mail.exportEml", id, token);
+    }
 }
 
 #[test]

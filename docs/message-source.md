@@ -23,6 +23,10 @@ therefore **reconstructed**, including known recipient and reply headers,
 plain/HTML alternatives, inline content IDs and attachments. It is not a
 byte-identical original and cannot recreate original MIME nesting, transfer
 encoding or a cryptographic signature over those original bytes.
+Saved drafts retain known Bcc recipients; sent and received message exports keep
+MailCraft's existing Bcc omission. Delivery-status attachments use their required
+7-bit MIME encoding and preserve retained bytes; invalid 7-bit content fails the
+export rather than producing an invalid complete file.
 
 ## MCP and headless access
 

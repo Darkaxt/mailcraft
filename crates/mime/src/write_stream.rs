@@ -18,8 +18,15 @@ pub enum ContentPart {
 
 type Fields = Vec<(&'static str, String)>;
 
+#[derive(Clone, Copy)]
+enum Encoding {
+    Base64,
+    SevenBit,
+    Binary,
+}
+
 enum Body {
-    Leaf { fields: Fields, part: ContentPart, raw: bool, text: bool },
+    Leaf { fields: Fields, part: ContentPart, encoding: Encoding, text: bool },
     Multipart { fields: Fields, boundary: String, children: Vec<Body> },
 }
 
@@ -31,7 +38,7 @@ impl Body {
     }
     fn binary(&self) -> bool {
         match self {
-            Self::Leaf { raw, .. } => *raw,
+            Self::Leaf { encoding, .. } => matches!(encoding, Encoding::Binary),
             Self::Multipart { children, .. } => children.iter().any(Self::binary),
         }
     }
@@ -58,7 +65,7 @@ pub fn write_to<'a>(
     let text = |kind, part| Body::Leaf {
         fields: vec![("Content-Type", format!("text/{kind}; charset=utf-8")), ("Content-Transfer-Encoding", "base64".into())],
         part,
-        raw: false,
+        encoding: Encoding::Base64,
         text: true,
     };
     let mut inline = Vec::new();
@@ -68,14 +75,24 @@ pub fn write_to<'a>(
             continue;
         }
         let mut fields = write::attachment_fields(attachment);
-        let raw = media::safe_media_type(&attachment.mime) == "message/rfc822";
+        let encoding = match media::safe_media_type(&attachment.mime).as_str() {
+            // RFC2046 section5.2.1 forbids Base64 for attached messages.
+            "message/rfc822" => Encoding::Binary,
+            // RFC3464 section2.1 requires readable 7bit delivery-status parts.
+            "message/delivery-status" => Encoding::SevenBit,
+            _ => Encoding::Base64,
+        };
         for (name, value) in &mut fields {
             if *name == "Content-Transfer-Encoding" {
-                // RFC 2046 §5.2.1 permits binary for message/rfc822, not base64.
-                *value = if raw { "binary" } else { "base64" }.into();
+                *value = match encoding {
+                    Encoding::Base64 => "base64",
+                    Encoding::SevenBit => "7bit",
+                    Encoding::Binary => "binary",
+                }
+                .into();
             }
         }
-        let leaf = Body::Leaf { fields, part: ContentPart::Attachment(index), raw, text: false };
+        let leaf = Body::Leaf { fields, part: ContentPart::Attachment(index), encoding, text: false };
         if has_html && attachment.inline {
             inline.push(leaf);
         } else {
@@ -105,7 +122,7 @@ pub fn write_to<'a>(
                 ("Content-Disposition", "inline".into()),
             ],
             part: ContentPart::Attachment(index),
-            raw: false,
+            encoding: Encoding::Base64,
             text: false,
         });
     }
@@ -179,14 +196,13 @@ fn write_body<'a>(
             }
             write!(out, "--{boundary}--\r\n")
         }
-        Body::Leaf { part, raw, text, .. } => {
+        Body::Leaf { part, encoding, text, .. } => {
             let reader = open(*part)?;
-            if *raw {
-                copy_raw(reader, out, forbidden.as_bytes())
-            } else if *text {
-                base64_lines(CanonicalText::new(reader), out)
-            } else {
-                base64_lines(reader, out)
+            match encoding {
+                Encoding::SevenBit => copy_raw(reader, out, forbidden.as_bytes(), true),
+                Encoding::Binary => copy_raw(reader, out, forbidden.as_bytes(), false),
+                Encoding::Base64 if *text => base64_lines(CanonicalText::new(reader), out),
+                Encoding::Base64 => base64_lines(reader, out),
             }
         }
     }
@@ -212,17 +228,46 @@ fn base64_lines(mut reader: impl Read, out: &mut dyn Write) -> io::Result<()> {
     }
 }
 
-fn copy_raw(mut reader: impl Read, out: &mut dyn Write, forbidden: &[u8]) -> io::Result<()> {
+fn copy_raw(mut reader: impl Read, out: &mut dyn Write, forbidden: &[u8], seven_bit: bool) -> io::Result<()> {
     let mut block = [0u8; 64 << 10];
     let mut overlap = Vec::new();
+    let mut line_bytes = 0usize;
+    let mut carriage_return = false;
     loop {
         let count = reader.read(&mut block)?;
         if count == 0 {
+            if seven_bit && carriage_return {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "a 7bit MIME part ends with a bare carriage return"));
+            }
             return Ok(());
+        }
+        if seven_bit {
+            for &byte in &block[..count] {
+                if carriage_return {
+                    if byte != b'\n' {
+                        return Err(io::Error::new(io::ErrorKind::InvalidData, "a 7bit MIME part has a bare carriage return"));
+                    }
+                    carriage_return = false;
+                    line_bytes = 0;
+                    continue;
+                }
+                match byte {
+                    b'\r' => carriage_return = true,
+                    0 | b'\n' | 0x80..=0xff => {
+                        return Err(io::Error::new(io::ErrorKind::InvalidData, "a MIME part is not valid 7bit content"));
+                    }
+                    _ => {
+                        line_bytes += 1;
+                        if line_bytes > 998 {
+                            return Err(io::Error::new(io::ErrorKind::InvalidData, "a 7bit MIME part has a line longer than 998 bytes"));
+                        }
+                    }
+                }
+            }
         }
         overlap.extend_from_slice(&block[..count]);
         if overlap.windows(forbidden.len()).any(|bytes| bytes == forbidden) {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "an attached message conflicts with the export boundary"));
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "a raw MIME part conflicts with the export boundary"));
         }
         out.write_all(&block[..count])?;
         let keep = forbidden.len().saturating_sub(1).min(overlap.len());

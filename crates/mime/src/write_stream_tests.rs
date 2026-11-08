@@ -118,3 +118,53 @@ fn text_line_end_canonicalization_handles_cr_lf_crlf_and_consecutive_cr() {
     write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
     assert_eq!(parse(&bytes).body.text, "one\ntwo\nthree\nfour\n\nfive\n");
 }
+
+struct ShortRead<R>(R);
+impl<R: Read> Read for ShortRead<R> {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        let count = bytes.len().min(3);
+        self.0.read(&mut bytes[..count])
+    }
+}
+
+#[test]
+fn delivery_status_and_attached_messages_keep_legal_encoding_and_exact_bytes() {
+    let report = b"Reporting-MTA: dns; mx.example.org\r\n\r\nFinal-Recipient: rfc822; owner@example.org\r\nAction: failed\r\nStatus: 5.1.1\r\n";
+    let attached = b"From: sender@example.org\r\nTo: owner@example.org\r\n\r\nBinary body: \xff\0\r\n";
+    let message = Message {
+        attachments: vec![
+            Attachment::new("delivery.txt", "message/delivery-status", report.to_vec()),
+            Attachment::new("original.eml", "message/rfc822", attached.to_vec()),
+        ],
+        ..Default::default()
+    };
+    let mut bytes = Vec::new();
+    write_to(&message, &WriteOptions::default(), NONCE, &mut |part| Ok(Box::new(ShortRead(open(&message, part)?))), &mut bytes).unwrap();
+    let wire = String::from_utf8_lossy(&bytes);
+    assert!(wire.contains("Content-Transfer-Encoding: 7bit\r\nContent-Disposition: attachment; filename=\"delivery.txt\""));
+    assert!(wire.contains("Content-Transfer-Encoding: binary\r\nContent-Disposition: attachment; filename=\"original.eml\""));
+    let reopened = parse(&bytes);
+    assert_eq!(reopened.attachments.len(), 2);
+    for (actual, expected) in reopened.attachments.iter().zip(&message.attachments) {
+        assert_eq!(actual.mime, expected.mime);
+        assert_eq!(actual.name, expected.name);
+        assert_eq!(actual.data, expected.data);
+    }
+}
+
+#[test]
+fn invalid_delivery_status_content_cannot_be_published_as_valid_7bit() {
+    for data in [
+        b"Bad: \xff\r\n".to_vec(),
+        b"Bad: \0\r\n".to_vec(),
+        b"Bad: bare\n".to_vec(),
+        b"Bad: bare\rX".to_vec(),
+        b"Bad: final\r".to_vec(),
+        vec![b'x'; 999],
+    ] {
+        let message = Message { attachments: vec![Attachment::new("delivery.txt", "message/delivery-status", data)], ..Default::default() };
+        let error = write_to(&message, &WriteOptions::default(), NONCE, &mut |part| Ok(Box::new(ShortRead(open(&message, part)?))), &mut Count(0))
+            .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    }
+}
