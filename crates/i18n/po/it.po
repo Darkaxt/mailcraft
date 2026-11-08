@@ -3388,6 +3388,11 @@ msgid "Downloading pictures…"
 msgstr "Download delle immagini…"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Downloading the complete message…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/graph_fetch.rs
 #, fuzzy
 msgid "Downloading the message first…"
@@ -3883,6 +3888,16 @@ msgid ""
 msgstr ""
 "Esporta\n"
 "cartella"
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Export .eml"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/mail.rs
+msgid "Export Complete Message"
+msgstr ""
 
 #. command label, interface
 #: crates/engine/src/cmd/file.rs crates/ui-egui/src/backstage.rs
@@ -4676,6 +4691,11 @@ msgstr "HTML"
 msgid "HTML Signature"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "HTML source"
+msgstr ""
+
 #. name
 #: crates/engine/src/session.rs
 #, fuzzy
@@ -5196,6 +5216,11 @@ msgstr ""
 #. command label
 #: crates/engine/src/cmd/aliases.rs
 msgid "Inspect Message Identities"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/mail.rs
+msgid "Inspect Message Source"
 msgstr ""
 
 #. command label
@@ -6331,7 +6356,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. interface, name, ribbon location
-#: crates/engine/src/cmd/compose.rs crates/engine/src/cmd/edit.rs crates/engine/src/cmd/format.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs crates/ui-egui/src/tasks_view.rs
+#: crates/engine/src/cmd/compose.rs crates/engine/src/cmd/edit.rs crates/engine/src/cmd/format.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs crates/ui-egui/src/source_pane.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "Message"
 msgstr "Messaggio"
@@ -6351,6 +6376,16 @@ msgstr ""
 #, fuzzy
 msgid "Message Preview"
 msgstr "Anteprima messaggio"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Message Source"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Message source"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -7079,6 +7114,11 @@ msgstr ""
 #, fuzzy
 msgid "Next Week"
 msgstr "Settimana prossima"
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Next page"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8500,6 +8540,11 @@ msgid "Plain Text"
 msgstr "Testo normale"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Plain-text source"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 msgid "Point at a link to see where it goes."
 msgstr ""
@@ -8547,6 +8592,16 @@ msgstr ""
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/send_receive.rs crates/ui-egui/src/ribbon.rs
 msgid "Preferences"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Preparing complete message…"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Preparing source…"
 msgstr ""
 
 #. interface
@@ -8602,6 +8657,11 @@ msgstr "Messaggio precedente"
 #. interface
 #: crates/ui-egui/src/date_picker.rs
 msgid "Previous Month"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Previous page"
 msgstr ""
 
 #. command label, interface, ribbon
@@ -8767,6 +8827,11 @@ msgstr ""
 #, fuzzy
 msgid "Reading Pane"
 msgstr "Riquadro di lettura"
+
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "Reading pane"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -9323,6 +9388,11 @@ msgstr "Riavvia per aggiornare"
 #, fuzzy
 msgid "Restart to update is the owner's click."
 msgstr "Solo il proprietario può fare clic su Riavvia per aggiornare."
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Return to the rendered message"
+msgstr ""
 
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
@@ -10014,6 +10084,11 @@ msgstr "Selezionare un elemento da leggere"
 msgid "Select some text first"
 msgstr "Selezionare prima del testo"
 
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Selectable message source"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -10623,6 +10698,11 @@ msgid "Show the Favorites from Outlook in the folder pane"
 msgstr "Mostra i Preferiti di Outlook nel riquadro delle cartelle"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Show the HTML or plain-text source without loading external content"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Show the calendars of this group"
@@ -11070,6 +11150,11 @@ msgstr "Qualcosa non è andato a buon fine, o non è arrivato come era stato inv
 #, fuzzy
 msgid "Sort by"
 msgstr "Ordina per"
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Source"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -11532,6 +11617,11 @@ msgid "Text Highlight Color"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Text only: nothing runs or downloads. Export reconstructs MIME; original bytes are unavailable."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Text to look for"
@@ -11846,6 +11936,11 @@ msgstr ""
 msgid "The colour is set in Outlook"
 msgstr "Il colore viene impostato in Outlook"
 
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The complete message could not be downloaded. Check Send/Receive before trying again."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/people_merge.rs
 msgid "The contact {id} chosen for a field is not one of those merged."
@@ -12151,6 +12246,11 @@ msgid "The proposed end has to be after the proposed start."
 msgstr "La fine proposta deve essere successiva all'inizio proposto."
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The retained headers, decoded bodies and attachments are exported completely. Original MIME nesting, encoding and signatures cannot be recreated."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/rule_sync.rs
 #, fuzzy
 msgid "The rules on the server couldn't be read: the job stopped unexpectedly"
@@ -12369,6 +12469,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/view_source.rs
 msgid "The source is long: only its first megabyte is shown."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The source reader is closed. Switch to Message and open Source again."
 msgstr ""
 
 #. interface
@@ -14960,6 +15065,11 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "another source export is being prepared; observe its completion first"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "at most 200 messages can be forwarded together"
@@ -14981,6 +15091,16 @@ msgstr ""
 #, fuzzy
 msgid "close a conversation first: each of the 1,000 open has a message selected"
 msgstr "chiudere prima una conversazione: ognuna delle 1.000 aperte ha un messaggio selezionato"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "close a previous source/export token before opening another"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "close is true or false"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/people.rs
@@ -15267,6 +15387,11 @@ msgstr "ha richiesto troppo tempo"
 #. interface
 #: crates/ui-egui/src/opened_message.rs
 msgid "larger than {mb} MB: bring it in with File › Import"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "limit is an integer from 4 to 65536 bytes"
 msgstr ""
 
 #. interface
@@ -15580,6 +15705,11 @@ msgstr "di"
 msgid "of every"
 msgstr "ogni"
 
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "offset is a nonnegative integer"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
@@ -15710,6 +15840,11 @@ msgstr "selezionare prima un'attività"
 msgid "select an appointment first"
 msgstr "selezionare prima un appuntamento"
 
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "select or name a message first"
+msgstr ""
+
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
@@ -15731,6 +15866,21 @@ msgstr "accesso non riuscito: il server non accetta una password su questa conne
 #. interface
 #: crates/ui-egui/src/forms/junk.rs
 msgid "someone@example.org or @example.org"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "source export identifiers are exhausted"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "source pages contain 4 to 65536 bytes"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "streaming source snapshots require the native app; View Source and Save Message As remain available in the browser"
 msgstr ""
 
 #. what a command says
@@ -15859,6 +16009,16 @@ msgid "the check stopped unexpectedly"
 msgstr "la verifica si è interrotta in modo imprevisto"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the complete message is not available locally; download it before opening its source or exporting it"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the complete prepared message is not ready or its token is closed"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs
 #, fuzzy
 msgid "the contact is gone"
@@ -15875,6 +16035,11 @@ msgstr "la conversazione è compressa"
 #, fuzzy
 msgid "the conversation is open"
 msgstr "la conversazione è espansa"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the decoded source is not valid UTF-8 or the offset is inside a character; use its returned continuation offset"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/images.rs
@@ -15904,6 +16069,11 @@ msgstr ""
 #, fuzzy
 msgid "the event is gone"
 msgstr "l'evento non c'è più"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the export did not copy the complete prepared message"
+msgstr ""
 
 #. why a command can't run
 #: crates/engine/src/cmd/folder.rs
@@ -15997,6 +16167,11 @@ msgid "the message can't hold that much text"
 msgstr "il messaggio non può contenere così tanto testo"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the message export is still being prepared"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 msgid "the message has no HTML signature"
 msgstr ""
@@ -16012,6 +16187,11 @@ msgstr "il messaggio non ha l'allegato {index}"
 msgid "the message has no attachments to save"
 msgstr ""
 
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the message is no longer in this mailbox"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/format.rs crates/engine/src/cmd/picture.rs
 #, fuzzy
@@ -16025,6 +16205,16 @@ msgid "the messages to forward are larger than {mb} MB together"
 msgstr "i messaggi da inoltrare superano insieme {mb} MB"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the native source export worker could not start"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the offset is past the end of this source"
+msgstr ""
+
+#. what a command says
 #: crates/model/src/mailbox.rs
 #, fuzzy
 msgid "the parent folder belongs to another account"
@@ -16033,6 +16223,21 @@ msgstr "la cartella padre appartiene a un altro account"
 #. what a command says
 #: crates/model/src/rich/find.rs
 msgid "the places to replace are not places in the text"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the prepared message is no longer available"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the prepared message token is closed"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the prepared message token is closed or belongs to another message"
 msgstr ""
 
 #. what a command says
@@ -16163,6 +16368,16 @@ msgid "the signature was edited as text: its copy is what goes out"
 msgstr ""
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the source export stopped unexpectedly"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the source page is not on a UTF-8 boundary; use its returned continuation offset"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/tasks.rs
 #, fuzzy
 msgid "the task is gone"
@@ -16179,6 +16394,11 @@ msgstr "il testo di «{subject}» non può essere letto su questo computer, quin
 #, fuzzy
 msgid "the top level"
 msgstr "livello superiore"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the visible source page exceeds its representation bound"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/file.rs
@@ -16392,6 +16612,11 @@ msgid "this message isn't downloaded: open it once you're online, then send it a
 msgstr ""
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "this message needs chunked export; read its existing token with mail.exportEml"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
 msgid "this series has too many cancelled days"
@@ -16402,6 +16627,11 @@ msgstr "questa serie ha troppi giorni annullati"
 #, fuzzy
 msgid "this series has too many changed days"
 msgstr "questa serie ha troppi giorni modificati"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "this source token is closed or belongs to another message"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs

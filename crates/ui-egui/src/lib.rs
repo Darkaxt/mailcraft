@@ -185,6 +185,10 @@ mod shared_mailboxes;
 mod signatures;
 #[cfg(test)]
 mod simple_login_ui_tests;
+mod source_pane;
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod source_pane_tests;
 mod symbol;
 mod sync_panel;
 pub mod task_sync;
@@ -1286,6 +1290,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.import", "Import", "File › Open & Export", "{}"),
     ("ui.attach", "Attach File", "Message › Include", "{}"),
     ("ui.toggleFolder", "Expand or Collapse Folder", "Folder", r#"{"id": number}"#),
+    (
+        "ui.source",
+        "Message Source",
+        "Reading pane",
+        r#"{"on"?: bool, "page"?: "next"|"previous", "export"?: bool} — show selectable HTML/plain text in the reading pane; export prepares a complete reconstructed .eml and opens the native save picker. Headless/programmatic callers use mail.sourcePage and mail.exportEml, with explicit close"#,
+    ),
     ("ui.toggleAliases", "Expand or Collapse Alias Filters", "Folder", r#"{"account": number} — changes only the alias section's expanded state"#),
     (
         "ui.openWindow",
@@ -1438,6 +1448,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
 /// The application.
 pub struct MailApp {
     pub(crate) lifecycle: app_lifecycle::State,
+    pub(crate) source_pane: source_pane::Pane,
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
@@ -1921,6 +1932,7 @@ impl MailApp {
             running_after_save: false,
             ctx: None,
             file_dialog: None,
+            source_pane: Default::default(),
             opened_waiting: Default::default(),
             hit: Default::default(),
             reminders: Default::default(),
@@ -2390,6 +2402,7 @@ impl MailApp {
         let s = |k: &str| p.get(k).and_then(Value::as_str);
         let b = |k: &str| p.get(k).and_then(Value::as_bool);
         Some(match id {
+            "ui.source" => source_pane::command(self, p),
             "ui.removeAllData" => self.remove_all_data(),
             "ui.openDataFolder" => self.open_data_folder(),
             "ui.confirmServers" => self.confirm_servers(),
@@ -4573,6 +4586,13 @@ impl MailApp {
             return;
         }
         opening::after(self, ctx);
+        self.session.poll_source_exports();
+        source_pane::tick(self);
+        if self.session.source_export_busy() {
+            // Diagnostic repaint cadence only; actual producer completion ends
+            // the wait, never a deadline or an assumed successful export.
+            ctx.request_repaint_after(std::time::Duration::from_millis(200));
+        }
         // The conversations (#795), which the message list and the reading pane look a message's
         // up in: worked out on the first frame over the mailbox, rather than at the first click
         // or the first list in conversation view, and kept through the changes that don't

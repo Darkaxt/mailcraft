@@ -19,6 +19,37 @@ use crate::{CmdResult, Part, Session, p};
 /// The most bytes of source shown; a longer one is cut at a character, and says so.
 pub const MAX_SOURCE: usize = 1 << 20;
 
+pub(super) fn source_page(s: &mut Session, v: &Value) -> CmdResult {
+    snapshot(s, v, crate::source_exports::Kind::Body)
+}
+pub(super) fn export_eml(s: &mut Session, v: &Value) -> CmdResult {
+    snapshot(s, v, crate::source_exports::Kind::Eml)
+}
+
+fn snapshot(s: &mut Session, v: &Value, kind: crate::source_exports::Kind) -> CmdResult {
+    p::only(v, &["id", "token", "offset", "limit", "close"])?;
+    let id = p::id_strict(v, "id")?.or(s.sel.focus()).ok_or_else(|| fail("select or name a message first"))?;
+    let token = p::id_strict(v, "token")?;
+    let offset = match v.get("offset") {
+        None => 0,
+        Some(value) => value.as_u64().ok_or_else(|| fail("offset is a nonnegative integer"))?,
+    };
+    let limit = match v.get("limit") {
+        None => 32 << 10,
+        Some(value) => value
+            .as_u64()
+            .and_then(|value| usize::try_from(value).ok())
+            .filter(|value| (4..=65536).contains(value))
+            .ok_or_else(|| fail("limit is an integer from 4 to 65536 bytes"))?,
+    };
+    let close = match v.get("close") {
+        None => false,
+        Some(Value::Bool(value)) => *value,
+        _ => return Err(fail("close is true or false")),
+    };
+    s.source_export(id, kind, token, offset, limit, close)
+}
+
 /// `mail.viewSource`.
 pub(super) fn view_source(s: &mut Session, v: &Value) -> CmdResult {
     p::only(v, &["id"])?;

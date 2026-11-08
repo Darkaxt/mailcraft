@@ -6,6 +6,10 @@ How the window compares with the target's. The look is the Craft apps' own (Mail
 a cool grey window and a blue accent, one set of tokens for every pane); the *arrangement* is the one
 Outlook users know. No pixel of the target's artwork is used: every icon is drawn in code.
 
+The native reading pane also has [Source/Message switching](message-source.md):
+selectable formatted HTML/plain text, explicit pages and complete reconstructed
+`.eml` export, using the same native controls and theme tokens.
+
 ## The window
 
 | Part | State | Notes |

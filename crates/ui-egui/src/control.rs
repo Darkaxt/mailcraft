@@ -163,6 +163,7 @@ pub fn inspect(app: &mut MailApp, ctx: &egui::Context) -> Value {
         "dirty": app.session.dirty,
         "syncing": app.syncing(),
         "saving": app.saving_inspect(),
+        "source": app.source_pane.inspect(),
         // A mailbox being read in the background (File › Open).
         "opening": crate::opening::ahead_inspect(app),
         "status": app.status_msg.as_ref().map(|(m, _)| m.clone()),

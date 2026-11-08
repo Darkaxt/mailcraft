@@ -5,6 +5,10 @@
 MailCraft speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio, so
 agents can read, file and write mail and keep a calendar.
 
+[Message source and .eml export](message-source.md) describe `mail.sourcePage`
+and `mail.exportEml`: owned native snapshots, bounded continuation, explicit
+release, and reconstructed MIME provenance without opening a UI.
+
 [SimpleLogin identity and alias inspection](simplelogin.md) use `mail.identity`,
 `aliases.list`, `view.alias` and `ui.toggleAliases` through the existing `execute`
 tool. They preserve transport/reply routing and distinguish reported headers

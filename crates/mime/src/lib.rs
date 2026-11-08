@@ -24,6 +24,9 @@ pub mod rich;
 mod transfer;
 mod words;
 mod write;
+mod write_stream;
+#[cfg(test)]
+mod write_stream_tests;
 
 #[cfg(test)]
 mod fields_tests;
@@ -72,6 +75,7 @@ pub use media::media_type_for;
 pub use parse::{MAX_CATEGORIES, MAX_RECIPIENTS, parse};
 pub use words::{decode_words, encode_words};
 pub use write::{write, written_message_id};
+pub use write_stream::{ContentPart, write_to};
 
 /// How [`write()`] and [`write_mbox`] write a message.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

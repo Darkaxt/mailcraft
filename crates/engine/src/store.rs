@@ -65,7 +65,7 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::io::{Read as _, Write as _};
+use std::io::{Read, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock, Weak};
@@ -992,6 +992,18 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let mut file = AtomicFile::create(path)?;
     file.write_all(bytes)?;
     file.commit()
+}
+
+/// The same durable atomic replacement for a verified export stream. No whole
+/// encoded message buffer is needed; failure preserves the prior destination.
+pub fn write_atomic_from(path: &Path, source: &mut dyn Read, expected: u64) -> std::io::Result<u64> {
+    let mut file = AtomicFile::create(path)?;
+    let bytes = std::io::copy(&mut source.take(expected.saturating_add(1)), &mut file)?;
+    if bytes != expected {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "the prepared export length changed while copying"));
+    }
+    file.commit()?;
+    Ok(bytes)
 }
 
 /// A new file for its owner only, created where nothing is (never through something already
@@ -2624,6 +2636,64 @@ pub struct Content;
 impl ContentSource for Content {
     fn fetch(&self, mailbox: &Path, r: &ContentRef) -> Result<Arc<Vec<u8>>, String> {
         fetch(mailbox, r)
+    }
+
+    fn open(&self, mailbox: &Path, r: &ContentRef) -> Result<Box<dyn Read + Send>, String> {
+        let wanted = Ref::from_model(r);
+        let dir = blob_dir(&resolve(mailbox));
+        let (sub, path) = blob_path(&dir, &wanted.hash).ok_or("the retained content has no valid name")?;
+        if wanted.len > MAX_BLOB || !Folders::new().real(&wanted.hash, &sub) {
+            return Err("the retained content folder is missing or not a plain folder".into());
+        }
+        let (file, len) = open_plain(&path).ok_or("the retained content is missing or not a plain file")?;
+        if len != wanted.len {
+            return Err("the retained content length is damaged".into());
+        }
+        Ok(Box::new(VerifiedContent { file, wanted, count: 0, hash: Some(ring::digest::Context::new(&ring::digest::SHA256)), failed: false }))
+    }
+}
+
+/// Bounded read with the same integrity contract as `fetch`; validation failure
+/// is an error, never an apparently successful short file. Exporters consume EOF
+/// before publishing their private output.
+struct VerifiedContent {
+    file: fs::File,
+    wanted: Ref,
+    count: u64,
+    hash: Option<ring::digest::Context>,
+    failed: bool,
+}
+
+impl Read for VerifiedContent {
+    fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
+        let damaged = || std::io::Error::new(std::io::ErrorKind::InvalidData, "retained content is missing or damaged");
+        if self.failed {
+            return Err(damaged());
+        }
+        if out.is_empty() || self.hash.is_none() {
+            return Ok(0);
+        }
+        let left = self.wanted.len.saturating_sub(self.count).saturating_add(1);
+        let room = out.len().min(usize::try_from(left).unwrap_or(usize::MAX));
+        let bytes = out.get_mut(..room).ok_or_else(damaged)?;
+        let count = self.file.read(bytes)?;
+        if count > 0 {
+            self.count = self.count.saturating_add(count as u64);
+            if self.count > self.wanted.len {
+                self.failed = true;
+                return Err(damaged());
+            }
+            if let Some(hash) = &mut self.hash {
+                hash.update(&bytes[..count]);
+            }
+            return Ok(count);
+        }
+        let matches = self.hash.take().is_some_and(|hash| hash.finish().as_ref() == &self.wanted.hash.0[..]) && self.count == self.wanted.len;
+        if !matches {
+            self.failed = true;
+            return Err(damaged());
+        }
+        Ok(0)
     }
 }
 

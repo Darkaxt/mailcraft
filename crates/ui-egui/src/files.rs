@@ -178,12 +178,23 @@ pub(crate) fn open(app: &mut MailApp, purpose: &str) {
     let _ = ask(app, FileDialogRequest::Open { purpose: purpose.to_string() }, AfterPick::Open(purpose.to_string(), asking));
 }
 
+fn release_export(app: &mut MailApp, after: &AfterPick) {
+    if let AfterPick::Export { command, params } = after
+        && command == "file.exportMessage"
+        && let (Some(id), Some(token)) = (params.get("id").and_then(Value::as_u64), params.get("token").and_then(Value::as_u64))
+    {
+        let _ = app.session.run("mail.exportEml", &json!({"id":id,"token":token,"close":true}));
+    }
+}
+
 fn ask(app: &mut MailApp, req: FileDialogRequest, after: AfterPick) -> Result<Value, String> {
     if app.file_dialog.is_some() {
+        release_export(app, &after);
         app.status(tl!("A file dialog is already open."));
         return Ok(json!({"pending": "fileDialog"}));
     }
     let Some(show) = &app.services.file_dialog else {
+        release_export(app, &after);
         let msg = tl!("File dialogs aren't available here").to_string();
         app.status(msg.clone());
         return Err(msg);
@@ -214,7 +225,10 @@ pub(crate) fn poll(app: &mut MailApp) -> Option<Result<Value, String>> {
     }
     // A dialog for one file answers with one; anything more is not taken.
     picked.truncate(1);
-    let Some(path) = picked.pop() else { return Some(Ok(json!({"cancelled": true}))) };
+    let Some(path) = picked.pop() else {
+        release_export(app, &d.after);
+        return Some(Ok(json!({"cancelled": true})));
+    };
     let r = match d.after {
         AfterPick::Open(purpose, asking) => opened_path(app, &purpose, &path, asking),
         AfterPick::Tree => app.run("ui.dialog", json!({"name": "importTree", "path": path})),
@@ -223,7 +237,11 @@ pub(crate) fn poll(app: &mut MailApp) -> Option<Result<Value, String>> {
             if let Some(o) = params.as_object_mut() {
                 o.insert("path".into(), json!(path));
             }
+            let release = AfterPick::Export { command: command.clone(), params: params.clone() };
             let r = app.execute(&command, params);
+            if r.is_err() {
+                release_export(app, &release);
+            }
             // (Report a Problem says itself where its file went and what to do with it.)
             if r.is_ok() && command == "ui.reportProblem" {
                 // The file is saved and GitHub's page open: now the window it came from closes.

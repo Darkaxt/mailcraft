@@ -69,6 +69,19 @@ const NAME_PIECE: usize = 52;
 /// clean 7-bit text goes as it is, as RFC 2046 asks. Boundaries are made from the content, so the
 /// same message always gives the same bytes.
 pub fn write(message: &Message, opts: &WriteOptions) -> Vec<u8> {
+    let mut out = headers(message, opts);
+    let body = body(message);
+    for (name, value) in &body.fields {
+        write_field(&mut out, name, value);
+    }
+    out.extend_from_slice(b"\r\n");
+    out.extend_from_slice(&body.content);
+    out.extend_from_slice(b"\r\n");
+    out
+}
+
+/// The same sanitized message headers for buffered and streaming exports.
+pub(super) fn headers(message: &Message, opts: &WriteOptions) -> Vec<u8> {
     let mut out = Vec::new();
     write_field(&mut out, "Date", &mailcraft_time::format_rfc5322(message.date, opts.offset_minutes));
     addresses(&mut out, "From", std::slice::from_ref(&message.from));
@@ -140,13 +153,6 @@ pub fn write(message: &Message, opts: &WriteOptions) -> Vec<u8> {
         }
     }
     write_field(&mut out, "MIME-Version", "1.0");
-    let body = body(message);
-    for (name, value) in &body.fields {
-        write_field(&mut out, name, value);
-    }
-    out.extend_from_slice(b"\r\n");
-    out.extend_from_slice(&body.content);
-    out.extend_from_slice(b"\r\n");
     out
 }
 
@@ -297,6 +303,14 @@ fn text_part(subtype: &str, text: &str) -> Part {
     let (encoding, content) =
         if seven_bit { ("7bit", text.replace('\n', "\r\n").into_bytes()) } else { ("quoted-printable", transfer::qp_encode(text.as_bytes())) };
     Part { fields: vec![("Content-Type", format!("text/{subtype}; charset=utf-8")), ("Content-Transfer-Encoding", encoding.to_string())], content }
+}
+
+/// Reuse the exact filename, disposition, content-id and header sanitization;
+/// metadata construction never loads or encodes the attachment's payload.
+pub(super) fn attachment_fields(attachment: &Attachment) -> Vec<(&'static str, String)> {
+    let mut metadata = attachment.clone();
+    metadata.data = std::sync::Arc::new(Vec::new());
+    attachment_part(&metadata).fields
 }
 
 fn attachment_part(attachment: &Attachment) -> Part {

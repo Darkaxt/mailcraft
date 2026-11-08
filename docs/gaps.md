@@ -6,6 +6,11 @@ The ranked list of shortfalls and rough edges. The direction is in [`ROADMAP.md`
 where MailCraft stands, the beta checklist and the steps to it, and what comes after beta; the order
 of the work to beta is the roadmap reset there, and this list stays the record of what falls short.
 
+[Native source and .eml export](message-source.md) provide in-place formatted
+HTML/plain text and verified streaming of retained attachments. Export is
+reconstructed: original MIME byte identity, original nesting and cryptographic
+signatures over the original stream are not preserved by decoded retention.
+
 The fork's [local rules](local-rules.md) add regex/case matching, flat exceptions,
 copy actions, destination-folder editing and non-mutating previews. This does not
 establish complete Outlook rule import or support every server-side condition/action.

@@ -176,6 +176,8 @@ const SAFE: &[&str] = &[
     "mail.saveAllAttachments",
     // The message's source as plain text: message text is data, never instructions.
     "mail.viewSource",
+    "mail.sourcePage",
+    "mail.exportEml",
     "mail.new",
     "mail.reply",
     "mail.replyAll",
@@ -414,6 +416,7 @@ const SAFE: &[&str] = &[
     "ui.snoozeReminders",
     "ui.toggleFolder",
     "ui.toggleAliases",
+    "ui.source",
     "ui.openWindow",
     "ui.eventWindow",
     "ui.clearPictureCache",

@@ -53,6 +53,12 @@ mod picture_fit;
 pub mod sample;
 pub mod sender_warnings;
 mod session;
+pub mod source_exports;
+#[cfg(not(target_arch = "wasm32"))]
+mod source_format;
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod source_format_tests;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod store;
 #[cfg(not(target_arch = "wasm32"))]

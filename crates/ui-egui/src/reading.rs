@@ -125,6 +125,7 @@ pub fn show(app: &mut MailApp, ui: &mut Ui) {
     // memory first, when the mailbox keeps it on disk; the message then shows whole in this
     // very frame. (One that can't be read says so in its text, once.)
     if let Some(id) = app.session.sel.focus()
+        && !app.source_pane.showing(id)
         && app.session.needs_load_for_display(id)
     {
         let _ = app.session.load_for_display(id);
@@ -178,6 +179,17 @@ fn draft_bar(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
 /// The reading pane shows the selected message with it, and a message window its own.
 pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place) {
     let ctx = ui.ctx().clone();
+    if place == Place::Pane {
+        crate::source_pane::toolbar(app, ui, m.id);
+        if app.source_pane.showing(m.id) {
+            // This precedes rendered-body layout, sender pictures and remote
+            // image work. Source is only selectable plain text.
+            select::begin(app, ui, m, place);
+            header(app, ui, m, place, |_, _, _| {});
+            crate::source_pane::show(app, ui);
+            return;
+        }
+    }
     // A window shows its own copy of the message: what the mailbox keeps on disk is brought in
     // here, and the window takes the whole message up at its next frame.
     if place != Place::Quote && app.session.needs_load_for_display(m.id) {
@@ -427,7 +439,7 @@ fn header(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place, pictur
         // Who and when.
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(vec2(36.0, 36.0), Sense::hover());
-            if m.id == 0 {
+            if m.id == 0 || (place == Place::Pane && app.source_pane.showing(m.id)) {
                 // (Not in the mailbox: nothing is asked of the web for its sender.)
                 crate::widgets::avatar(ui, r.center(), 17.0, &m.from);
             } else {

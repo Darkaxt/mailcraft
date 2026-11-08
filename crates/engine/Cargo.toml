@@ -35,6 +35,7 @@ image = { workspace = true }
 # keeps the mailbox as one file.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { workspace = true }
+tempfile = { workspace = true }
 
 # `O_NONBLOCK` for opening a file named from outside (`io::regular_file`).
 [target.'cfg(unix)'.dependencies]

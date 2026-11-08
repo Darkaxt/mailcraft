@@ -64,6 +64,15 @@ pub fn write_from_mail(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     Ok(())
 }
 
+/// An owned native export stream, committed atomically before success and marked
+/// with the same Internet provenance as other mail downloads.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn write_stream_from_mail(path: &Path, source: &mut dyn std::io::Read, expected: u64) -> std::io::Result<u64> {
+    let bytes = crate::store::write_atomic_from(path, source, expected)?;
+    mark_from_internet(path);
+    Ok(bytes)
+}
+
 /// [`write_from_mail`] into a new file only: never over one that is there, nor through a link
 /// (an error of kind `AlreadyExists` then). What was written of a file that couldn't be written
 /// whole is removed.

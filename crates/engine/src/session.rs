@@ -1133,6 +1133,9 @@ pub struct Session {
     /// content folder beside the mailbox file, where there is one (the desktop); the browser,
     /// which keeps everything in memory, never asks.
     pub content_source: Option<Arc<dyn crate::io::ContentSource>>,
+    /// Bounded, temporary source/export readers. Never mailbox data or undo state.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) source_exports: crate::source_exports::Exports,
     /// Counts the parts brought into memory (caches that read bodies key on it with `rev`).
     loads: u64,
     /// Messages the last search left out because their bodies weren't in memory and loading them
@@ -1272,6 +1275,8 @@ impl Session {
             opened: None,
             sender_checks: Default::default(),
             content_source: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            source_exports: Default::default(),
             loads: 0,
             unsearched: 0,
             search_time: SEARCH_TIME,
@@ -2066,7 +2071,7 @@ impl Session {
 
     /// Where content comes from: what the host set, else the content folder beside the mailbox
     /// file (`crate::store`), where this build has one.
-    fn source(&self) -> Option<Arc<dyn crate::io::ContentSource>> {
+    pub(crate) fn source(&self) -> Option<Arc<dyn crate::io::ContentSource>> {
         if let Some(source) = &self.content_source {
             return Some(source.clone());
         }

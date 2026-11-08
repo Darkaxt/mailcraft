@@ -12,6 +12,7 @@ const SENDER_WRITERS: &[(&str, &str)] = &[
     // `deliver`: every export (`file.exportMessage`, `exportFolder`, `exportCalendar`,
     // `exportContacts`) and Save Attachment.
     ("crates/engine/src/cmd/mod.rs", "mark::write_from_mail("),
+    ("crates/engine/src/source_exports.rs", "mark::write_stream_from_mail("),
     // Save All Attachments.
     ("crates/engine/src/cmd/save_all.rs", "mark::write_new_from_mail("),
     // `mailcraft-cli mcp --files DIR`: what an agent saves.

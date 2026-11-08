@@ -113,6 +113,9 @@ impl Fetching {
 
 /// The commands other than a forward that need a message whole, and the message they are about.
 fn needs_whole(app: &MailApp, id: &str, params: &Value) -> Option<Id> {
+    if matches!(id, "mail.sourcePage" | "mail.exportEml" | "file.exportMessage") && params.get("token").is_some() {
+        return None;
+    }
     if !matches!(
         id,
         "mail.reply"
@@ -125,6 +128,8 @@ fn needs_whole(app: &MailApp, id: &str, params: &Value) -> Option<Id> {
             | "mail.saveAllAttachments"
             | "mail.openAttachment"
             | "mail.viewSource"
+            | "mail.sourcePage"
+            | "mail.exportEml"
             | "compose.attachItem"
     ) {
         return None;
@@ -138,7 +143,9 @@ fn needs_whole(app: &MailApp, id: &str, params: &Value) -> Option<Id> {
     use mailcraft_engine::p;
     let named = match id {
         "mail.reply" | "mail.replyAll" | "mail.replyAndDelete" | "mail.editDraft" | "mail.resend" => p::message_strict(params).ok()?,
-        "mail.viewSource" | "mail.saveAllAttachments" | "compose.attachItem" => p::id_strict(params, "id").ok()?,
+        "mail.viewSource" | "mail.sourcePage" | "mail.exportEml" | "mail.saveAllAttachments" | "compose.attachItem" => {
+            p::id_strict(params, "id").ok()?
+        }
         _ => p::message_strict(params).ok()?,
     };
     to_fetch(app, id, named.or(selected)?)
@@ -237,7 +244,7 @@ impl MailApp {
     /// an owner command or replacing another foreground download. The caller observes
     /// the existing native job and reads the result once its content is available.
     pub(crate) fn fetch_source_for_agent(&mut self, id: &str, params: &Value) -> Option<Result<Value, String>> {
-        if id != "mail.viewSource" {
+        if !matches!(id, "mail.viewSource" | "mail.sourcePage" | "mail.exportEml") {
             return None;
         }
         let message = needs_whole(self, id, params)?;

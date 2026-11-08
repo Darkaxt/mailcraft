@@ -168,7 +168,8 @@ impl MailApp {
             Some("a message being written must be saved and closed first")
         } else if self.windows.has_open() || self.session.signature_edit.is_some() {
             Some("an editor or secondary window is open")
-        } else if self.sync_rx.is_some()
+        } else if self.session.source_export_busy()
+            || self.sync_rx.is_some()
             || self.graph_rx.is_some()
             || self.graph_pieces.is_some()
             || !self.sync_queue.is_empty()

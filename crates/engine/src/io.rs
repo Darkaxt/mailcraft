@@ -279,6 +279,19 @@ pub trait ContentSource: Send + Sync {
     /// The bytes kept under `r` for the mailbox file at `mailbox`, checked against the length and
     /// SHA-256 the reference names (anything else is "missing or damaged", never bytes).
     fn fetch(&self, mailbox: &std::path::Path, r: &ContentRef) -> Result<std::sync::Arc<Vec<u8>>, String>;
+
+    /// A retained part as a stream. Consume through EOF before publishing its
+    /// output: a native source validates its length and SHA-256 while reading.
+    /// Hosts that already keep content in memory reuse their verified buffer.
+    fn open(&self, mailbox: &std::path::Path, r: &ContentRef) -> Result<Box<dyn std::io::Read + Send>, String> {
+        struct Bytes(std::sync::Arc<Vec<u8>>);
+        impl AsRef<[u8]> for Bytes {
+            fn as_ref(&self) -> &[u8] {
+                self.0.as_slice()
+            }
+        }
+        Ok(Box::new(std::io::Cursor::new(Bytes(self.fetch(mailbox, r)?))))
+    }
 }
 
 pub use mailcraft_model::ContentRef;

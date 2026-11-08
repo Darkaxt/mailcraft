@@ -16,6 +16,9 @@ pub mod files;
 pub mod server;
 #[cfg(test)]
 mod simple_login_tests;
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod source_export_tests;
 pub mod tools;
 
 pub use backend::{Backend, Remote};

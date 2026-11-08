@@ -27,6 +27,8 @@ const CONTENT: &[&str] = &[
     "mail.identity",
     "aliases.list",
     "mail.viewSource",
+    "mail.sourcePage",
+    "mail.exportEml",
     "mail.list",
     "calendar.get",
     "calendar.list",
@@ -51,6 +53,7 @@ const CONTENT: &[&str] = &[
 const TEXT_KEYS: &[&str] = &[
     "subject",
     "body",
+    "source",
     // What the sender hid in the message, kept for search and agents (#599): message text too.
     "hiddenText",
     "snippet",
