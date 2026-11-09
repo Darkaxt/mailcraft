@@ -383,10 +383,26 @@ parameters.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-08 | minor | Document bounded native source/export snapshots and reconstruction provenance. |
+| 2026-11-08 | patch | Headless normal close persists changed engine options without rewriting desktop settings; failed saving retains the owner. |
+| 2026-11-08 | minor | Persistent retained-content search: literal/case matching, coverage, original-token source inspection and local native/OCR extraction. |
+| 2026-11-08 | patch | Distinguish full-message reads from unavailable content and document native download receipts. |
+| 2026-11-08 | minor | #911: a Gmail Inbox's messages carry `gmailCategory`; `gmail:` searches Gmail's categories and `folder.select` takes `gmail` |
+| 2026-11-08 | minor | #911: `view.gmailCategories` shows Gmail's categories as folders or as tabs |
 | 2026-11-08 | patch | AU3-R1: what is framed as untrusted also covers a message's source, the searches built from a message, an online meeting's link, categories, identifiers and a contact's details |
 | 2026-11-08 | patch | AU3-R2: with `--connect`, a request is sent again only when it never reached the app; a lost answer is an error that says the app may have run it |
 | 2026-11-08 | patch | AU3-R4: a message on stdio is at most 1 MiB; a longer line is answered with an error and the next one served |
+| 2026-11-07 | patch | Reconcile upstream message-removal undo consent with action-based filing-rule access. |
+| 2026-11-07 | minor | Document read-only identity and alias inspection, virtual alias views and native section expansion. |
+| 2026-11-07 | minor | Document destination-folder rule editing, regex/case matching, exceptions, previews, automatic sender consolidation and action-based rule consent; preserve unrelated native approvals. |
+| 2026-11-07 | minor | Document nonblocking headless rules-permission diagnostics and explicit request-only provider authorization. |
+| 2026-11-07 | minor | Consent follows destructive effects: reads and reversible account, settings, signature, filing and save/close operations need no blanket grant; unsaved-data loss, sending, provider approval and file boundaries remain protected. |
 | 2026-11-07 | patch | AU3-14: a new sender warning kind, `linksUnchecked`, for a message with more looks than are checked |
+| 2026-11-06 | minor | Document opt-in resident memory attribution without content loading or ordinary inspection overhead. |
+| 2026-11-06 | minor | Describe native hidden startup, observed window state and safe MCP hide/close acknowledgement semantics. |
+| 2026-11-06 | minor | Document the native headless mail host, retained consent/lifecycle rules and manual Microsoft To Do connection. |
+| 2026-11-06 | patch | Headless startup validates saved content without warming desktop body buffers; on-demand reads and desktop loading are preserved. |
+| 2026-11-06 | minor | Document the live-app bridge's no-replay option for coordinated workflows. |
 | 2026-11-04 | patch | #473 follow-up: `safe`, `delete` and `edit.undo` name messages among what an undo or redo removes (a server copy of a Microsoft or Exchange server account goes to Deleted Items instead); an undo or redo that puts back accounts or a change that writes to people and takes messages away is asked once, the question names the messages, and a yes covers Delete too |
 | 2026-11-03 | patch | #566 follow-up: `rules.move` of a rule its server has that deletes mail (or moves it to Deleted Items, or has parts MailCraft doesn't know) is `delete`, as `rules.enable` is |
 | 2026-11-02 | minor | #566: `delete` also covers deleting a rule its server has or may have, a rule that deletes mail or moves it to Deleted Items or a folder under it going to its server or switched on there, and a server's rule with parts MailCraft doesn't know switched on |

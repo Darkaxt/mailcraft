@@ -1,1 +1,0 @@
-- Keep large saved message bodies on disk during headless startup instead of warming the desktop reading cache. Content validation and on-demand offline reads are preserved.

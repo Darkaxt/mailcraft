@@ -1,1 +1,0 @@
-- Inspect resident mail and index buffers with opt-in memory attribution; ordinary mailbox inspection remains unchanged and the diagnostic does not load content.

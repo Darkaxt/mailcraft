@@ -1,1 +1,0 @@
-| 2026-11-07 | MCP consent follows destructive effects across mailbox, account, settings and signature operations. Reversible edits and ordinary cross-account filing are prompt-free; unsaved edits and destructive consent stay bound to the state shown. |

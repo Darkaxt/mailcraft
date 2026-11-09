@@ -277,6 +277,8 @@ sign-in is not public-app approval. See [release readiness](releasing.md#google-
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-08 | minor | #911: Gmail's inbox categories shown as five folders under a Gmail account's Inbox, read with Gmail's own search; the two account settings, the `gmail:` search and what agents see |
+| 2026-11-08 | minor | #911: Gmail's categories as tabs above the Inbox (View › Gmail Categories), how they are chosen with the mouse and the keyboard |
 | 2026-11-08 | minor | #232: Google sign-in is for invited testers while Google reviews MailCraft, with how to join; a new Gmail account starts on an app password |
 | 2026-11-04 | minor | #232: document primary-address identity checks and unsupported Workspace aliases; keep the public client-ID option while taking the matching registration secret only from build or environment configuration, including migration from the former preference |
 | 2026-11-03 | major | Desktop Google sign-in, app-password alternative, explicit conversion, registration overrides, restrictions and verified acceptance scope (#232) |

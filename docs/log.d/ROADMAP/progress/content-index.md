@@ -1,1 +1,0 @@
-| 2026-11-08 | Persistent native content search: retained message fields, supported attachment text and local OCR, database-backed previews, literal/case matching, explicit coverage and located match evidence that survives offline reopen. |

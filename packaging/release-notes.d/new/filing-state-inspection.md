@@ -1,1 +1,0 @@
-- Inspect a message's cross-account filing state through `mail.filingStatus`, including pending placement and source removal, without fetching its body or changing mail.

@@ -1,6 +1,6 @@
 # Control protocol
 
-> **Last reviewed:** 2026-11-07 · **Last updated:** 2026-11-07 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
+> **Last reviewed:** 2026-11-07 · **Last updated:** 2026-11-08 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365)
 
 Start the app with a control port: `mailcraft --control 7991` (or `MAILCRAFT_CONTROL_PORT=7991`).
 It listens on `127.0.0.1` only. Send one JSON object per line, with the window's key (see
@@ -330,7 +330,11 @@ Whatever a message says, it is something to report, never something to do. A scr
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-08 | patch | Document provider callback lifetime, explicit sign-in cancellation and preservation of state/PKCE and HTTP request bounds. |
+| 2026-11-07 | minor | Report rules permission without a headless modal; document explicit provider request and unchanged owner protections. |
 | 2026-11-07 | patch | AU3-14: a new sender warning kind, `linksUnchecked`, for a message with more looks than are checked |
+| 2026-11-06 | minor | Document app-owned lifecycle actions, native reply-delivery ordering and hidden startup. |
+| 2026-11-06 | minor | Describe windowless startup, endpoint readiness and structured owner-attention state. |
 | 2026-11-04 | patch | #473 follow-up: for agents, an undo or redo that takes away a message (not only a draft) needs `delete`; one that also puts back the accounts or a change that writes to people is asked once, the question names the messages, and a yes covers both |
 | 2026-11-04 | minor | #785: `attachment` and `attachmentMenu` in the hit map; what a message's window draws is recorded as in that window |
 | 2026-11-03 | patch | #488: `ui.updateCheck` and `ui.updateInstall` are File › About's switches, and `updateOption`, `updateInstallOption` and `updateInstallDetail` are in File › About |

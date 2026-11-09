@@ -1,1 +1,0 @@
-- Headless rules checks no longer open an invisible permission dialog that blocks normal close. MCP can explicitly request Microsoft's approval page; the person still approves there, and background checks never open it automatically.

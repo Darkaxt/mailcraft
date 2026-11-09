@@ -1,1 +1,0 @@
-- Preserve explicitly changed preferences, including offline mode, across normal headless restarts without replacing desktop layout or unrelated settings.

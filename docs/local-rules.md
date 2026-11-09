@@ -1,6 +1,6 @@
 # Local mail rules
 
-> **Last reviewed:** 2026-11-07 · **Last updated:** 2026-11-07 · **Change:** minor
+> **Last reviewed:** 2026-11-07 · **Last updated:** 2026-11-08 · **Change:** minor
 
 Open a destination folder's context menu and choose **Rules for This Folder**.
 A settings icon also appears beside a folder with assigned rules, including
@@ -195,3 +195,6 @@ permission to execute a rule, change settings or bypass an owner question.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-08 | patch | Explain durable filing identity, offline retention and startup content-check ordering. |
+| 2026-11-08 | minor | Document per-message filing-state inspection and the distinction between recorded provider state and a fresh server lookup. |
+| 2026-11-07 | minor | Document local matching, destination-scoped management, explicit action failures, safe exception storage, automatic sender consolidation and action-based MCP consent. |

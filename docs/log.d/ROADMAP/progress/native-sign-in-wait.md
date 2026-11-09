@@ -1,1 +1,0 @@
-| 2026-11-08 | Native sign-in and explicit provider consent keep their loopback callback ready until a validated answer or explicit cancellation; finite HTTP request limits and PKCE/state checks remain in force. |

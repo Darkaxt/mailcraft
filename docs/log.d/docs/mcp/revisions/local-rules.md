@@ -1,1 +1,0 @@
-| 2026-11-07 | minor | Document destination-folder rule editing, regex/case matching, exceptions, previews, automatic sender consolidation and action-based rule consent; preserve unrelated native approvals. |

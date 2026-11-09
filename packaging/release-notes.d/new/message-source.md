@@ -1,1 +1,0 @@
-- Native reading-pane Source/Message switching, selectable formatted HTML and plain text, and complete reconstructed `.eml` export with verified streaming attachments. MCP source/export pages support bounded, explicit continuation and owned cleanup.

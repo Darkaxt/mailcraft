@@ -1,1 +1,0 @@
-- All inboxes combines the real inboxes across accounts without copying mail. Filtering, search and replies retain each message's account. Account and alias context menus offer persistent pastel or custom origin colours and reset; an alias can override its account's colour. Combined rows also name their origin so colour is not the only cue.

@@ -1,1 +1,0 @@
-- Read HTML mail in a coherent dark palette with separate background, text and border adaptation inspired by Dark Reader. Preserve readable sender-designed dark colours and original image pixels. Body text reaches 4.5:1 contrast; high contrast uses the owner's strong palette. Accent/high-contrast changes refresh already-open mail without changing its source or reply content.

@@ -1,1 +1,0 @@
-- Native sign-in keeps its local callback listener ready while you finish on the provider's page, without a five-minute app deadline. Cancel Sign-in still ends the request explicitly.

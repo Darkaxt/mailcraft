@@ -1,1 +1,0 @@
-- Search retained mail and supported attachment contents offline with literal phrases, case-sensitive matching, explicit coverage and located native/OCR evidence.

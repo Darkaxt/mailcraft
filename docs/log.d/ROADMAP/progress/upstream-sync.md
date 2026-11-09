@@ -1,1 +1,0 @@
-| 2026-11-07 | Integrate upstream 0.11.0 while preserving native headless hosting, action-based filing rules, deferred content classification and reported alias identities. Pending rule fetches retain queued-message and edited-draft protection. |

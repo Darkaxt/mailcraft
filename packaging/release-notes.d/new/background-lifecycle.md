@@ -1,1 +1,0 @@
-- Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.

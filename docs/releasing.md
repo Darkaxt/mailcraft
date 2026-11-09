@@ -38,7 +38,7 @@ retire disposable package/download trees with the installed transactional-cleanu
 helper; no packaging script recursively deletes a previous tree. Preserve the
 versioned final MSI/portable/runtime ZIPs and required release receipts.
 
-> **Last reviewed:** 2026-10-18 · **Last updated:** 2026-11-07 · **Change:** minor · **Status:** releases v0.1.0 to v0.5.0 were built and published by `release.yml` and `package.yml` on GitHub's runners, for every platform in the table below; v0.5.0 is the first with MailCraft's own release signature (`SHA256SUMS.txt.sig`, verified by the in-use key), and none is signed by the operating systems' signatures yet (gap #18).
+> **Last reviewed:** 2026-10-18 · **Last updated:** 2026-11-09 · **Change:** minor · **Status:** releases v0.1.0 to v0.5.0 were built and published by `release.yml` and `package.yml` on GitHub's runners, for every platform in the table below; v0.5.0 is the first with MailCraft's own release signature (`SHA256SUMS.txt.sig`, verified by the in-use key), and none is signed by the operating systems' signatures yet (gap #18).
 
 This file is MailCraft's release recipe. The scripts in `packaging/` are WordCraft's with MailCraft's
 names, and differ from them only where the program does (what it opens, its description, its
@@ -408,6 +408,7 @@ and in the Flatpak (which is granted `org.freedesktop.secrets` for it).
 
 | Date | Change |
 |---|---|
+| 2026-11-09 | minor: fork checksum trust, selected Windows x64 native runtime handoff, and final portable/MSI release preparation |
 | 2026-11-07 | AU3-04: release programs are built in jobs without signing material and handed on by digest; the jobs that sign never run cargo or a built program, the programs are run in check jobs without secrets, the checksums are signed with OpenSSL, and `cargo xtask workflows` checks the shape |
 | 2026-11-06 | Pull requests leave status lines alone; the release pull request sets each one from the rows it joins in |
 | 2026-11-04 | The rows of the documents' revision histories and of the progress log are fragments, `docs/log.d/<document>/{revisions,progress}/<name>.md`, joined into their tables by `cargo xtask docs-log --write` in the release's pull request, beside the release notes' |

@@ -1,1 +1,0 @@
-- Windows window controls share MailCraft's top row with search, quick actions and the account controls. Narrow windows retain search through compact diagnostic buttons. Native dragging, resize, system menu and Snap Layouts use the same rendered caption geometry; closing retains MailCraft's unsaved-draft handling.

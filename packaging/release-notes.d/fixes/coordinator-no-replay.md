@@ -1,1 +1,0 @@
-- Coordinated live-app MCP workflows can use `--no-replay` to retain an unknown request outcome instead of reconnecting and sending it again.

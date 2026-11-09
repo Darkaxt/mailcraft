@@ -58,3 +58,4 @@ neither a search nor an alias count claims to reconstruct it.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-07 | minor | Document header-reported forwarding identity, virtual account-scoped aliases, unchanged reply routing, explicit local predicates and metadata coverage. |

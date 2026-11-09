@@ -1,6 +1,6 @@
 # Where MailCraft falls short of Outlook
 
-> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-11-07 · **Change:** minor
+> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-11-09 · **Change:** minor
 
 The ranked list of shortfalls and rough edges. The direction is in [`ROADMAP.md`](../ROADMAP.md):
 where MailCraft stands, the beta checklist and the steps to it, and what comes after beta; the order
@@ -17,6 +17,20 @@ establish complete Outlook rule import or support every server-side condition/ac
 Its [SimpleLogin views](simplelogin.md) distinguish reported original sender,
 receiving alias and actual reply routing. Coverage is limited to downloaded
 retained metadata, with missing or ambiguous historical identities explicit.
+
+The fork also provides All inboxes, manual account and alias row colours, a
+unified filing view over the existing destination tree, and local saved search
+folders. Filing reviews overlapping destinations before changing sender rules;
+saved searches keep exact scope anchors and message identities. Windows uses one
+integrated header, and dark email rendering adjusts text, backgrounds and borders
+while preserving message source and image pixels.
+
+Windows x64 release packages include the selected native document workers and
+English, Spanish and Greek OCR. Coverage reports missing, pending and unsupported
+content explicitly. Other architecture/platform packages do not include those
+x64 workers; provider content that has not been downloaded remains outside the
+local content index.
+
 One entry per shortfall, ranked by how much it stops an Outlook user from switching
 (**B** = blocks beta). Each says what's missing, the evidence, who it hurts, a rough estimate of
 focused work, and which document tracks it: `ROADMAP.md` (the beta checklist, or after beta) or a
@@ -100,7 +114,14 @@ new performance measurements for this index or proof of undiscovered mail.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-09 | minor | Record unified inbox/filing/search-folder and dark/header behavior, Windows x64 worker packaging, and explicit local-content/platform coverage limits |
+| 2026-11-08 | minor | Distinguish complete retained-content export from unavailable original MIME byte identity. |
+| 2026-11-08 | minor | Describe retained native content indexing and explicit coverage; distinguish it from historical word-index performance measurements. |
+| 2026-11-07 | minor | Record SimpleLogin header-based viewing and explicit historical metadata coverage limitations. |
 | 2026-11-07 | patch | AU3-V1: gap 5: Autodiscover asks before the sign-in goes to any host in the owner's domain but its Autodiscover host and the hosts its SRV record names, naming the host whole |
+| 2026-11-06 | minor | Record account-connection queue correction without closing broader live-interoperability gaps. |
+| 2026-11-06 | minor | Record headless mail hosting and manual To Do without closing broader interoperability or resource gaps. |
+| 2026-11-06 | minor | Distinguish local regex/destination rule management from complete Outlook rule-import and server-side parity. |
 | 2026-11-05 | minor | #815 part 3: gap 12: a `.pst` file's contacts and distribution lists import too; calendar, tasks and notes left for a later part |
 | 2026-11-05 | minor | #815 part 2: gap 12: a `.pst` file's mail imports (preview), with its report; calendar, contacts, tasks and notes left for a later part |
 | 2026-11-05 | minor | #745: gap 8: selecting copies nothing, a change to the mailbox costs what it changed (chunked messages) and the conversations are kept through it: a click 1.3–3.9 ms, a Shift+click 0.1 ms, Undo of 1,000 deletes 30 + 14 ms at 326,000 messages |
