@@ -239,3 +239,6 @@ mod tls_test_support;
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod verifier_tests;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod update_fork_tests;

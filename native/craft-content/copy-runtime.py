@@ -30,14 +30,10 @@ def files(root):
                 else:raise ValueError(f"Unexpected runtime member type: {path}")
 
 
-def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source",type=Path,required=True)
-    parser.add_argument("--destination",type=Path,required=True)
-    args=parser.parse_args()
-    plain(args.source)
-    source=args.source.resolve(strict=True)
-    destination=args.destination.absolute()
+def copy_runtime(source,destination):
+    plain(source)
+    source=source.resolve(strict=True)
+    destination=destination.absolute()
     if destination.exists():raise FileExistsError("Preserve the existing packaged runtime")
     for parent in destination.parents:
         if parent.exists():plain(parent)
@@ -83,7 +79,15 @@ def main():
     with target.open("xb") as output:
         output.write(manifest_bytes);output.flush();os.fsync(output.fileno())
     rows.append(dict(path="runtime.json",bytes=len(manifest_bytes),sha256=hashlib.sha256(manifest_bytes).hexdigest()))
-    print(json.dumps(dict(copied=True,nativeLaunched=False,payload=rows)))
+    return dict(copied=True,nativeLaunched=False,payload=rows)
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source",type=Path,required=True)
+    parser.add_argument("--destination",type=Path,required=True)
+    args=parser.parse_args()
+    print(json.dumps(copy_runtime(args.source,args.destination)))
 
 
 if __name__=="__main__":main()

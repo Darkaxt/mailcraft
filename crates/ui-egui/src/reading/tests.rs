@@ -371,7 +371,14 @@ fn write_the_corpus_as_a_mailbox() {
         return;
     };
     let dir = std::path::PathBuf::from(dir);
-    let (mut app, ids) = corpus_app(true);
+    let (mut app, mut ids) = corpus_app(true);
+    let inbox = app.session.mailbox.inbox().unwrap();
+    for (name, html) in super::dark_palette_tests::scenarios() {
+        let mut message = super::dark_palette_tests::message(html);
+        message.folder = inbox;
+        message.subject = name.into();
+        ids.push((name, app.session.mailbox.add_message(message).unwrap()));
+    }
     app.execute("file.save", json!({"path": dir.join("corpus.mailcraft")})).unwrap();
     let list: String = ids.iter().map(|(name, id)| format!("{id}\t{name}\n")).collect();
     std::fs::write(dir.join("corpus-ids.txt"), list).unwrap();
@@ -1177,8 +1184,8 @@ fn the_reading_pane_names_nothing_that_could_fetch() {
         checked += 1;
     }
     assert_eq!(
-        checked, 18,
-        "reading.rs, colors (and its tests), fonts (and its tests), header tests, images (and its tests), invitation, layout, remote, select, sharing (and its tests), view (and its zoom tests) and warnings (and its tests)"
+        checked, 19,
+        "reading.rs, colors (and its tests), semantic dark-palette tests, fonts (and its tests), header tests, images (and its tests), invitation, layout, remote, select, sharing (and its tests), view (and its zoom tests) and warnings (and its tests)"
     );
 }
 

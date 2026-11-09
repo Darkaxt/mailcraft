@@ -443,13 +443,17 @@ fn respond(s: &mut Session, v: &Value, mode: ComposeMode) -> CmdResult {
         _ => None,
     };
     let body = if quoting && quote.is_none() { quoted(s, &m) } else { String::new() };
-    let sig = chosen_signature(s, m.account, None, true);
+    let account = m.origin_account();
+    if s.mailbox.account(account).is_none() {
+        return Err(fail("the receiving account is no longer configured; restore it or compose a new message with an explicit sender"));
+    }
+    let sig = chosen_signature(s, account, None, true);
     // A line to write on, a blank one, then the signature above the original.
     let body = if sig.is_some() { format!("\n{}", body.strip_prefix('\n').unwrap_or(&body)) } else { body };
     let mut c = Compose {
         mode,
         source: Some(m.id),
-        account: m.account,
+        account,
         to: format_list(&to),
         cc: format_list(&cc),
         subject: prefixed(if mode == ComposeMode::Forward { "FW" } else { "RE" }, &m.subject),
@@ -571,7 +575,10 @@ fn forward_attached(s: &mut Session, ids: &[Id], focus: Id) -> CmdResult {
         attachments.push(Attachment { name, ..a });
     }
     let m = s.mailbox.message(focus).ok_or_else(|| failed!("no message with id {id}", id = focus))?;
-    let account = m.account;
+    let account = m.origin_account();
+    if s.mailbox.account(account).is_none() {
+        return Err(fail("the receiving account is no longer configured; restore it or compose a new message with an explicit sender"));
+    }
     // Several have no subject: one message's would name the others wrongly. The owner writes it.
     let subject = match ids {
         [_] => prefixed("FW", &m.subject),

@@ -13,6 +13,9 @@ pub const HEADER: &str = "// SPDX-FileCopyrightText: MailCraft contributors\n// 
 // Their exact source and original hashes are recorded in native/craft-content/
 // sources.json. No directory or source file is exempt from the header check.
 fn expected_header(path: &str) -> &'static str {
+    if path.starts_with("vendor/winit/") {
+        return "// SPDX-FileCopyrightText: The winit contributors\n// SPDX-License-Identifier: Apache-2.0\n";
+    }
     match path {
         "native/craft-content/adapters/gridcraft/engine.rs" => {
             "// SPDX-FileCopyrightText: 2026 Protagonist Labs, Pathweft and MailCraft contributors\n// SPDX-License-Identifier: MIT\n"

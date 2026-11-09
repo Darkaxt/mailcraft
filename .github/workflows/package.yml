@@ -136,6 +136,12 @@ jobs:
           MAILCRAFT_GOOGLE_CLIENT_ID: ${{ secrets.MAILCRAFT_GOOGLE_CLIENT_ID }}
           MAILCRAFT_GOOGLE_CLIENT_SECRET: ${{ secrets.MAILCRAFT_GOOGLE_CLIENT_SECRET }}
         run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -BuildOnly
+      - name: Bind the qualified seven-core and OCR release input
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B packaging/windows/prepare-runtime-input.py --handoff handoff --download-root "$env:RUNNER_TEMP/mailcraft-content-release-input"
       - name: Hand the programs on by digest
         id: seal
         shell: bash
@@ -244,12 +250,17 @@ jobs:
         shell: pwsh
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/prebuilt
+          MAILCRAFT_CONTENT_RUNTIME: ${{ matrix.arch == 'x64' && format('{0}/prebuilt/content-runtime', github.workspace) || '' }}
           WINDOWS_CERTIFICATE: ${{ inputs.sign && secrets.WINDOWS_CERTIFICATE || '' }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ inputs.sign && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
           AZURE_SIGNING_ENDPOINT: ${{ inputs.sign && secrets.AZURE_SIGNING_ENDPOINT || '' }}
           AZURE_SIGNING_ACCOUNT: ${{ inputs.sign && secrets.AZURE_SIGNING_ACCOUNT || '' }}
           AZURE_CERT_PROFILE: ${{ inputs.sign && secrets.AZURE_CERT_PROFILE || '' }}
         run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -SkipBuild -NoRun
+      - name: Retain the verified native runtime input in the release
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: Get-ChildItem -LiteralPath prebuilt -Filter '*-windows-x64-content-runtime.zip' | Copy-Item -Destination dist/release
       - name: Hand the release files on by digest
         id: seal
         shell: bash

@@ -25,12 +25,12 @@ use crate::NetError;
 use crate::http::{self, Request, Url};
 
 /// The public keys of MailCraft's release signature, in base64 (32 bytes each): the key the
-/// release workflow signs `SHA256SUMS.txt` with, and a spare whose private half is kept offline
-/// until the first is lost or stolen. A release signed by either is one of the project's; a copy
+/// fork release workflow signs `SHA256SUMS.txt` with, and a separately retained recovery spare.
+/// Private keys belong outside the repository. A release signed by either is one of the fork's; a copy
 /// that updates itself takes nothing that isn't (`update_download`). An empty one is no key:
 /// with neither, nothing is ever downloaded. `cargo xtask release-key new` prints both
 /// (docs/releasing.md).
-pub const RELEASE_KEYS: [&str; 2] = ["Mu5RF5oJpFhDGfa5wpgznC39tDC8vbUbyNkiAMdluPQ=", "XV6WRgW06/mGhZCHhFVKMIEZDmLevQduZPLSj/UW5zI="];
+pub const RELEASE_KEYS: [&str; 2] = ["RSN0v7ZMyfaaO+HjwsK9A1zkwpRo5UIviqUHbZdQq3k=", "TZ2z+YtbVqIAqv+mTUkjpHzj7nUNN3cNp22fhE24lJQ="];
 
 /// The repository this build came from: `https://github.com/{owner}/{repo}`.
 pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");

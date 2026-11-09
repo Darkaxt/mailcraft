@@ -185,6 +185,7 @@ const VIEW: &[Row] = &[
 
 const FOLDER: &[Row] = &[
     Cmd("folder.new"),
+    Cmd("folder.newSearchFolder"),
     Cmd("folder.rename"),
     Cmd("folder.move"),
     Cmd("folder.delete"),

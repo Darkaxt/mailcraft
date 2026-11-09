@@ -1,0 +1,1 @@
+- Windows x64 packages include the source-bound native attachment indexing workers, local OCR, English/Spanish/Greek models and their licences. Portable and MSI formats carry the same manifest-bound runtime. This fork checks its own release repository and uses its own checksum-signing keys, preserving update preferences.

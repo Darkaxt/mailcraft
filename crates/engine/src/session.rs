@@ -176,21 +176,8 @@ impl Filter {
     }
 }
 
-/// Where a search looks.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Scope {
-    /// The folder in view.
-    #[default]
-    Folder,
-    /// The folder in view and every folder under it (#493).
-    Subfolders,
-    /// Every folder of the account in view, except Deleted Items, Junk and their subfolders; a
-    /// shared mailbox is an account of its own (#493).
-    Mailbox,
-    /// Every folder of every account, except Deleted Items and Junk.
-    Everywhere,
-}
+/// Where an ad-hoc or saved search looks. Shared with mailbox-owned search definitions.
+pub use mailcraft_model::SearchScope as Scope;
 
 /// Where the reading pane sits.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -285,8 +272,20 @@ pub struct ViewState {
     #[serde(skip)]
     pub open: Vec<(Id, mailcraft_model::ThreadKey)>,
     pub filter: Filter,
+    /// The Gmail category of the folder in view the list shows (#911): that Inbox's mail Gmail
+    /// put in it. Only while that folder is in view (`folder.select` with `gmail`); `None` for
+    /// the whole folder. Not kept between sessions: the window opens on the whole folder.
+    #[serde(skip)]
+    pub gmail: Option<(Id, mailcraft_model::GmailCategory)>,
+    /// Gmail's categories as a row of tabs above a Gmail Inbox's list, in place of the five
+    /// folders under it in the folder pane (#911; `view.gmailCategories`). Off: as folders.
+    pub gmail_tabs: bool,
     pub search: String,
     pub scope: Scope,
+    /// Canonical real Outlook account for the unified filing tree; ordinary views have none.
+    pub filing: Option<Id>,
+    /// Selected saved virtual query. Typing a different search leaves its definition intact.
+    pub search_folder: Option<Id>,
     pub reading_pane: Pane,
     pub folder_pane: bool,
     pub calendar: CalView,
@@ -324,8 +323,12 @@ impl Default for ViewState {
             conversations: false,
             open: Vec::new(),
             filter: Filter::All,
+            gmail: None,
+            gmail_tabs: false,
             search: String::new(),
             scope: Scope::Folder,
+            filing: None,
+            search_folder: None,
             reading_pane: Pane::Right,
             folder_pane: true,
             calendar: CalView::Week,
@@ -419,6 +422,9 @@ pub struct Stays {
 pub(crate) struct ListOf {
     folder: Id,
     filter: Filter,
+    /// The Gmail category it shows, if any (#911).
+    gmail: Option<(Id, mailcraft_model::GmailCategory)>,
+    virtual_view: (bool, Option<Id>),
     search: Option<(mailcraft_model::search::Query, Scope)>,
     /// The day, the first day of the week and the zone, for a search with dates in it:
     /// `received:today` is other messages tomorrow (#329).
@@ -432,7 +438,14 @@ impl ListOf {
         let query = mailcraft_model::search::Query::parse(&view.search);
         let when = query.has_dates().then(when);
         let search = (!query.is_empty()).then_some((query, view.scope));
-        ListOf { folder: view.folder, filter: view.filter, search, when }
+        ListOf {
+            folder: view.folder,
+            filter: view.filter,
+            gmail: view.gmail,
+            virtual_view: (view.scope == Scope::Inboxes, view.filing),
+            search,
+            when,
+        }
     }
 }
 
@@ -1119,7 +1132,7 @@ pub struct Session {
     pub(crate) aliases_cache: Option<((u64, usize), Arc<crate::aliases::Inventory>)>,
     /// The conversation last asked for ([`Session::conversation`]), as of the revision, message
     /// count and message it was worked out for.
-    conversation_cache: Option<((u64, usize, Id), Arc<Vec<Id>>)>,
+    conversation_cache: Option<((u64, usize, Id, bool), Arc<Vec<Id>>)>,
     /// The conversations of the mailbox ([`Session::threads`]), as of the revision and message
     /// count they were worked out at.
     pub(crate) threads_cache: crate::conversations::ThreadsCache,
@@ -1592,18 +1605,24 @@ impl Session {
         self.sel.stays = Some(Arc::new(Stays::of(shown, &self.sel.messages, &self.list_of())));
     }
 
-    /// The list shows the whole folder in view: the All tab, and no search.
+    /// The list shows the whole folder in view: the All tab, none of Gmail's categories (#911),
+    /// and no search.
     pub(crate) fn show_whole_folder(&mut self) {
         self.view.filter = Filter::All;
+        self.view.gmail = None;
         self.clear_search();
+        self.view.scope = Scope::Folder;
     }
 
     /// No search: the list is the folder's again, and what the servers found for the search is
     /// forgotten.
     pub(crate) fn clear_search(&mut self) {
+        self.view.search_folder = None;
         self.view.search.clear();
         self.server_search.forget();
-        self.view.scope = Scope::Folder;
+        if self.view.scope != Scope::Inboxes {
+            self.view.scope = Scope::Folder;
+        }
     }
 
     /// Counts the times content was brought into memory or let go of ([`Session::load_where`]):
@@ -1701,14 +1720,15 @@ impl Session {
     /// account, same topic, one thread, oldest first), kept while the mailbox doesn't change:
     /// the reading pane asks at every frame.
     pub fn conversation(&mut self, id: Id) -> Arc<Vec<Id>> {
-        let key = (self.rev, self.mailbox.messages.len(), id);
+        let key = (self.rev, self.mailbox.messages.len(), id, self.origin_conversations());
         if let Some((at, thread)) = &self.conversation_cache
             && *at == key
         {
             return thread.clone();
         }
         let threads = self.threads();
-        let thread = self.mailbox.conversation_in(&threads, id);
+        let thread =
+            if self.origin_conversations() { self.mailbox.conversation_origins_in(&threads, id) } else { self.mailbox.conversation_in(&threads, id) };
         let thread = Arc::new(thread);
         self.conversation_cache = Some((key, thread.clone()));
         thread
@@ -1742,13 +1762,13 @@ impl Session {
         // at each run (how far it has read, the server's ids), which would build the list again
         // every time mail is looked for.
         let folders = |mb: &Mailbox| mb.folders.iter().map(|f| (f.id, f.account, f.parent, f.kind)).collect::<Vec<_>>();
-        let accounts = |mb: &Mailbox| mb.accounts.iter().map(|a| (a.id, a.kind, a.email.clone())).collect::<Vec<_>>();
+        let accounts = |mb: &Mailbox| mb.accounts.iter().map(|a| (a.id, a.kind, a.email.clone(), a.hide_gmail_categories)).collect::<Vec<_>>();
         if folders(before) != folders(&self.mailbox) || accounts(before) != accounts(&self.mailbox) || before.categories != self.mailbox.categories {
             return None;
         }
         let same = |a: &Message, b: &Message| {
-            (a.folder, a.account, a.received, a.date, a.pinned, a.importance, a.unfetched)
-                == (b.folder, b.account, b.received, b.date, b.pinned, b.importance, b.unfetched)
+            (a.folder, a.account, a.received, a.date, a.pinned, a.importance, a.unfetched, a.gmail_category)
+                == (b.folder, b.account, b.received, b.date, b.pinned, b.importance, b.unfetched, b.gmail_category)
                 && a.subject == b.subject
                 && a.from == b.from
                 && a.categories == b.categories
@@ -1872,7 +1892,7 @@ impl Session {
         {
             let counts = Arc::make_mut(counts);
             for m in read.iter().filter_map(|id| mb.message(*id)) {
-                counts.read_changed(m.folder, m.account, m.read);
+                counts.read_changed(m.folder, m.account, m.gmail_category, m.read);
             }
             *at = (rev, mb.messages.len());
         }
@@ -1896,7 +1916,7 @@ impl Session {
     /// What the message list is built from, but for the content brought into memory or let go of.
     fn list_state(&self) -> String {
         format!(
-            "{}|{}|{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{:?}|{}",
             self.rev,
             self.today().to_days(),
             // `received:"last week"` is other days for another first day of the week, and
@@ -1905,6 +1925,8 @@ impl Session {
             self.zone_key(),
             self.words_finished(),
             self.prefs.show_groups,
+            // (Not saved with the rest of the view, so not in its text.)
+            self.view.gmail,
             serde_json::to_string(&self.view).unwrap_or_default()
         )
     }
@@ -2741,7 +2763,17 @@ impl Session {
 
     /// Keep the view and the selection pointing at things that exist.
     pub fn normalize(&mut self) {
-        if self.mailbox.folder(self.view.folder).is_none() {
+        if self.view.search_folder.is_some_and(|id| !self.mailbox.search_folders.iter().any(|search| search.id == id)) {
+            self.view.search_folder = None;
+        }
+        if self
+            .view
+            .filing
+            .is_some_and(|id| !self.mailbox.account(id).is_some_and(|a| a.kind == mailcraft_model::AccountKind::Microsoft && !a.is_shared()))
+        {
+            self.view.filing = None;
+        }
+        if self.mailbox.folder(self.view.folder).is_none() && crate::cmd::search_folders::active_problem(self).is_none() {
             self.view.folder = self.mailbox.inbox().unwrap_or(0);
         }
         self.select_in_view();

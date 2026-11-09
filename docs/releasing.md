@@ -1,5 +1,43 @@
 # Releasing MailCraft
 
+## Fork Windows native-content input
+
+This fork checks releases at `Darkaxt/mailcraft` and carries its own release
+checksum public keys. Preserve the owner's update opt-in; changing the source
+does not enable updates. Private signing keys belong in protected local settings
+and the existing protected release environment, never this repository.
+
+Windows x64 portable and MSI packages include all seven Craft content workers,
+the local Tesseract runtime, English/Spanish/Greek models, provenance and licences.
+`native/craft-content/release-runtime.json` pins the independently qualified
+manifest and its exact source inputs. Requalify and update that selection if an
+adapter, shared protocol or selected source changes. Do not substitute the latest
+installed Craft engines for these source-bound workers.
+
+Before pushing the final version tag, prepare a ZIP of the qualified runtime's
+contents (with `runtime.json` at the ZIP root) and attach it to that version's
+draft release as `mailcraft-<version>-windows-x64-content-runtime.zip`. This is an
+unpublished release input, not an intermediate product publication. The existing
+Windows build job binds every member to the committed manifest and hands the
+runtime on with its existing SHA-256 job digest. The signing/package job copies
+the same runtime into the portable tree and generated MSI component fragment,
+and retains the input ZIP in the final checksum-bound release asset set. It
+does not execute a worker, OCR or a program built by the preceding job. The
+existing release checks and explicit final publication still apply. Dry runs
+also need this prepared input for their selected version.
+
+For local packaging, pass the exact qualified folder with
+`packaging/windows/package.ps1 -Arch x64 -ContentRuntime <folder>` (or set
+`MAILCRAFT_CONTENT_RUNTIME` for that child only). Build-only compilation does not
+package it; an x64 package without it fails. Other architectures never receive
+the x64 payload. `-PackageRoot` selects a new exact scratch directory; on the
+maintained Windows host its default is a unique `D:/Temp/mailcraft-package-*`
+directory for native/package I/O. Existing scratch and deliverables are preserved.
+The receipt records the path and input. After consumers/verification finish,
+retire disposable package/download trees with the installed transactional-cleanup
+helper; no packaging script recursively deletes a previous tree. Preserve the
+versioned final MSI/portable/runtime ZIPs and required release receipts.
+
 > **Last reviewed:** 2026-10-18 · **Last updated:** 2026-11-07 · **Change:** minor · **Status:** releases v0.1.0 to v0.5.0 were built and published by `release.yml` and `package.yml` on GitHub's runners, for every platform in the table below; v0.5.0 is the first with MailCraft's own release signature (`SHA256SUMS.txt.sig`, verified by the in-use key), and none is signed by the operating systems' signatures yet (gap #18).
 
 This file is MailCraft's release recipe. The scripts in `packaging/` are WordCraft's with MailCraft's

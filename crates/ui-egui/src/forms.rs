@@ -27,6 +27,9 @@ pub enum Form {
     Categories(Box<categories::CategoriesForm>),
     /// The mail rules, and a builder for a new one.
     Rules(Box<rules::RulesForm>),
+    /// A sender-filing conflict: review real destinations before any side effect.
+    Filing(Box<crate::filing::FilingForm>),
+    SearchFolder(Box<crate::search_folders::SearchForm>),
     /// Junk E-mail Options: the Safe and Blocked Senders lists (#504).
     Junk(Box<junk::JunkForm>),
 }
@@ -49,6 +52,8 @@ impl Form {
             "account" => Form::Account(Box::new(account::AccountForm::open(app, params)?)),
             "categories" => Form::Categories(Box::new(categories::CategoriesForm::new(s, params)?)),
             "rules" => Form::Rules(Box::new(rules::RulesForm::new(s, params))),
+            "filing" => Form::Filing(Box::new(crate::filing::FilingForm::new(params))),
+            "searchFolder" => Form::SearchFolder(Box::new(crate::search_folders::SearchForm::new(app, params)?)),
             "junkOptions" => Form::Junk(Box::new(junk::JunkForm::new(s, params))),
             _ => return None,
         })
@@ -63,6 +68,8 @@ impl Form {
             Form::Account(_) => "account",
             Form::Categories(_) => "categories",
             Form::Rules(_) => "rules",
+            Form::Filing(_) => "filing",
+            Form::SearchFolder(_) => "searchFolder",
             Form::Junk(_) => "junkOptions",
         }
     }
@@ -76,6 +83,8 @@ impl Form {
             Form::Account(f) => f.title(),
             Form::Categories(_) => tl!("Categories").to_string(),
             Form::Rules(_) => tl!("Rules").to_string(),
+            Form::Filing(_) => tl!("Choose a filing destination").to_string(),
+            Form::SearchFolder(_) => tl!("Search folder").to_string(),
             Form::Junk(_) => tl!("Junk E-mail Options").to_string(),
         }
     }
@@ -88,6 +97,8 @@ impl Form {
             Form::Account(_) => crate::account_setup::WIDTH,
             Form::Categories(_) => 420.0,
             Form::Rules(_) => 620.0,
+            Form::Filing(_) => 660.0,
+            Form::SearchFolder(_) => 600.0,
             Form::Junk(_) => junk::WIDTH,
         }
     }
@@ -101,6 +112,8 @@ impl Form {
             Form::Account(f) => f.show(app, ui),
             Form::Categories(f) => f.show(app, ui),
             Form::Rules(f) => f.show(app, ui),
+            Form::Filing(f) => f.show(app, ui),
+            Form::SearchFolder(f) => f.show(app, ui),
             Form::Junk(f) => f.show(app, ui),
         }
     }
@@ -157,7 +170,7 @@ impl Form {
             Form::Event(f) => f.editing(),
             Form::Contact(f) => f.editing(),
             Form::Task(f) => f.editing(),
-            Form::Account(_) | Form::Categories(_) | Form::Rules(_) | Form::Junk(_) => None,
+            Form::Account(_) | Form::Categories(_) | Form::Rules(_) | Form::Filing(_) | Form::SearchFolder(_) | Form::Junk(_) => None,
         }
     }
 
@@ -169,7 +182,8 @@ impl Form {
             Form::Event(f) => f.dirty(),
             Form::Contact(f) => f.dirty(),
             Form::Task(f) => f.dirty(),
-            Form::Account(_) | Form::Categories(_) | Form::Rules(_) | Form::Junk(_) => false,
+            Form::SearchFolder(f) => f.dirty(),
+            Form::Account(_) | Form::Categories(_) | Form::Rules(_) | Form::Filing(_) | Form::Junk(_) => false,
         }
     }
 
@@ -187,7 +201,8 @@ impl Form {
             Form::Event(f) => (if f.is_meeting() { "meeting" } else { "appointment" }, f.subject().to_string()),
             Form::Contact(f) => ("contact", f.subject()),
             Form::Task(f) => ("task", f.subject().to_string()),
-            Form::Account(_) | Form::Categories(_) | Form::Rules(_) | Form::Junk(_) => return None,
+            Form::SearchFolder(f) => ("search folder", f.title()),
+            Form::Account(_) | Form::Categories(_) | Form::Rules(_) | Form::Filing(_) | Form::Junk(_) => return None,
         };
         self.changed().then(|| serde_json::json!({"form": form, "title": title}))
     }

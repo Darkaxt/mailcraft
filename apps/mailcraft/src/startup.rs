@@ -72,6 +72,7 @@ impl Startup {
             app.settings_unread = self.settings_unread;
             app.ui.window = self.restored;
             app.integrated_titlebar = cfg!(target_os = "macos");
+            app.windows_titlebar = cfg!(target_os = "windows");
             if self.headless {
                 app.start_headless();
             } else if self.hidden {

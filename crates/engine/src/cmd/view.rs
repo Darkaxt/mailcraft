@@ -21,10 +21,16 @@ pub fn specs() -> Vec<CommandSpec> {
             .pure()
             .params("{} — answers the reminders that are due now: events inside their reminder time, or that ended less than a day ago"),
         CommandSpec::new("view.mail", "Mail", "Navigation", mail).reads().key("Mod+1"),
+        CommandSpec::new("view.allInboxes", "All inboxes", "Folder Pane", all_inboxes).reads()
+            .params("{} — virtual union of each account's actual Inbox; preserves message and account identities without filing or copying mail"),
         CommandSpec::new("view.calendar", "Calendar", "Navigation", calendar).reads().key("Mod+2"),
         CommandSpec::new("view.people", "People", "Navigation", people).reads().key("Mod+3"),
         CommandSpec::new("view.tasks", "Tasks", "Navigation", tasks).reads().key("Mod+4"),
         CommandSpec::new("view.readingPane", "Reading Pane", "View › Layout", reading_pane).reads().params(r#"{"value": "right"|"bottom"|"off"}"#),
+        CommandSpec::new("view.gmailCategories", "Gmail Categories", "View › Layout", gmail_categories)
+            .reads()
+            .when(crate::gmail::offered)
+            .params(r#"{"value": "folders"|"tabs"} — Gmail's inbox categories as five folders under a Gmail account's Inbox in the folder pane, or as a row of tabs above its message list (#911)"#),
         CommandSpec::new("view.folderPane", "Folder Pane", "View › Layout", folder_pane).reads().params(TOGGLE),
         CommandSpec::new("view.conversations", "Show as Conversations", "View › Messages", conversations).reads().params(TOGGLE),
         CommandSpec::new("view.sort", "Arrange By", "View › Arrangement", sort)
@@ -37,7 +43,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.search", "Search", "Search", search)
             .reads()
             .key("Mod+E / F3")
-            .params(r#"{"query": string, "scope"?: "folder"|"subfolders"|"mailbox"|"everywhere"}"#),
+            .params(r#"{"query": string, "scope"?: "folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes"}"#),
         CommandSpec::new("view.clearSearch", "Close Search", "Search", clear_search).reads(),
         CommandSpec::new("view.searchSuggestions", "Search Suggestions", "Search", search_suggestions_command).reads().params(
             r#"{"query": string, "cursor"?: number (characters; default: the end)} — answers what the search box offers for the word the cursor is at the end of: keywords, categories, what is: and has: take, and after from:, to: and cc: people from the contacts and the mail on this computer. Each with "name" (what the list shows), "text" (what goes in place of characters "start" to "end"), and "email" (a person's address) or "color" (a category)"#,
@@ -80,6 +86,33 @@ fn mail(s: &mut Session, _: &Value) -> CmdResult {
     module(s, Module::Mail)
 }
 
+fn all_inboxes(s: &mut Session, _: &Value) -> CmdResult {
+    s.view.gmail = None;
+    s.view.search_folder = None;
+    s.view.filing = None;
+    s.view.module = Module::Mail;
+    s.view.scope = Scope::Inboxes;
+    s.view.search.clear();
+    s.view.open.clear();
+    s.sel.messages.clear();
+    s.server_search.forget();
+    // Keep a real folder as the normal compose/navigation fallback; never invent a folder ID.
+    s.view.folder = s
+        .mailbox
+        .default_account()
+        .and_then(|a| s.mailbox.folder_of_kind(a.id, mailcraft_model::FolderKind::Inbox))
+        .or_else(|| s.mailbox.folders.iter().find(|f| f.kind == mailcraft_model::FolderKind::Inbox).map(|f| f.id))
+        .unwrap_or(0);
+    let counts = s.folder_counts();
+    let unread = s
+        .mailbox
+        .folders
+        .iter()
+        .filter(|f| f.kind == mailcraft_model::FolderKind::Inbox)
+        .fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)));
+    Ok(json!({"scope":"inboxes","unread":unread,"shown":crate::list::listed(&s.rows())}))
+}
+
 fn calendar(s: &mut Session, _: &Value) -> CmdResult {
     module(s, Module::Calendar)
 }
@@ -95,6 +128,15 @@ fn tasks(s: &mut Session, _: &Value) -> CmdResult {
 fn reading_pane(s: &mut Session, v: &Value) -> CmdResult {
     s.view.reading_pane = parse_enum::<Pane>(p::req_str(v, "value")?).ok_or_else(|| bad("`value` is right, bottom or off"))?;
     Ok(json!({"value": s.view.reading_pane}))
+}
+
+fn gmail_categories(s: &mut Session, v: &Value) -> CmdResult {
+    s.view.gmail_tabs = match p::req_str(v, "value")? {
+        "folders" => false,
+        "tabs" => true,
+        _ => return Err(bad("`value` is folders or tabs")),
+    };
+    Ok(json!({"value": if s.view.gmail_tabs { "tabs" } else { "folders" }}))
 }
 
 fn folder_pane(s: &mut Session, v: &Value) -> CmdResult {
@@ -127,12 +169,16 @@ fn filter(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn search(s: &mut Session, v: &Value) -> CmdResult {
+    if let Some(why) = super::search_folders::active_problem(s) {
+        return Err(super::fail(why));
+    }
+    s.view.search_folder = None;
     let query = p::req_str(v, "query")?.to_owned();
     if query.len() > mailcraft_model::search::text::MAX_QUERY_BYTES {
         return Err(bad("search query is longer than 16384 UTF-8 bytes"));
     }
     if let Some(scope) = p::str(v, "scope") {
-        s.view.scope = parse_enum::<Scope>(scope).ok_or_else(|| bad("`scope` is folder, subfolders, mailbox or everywhere"))?;
+        s.view.scope = parse_enum::<Scope>(scope).ok_or_else(|| bad("`scope` is folder, subfolders, mailbox, everywhere or inboxes"))?;
     }
     // A new search forgets what the servers found for the last (R6.2).
     if s.view.search != query {

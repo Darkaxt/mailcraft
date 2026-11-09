@@ -5,7 +5,7 @@
 .DESCRIPTION
   Produces, in $env:DIST (default: dist/release):
     mailcraft-<version>-windows-<arch>.msi            per-machine installer (WiX v5)
-    mailcraft-<version>-windows-<arch>-portable.zip   mailcraft.exe + mailcraft-cli.exe
+    mailcraft-<version>-windows-<arch>-portable.zip   app, CLI and (x64) native content runtime
 
   The binaries link the C runtime statically (+crt-static), so neither the MSI nor the portable
   zip needs the Visual C++ redistributable. Signing is delegated to sign.ps1 (skipped with a
@@ -27,10 +27,17 @@ param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
   [switch] $SkipBuild,
   [switch] $BuildOnly,
+  # Exact qualified runtime input; mandatory for x64 packaging, not for -BuildOnly.
+  [string] $ContentRuntime = $env:MAILCRAFT_CONTENT_RUNTIME,
+  # Fresh disposable package scratch. Retire through transactional-cleanup after last use.
+  [string] $PackageRoot = '',
   # Don't run the built CLI at the end (the job that signs never runs what was built).
   [switch] $NoRun
 )
 $ErrorActionPreference = 'Stop'
+if (Test-Path -LiteralPath (Join-Path $PSScriptRoot '../../plan/COMPILATION-SUSPENDED.md')) {
+  throw 'The user suspended compilation and candidate/package validation until whole-project source readiness'
+}
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 function Invoke-Native([string] $What, [scriptblock] $Block) {
@@ -56,6 +63,21 @@ $Target = switch ($Arch) { 'x64' { 'x86_64-pc-windows-msvc' } 'x86' { 'i686-pc-w
 $Dist = if ($env:DIST) { $env:DIST } else { Join-Path $Root 'dist\release' }
 $TargetDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $Root 'target' }
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
+if (-not $PackageRoot) {
+  # Native/package small-file I/O stays on D: on the maintained Windows host.
+  $scratchBase = if ($env:GITHUB_ACTIONS -eq 'true') { $env:RUNNER_TEMP } else { 'D:\Temp' }
+  $PackageRoot = Join-Path $scratchBase ("mailcraft-package-$Version-$Arch-" + [guid]::NewGuid().ToString('N'))
+}
+$PackageRoot = [IO.Path]::GetFullPath($PackageRoot)
+if (Test-Path -LiteralPath $PackageRoot) { throw 'Choose a new exact package scratch root; existing output is preserved' }
+New-Item -ItemType Directory -Path $PackageRoot | Out-Null
+$previousTemp = $env:TEMP
+$previousTmp = $env:TMP
+$env:TEMP = $PackageRoot
+$env:TMP = $PackageRoot
+try {
+[ordered]@{version=$Version;arch=$Arch;packageScratch=$PackageRoot;contentRuntime=$ContentRuntime;cleanup='transactional-cleanup after all consumers exit';storageReason='native/package small-file I/O'} |
+  ConvertTo-Json | Set-Content -LiteralPath (Join-Path $PackageRoot 'package-inputs.json') -Encoding utf8
 
 if (-not $env:MAILCRAFT_BUILD_SHA) { $env:MAILCRAFT_BUILD_SHA = (git -C $Root rev-parse HEAD 2>$null) }
 if (-not $env:MAILCRAFT_BUILD_DATE) { $env:MAILCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd') }
@@ -94,10 +116,14 @@ foreach ($check in @(@('mailcraft.exe', 2), @('mailcraft-cli.exe', 3))) {
   if ($h.Subsystem -ne $check[1]) { throw "$($check[0]) has PE subsystem $($h.Subsystem), expected $($check[1])" }
   Write-Output "ok $($check[0]): $Arch, PE subsystem $($h.Subsystem)"
 }
-$Stage = Join-Path $TargetDir "windows-package\$Arch"
-Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $Stage | Out-Null
+$Stage = Join-Path $PackageRoot 'stage'
+New-Item -ItemType Directory -Path $Stage | Out-Null
 Copy-Item (Join-Path $Bin 'mailcraft.exe'), (Join-Path $Bin 'mailcraft-cli.exe') $Stage
+Copy-Item (Join-Path $Root 'NOTICE'), (Join-Path $Root 'ATTRIBUTION.md') $Stage
+$RuntimeFragment = Join-Path $PackageRoot 'content-runtime.wxs'
+$runtimeArgs = @('-B', (Join-Path $PSScriptRoot 'content-runtime.py'), '--arch', $Arch, '--stage', $Stage, '--fragment', $RuntimeFragment)
+if ($ContentRuntime) { $runtimeArgs += @('--source', $ContentRuntime) }
+Invoke-Native 'bind qualified content runtime' { & python @runtimeArgs }
 
 & (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage 'mailcraft.exe') (Join-Path $Stage 'mailcraft-cli.exe')
 
@@ -117,7 +143,7 @@ function ConvertTo-RtfText([string] $Text) {
 }
 $paragraphs = [System.Collections.Generic.List[string]]::new()
 $paragraphs.Add('\b MailCraft\b0')
-$paragraphs.Add((ConvertTo-RtfText 'MailCraft is dual-licensed under the MIT License or the Apache License, Version 2.0, at your option. Both license texts follow. Bundled fonts and other third-party material keep their own open licenses, listed in NOTICE and ATTRIBUTION.md at https://github.com/UCS-Care-Group/mailcraft.'))
+$paragraphs.Add((ConvertTo-RtfText 'MailCraft is dual-licensed under the MIT License or the Apache License, Version 2.0, at your option. Both license texts follow. Bundled fonts and other third-party material keep their own open licenses, listed in NOTICE, ATTRIBUTION.md and craft-content/licences at https://github.com/Darkaxt/mailcraft.'))
 foreach ($file in 'LICENSE-MIT', 'LICENSE-APACHE') {
   $title = $true  # each file opens with its license's name: show it bold
   foreach ($para in ((Get-Content -Raw (Join-Path $Root $file)) -split '\r?\n\s*\r?\n')) {
@@ -133,23 +159,25 @@ $rtf = '{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fswiss\fcharset0 Tahoma;}}\vi
 [System.IO.File]::WriteAllText($LicenseRtf, $rtf, [System.Text.Encoding]::ASCII)
 
 $Msi = Join-Path $Dist "mailcraft-$Version-windows-$Arch.msi"
+if (Test-Path -LiteralPath $Msi) { throw 'Preserve the existing MSI deliverable; select a fresh DIST' }
+$BuiltMsi = Join-Path $PackageRoot (Split-Path -Leaf $Msi)
 Invoke-Native 'wix build' {
-  wix build (Join-Path $PSScriptRoot 'mailcraft.wxs') -arch $Arch `
+  wix build (Join-Path $PSScriptRoot 'mailcraft.wxs') $RuntimeFragment -arch $Arch `
     -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext `
     -d "Version=$MsiVersion" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root 'assets\app-icon\mailcraft.ico')" `
     -d "LicenseRtf=$LicenseRtf" `
-    -o $Msi
+    -o $BuiltMsi
 }
-# wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
-Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
+# WiX's debug sidecar stays in exact package scratch, outside release deliverables.
+Copy-Item -LiteralPath $BuiltMsi -Destination $Msi
 & (Join-Path $PSScriptRoot 'sign.ps1') $Msi
 
 # ---- portable zip ------------------------------------------------------------------------------
-$Portable = Join-Path $TargetDir "windows-package\mailcraft-$Version-windows-$Arch-portable"
-Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $Portable | Out-Null
+$Portable = Join-Path $PackageRoot "mailcraft-$Version-windows-$Arch-portable"
+New-Item -ItemType Directory -Path $Portable | Out-Null
 Copy-Item (Join-Path $Stage '*.exe') $Portable
-foreach ($f in 'README.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE') {
+if ($Arch -eq 'x64') { Copy-Item -LiteralPath (Join-Path $Stage 'craft-content') -Destination $Portable -Recurse }
+foreach ($f in 'README.md', 'LICENSE', 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'ATTRIBUTION.md') {
   $p = Join-Path $Root $f
   if (Test-Path $p) { Copy-Item $p $Portable }
 }
@@ -160,7 +188,7 @@ if ($env:CRAFT_FONTS_DIR) {
   }
 }
 $Zip = Join-Path $Dist "mailcraft-$Version-windows-$Arch-portable.zip"
-Remove-Item -Force $Zip -ErrorAction SilentlyContinue
+if (Test-Path -LiteralPath $Zip) { throw 'Preserve the existing portable deliverable; select a fresh DIST' }
 Compress-Archive -Path $Portable -DestinationPath $Zip
 
 # Smoke-test the CLI when this machine can run it. An ARM64 build made on an x64 runner can't run
@@ -174,3 +202,8 @@ if ($NoRun) {
   Write-Output "skipping mailcraft-cli --version: an $Arch build doesn't run on this $HostArch machine"
 }
 Get-Item $Msi, $Zip | Format-Table Name, Length
+Write-Output "Package scratch retained for transactional cleanup after verification: $PackageRoot"
+} finally {
+  $env:TEMP = $previousTemp
+  $env:TMP = $previousTmp
+}

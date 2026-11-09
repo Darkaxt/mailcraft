@@ -264,7 +264,7 @@ pub(crate) fn capped_vec<'de, D: Deserializer<'de>, T: Deserialize<'de>>(deseria
 
 /// `deserialize_with` for the messages of a mailbox ([`crate::Messages`]).
 pub(crate) fn capped_messages<'de, D: Deserializer<'de>>(deserializer: D) -> Result<crate::Messages, D::Error> {
-    capped_map::<D, std::sync::Arc<crate::Message>>(deserializer).map(crate::Messages::from)
+    capped_map::<D, Id, std::sync::Arc<crate::Message>>(deserializer).map(crate::Messages::from)
 }
 
 /// `deserialize_with` for a list of ids a file may have got wrong (the owner's order of the
@@ -351,17 +351,19 @@ pub(crate) fn capped_lists<'de, D: Deserializer<'de>, T: DeserializeOwned>(deser
     Ok(out)
 }
 
-/// `deserialize_with` for a map by id.
-pub(crate) fn capped_map<'de, D: Deserializer<'de>, T: Deserialize<'de>>(deserializer: D) -> Result<BTreeMap<Id, T>, D::Error> {
-    struct V<T>(PhantomData<T>);
-    impl<'de, T: Deserialize<'de>> Visitor<'de> for V<T> {
-        type Value = BTreeMap<Id, T>;
+/// `deserialize_with` for bounded maps, including stable ids and exact alias names.
+pub(crate) fn capped_map<'de, D: Deserializer<'de>, K: Deserialize<'de> + Ord, T: Deserialize<'de>>(
+    deserializer: D,
+) -> Result<BTreeMap<K, T>, D::Error> {
+    struct V<K, T>(PhantomData<(K, T)>);
+    impl<'de, K: Deserialize<'de> + Ord, T: Deserialize<'de>> Visitor<'de> for V<K, T> {
+        type Value = BTreeMap<K, T>;
         fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             f.write_str("a map")
         }
-        fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<BTreeMap<Id, T>, A::Error> {
+        fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<BTreeMap<K, T>, A::Error> {
             let mut out = BTreeMap::new();
-            while let Some((id, item)) = map.next_entry::<Id, T>()? {
+            while let Some((id, item)) = map.next_entry::<K, T>()? {
                 charge()?;
                 out.insert(id, item);
             }

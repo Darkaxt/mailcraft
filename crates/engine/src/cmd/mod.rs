@@ -36,6 +36,7 @@ mod ews_up;
 #[cfg(test)]
 mod favorites_tests;
 pub mod file;
+pub mod filing;
 pub mod folder;
 #[cfg(test)]
 mod folder_properties_tests;
@@ -120,6 +121,7 @@ mod rules_merge_tests;
 pub mod rules_remote;
 #[cfg(test)]
 mod rules_remote_tests;
+pub mod search_folders;
 pub mod search_index;
 #[cfg(test)]
 mod search_scope_tests;
@@ -170,6 +172,7 @@ pub fn registry() -> Registry {
     v.extend(picture::specs());
     v.extend(writing_tools::specs());
     v.extend(folder::specs());
+    v.extend(filing::specs());
     v.extend(view::specs());
     v.extend(calendar::specs());
     v.extend(calendar_extra::specs());
@@ -199,6 +202,7 @@ pub fn registry() -> Registry {
     v.extend(sync_progress::specs());
     v.extend(search_server::specs());
     v.extend(search_index::specs());
+    v.extend(search_folders::specs());
     Registry::new(v)
 }
 
@@ -350,7 +354,9 @@ pub(crate) fn select_after_removal(s: &mut Session, before: &[Row], removed: &[I
     }
 }
 
-/// A message as agents see it in lists.
+/// A message as agents see it in lists. For a message of a Gmail account's Inbox, its
+/// `gmailCategory` too (#911): one of five words this program wrote, not message text, so it isn't
+/// framed as such.
 pub fn message_summary(s: &Session, m: &Message) -> Value {
     if let Some(mut row) = s.indexed_row(m) {
         if let Some(snippet) = row.get("snippet").and_then(Value::as_str) {
@@ -359,13 +365,18 @@ pub fn message_summary(s: &Session, m: &Message) -> Value {
                 row.insert("snippet".into(), Value::String(snippet));
             }
         }
+        if let (Some(category), Some(object)) = (m.gmail_category, row.as_object_mut()) {
+            object.insert("gmailCategory".into(), json!(category.code()));
+        }
         return row;
     }
-    json!({
+    let mut v = json!({
         "id": m.id,
         "folder": m.folder,
         "account": m.account,
         "filingSourceAccount": (m.filing_source_account != 0).then_some(m.filing_source_account),
+        "filingSourceAlias": m.filing_source_alias,
+        "filingOverride": m.filing_override,
         "simpleLogin": m.simple_login(),
         "from": m.from.full(),
         "to": mailcraft_model::format_list(&m.to),
@@ -378,7 +389,11 @@ pub fn message_summary(s: &Session, m: &Message) -> Value {
         "categories": m.categories,
         "attachments": m.listed_attachments().map(|(_, a)| a.name.as_str()).collect::<Vec<_>>(),
         "snippet": crate::list::preview(m, 140),
-    })
+    });
+    if let (Some(category), Some(o)) = (m.gmail_category, v.as_object_mut()) {
+        o.insert("gmailCategory".into(), json!(category.code()));
+    }
+    v
 }
 
 /// A message in full.

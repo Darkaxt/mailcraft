@@ -46,6 +46,7 @@ struct Fixture {
     joinable: Id,
     contact: Id,
     task: Id,
+    filing_folder: Id,
 }
 
 fn fixture() -> Fixture {
@@ -166,7 +167,12 @@ fn fixture() -> Fixture {
         list: marked("list"),
         ..Default::default()
     });
-    Fixture { session: s, account, message, invitation, event, joinable, contact, task }
+    let filing_account = s.run("account.add", &json!({"email":"filing@example.org","kind":"microsoft"})).unwrap()["id"].as_u64().unwrap();
+    let filing_folder = s.mailbox.folder_of_kind(filing_account, FolderKind::Inbox).unwrap();
+    s.mailbox.folder_mut(filing_folder).unwrap().name = marked("filingFolder");
+    s.mailbox_changed();
+    s.run("folder.newSearchFolder", &json!({"name":marked("savedFolder"),"query":"Hostile","scope":"everywhere"})).unwrap();
+    Fixture { session: s, account, message, invitation, event, joinable, contact, task, filing_folder }
 }
 
 /// Where in an answer a marker stands outside a frame (or a frame holds one inside it).
@@ -203,6 +209,8 @@ fn params(f: &Fixture, id: &str) -> Value {
     match id {
         "mail.get" | "mail.identity" | "mail.viewSource" | "mail.findFromSender" => json!({"id": m}),
         "aliases.list" => json!({"account":f.account}),
+        "filing.preview" => json!({"ids":[m],"folder":f.filing_folder}),
+        "searchFolders.preview" => json!({"name":marked("previewFolder"),"query":"Hostile","scope":"everywhere"}),
         "mail.list" => json!({"folder": f.session.mailbox.message(m).map(|x| x.folder), "query": "", "limit": 500}),
         "mail.findRelated" => json!({}),
         "calendar.get" | "calendar.proposals" => json!({"id": e}),
@@ -228,7 +236,9 @@ fn no_marker_in_any_content_answer_stands_outside_a_frame() {
     let mut h = Headless::new(std::mem::replace(&mut f.session, Session::empty()), Vec::new());
     let pol = Policy::default();
     let mut bare = Vec::new();
-    for id in CONTENT {
+    // Filing moves the marked message, so exercise its real mutation after the
+    // read commands have inspected their original inbox/account fixtures.
+    for id in CONTENT.iter().filter(|id| **id != "filing.apply").chain(CONTENT.iter().filter(|id| **id == "filing.apply")) {
         if *id == "edit.copy" {
             // A message being written that holds such text (a draft opened again, a paste).
             exec(&mut h, &pol, "mail.select", json!({"id": f.message})).unwrap();
@@ -238,7 +248,12 @@ fn no_marker_in_any_content_answer_stands_outside_a_frame() {
         if *id == "mail.findRelated" {
             exec(&mut h, &pol, "mail.select", json!({"id": f.message})).unwrap();
         }
-        let p = params(&f, id);
+        let p = if *id == "filing.apply" {
+            let review = exec(&mut h, &pol, "filing.preview", json!({"ids":[f.message],"folder":f.filing_folder})).unwrap();
+            json!({"ids":[f.message],"folder":f.filing_folder,"review":review["review"],"choice":"once"})
+        } else {
+            params(&f, id)
+        };
         let answer = if matches!(*id, "mail.sourcePage" | "mail.exportEml" | "search.sources" | "search.gaps" | "search.coverageDetails") {
             // These commands own asynchronous snapshots/tokens. Their real
             // native lifecycle is covered by source_export_tests and the engine
@@ -262,9 +277,10 @@ fn no_marker_in_any_content_answer_stands_outside_a_frame() {
             exec(&mut h, &pol, id, p.clone()).unwrap_or_else(|e| panic!("{id} {p}: {e}"))
         };
         let text = answer.to_string();
-        // Every command but Send/Receive's progress (no sync has run) answered with the
-        // hostile items, so the test sees what it is meant to.
-        if *id != "sync.progress" {
+        // Empty sync progress and successful filing counters contain no item
+        // text. The filing failure-data path is also checked below. Every other
+        // command must actually return the fixture's hostile items.
+        if !matches!(*id, "sync.progress" | "filing.apply") {
             assert!(text.to_lowercase().contains("hostile"), "{id} answered without the marked items: {text}");
         }
         let mut found = Vec::new();
@@ -281,6 +297,30 @@ fn no_marker_in_any_content_answer_stands_outside_a_frame() {
         }
     }
     assert!(bare.is_empty(), "markers outside a frame:\n{}", bare.join("\n"));
+}
+
+#[test]
+fn filing_failure_text_is_framed_without_changing_counter_or_review_types() {
+    struct FailedPlacement;
+    impl crate::backend::Backend for FailedPlacement {
+        fn call(&mut self, method: &str, _: Value) -> Result<Value, String> {
+            assert_eq!(method, "engine.execute");
+            Ok(json!({"processed":0,"unavailable":[{"id":17,"reason":marked("providerReason")}],"review":"opaque-review"}))
+        }
+        fn has_ui(&self) -> bool {
+            false
+        }
+        fn describe(&self) -> String {
+            "synthetic filing failure response".into()
+        }
+    }
+    let answer = exec(&mut FailedPlacement, &Policy::default(), "filing.apply", json!({"ids":[17],"folder":9,"review":"opaque-review"})).unwrap();
+    assert_eq!(answer["processed"], 0);
+    assert_eq!(answer["review"], "opaque-review");
+    assert!(answer["unavailable"][0]["reason"].as_str().unwrap().starts_with(UNTRUSTED_OPEN));
+    let mut bare = Vec::new();
+    bare_marks(&answer, "", &mut bare);
+    assert!(bare.is_empty(), "{bare:?}");
 }
 
 #[test]

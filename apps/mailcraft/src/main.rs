@@ -214,6 +214,10 @@ impl eframe::App for App {
     }
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.0.ui(ui);
+        #[cfg(target_os = "windows")]
+        if let Some(window) = frame.winit_window() {
+            window_caption::publish(&mut self.0, ui.ctx(), window);
+        }
         self.3.show(frame);
         open_pages(ui.ctx(), frame);
     }
@@ -1941,9 +1945,13 @@ fn update_download(
 /// The application id of every window (by which Wayland desktops find the icon).
 const APP_ID: &str = "io.github.billsecond.mailcraft";
 
+#[cfg(target_os = "windows")]
+mod window_caption;
+
 fn desktop_viewport(hidden: bool, agents_only: bool) -> egui::ViewportBuilder {
     egui::ViewportBuilder::default()
         .with_title("MailCraft")
+        .with_decorations(!cfg!(target_os = "windows"))
         .with_active(!agents_only && !hidden)
         .with_visible(!hidden)
         .with_app_id(APP_ID)
@@ -2226,6 +2234,7 @@ fn main() -> eframe::Result {
                 MailApp::opening(mailcraft_ui_egui::opening::Opening::new(arriving, progress, build), first_prefs, system_locale::system_locale());
             app.ui.window = restored;
             app.integrated_titlebar = cfg!(target_os = "macos");
+            app.windows_titlebar = cfg!(target_os = "windows");
             if hidden {
                 app.start_hidden();
             }

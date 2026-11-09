@@ -52,6 +52,9 @@ pub fn run(root: &Path) -> Result<(), String> {
     let files: Vec<String> = String::from_utf8_lossy(&out.stdout).lines().map(str::to_owned).collect();
     let found: Vec<&str> = files
         .iter()
+        // Retained dependency tests keep their upstream structure; application
+        // tests and new caption regressions still live in separate test files.
+        .filter(|f| !f.starts_with("vendor/winit/"))
         .filter(|f| !is_test_file(f))
         .filter(|f| std::fs::read_to_string(root.join(f)).is_ok_and(|text| has_inline_tests(&text)))
         .map(String::as_str)

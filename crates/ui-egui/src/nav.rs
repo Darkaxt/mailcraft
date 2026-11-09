@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use egui::{Align2, Color32, CornerRadius, Painter, Pos2, Rect, Sense, Shape, Stroke, Ui, pos2, vec2};
 use mailcraft_engine::Module;
 use mailcraft_engine::cmd::folder::sort_as_listed;
-use mailcraft_model::{Folder, FolderKind, Id, Mailbox};
+use mailcraft_model::{Folder, FolderKind, GmailCategory, Id, Mailbox};
 use serde_json::json;
 
 use crate::favorites_sync::Note;
@@ -239,6 +239,7 @@ fn heading(app: &mut MailApp, ui: &mut Ui, id: Id, name: &str, height: f32, text
                 let _ = app.run("folder.properties", json!({"account": id}));
                 ui.close();
             }
+            crate::unified_inbox::color_menu(app, ui, id);
         });
     }
     open
@@ -448,7 +449,11 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     );
     if resp.clicked() && !rules_clicked {
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("folder_picked_in_list"), key == "tree"));
-        let _ = app.run("folder.select", json!({"id": f.id}));
+        if let Some(account) = app.session.view.filing {
+            let _ = app.run("view.filing", json!({"account":account,"folder":f.id}));
+        } else {
+            let _ = app.run("folder.select", json!({"id": f.id}));
+        }
     }
     // Messages dragged out of the list are filed in the folder they are let go over.
     if let Some(drag) = resp.dnd_hover_payload::<crate::mail_view::MessageDrag>() {
@@ -462,7 +467,11 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         // Only what isn't here already.
         let ids = crate::drag_pointer::movable(&app.session.mailbox, &drag.0, f.id);
         if !ids.is_empty() {
-            let _ = app.run("mail.move", json!({"ids": ids, "folder": f.id}));
+            if app.session.view.filing.is_some() {
+                crate::filing::begin(app, ids, f.id);
+            } else {
+                let _ = app.run("mail.move", json!({"ids": ids, "folder": f.id}));
+            }
         }
     }
     // (One of the server's own, Conversation History say, is left as it is, and takes no new
@@ -502,6 +511,78 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         ui.separator();
         item(ui, app, "Properties…", "folder.properties", json!({"id": id}), true);
     });
+}
+
+/// What the window calls one of Gmail's categories (#911).
+pub(crate) fn gmail_name(category: GmailCategory) -> &'static str {
+    match category {
+        GmailCategory::Primary => tl!("Primary"),
+        GmailCategory::Social => tl!("Social"),
+        GmailCategory::Promotions => tl!("Promotions"),
+        GmailCategory::Updates => tl!("Updates"),
+        GmailCategory::Forums => tl!("Forums"),
+    }
+}
+
+/// What a row of one of Gmail's categories is known by to `ui.inspect`, with its Inbox's id.
+fn gmail_hit(category: GmailCategory) -> &'static str {
+    match category {
+        GmailCategory::Primary => "gmailPrimary",
+        GmailCategory::Social => "gmailSocial",
+        GmailCategory::Promotions => "gmailPromotions",
+        GmailCategory::Updates => "gmailUpdates",
+        GmailCategory::Forums => "gmailForums",
+    }
+}
+
+/// The row of one of Gmail's categories under a Gmail account's Inbox (#911), a level further in
+/// than the Inbox (`depth`): its name and its unread count, `selected` when the list shows it.
+/// It is a view of the Inbox, no folder: a click shows its mail, and it has nothing to rename,
+/// delete or file mail in, so no menu, and mail let go over it stays where it was.
+fn gmail_row(app: &mut MailApp, ui: &mut Ui, inbox: Id, depth: usize, category: GmailCategory, unread: usize, selected: bool) {
+    let t = Tokens::get(ui.ctx());
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+    let resp = ui.interact(r, ui.scope_id().with(("gmail", inbox, category.code())), Sense::click());
+    app.hit.add(gmail_hit(category), inbox, r);
+    let row = highlight(r);
+    if selected {
+        ui.painter().rect_filled(row, 6.0, t.accent_soft);
+        ui.painter().rect_filled(Rect::from_center_size(pos2(row.min.x + 1.5, row.center().y), vec2(3.0, 14.0)), 1.5, t.selection_edge);
+    } else if resp.hovered() {
+        ui.painter().rect_filled(row, 6.0, t.hover_nav);
+    }
+    // Reached with Tab or the arrow keys (Enter or Space shows it): where the keyboard is.
+    if resp.has_focus() {
+        ui.painter().rect_stroke(row, 6.0, Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
+    }
+    let x = r.min.x + depth.min(MAX_INDENT_DEPTH) as f32 * INDENT;
+    let y = r.center().y - TEXT_RISE;
+    let mut name_end = r.max.x - COUNT_RIGHT;
+    if unread > 0 {
+        let fill = if selected { t.surface } else { t.accent_soft };
+        let galley = ui.painter().layout_no_wrap(unread.to_string(), bold(NAME_SIZE - 1.0), t.accent_soft_text);
+        let w = (galley.size().x + 12.0).max(20.0);
+        let pill = Rect::from_center_size(pos2(r.max.x - COUNT_RIGHT + 4.0 - w / 2.0, r.center().y), vec2(w, 18.0));
+        ui.painter().rect_filled(pill, 9.0, fill);
+        ui.painter().galley(pill.center() - galley.size() / 2.0, galley, t.accent_soft_text);
+        name_end = pill.min.x - 6.0;
+    }
+    let name = gmail_name(category);
+    let font = if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) };
+    paint_clipped(
+        ui.painter(),
+        pos2(x + NAME_LEFT, y),
+        (name_end - x - NAME_LEFT).max(0.0),
+        name,
+        font,
+        if selected { t.accent_soft_text } else { t.text },
+    );
+    // Read out as its name and how many of its messages are unread.
+    let said = if unread > 0 { format!("{name}, {}", tln!(unread, "{n} unread", "{n} unread")) } else { name.to_string() };
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::TreeItem, true, selected, &said));
+    if resp.clicked() {
+        let _ = app.run("folder.select", json!({"id": inbox, "gmail": category.code()}));
+    }
 }
 
 /// A sentence under the Favorites heading that is longer than a row: wrapped to the pane, three
@@ -685,12 +766,25 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         pane_top(app, ui, &t);
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+            crate::unified_inbox::navigation(app, ui);
+            crate::filing::navigation(app, ui);
+            crate::search_folders::navigation(app, ui);
             // (Counted once per change to the mailbox, not at every frame: `Session::folder_counts`.)
             let counts = app.session.folder_counts();
+            let unfiled = app.session.view.filing.map(|account| {
+                mailcraft_engine::cmd::filing::unfiled_folders(&app.session, account)
+                    .into_iter()
+                    .fold((0usize, 0usize), |(total, unread), id| (total.saturating_add(counts.total(id)), unread.saturating_add(counts.unread(id))))
+            });
             let aliases = app.session.aliases();
             let alias_query = mailcraft_model::search::Query::parse(&app.session.view.search);
             let selected_alias = (app.session.view.scope == mailcraft_engine::Scope::Mailbox).then(|| alias_query.receiving_alias()).flatten();
             let count = |f: &Folder| {
+                if f.kind == FolderKind::Inbox
+                    && let Some((total, unread)) = unfiled
+                {
+                    return Count::of(f.kind, total, unread);
+                }
                 let held = counts.folder(f.id);
                 Count::of(f.kind, held.total, held.unread)
             };
@@ -710,17 +804,23 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                 .mailbox
                 .accounts_in_order()
                 .into_iter()
+                .filter(|a| app.session.view.filing.is_none_or(|id| a.id == id))
                 .map(|a| {
                     let rows = visible_in(trees.remove(&a.id).unwrap_or_default(), &folded);
                     (a.id, heading_name(app, a), rows)
                 })
                 .collect();
             // The folder in view is highlighted once: under Favorites when it shows there, unless
-            // it was picked in its account's list and shows there too.
-            let current = app.session.view.folder;
+            // it was picked in its account's list and shows there too. While the list shows one of
+            // Gmail's categories of it (#911), that category's row is, and the Inbox's isn't; when
+            // they are tabs above the list instead (`view.gmailCategories`), the Inbox's is.
+            let gmail_tabs = app.session.view.gmail_tabs;
+            let gmail_now = mailcraft_engine::gmail::in_view(&app.session);
+            let current = if gmail_now.is_some() && !gmail_tabs { 0 } else { app.session.view.folder };
+            let gmail_current = app.session.view.folder;
             let among_favorites = !folded.contains(&FAVORITES) && favorites.iter().any(|f| f.id == current);
             let in_a_list = lists.iter().any(|(_, _, rows)| rows.iter().any(|(f, _, _)| f.id == current));
-            let favorite_selected = among_favorites && !(in_a_list && picked_in_list(ui));
+            let favorite_selected = app.session.view.filing.is_none() && among_favorites && !(in_a_list && picked_in_list(ui));
             // The owner's own accounts are dragged up or down by their headings (#702), when there
             // are two at least; a shared mailbox goes with its account.
             let own = owners(&app.session.mailbox);
@@ -736,12 +836,25 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                     heading(app, ui, id, name, 2.0 * ROW_H, 34.5, true, movable.contains(&id))
                 }
             };
-            if (!favorites.is_empty() || note.is_some()) && head(app, ui, FAVORITES, tl!("Favorites")) {
+            if app.session.view.filing.is_none() && (!favorites.is_empty() || note.is_some()) && head(app, ui, FAVORITES, tl!("Favorites")) {
                 if let Some((account, note)) = &note {
                     favorites_note(app, ui, *account, note);
                 }
                 for f in &favorites {
-                    folder_row(app, ui, f, 0, false, "fav", count(f), selected_alias.is_none() && favorite_selected && f.id == current);
+                    folder_row(
+                        app,
+                        ui,
+                        f,
+                        0,
+                        false,
+                        "fav",
+                        count(f),
+                        app.session.view.search_folder.is_none()
+                            && app.session.view.scope != mailcraft_engine::Scope::Inboxes
+                            && selected_alias.is_none()
+                            && favorite_selected
+                            && f.id == current,
+                    );
                 }
             }
             // Where each of the owner's accounts starts, for a drag of one.
@@ -761,16 +874,30 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                     alias_rows(app, ui, *account, observed, if current_account == Some(*account) { selected_alias } else { None });
                 }
                 for (f, depth, has_children) in rows {
+                    // A Gmail account's Inbox has Gmail's categories under it, folded with it,
+                    // unless they are tabs above its list.
+                    let gmail = !gmail_tabs && f.kind == FolderKind::Inbox && mailcraft_engine::gmail::listed_under(&mut app.session, f.id);
                     folder_row(
                         app,
                         ui,
                         f,
                         *depth,
-                        *has_children,
+                        *has_children || gmail,
                         "tree",
                         count(f),
-                        selected_alias.is_none() && !favorite_selected && f.id == current,
+                        app.session.view.search_folder.is_none()
+                            && app.session.view.scope != mailcraft_engine::Scope::Inboxes
+                            && selected_alias.is_none()
+                            && !favorite_selected
+                            && f.id == current,
                     );
+                    if gmail && !app.ui.collapsed_folders.contains(&f.id) {
+                        for category in GmailCategory::ALL {
+                            let unread = counts.gmail(f.id, category).unread;
+                            let selected = f.id == gmail_current && gmail_now == Some(category);
+                            gmail_row(app, ui, f.id, depth + 1, category, unread, selected);
+                        }
+                    }
                 }
             }
             let end = ui.cursor().min.y;
@@ -861,6 +988,7 @@ fn alias_rows(app: &mut MailApp, ui: &mut Ui, account: Id, observed: &mailcraft_
                     tl!("Original sender unavailable"),
                     alias.missing_original
                 );
+                response.context_menu(|ui| crate::unified_inbox::color_menu_for(app, ui, account, Some(&alias.address)));
                 if response.on_hover_text(tip).clicked() {
                     let _ = app.run("view.alias", json!({"account": account, "alias": alias.address}));
                 }
@@ -958,4 +1086,4 @@ pub(crate) fn heading_name(app: &MailApp, a: &mailcraft_model::Account) -> Strin
 
 #[cfg(test)]
 #[path = "nav_tests.rs"]
-mod tests;
+pub(crate) mod tests;

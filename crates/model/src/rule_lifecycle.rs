@@ -35,6 +35,12 @@ impl Mailbox {
     /// Remove the whole definition: retaining its other actions could change its meaning.
     pub fn remove_rules_for_deleted_folders(&mut self, folders: &[Id]) -> usize {
         let folders: HashSet<Id> = folders.iter().copied().collect();
+        let overrides: Vec<_> = self.messages.values().filter(|m| m.filing_override.is_some_and(|id| folders.contains(&id))).map(|m| m.id).collect();
+        for id in overrides {
+            if let Ok(message) = self.message_mut(id) {
+                message.filing_override = None;
+            }
+        }
         let mut removed = 0;
         for index in (0..self.rules.len()).rev() {
             if self.rules.get(index).is_some_and(|rule| {

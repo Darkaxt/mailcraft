@@ -39,6 +39,7 @@ pub(crate) struct Kept {
     /// The revision and the count of messages they were last checked at; `None` once the mailbox
     /// may have changed since ([`Session::threads_may_change`]).
     at: Option<(u64, usize)>,
+    origins: bool,
     threads: Arc<ThreadIndex>,
     /// Of each chunk of the map of messages, in the map's order.
     seen: Vec<SeenChunk>,
@@ -65,7 +66,7 @@ impl SeenChunk {
 fn grouping_hash(m: &Message) -> u64 {
     let mut h = DefaultHasher::new();
     let server = m.server.as_ref().map(|s| (s.thread.as_str(), s.thread_asked));
-    (m.account, &m.subject, &m.message_id, &m.in_reply_to, &m.references, server).hash(&mut h);
+    (m.account, m.filing_source_account, &m.subject, &m.message_id, &m.in_reply_to, &m.references, server).hash(&mut h);
     h.finish()
 }
 
@@ -75,6 +76,7 @@ fn grouping_hash(m: &Message) -> u64 {
 pub(crate) fn same_grouping(a: &Message, b: &Message) -> bool {
     let server = |m: &Message| m.server.as_ref().map(|s| (s.thread.clone(), s.thread_asked));
     a.account == b.account
+        && a.filing_source_account == b.filing_source_account
         && a.subject == b.subject
         && a.message_id == b.message_id
         && a.in_reply_to == b.in_reply_to
@@ -128,6 +130,10 @@ fn seen_of(mailbox: &Mailbox) -> Vec<SeenChunk> {
 }
 
 impl Session {
+    pub(crate) fn origin_conversations(&self) -> bool {
+        self.view.search_folder.is_some() || self.view.filing.is_some() || self.view.scope == crate::Scope::Inboxes
+    }
+
     fn threads_key(&self) -> (u64, usize) {
         (self.rev(), self.mailbox.messages.len())
     }
@@ -138,7 +144,8 @@ impl Session {
     pub fn threads(&self) -> Arc<ThreadIndex> {
         let key = self.threads_key();
         let mut cache = self.threads_cache.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some(kept) = cache.as_mut() {
+        let origins = self.origin_conversations();
+        if let Some(kept) = cache.as_mut().filter(|kept| kept.origins == origins) {
             if kept.at == Some(key) {
                 return kept.threads.clone();
             }
@@ -147,8 +154,9 @@ impl Session {
                 return kept.threads.clone();
             }
         }
-        let threads = Arc::new(ThreadIndex::build(self.mailbox.messages.values().map(|m| m.as_ref())));
-        *cache = Some(Kept { at: Some(key), threads: threads.clone(), seen: seen_of(&self.mailbox), rehashed: 0 });
+        let messages = self.mailbox.messages.values().map(|m| m.as_ref());
+        let threads = Arc::new(if origins { ThreadIndex::build_origins(messages) } else { ThreadIndex::build(messages) });
+        *cache = Some(Kept { at: Some(key), origins, threads: threads.clone(), seen: seen_of(&self.mailbox), rehashed: 0 });
         threads
     }
 
@@ -164,7 +172,7 @@ impl Session {
         let key = self.threads_key();
         let in_step = {
             let cache = self.threads_cache.lock().unwrap_or_else(PoisonError::into_inner);
-            cache.as_ref().is_some_and(|kept| kept.at == Some(key))
+            cache.as_ref().is_some_and(|kept| kept.at == Some(key) && kept.origins == self.origin_conversations())
         };
         if in_step {
             return false;
@@ -185,7 +193,7 @@ impl Session {
 /// Whether the conversations of `before` are those of `after`, as [`Session::threads`] checks.
 #[cfg(test)]
 pub(crate) fn grouping_kept(before: &Mailbox, after: &Mailbox) -> bool {
-    still_of(&mut Kept { at: None, threads: Arc::default(), seen: seen_of(before), rehashed: 0 }, after)
+    still_of(&mut Kept { at: None, origins: false, threads: Arc::default(), seen: seen_of(before), rehashed: 0 }, after)
 }
 
 #[cfg(test)]

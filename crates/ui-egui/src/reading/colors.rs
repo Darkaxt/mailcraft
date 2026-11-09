@@ -9,9 +9,8 @@
 //!    and so it is in the dark theme for a message whose style sheet brings its own design for
 //!    dark windows (`@media (prefers-color-scheme: dark)`, [`Tokens::sender_dark`]): the sender's
 //!    palette is used, and only text whose contrast falls short (rule 2) is adjusted.
-//!    In the dark theme a light one (lightness over a half) is turned dark by inverting its
-//!    lightness, keeping its hue and muting it a little, so a white card becomes the window's own
-//!    surface and a pale band a slightly lighter one; a dark or strongly coloured one stays.
+//!    Otherwise a role-aware dark palette maps neutral backgrounds to the window's surface
+//!    ramp and keeps chromatic backgrounds distinct without bright yellow/white islands.
 //! 2. **Text.** Every text colour is checked against the background that is really behind it
 //!    (the window's surface, or the block's own background after rule 1). A colour with a contrast
 //!    under [`MIN_CONTRAST`] is first turned over the same way, its lightness inverted and its hue
@@ -28,7 +27,7 @@ use mailcraft_html::Rgb;
 use crate::theme::Tokens;
 
 /// The lowest contrast (WCAG 2 ratio, 1 to 21) at which a message's own text colour is used as it is.
-pub const MIN_CONTRAST: f32 = 3.0;
+pub const MIN_CONTRAST: f32 = 4.5;
 
 /// The contrast a colour that falls short is brought to: what WCAG asks of body text.
 pub const TARGET_CONTRAST: f32 = 4.5;
@@ -142,6 +141,64 @@ fn from_hsl(h: f32, s: f32, l: f32) -> Color32 {
     Color32::from_rgb(byte(r), byte(g), byte(b))
 }
 
+// Role-specific HSL mappings adapted from Dark Reader v4.9.135, modify-colors.ts.
+// Copyright (c) 2026 Dark Reader Ltd. MIT; full notice and source are in NOTICE.
+// This is only a native colour transform: no browser/DOM, JavaScript or image filter.
+fn scale(value: f32, from: f32, to: f32, a: f32, b: f32) -> f32 {
+    a + (value - from) / (to - from) * (b - a)
+}
+
+fn dark_background(asked: Color32, surface: Color32) -> Color32 {
+    let (h, s, l) = hsl(asked);
+    let (pole_h, pole_s, pole_l) = hsl(surface);
+    let degrees = h * 60.0;
+    let neutral = s < 0.12 || (l > 0.8 && degrees > 200.0 && degrees < 280.0);
+    let mut lightness = if l < 0.5 { scale(l, 0.0, 0.5, 0.0, 0.4) } else { scale(l, 0.5, 1.0, 0.4, pole_l) };
+    if neutral {
+        return from_hsl(pole_h, pole_s, lightness);
+    }
+    let mut hue = degrees;
+    if hue > 60.0 && hue < 180.0 {
+        hue = if hue > 120.0 { scale(hue, 120.0, 180.0, 135.0, 180.0) } else { scale(hue, 60.0, 120.0, 60.0, 105.0) };
+    }
+    if hue > 40.0 && hue < 80.0 {
+        lightness *= 0.75;
+    }
+    let mapped = from_hsl(hue / 60.0, s, lightness);
+    // Saturated yellow/cyan can be bright even at a dark HSL lightness. Keep the
+    // background within the luminance range that can support 4.5:1 white body text.
+    let maximum = (luminance(Color32::WHITE) + 0.05) / TARGET_CONTRAST - 0.05;
+    if luminance(mapped) <= maximum {
+        return mapped;
+    }
+    (1..=12).map(|step| mix(mapped, surface, step as f32 / 12.0)).find(|color| luminance(*color) <= maximum).unwrap_or(surface)
+}
+
+fn dark_foreground(asked: Color32, text: Color32) -> Color32 {
+    let (h, s, l) = hsl(asked);
+    let (pole_h, pole_s, pole_l) = hsl(text);
+    let degrees = h * 60.0;
+    let neutral = l < 0.2 || s < 0.24;
+    let blue = !neutral && degrees > 205.0 && degrees < 245.0;
+    let lightness = if l > 0.5 { scale(l, 0.5, 1.0, 0.55, pole_l) } else { scale(l, 0.0, 0.5, pole_l, if blue { 0.60 } else { 0.55 }) };
+    if neutral {
+        return from_hsl(pole_h, pole_s, lightness);
+    }
+    let hue = if blue { scale(degrees, 205.0, 245.0, 205.0, 220.0) / 60.0 } else { h };
+    from_hsl(hue, s, lightness)
+}
+
+fn dark_border(asked: Color32, t: &Tokens) -> Color32 {
+    let (h, s, l) = hsl(asked);
+    let (h, s) = if l < 0.2 || s < 0.24 {
+        let (h, s, _) = hsl(if l < 0.5 { t.text } else { t.surface });
+        (h, s)
+    } else {
+        (h, s)
+    };
+    from_hsl(h, s, scale(l, 0.0, 1.0, 0.5, 0.2))
+}
+
 /// What is behind a piece of the message: the window's own surface, or a background the message
 /// asked for (already turned dark in the dark theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -160,24 +217,20 @@ impl Paper {
     /// A background the message asks for, as it is painted in this theme.
     pub fn of(asked: Rgb, t: &Tokens) -> Paper {
         let asked = c32(asked);
+        if t.high_contrast {
+            return Paper { fill: t.surface, own: true };
+        }
         // (A message with its own design for dark windows has its backgrounds as it asks.)
         if !t.dark || t.sender_dark {
             return Paper { fill: asked, own: true };
         }
-        let (h, s, l) = hsl(asked);
-        if l <= 0.5 {
-            return Paper { fill: asked, own: true };
-        }
-        // White lands on the window's surface; a half stays a half, so nothing jumps there.
-        let floor = hsl(t.surface).2.clamp(0.0, 0.4);
-        let dark = floor + (1.0 - l) * (1.0 - 2.0 * floor);
-        Paper { fill: from_hsl(h, s * 0.6, dark), own: true }
+        Paper { fill: dark_background(asked, t.surface), own: true }
     }
 
     /// The colour of text that names none.
     pub fn text(&self, t: &Tokens, quoted: bool) -> Color32 {
         if !self.own {
-            return if quoted { t.text_dim } else { t.text };
+            return at_least(if quoted { t.text_dim } else { t.text }, self.fill, if t.high_contrast { HIGH_CONTRAST } else { TARGET_CONTRAST });
         }
         let (dark, light) = (Tokens::light().text, Tokens::dark().text);
         let best = if contrast(dark, self.fill) >= contrast(light, self.fill) { dark } else { light };
@@ -188,7 +241,7 @@ impl Paper {
     /// The colour of a link that names none.
     pub fn link(&self, t: &Tokens) -> Color32 {
         if !self.own {
-            return t.accent_text;
+            return if t.high_contrast { readable_strong(t.accent_text, self.fill) } else { readable(t.accent_text, self.fill) };
         }
         let (dark, light) = (Tokens::light().accent_text, Tokens::dark().accent_text);
         let ink = if contrast(dark, self.fill) >= contrast(light, self.fill) { dark } else { light };
@@ -197,7 +250,8 @@ impl Paper {
 
     /// The colour of a rule, a quote bar or a cell border.
     pub fn line(&self, t: &Tokens) -> Color32 {
-        if self.own { mix(self.fill, self.text(t, false), 0.28) } else { t.border_strong }
+        let ink = if self.own { mix(self.fill, self.text(t, false), 0.28) } else { t.border_strong };
+        at_least(ink, self.fill, if t.high_contrast { 3.0 } else { LINE_CONTRAST })
     }
 
     /// The colour of a line round a box that asks for `asked`: as a background colour is turned
@@ -205,12 +259,9 @@ impl Paper {
     /// is seen in light and dark and on any colour. The reader's own line colour when it asks for none.
     pub fn border(&self, t: &Tokens, asked: Option<Rgb>) -> Color32 {
         let Some(asked) = asked else { return self.line(t) };
-        let turned = Paper::of(asked, t).fill;
-        if contrast(turned, self.fill) >= LINE_CONTRAST {
-            return turned;
-        }
-        let end = if contrast(Color32::BLACK, self.fill) >= contrast(Color32::WHITE, self.fill) { Color32::BLACK } else { Color32::WHITE };
-        (1..=12).map(|step| mix(turned, end, step as f32 / 12.0)).find(|moved| contrast(*moved, self.fill) >= LINE_CONTRAST).unwrap_or(end)
+        let ink = c32(asked);
+        let turned = if t.dark && !t.sender_dark { dark_border(ink, t) } else { ink };
+        at_least(turned, self.fill, if t.high_contrast { 3.0 } else { LINE_CONTRAST })
     }
 
     /// The colour a run of text is painted in: the one it asks for when that can be read here,
@@ -218,7 +269,10 @@ impl Paper {
     pub fn ink(&self, t: &Tokens, asked: Option<Rgb>, link: bool, quoted: bool) -> Color32 {
         match asked {
             Some(asked) if t.high_contrast => readable_strong(c32(asked), self.fill),
-            Some(asked) => readable(c32(asked), self.fill),
+            Some(asked) => {
+                let ink = if t.dark && !t.sender_dark { dark_foreground(c32(asked), t.text) } else { c32(asked) };
+                readable(ink, self.fill)
+            }
             None if link => self.link(t),
             None => self.text(t, quoted),
         }
@@ -298,9 +352,11 @@ mod tests {
         // A tint keeps its hue, muted: pale yellow is a dark yellow-brown, not grey and not bright.
         let note = Paper::of(Rgb(0xff, 0xf8, 0xe1), &dark).fill;
         assert!(note.r() > note.b() && note.g() > note.b() && luminance(note) < 0.08, "{note:?}");
-        // What is dark or strongly coloured already stays as it is.
+        // Saturated backgrounds are mapped by role too, avoiding bright islands. An
+        // actual author-designed dark palette retains its own colours instead.
         for asked in [Rgb(0x00, 0x66, 0xcc), Rgb(0x11, 0x11, 0x11), Rgb(0x2f, 0x4f, 0x3a), Rgb(0xc8, 0x55, 0x2b), Rgb(255, 0, 0)] {
-            assert_eq!(Paper::of(asked, &dark).fill, c32(asked));
+            assert_eq!(Paper::of(asked, &Tokens { sender_dark: true, ..dark }).fill, c32(asked));
+            assert!(hsl(Paper::of(asked, &dark).fill).2 <= 0.401);
         }
         // Lightness turns over smoothly: no colour lands far from its neighbour.
         let mut last = Paper::of(Rgb(0, 0, 0), &dark).fill;

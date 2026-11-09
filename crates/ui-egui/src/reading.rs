@@ -26,6 +26,8 @@
 pub(crate) mod colors;
 #[cfg(test)]
 mod colors_strong_tests;
+#[cfg(test)]
+mod dark_palette_tests;
 pub(crate) mod fonts;
 #[cfg(test)]
 mod header_tests;
@@ -606,6 +608,16 @@ fn notes(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, t: &Tokens, pictures:
     // The rest of the conversation, to jump to.
     // (Worked out once per change to the mailbox, not at every frame.)
     let thread = app.session.conversation(m.id);
+    let thread: Vec<_> = thread
+        .iter()
+        .copied()
+        .filter(|id| {
+            (app.session.view.search_folder.is_none()
+                && app.session.view.filing.is_none()
+                && app.session.view.scope != mailcraft_engine::Scope::Inboxes)
+                || app.session.mailbox.message(*id).is_some_and(|other| other.origin_account() == m.origin_account())
+        })
+        .collect();
     if thread.len() > 1 {
         ui.horizontal_wrapped(|ui| {
             ui.label(

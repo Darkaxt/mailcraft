@@ -16,6 +16,7 @@ pub mod confusables;
 mod contact;
 pub mod dav;
 mod ews_server;
+pub mod gmail;
 mod jmap_server;
 mod junk;
 pub mod load_limit;
@@ -36,6 +37,7 @@ mod rule;
 mod rule_lifecycle;
 mod rule_text;
 pub mod search;
+mod search_folder;
 pub mod sender_warnings;
 pub mod shown;
 pub mod signature;
@@ -58,12 +60,13 @@ pub use calendar::{
 };
 pub use contact::{Contact, Labeled, PostalAddress};
 pub use ews_server::{EwsServer, is_exchange_online, is_microsoft_domain, is_within};
+pub use gmail::{GmailCategory, is_gmail_host};
 pub use jmap_server::JmapServer;
 pub use junk::{Added, JunkList, JunkLists, MAX_JUNK_ENTRIES, junk_entry, junk_key};
 pub use load_limit::{MIN_ITEM_BYTES, from_json};
 pub use mailbox::{
-    Account, AccountKind, AsWritten, BETWEEN_MAILBOXES, COPY_INTO_OUTBOX, Category, Directory, DownloadInFull, FOLDERS_STAY_YET, Folder,
-    FolderCounts, FolderKind, GREY_CATEGORY, GraphSwitch, IMPORTED, INTO_OUTBOX, MAX_FOLDER_DEPTH, MAX_RULES, MAX_SHARED, MOVED_INTO_OUTBOX,
+    ACCOUNT_ROW_COLORS, Account, AccountKind, AsWritten, BETWEEN_MAILBOXES, COPY_INTO_OUTBOX, Category, Directory, DownloadInFull, FOLDERS_STAY_YET,
+    Folder, FolderCounts, FolderKind, GREY_CATEGORY, GraphSwitch, IMPORTED, INTO_OUTBOX, MAX_FOLDER_DEPTH, MAX_RULES, MAX_SHARED, MOVED_INTO_OUTBOX,
     MailIdentity, Mailbox, NOT_MOVING_YET, NOT_SENDING_YET, OAuth, OAuthProvider, Pending, Queued, Security, Server, ServerFavorites, ServerFolder,
     preset_category_color,
 };
@@ -78,6 +81,7 @@ pub use remote::{AccountChoice, Origin};
 pub use rich::{RichBody, RichText};
 pub use rule::{Action, Condition, Keep, MAX_RULE_SENDERS, Rule, RuleExecution, RuleExecutionFailure, RuleGone, RuleMergeSource, ServerRule};
 pub use rule_text::{RuleField, RuleText};
+pub use search_folder::{MAX_SEARCH_FOLDERS, SearchFolder, SearchScope};
 pub mod rule_conflicts;
 pub use signature::Signature;
 pub use task::{LocalTasks, MAX_TASK_GONE, SharedTaskList, SharedTaskLists, Task, TaskFields, TaskGone, TaskPatch};
@@ -161,6 +165,8 @@ mod auth_results_tests;
 mod auto_replies_tests;
 #[cfg(test)]
 mod calendar_rights_tests;
+#[cfg(test)]
+mod gmail_tests;
 #[cfg(test)]
 mod hidden_text_tests;
 #[cfg(test)]

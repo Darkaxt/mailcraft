@@ -329,6 +329,12 @@ pub struct Account {
     pub email: String,
     /// The owner's name, as recipients see it.
     pub display_name: String,
+    /// Local message-row colour, keyed by this stable account identity. Never sent to a provider.
+    #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "crate::sync::lenient")]
+    pub row_color: Option<Rgb>,
+    /// Local display colours for exact receiving-alias identities; never provider settings.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty", deserialize_with = "crate::load_limit::capped_map")]
+    pub alias_row_colors: BTreeMap<String, Rgb>,
     pub kind: AccountKind,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub incoming: Option<Server>,
@@ -406,6 +412,16 @@ pub struct Account {
     /// shared mailbox follows its owner's ([`Mailbox::asks_before_deleting_conversation`]).
     #[serde(skip_serializing_if = "is_false", deserialize_with = "crate::sync::lenient_or_default")]
     pub skip_conversation_question: bool,
+    /// For a Gmail account: its owner turned off Gmail's categories (#911), which the folder pane
+    /// then doesn't show under its Inbox. Off for a new account and in a file from before there
+    /// was one: they are shown. Every other account has none to show, whatever this says.
+    #[serde(skip_serializing_if = "is_false", deserialize_with = "crate::sync::lenient_or_default")]
+    pub hide_gmail_categories: bool,
+    /// For a Gmail account: a desktop alert is shown only for new mail in Gmail's Primary category
+    /// (#911). Off for a new account and in a file from before there was one: all new mail in the
+    /// Inbox is told of, as for any account.
+    #[serde(skip_serializing_if = "is_false", deserialize_with = "crate::sync::lenient_or_default")]
+    pub alert_primary_only: bool,
     /// For an account of a kind this version doesn't know ([`AccountKind::Unknown`]): the account
     /// as its file had it, every field but its id, which is what a mailbox file gets in its place
     /// ([`Mailbox::accounts`]). `None` for every other account.
@@ -414,6 +430,14 @@ pub struct Account {
 }
 
 impl Account {
+    /// The theme-neutral pastel assigned to this account; reordering accounts never changes it.
+    pub fn effective_row_color(&self) -> Rgb {
+        self.row_color.unwrap_or_else(|| ACCOUNT_ROW_COLORS.get((self.id % 8) as usize).copied().unwrap_or_default())
+    }
+
+    pub fn origin_row_color(&self, alias: Option<&str>) -> Rgb {
+        alias.and_then(|alias| self.alias_row_colors.get(&alias.to_ascii_lowercase())).copied().unwrap_or_else(|| self.effective_row_color())
+    }
     /// Keep the calendars opened by address to what can be kept: an address that could be one
     /// (once, whatever its case), a one-line name, at most [`crate::MAX_OPENED_CALENDARS`].
     pub fn clamp_opened_calendars(&mut self) {
@@ -972,6 +996,18 @@ pub struct Category {
 /// The colour of a category with none: one a list doesn't have, or one new to the list.
 pub const GREY_CATEGORY: Rgb = Rgb(0x8A, 0x8A, 0x8A);
 
+/// Theme-neutral account pastels. The renderer adapts their strength to the surface.
+pub const ACCOUNT_ROW_COLORS: [Rgb; 8] = [
+    Rgb(225, 233, 252),
+    Rgb(222, 243, 231),
+    Rgb(252, 231, 219),
+    Rgb(239, 226, 249),
+    Rgb(219, 242, 245),
+    Rgb(250, 240, 211),
+    Rgb(249, 225, 235),
+    Rgb(230, 237, 221),
+];
+
 /// Our own colours for the numbered colours Outlook gives a category (0 to 24: red, orange,
 /// brown, yellow, green, teal, olive, blue, purple, cranberry, steel, dark steel, gray, dark
 /// gray, black, then the dark ones of the first ten), as Microsoft Graph names them
@@ -1054,6 +1090,9 @@ pub struct Mailbox {
     #[serde(deserialize_with = "crate::load_limit::capped_vec")]
     pub categories: Vec<Category>,
     pub rules: Vec<Rule>,
+    /// Local virtual search folders; never synchronised as provider folder mutations.
+    #[serde(skip_serializing_if = "Vec::is_empty", deserialize_with = "crate::load_limit::capped_vec")]
+    pub search_folders: Vec<crate::SearchFolder>,
     /// The mailbox-wide Safe Senders and Blocked Senders of #504, before they were kept per
     /// account (#516). Only read from an old file: [`Mailbox::repair`] moves them to every
     /// account's own lists and empties this, so the next save drops it.
@@ -1160,6 +1199,7 @@ impl Default for Mailbox {
             tasks: BTreeMap::new(),
             categories: default_categories(),
             rules: Vec::new(),
+            search_folders: Vec::new(),
             junk: crate::JunkLists::default(),
             junk_accounts: BTreeMap::new(),
             signatures: Vec::new(),
@@ -2158,6 +2198,7 @@ impl Mailbox {
             return Ok(());
         }
         let from_account = m.account;
+        let origin_alias = m.origin_alias();
         // Moved in from another mailbox and not made on this account's server yet, it is mail from
         // elsewhere still: not into an Outbox that would send it, as straight from there (#704).
         if m.account == account
@@ -2170,11 +2211,15 @@ impl Mailbox {
             // Moved on by its owner: what its server says of it from here on goes as for any other.
             self.message_mut(id)?.returned = 0;
         }
+        // A new explicit relocation supersedes a previous one-time exception. The filing
+        // command records its new exception only after the durable move has been queued.
+        self.message_mut(id)?.filing_override = None;
         let into_outbox = self.is_imap_outbox(folder);
         if self.move_between_accounts(id, folder, account, &remote, fresh)? {
             let m = self.message_mut(id)?;
             if m.filing_source_account == 0 && from_account != account {
                 m.filing_source_account = from_account;
+                m.filing_source_alias = origin_alias;
             }
             hold_if_put_in_outbox(m, into_outbox);
             return Ok(());
@@ -2185,6 +2230,7 @@ impl Mailbox {
         m.lies_in(folder, account, uid, synced);
         if m.filing_source_account == 0 && from_account != account {
             m.filing_source_account = from_account;
+            m.filing_source_alias = origin_alias;
         }
         hold_if_put_in_outbox(m, into_outbox);
         Ok(())
@@ -2613,11 +2659,14 @@ impl Mailbox {
             let mut copy = m.clone();
             if copy.filing_source_account == 0 && from_account != to_account {
                 copy.filing_source_account = from_account;
+                copy.filing_source_alias = m.origin_alias();
             }
             (copy.id, copy.folder, copy.account, copy.uid, copy.synced) = (0, folder, to_account, 0, None);
             copy.rule_processing = None;
+            copy.filing_override = None;
             (copy.server, copy.moving_out, copy.returned) = (None, None, 0);
             copy.placed.clear();
+            copy.left_gmail_inbox();
             crate::auth_results::forget_stamps(&mut copy);
             hold_if_put_in_outbox(&mut copy, self.is_imap_outbox(folder));
             let new = self.add_message(copy)?;
@@ -2635,9 +2684,11 @@ impl Mailbox {
         let mut copy = m.clone();
         if copy.filing_source_account == 0 && from_account != to_account {
             copy.filing_source_account = from_account;
+            copy.filing_source_alias = m.origin_alias();
         }
         copy.id = 0;
         copy.rule_processing = None;
+        copy.filing_override = None;
         copy.folder = folder;
         copy.uid = 0;
         copy.synced = None;
@@ -2647,6 +2698,7 @@ impl Mailbox {
         // the copy on a server it waits for.)
         copy.returned = 0;
         copy.placed.clear();
+        copy.left_gmail_inbox();
         hold_if_put_in_outbox(&mut copy, self.is_imap_outbox(folder));
         let new = self.add_message(copy)?;
         if let Some(server) = server {
@@ -2759,13 +2811,26 @@ impl Mailbox {
     /// [`Mailbox::conversation`] of `id` by `threads`, built of (at least) the messages of its
     /// account, for a caller that keeps one rather than walk every message each time.
     pub fn conversation_in(&self, threads: &ThreadIndex, id: Id) -> Vec<Id> {
+        self.conversation_scoped_in(threads, id, false)
+    }
+
+    /// A combined-view conversation indexed by observed origin, across real
+    /// storage accounts. Each account retains its own Junk/Deleted exclusions.
+    pub fn conversation_origins_in(&self, threads: &ThreadIndex, id: Id) -> Vec<Id> {
+        self.conversation_scoped_in(threads, id, true)
+    }
+
+    fn conversation_scoped_in(&self, threads: &ThreadIndex, id: Id, origins: bool) -> Vec<Id> {
         let Some(m) = self.message(id) else { return Vec::new() };
-        let skips = self.conversation_skips(m.account, m.folder);
+        let mut skips = HashMap::new();
         let mut v: Vec<&Message> = threads
             .members(id)
             .into_iter()
             .filter_map(|x| self.message(x))
-            .filter(|x| x.account == m.account && !skips.contains(&x.folder))
+            .filter(|x| {
+                (if origins { x.origin_account() == m.origin_account() } else { x.account == m.account })
+                    && !skips.entry(x.account).or_insert_with(|| self.conversation_skips(x.account, m.folder)).contains(&x.folder)
+            })
             .collect();
         v.sort_by_key(|x| (x.date, x.id));
         v.into_iter().map(|x| x.id).collect()
@@ -2943,6 +3008,9 @@ impl Mailbox {
         let mut importance = message.importance;
         for index in self.rules_in_order(message.account) {
             let Some(rule) = self.rules.get(index) else { continue };
+            if self.filing_rule_overridden(message, rule) {
+                continue;
+            }
             let addresses = self.rule_reads_addresses(rule);
             let could_match =
                 rule.may_match_headers(message, addresses, now, importance) || rule.may_match_headers(message, addresses, now, message.importance);
@@ -3060,6 +3128,9 @@ impl Mailbox {
             .collect();
         for mut rule in order {
             let Some(m) = self.message(id) else { break };
+            if self.filing_rule_overridden(m, &rule) {
+                continue;
+            }
             // New mail: a rule its server has ran there as the server last had it, which is what
             // says whether the rules after it run, whatever was switched here and not sent yet.
             if let Some(server) = rule.server.as_ref().filter(|s| !now && !s.id.is_empty()) {
@@ -3498,6 +3569,10 @@ impl Mailbox {
     /// loop, every message is in a folder, every event in a calendar. Returns what was fixed.
     pub fn repair(&mut self) -> Vec<String> {
         let mut fixed = Vec::new();
+        if self.search_folders.len() > crate::MAX_SEARCH_FOLDERS {
+            self.search_folders.truncate(crate::MAX_SEARCH_FOLDERS);
+            fixed.push(format!("search folders cut to {}", crate::MAX_SEARCH_FOLDERS));
+        }
         if self.rules.len() > MAX_RULES {
             self.rules.truncate(MAX_RULES);
             fixed.push(format!("rules cut to {MAX_RULES}"));
@@ -3531,6 +3606,7 @@ impl Mailbox {
             .chain(self.folders.iter().map(|f| f.id))
             .chain(self.calendars.iter().map(|c| c.id))
             .chain(self.rules.iter().map(|r| r.id))
+            .chain(self.search_folders.iter().map(|r| r.id))
             .filter(sane)
             .max()
             .unwrap_or(0);
@@ -3846,6 +3922,29 @@ impl Mailbox {
         let after: usize = self.favorites_from_server.iter().map(|list| list.folders.len().saturating_add(1)).sum();
         if after != before {
             fixed.push("the Favorites kept from a mail server corrected".into());
+        }
+        let mut search_ids: HashSet<Id> = self
+            .accounts
+            .iter()
+            .map(|a| a.id)
+            .chain(self.folders.iter().map(|f| f.id))
+            .chain(self.calendars.iter().map(|c| c.id))
+            .chain(self.rules.iter().map(|r| r.id))
+            .collect();
+        for search in &mut self.search_folders {
+            if search.id == 0
+                || !sane(&search.id)
+                || self.messages.contains_key(&search.id)
+                || self.contacts.contains_key(&search.id)
+                || self.events.contains_key(&search.id)
+                || self.tasks.contains_key(&search.id)
+                || !search_ids.insert(search.id)
+            {
+                search.id = self.next_id;
+                self.next_id += 1;
+                search_ids.insert(search.id);
+                fixed.push("a search folder id corrected".into());
+            }
         }
         self.next_id = self.next_id.max(1);
         fixed

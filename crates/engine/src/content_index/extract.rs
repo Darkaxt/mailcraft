@@ -9,6 +9,7 @@ use std::io::{Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[cfg(windows)]
 use craft_content::Record;
 use serde_json::{Value, json};
 

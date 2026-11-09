@@ -142,13 +142,23 @@ impl ThreadIndex {
     /// The conversations of `messages`: those of one account and one topic, linked as the
     /// module's documentation says.
     pub fn build<'a>(messages: impl IntoIterator<Item = &'a Message>) -> ThreadIndex {
+        Self::build_scoped(messages, false)
+    }
+
+    /// Combined filing/search views group by receiving origin, even when only
+    /// part of a thread has moved to the canonical account. Other origins stay separate.
+    pub fn build_origins<'a>(messages: impl IntoIterator<Item = &'a Message>) -> ThreadIndex {
+        Self::build_scoped(messages, true)
+    }
+
+    fn build_scoped<'a>(messages: impl IntoIterator<Item = &'a Message>, origins: bool) -> ThreadIndex {
         let mut index = ThreadIndex::default();
         let mut topics: HashMap<(Id, String), Vec<&Message>> = HashMap::new();
         for m in messages {
             index.work = index.work.saturating_add(1);
             let topic = m.topic_key();
             if !topic.is_empty() {
-                topics.entry((m.account, topic)).or_default().push(m);
+                topics.entry((if origins { m.origin_account() } else { m.account }, topic)).or_default().push(m);
             }
         }
         for same in topics.into_values().filter(|same| same.len() > 1) {

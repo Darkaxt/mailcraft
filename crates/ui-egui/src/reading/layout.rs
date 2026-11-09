@@ -312,7 +312,7 @@ impl Laid {
         if self.done {
             return;
         }
-        let base = if self.light { Tokens::light() } else { Tokens::get(ctx) };
+        let base = Tokens::page(ctx, self.light);
         let t = Tokens { sender_dark: self.sender_dark && base.dark, ..base };
         let cuts = self.cuts.clone();
         let mut cx = Cx {

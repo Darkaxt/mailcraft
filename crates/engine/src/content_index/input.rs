@@ -109,10 +109,11 @@ pub fn metadata(session: &Session, message: &Message, extraction_revision: &str)
     let downloaded = !message.unfetched && !message.incomplete && message.not_downloaded == 0;
     let row = json!({"id":message.id,"account":message.account,"folder":message.folder,
         "filingSourceAccount":(message.filing_source_account!=0).then_some(message.filing_source_account),
+        "filingSourceAlias":message.filing_source_alias,"filingOverride":message.filing_override,
         "simpleLogin":message.simple_login(),"from":message.from.full(),"to":mailcraft_model::format_list(&message.to),
         "subject":message.subject,"date":mailcraft_time::format_iso_utc(message.date),
         "received":session.local(crate::list::when(message)).iso(),"read":message.read,"flag":message.flag,
-        "importance":message.importance,"categories":message.categories,
+        "importance":message.importance,"categories":message.categories,"gmailCategory":message.gmail_category.map(|category|category.code()),
         "attachments":message.listed_attachments().map(|(_,file)| file.name.as_str()).collect::<Vec<_>>()});
     let metadata_fp = hash_json(&row)?;
     Ok(Metadata {

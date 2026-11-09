@@ -131,7 +131,7 @@ fn key_of(s: &Session) -> (String, Scope, Id, Option<(Date, Weekday)>, Option<St
     // The folder in view, or for a mailbox's search its account: another folder of the same
     // account keeps what the server found.
     let place = match s.view.scope {
-        Scope::Everywhere => 0,
+        Scope::Everywhere | Scope::Inboxes => 0,
         Scope::Mailbox => s.mailbox.folder(s.view.folder).map_or(0, |f| f.account),
         Scope::Folder | Scope::Subfolders => s.view.folder,
     };
@@ -163,11 +163,27 @@ pub fn mailboxes_for(s: &Session) -> Vec<(Id, String)> {
             mb.folder(s.view.folder).filter(|f| usable(f.account)).map(|f| (f.account, String::new())).into_iter().collect()
         }
         Scope::Everywhere => mb.accounts.iter().filter(|a| usable(a.id)).map(|a| (a.id, String::new())).collect(),
+        Scope::Inboxes => mb
+            .accounts
+            .iter()
+            .filter(|a| usable(a.id))
+            .filter_map(|a| {
+                let folder = mb.folder_of_kind(a.id, FolderKind::Inbox)?;
+                let server = mb.folder(folder)?.server.as_ref()?;
+                Some((a.id, server.id.clone()))
+            })
+            .collect(),
     }
 }
 
 /// Why More results on the server isn't offered for the search in view, when it isn't.
 pub fn offered_reason(s: &Session) -> Option<&'static str> {
+    if super::search_folders::active_problem(s).is_some() {
+        return Some("the saved search's exact scope is unavailable; edit its anchor first");
+    }
+    if super::filing::is_unfiled_view(s) {
+        return Some("the combined unfiled view searches downloaded mail locally; provider search cannot represent this cross-account folder union");
+    }
     let query = Query::parse(&s.view.search);
     if query.is_empty() {
         return Some("there is no search");
@@ -266,6 +282,7 @@ pub fn apply(s: &mut Session, result: GraphSearchResult) -> CmdResult {
             .flat_map(|f| mb.subtree(f.id))
             .collect(),
         Scope::Folder => HashSet::new(),
+        Scope::Inboxes => mb.folders.iter().filter(|f| f.account == account && f.kind != FolderKind::Inbox).map(|f| f.id).collect(),
         Scope::Subfolders => {
             let under: HashSet<Id> = mb.subtree(s.view.folder).into_iter().collect();
             mb.folders.iter().map(|f| f.id).filter(|id| !under.contains(id)).collect()

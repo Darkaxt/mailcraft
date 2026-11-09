@@ -53,3 +53,11 @@ Generated-in-code art is original and has no file to list: the UI icon set (`cra
 | `assets/fonts/OFL-Inter.txt` | (licence text) | upstream project | — |  |
 | `assets/fonts/OFL-SourceSans3.txt` | (licence text) | upstream project | — |  |
 | `assets/fonts/OFL-JetBrainsMono.txt` | (licence text) | upstream project | — |  |
+| `vendor/winit/docs/res/keyboard_left_shift_key.svg` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/docs/res | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency documentation; not used as MailCraft interface artwork |
+| `vendor/winit/docs/res/keyboard_numpad_1_key.svg` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/docs/res | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency documentation |
+| `vendor/winit/docs/res/keyboard_right_shift_key.svg` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/docs/res | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency documentation |
+| `vendor/winit/docs/res/keyboard_standard_1_key.svg` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/docs/res | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency documentation |
+| `vendor/winit/examples/data/cross.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example; not used by the app |
+| `vendor/winit/examples/data/cross2.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example |
+| `vendor/winit/examples/data/gradient.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example |
+| `vendor/winit/examples/data/icon.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example, not MailCraft's icon |

@@ -15,3 +15,6 @@
 *.ttf binary
 *.po text eol=lf
 *.pot text eol=lf
+
+# Retain source-import byte identities across Windows checkouts and recovery stashes.
+vendor/winit/** -text

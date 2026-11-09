@@ -171,6 +171,7 @@ impl Spool {
         Ok(Records { reader: BufReader::new(&mut self.file), failed: false })
     }
 
+    #[cfg(windows)]
     pub fn append(&mut self, other: &mut Spool) -> Result<()> {
         self.finish_located()?;
         self.file.seek(SeekFrom::End(0)).map_err(|why| why.to_string())?;

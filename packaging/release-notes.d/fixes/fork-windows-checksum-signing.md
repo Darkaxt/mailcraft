@@ -1,0 +1,1 @@
+- Local checksum signing uses the existing Rust signer on Git for Windows, where native OpenSSL cannot read Bash process-substitution descriptors. Private keys stay in memory.

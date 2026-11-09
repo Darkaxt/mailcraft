@@ -689,6 +689,9 @@ fn main() {
         services.update_start.didnt_start = Some((env!("CARGO_PKG_VERSION").to_string(), kept));
     }
     let mut app = MailApp::new(session, services).with_control(rx);
+    // Match the actual native host's caption choice. Offscreen Windows renders
+    // must show the integrated header that the delivered desktop uses too.
+    app.windows_titlebar = cfg!(target_os = "windows");
     app.autosave = false;
     // Every frame may be a shot: a password shown with its eye is drawn as dots (#438).
     app.headless_shots = true;

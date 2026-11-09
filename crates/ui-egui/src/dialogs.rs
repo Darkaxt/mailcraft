@@ -1201,6 +1201,7 @@ pub fn input_dialog(id: &str, params: &Value) -> Option<&'static str> {
     let empty = params.as_object().is_none_or(|m| m.is_empty());
     match id {
         "folder.new" | "folder.rename" if !has("name") => Some("folder"),
+        "folder.newSearchFolder" if !has("name") => Some("searchFolder"),
         "calendar.new" if !has("title") => Some("event"),
         "calendar.newMeeting" | "people.meeting" if !has("title") => Some("meeting"),
         // (Which of a series is meant says nothing of what to change: the form is still to come.)

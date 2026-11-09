@@ -15,6 +15,8 @@ pub fn specs() -> Vec<CommandSpec> {
             r#"{"id": number} — actual transport sender/reply recipients plus separately attributed SimpleLogin receiving alias, original sender and metadata gaps. Reads retained headers only, never changes reply routing or authenticates sender claims."#),
         CommandSpec::new("view.alias", "Show Mail for Alias", "Mail", view).reads().params(
             r#"{"account": number, "alias": string} — exact header-reported receiving alias across this account's folders, excluding Deleted/Junk descendants. Changes only the view/selection; creates no physical folder and never moves messages."#),
+        CommandSpec::new("aliases.rowColor", "Alias row color", "Folder Pane", row_color).params(
+            r##"{"account":number,"alias":string,"color":"#RRGGBB"|null} — locally persisted exact receiving-alias tint in combined views; null restores its account colour. Display metadata only, not a claim that forwarded headers authenticate an identity."##),
     ]
 }
 
@@ -70,10 +72,39 @@ fn view(session: &mut Session, value: &Value) -> CmdResult {
         .ok_or_else(|| fail("the account has no Inbox to anchor its alias view"))?
         .id;
     session.show_whole_folder();
+    session.view.filing = None;
     session.sel.clear_messages();
     session.view.folder = folder;
     session.view.module = Module::Mail;
     session.view.scope = Scope::Mailbox;
     session.view.search = format!("alias:{}", mailcraft_model::search::keyword_value(alias));
     Ok(json!({"account": account, "alias": alias, "found": crate::list::listed(&session.rows()), "mutated": false}))
+}
+
+fn row_color(session: &mut Session, value: &Value) -> CmdResult {
+    p::only(value, &["account", "alias", "color"])?;
+    let account = p::req_id(value, "account")?;
+    let alias = p::req_str(value, "alias")?.trim();
+    if alias.len() > mailcraft_model::MAX_ADDRESS || !mailcraft_model::search::is_address(alias) {
+        return Err(bad("alias must be one complete email address"));
+    }
+    let alias = alias.to_ascii_lowercase();
+    let color = match value.get("color") {
+        Some(Value::Null) => None,
+        Some(Value::String(text)) => Some(mailcraft_model::Rgb::parse(text).ok_or_else(|| bad("color is #RRGGBB or null"))?),
+        _ => return Err(bad("color is #RRGGBB or null")),
+    };
+    let account = session.mailbox.account_mut(account)?;
+    if account.kind == mailcraft_model::AccountKind::Unknown {
+        return Err(bad("preserve the settings of this unsupported account"));
+    }
+    if let Some(color) = color {
+        if account.alias_row_colors.len() >= 10_000 && !account.alias_row_colors.contains_key(&alias) {
+            return Err(bad("too many saved alias colours"));
+        }
+        account.alias_row_colors.insert(alias.clone(), color);
+    } else {
+        account.alias_row_colors.remove(&alias);
+    }
+    Ok(json!({"account":account.id,"alias":alias,"color":account.origin_row_color(Some(&alias)).hex(),"custom":color.is_some()}))
 }

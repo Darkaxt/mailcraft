@@ -36,9 +36,9 @@
 
     <Icon Id="MailcraftIcon.ico" SourceFile="$(var.IconPath)" />
     <Property Id="ARPPRODUCTICON" Value="MailcraftIcon.ico" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/UCS-Care-Group/mailcraft" />
-    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/UCS-Care-Group/mailcraft" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/UCS-Care-Group/mailcraft/issues" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Darkaxt/mailcraft" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/Darkaxt/mailcraft" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Darkaxt/mailcraft/issues" />
 
     <!-- Installer UI (#198): WixUI_Minimal is welcome + license, progress, then a finish page so
          people can see the install worked. Its dialogs and bitmaps are WiX's own
@@ -71,6 +71,7 @@
 
     <Feature Id="Main" Title="MailCraft" Level="1">
       <ComponentGroupRef Id="MailcraftFiles" />
+      <ComponentGroupRef Id="MailcraftContentRuntime" />
     </Feature>
   </Package>
 
@@ -149,6 +150,10 @@
       </Component>
       <Component Id="MailcraftCli">
         <File Id="MailcraftCliExe" Source="$(var.BinDir)\mailcraft-cli.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="MailcraftNotices">
+        <File Id="MailcraftNotice" Source="$(var.BinDir)\NOTICE" KeyPath="yes" />
+        <File Id="MailcraftAttribution" Source="$(var.BinDir)\ATTRIBUTION.md" />
       </Component>
     </ComponentGroup>
   </Fragment>

@@ -158,6 +158,13 @@ pub fn inspect(app: &mut MailApp, ctx: &egui::Context) -> Value {
         "agentQuestion": app.asking.front().map(|a| json!({"command": a.id, "needs": a.class.as_str(), "what": a.what})),
         "windows": crate::windows::inspect(app),
         "window": [r.width(), r.height()],
+        "windowHeader": {
+            "integratedWindows": app.windows_titlebar,
+            "drag": app.window_header.drag.iter().map(|rect|[rect.left(),rect.top(),rect.right(),rect.bottom()]).collect::<Vec<_>>(),
+            "maximize": app.window_header.maximize.map(|rect|[rect.left(),rect.top(),rect.right(),rect.bottom()]),
+            "systemMenu": app.window_header.system_menu.map(|rect|[rect.left(),rect.top(),rect.right(),rect.bottom()]),
+            "exclusions": app.window_header.exclusions.iter().map(|rect|[rect.left(),rect.top(),rect.right(),rect.bottom()]).collect::<Vec<_>>()
+        },
         "items": app.hit.to_json(),
         "title": app.title_stem(),
         "dirty": app.session.dirty,

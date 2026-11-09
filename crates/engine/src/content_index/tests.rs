@@ -121,6 +121,43 @@ fn persistent_full_sources_case_quotes_and_snippets_survive_reopen_without_body_
 }
 
 #[test]
+fn saved_header_and_attachment_queries_reopen_with_exact_native_scope_without_body_reads() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (id, other, second) = fixture(&path);
+    let (mut session, opens) = open(&path);
+    search(&mut session, "HeaderOnlyAster");
+    let anchor = session.mailbox.folder_of_kind(second, FolderKind::Inbox).unwrap();
+    let wanted = session
+        .run("folder.newSearchFolder", &json!({"name":"Invoice attachment","query":"attachmenttext:\"exact, punctuation!\"","scope":"inboxes"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let excluded = session
+        .run("folder.newSearchFolder", &json!({"name":"Other mailbox only","query":"HeaderOnlyAster","scope":"mailbox","folder":anchor}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    opens.store(0, Ordering::Relaxed);
+    session.run("searchFolders.select", &json!({"id":wanted})).unwrap();
+    session.wait_for_word_index();
+    assert_eq!(session.rows().iter().map(|row| row.id).collect::<Vec<_>>(), [id]);
+    session.run("searchFolders.select", &json!({"id":excluded})).unwrap();
+    session.wait_for_word_index();
+    assert!(session.rows().is_empty(), "a header hit in another account cannot escape the saved mailbox binding");
+    assert_eq!(opens.load(Ordering::Relaxed), 0, "saved searches use indexed sources");
+    crate::store::save(&path, &session.mailbox).unwrap();
+    drop(session);
+    let (mut session, opens) = open(&path);
+    assert_eq!(session.mailbox.search_folders.len(), 2);
+    session.run("searchFolders.select", &json!({"id":wanted})).unwrap();
+    session.wait_for_word_index();
+    assert_eq!(session.rows().iter().map(|row| row.id).collect::<Vec<_>>(), [id]);
+    assert!(!session.rows().iter().any(|row| row.id == other));
+    assert_eq!(opens.load(Ordering::Relaxed), 0, "reopened definitions reuse retained index content");
+}
+
+#[test]
 fn edits_removal_and_account_scopes_cannot_reuse_stale_hits() {
     let scratch = tempfile::tempdir().unwrap();
     let path = scratch.path().join("mailbox.mailcraft");

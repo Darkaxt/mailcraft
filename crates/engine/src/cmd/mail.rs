@@ -38,7 +38,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("mail.filingStatus", "Inspect Filing State", "Mail", filing_status).reads().params(
             r#"{"id": number} — read stored placement/source-removal state for exactly one message, without fetching content, running sync or changing selection. Recorded provider ids are the last native server observation, not a new server lookup; pending placement is not a confirmed remote copy."#,
         ),
-        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "Inbox/Projects", "query"?: string} — bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone."#),
+        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "Inbox/Projects", "query"?: string,"scope"?:"folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes"} — inboxes is the virtual union of actual account inboxes; omit folder. Bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone."#),
         CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_movable),
         CommandSpec::new("mail.deletePermanently", "Delete Permanently", "Home › Delete", delete_permanently)
             .key("Shift+Delete")
@@ -466,7 +466,7 @@ fn focused_conversation(s: &Session) -> Option<bool> {
         return None;
     }
     let m = s.focused_message()?;
-    Some(s.view.open.contains(&(m.account, s.thread_of(m.id))))
+    Some(s.view.open.contains(&(crate::list::conversation_account(s, m), s.thread_of(m.id))))
 }
 
 /// Right opens the focused row's conversation (#503).
@@ -515,7 +515,7 @@ fn named_message(s: &Session, v: &Value) -> Result<(), crate::CmdError> {
 
 /// The key a conversation's row is opened by: its account and its conversation (#795).
 fn key_of(s: &mut Session, row: &Row) -> Option<(Id, ThreadKey)> {
-    let account = s.mailbox.message(row.id)?.account;
+    let account = crate::list::conversation_account(s, s.mailbox.message(row.id)?);
     Some((account, s.thread_of(row.id)))
 }
 
@@ -536,8 +536,13 @@ fn expand(s: &mut Session, v: &Value) -> CmdResult {
             // Never one with a message selected under it: closed, its row would stand for all of it
             // (#503).
             let threads = s.threads();
-            let held: HashSet<(Id, ThreadKey)> =
-                s.sel.messages.iter().filter_map(|id| s.mailbox.message(*id)).map(|m| (m.account, threads.key(m.id))).collect();
+            let held: HashSet<(Id, ThreadKey)> = s
+                .sel
+                .messages
+                .iter()
+                .filter_map(|id| s.mailbox.message(*id))
+                .map(|m| (crate::list::conversation_account(s, m), threads.key(m.id)))
+                .collect();
             let Some(i) = s.view.open.iter().position(|k| !held.contains(k)) else {
                 return Err(fail("close a conversation first: each of the 1,000 open has a message selected"));
             };
@@ -606,6 +611,8 @@ fn filing_status(s: &mut Session, v: &Value) -> CmdResult {
     Ok(json!({
         "id": id, "messageId": message.message_id, "account": message.account, "folder": message.folder,
         "filingSourceAccount": (message.filing_source_account != 0).then_some(message.filing_source_account),
+        "filingSourceAlias": message.filing_source_alias,
+        "filingOverride": message.filing_override,
         "recordedServer": message.server.as_ref().map(|server| json!({"id": server.id, "folder": server.folder, "gone": server.gone})),
         "imap": {"uid": message.uid, "flagsRecorded": message.synced.is_some()},
         "pendingDestination": placement,
@@ -642,7 +649,18 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
     let offset = usize::try_from(p::u64(v, "offset").unwrap_or(0)).map_err(|_| bad("the list offset is too large for this platform"))?;
     // A named folder or a search is read from a view of its own: the owner's folder, search and
     // selection stay as they are (#620).
-    let looks_elsewhere = v.get("folder").is_some_and(|f| !f.is_null()) || v.get("query").is_some_and(|q| !q.is_null());
+    let explicit_folder = v.get("folder").is_some_and(|f| !f.is_null());
+    let requested_scope = match v.get("scope") {
+        Some(Value::String(scope)) => Some(
+            crate::session::parse_enum::<crate::Scope>(scope).ok_or_else(|| bad("`scope` is folder, subfolders, mailbox, everywhere or inboxes"))?,
+        ),
+        None => None,
+        Some(_) => return Err(bad("`scope` is folder, subfolders, mailbox, everywhere or inboxes")),
+    };
+    if explicit_folder && requested_scope == Some(crate::Scope::Inboxes) {
+        return Err(bad("all inboxes is a virtual view: omit `folder` when `scope` is inboxes"));
+    }
+    let looks_elsewhere = explicit_folder || v.get("query").is_some_and(|q| !q.is_null()) || requested_scope.is_some();
     if !looks_elsewhere {
         return list_in_view(s, limit, offset);
     }
@@ -656,7 +674,11 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
             }
         },
     };
-    let query = p::str(v, "query").unwrap_or("").to_owned();
+    let query = match v.get("query") {
+        None | Some(Value::Null) => String::new(),
+        Some(Value::String(query)) => query.clone(),
+        _ => return Err(bad("query must be a string")),
+    };
     if let Some(why) = mailcraft_model::search::Query::parse(&query).error() {
         return Err(bad(why));
     }
@@ -664,9 +686,20 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
     s.view.folder = folder;
     s.view.module = crate::Module::Mail;
     s.view.search = query;
-    s.view.scope = crate::Scope::Folder;
+    s.view.scope = requested_scope.unwrap_or(if !explicit_folder && (view.scope == crate::Scope::Inboxes || view.search_folder.is_some()) {
+        view.scope
+    } else {
+        crate::Scope::Folder
+    });
+    if explicit_folder || requested_scope.is_some() {
+        s.view.filing = None;
+        s.view.gmail = None;
+    }
+    if explicit_folder || requested_scope.is_some() {
+        s.view.search_folder = None;
+    }
     // Another folder or search lists every conversation closed, as the window does (#503).
-    if s.view.folder != view.folder || s.view.search != view.search {
+    if s.view.folder != view.folder || s.view.search != view.search || s.view.scope != view.scope {
         s.view.open.clear();
     }
     let out = list_in_view(s, limit, offset);
@@ -716,7 +749,8 @@ fn list_in_view(s: &mut Session, limit: usize, offset: usize) -> CmdResult {
         })
         .collect();
     let next = offset.saturating_add(items.len());
-    Ok(json!({"folder":s.view.folder,"total":listed(&rows),"rows":rows.len(),"messages":items,
+    Ok(json!({"folder":s.view.folder,"scope":s.view.scope,"filingAccount":s.view.filing,
+        "scopeProblem":super::search_folders::active_problem(s),"total":listed(&rows),"rows":rows.len(),"messages":items,
         "offset":offset,"nextOffset":(next<rows.len()).then_some(next),"searchIndex":s.content_index_status(),
         "unsearched":s.unsearched}))
 }

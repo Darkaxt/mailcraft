@@ -28,26 +28,26 @@ fn qat_button(ui: &mut Ui, app: &mut MailApp, icon: &str, tip: &str, id: &str) -
 
 /// "Copy Diagnostics", beside the window's own buttons, so a tester finds it (D1): the same command
 /// as Help › Copy Diagnostics.
-fn diagnostics_pill(ui: &mut Ui, app: &mut MailApp, h: f32) {
+fn diagnostics_pill(ui: &mut Ui, app: &mut MailApp, h: f32, compact: bool) {
     let tip = tl!(
         "Copy the version, the platform and the end of MailCraft's own record, to paste into a problem report. No message, address, password or token is in it, and nothing is sent."
     );
-    pill(ui, app, h, "copy", tl!("Copy Diagnostics"), tip, "ui.copyDiagnostics");
+    pill(ui, app, h, "copy", tl!("Copy Diagnostics"), tip, "ui.copyDiagnostics", compact);
 }
 
 /// "Report a Problem", beside Copy Diagnostics: the same command as Help › Report a Problem,
 /// which opens its window ([`crate::report_problem`]).
-fn report_pill(ui: &mut Ui, app: &mut MailApp, h: f32) {
+fn report_pill(ui: &mut Ui, app: &mut MailApp, h: f32, compact: bool) {
     let tip = tl!("Tell MailCraft's makers what went wrong, on GitHub or by email. You check the report and send it yourself.");
-    pill(ui, app, h, "report", tl!("Report a Problem"), tip, "ui.reportProblem");
+    pill(ui, app, h, "report", tl!("Report a Problem"), tip, "ui.reportProblem", compact);
 }
 
 /// A rounded button of the title bar, with its icon and its label, that runs `id` by hand.
-fn pill(ui: &mut Ui, app: &mut MailApp, h: f32, icon: &str, label: &str, tip: &str, id: &str) {
+fn pill(ui: &mut Ui, app: &mut MailApp, h: f32, icon: &str, label: &str, tip: &str, id: &str, compact: bool) {
     let t = Tokens::get(ui.ctx());
     let font = medium(11.5);
     let w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(label.to_string(), font.clone(), t.text).size().x);
-    let (r, resp) = ui.allocate_exact_size(vec2(w + 34.0, h), Sense::click());
+    let (r, resp) = ui.allocate_exact_size(vec2(if compact { 28.0 } else { w + 34.0 }, h), Sense::click());
     let fill = if resp.is_pointer_button_down_on() {
         t.pressed
     } else if resp.hovered() {
@@ -56,10 +56,13 @@ fn pill(ui: &mut Ui, app: &mut MailApp, h: f32, icon: &str, label: &str, tip: &s
         t.title_bar
     };
     ui.painter().rect(r, h / 2.0, fill, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
-    icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 15.0, r.center().y), vec2(16.0, 16.0)), icon, t.icon, t.accent);
-    ui.painter().text(pos2(r.min.x + 26.0, r.center().y), Align2::LEFT_CENTER, label, font, t.text);
+    let icon_center = if compact { r.center() } else { pos2(r.min.x + 15.0, r.center().y) };
+    icons::paint(ui.painter(), Rect::from_center_size(icon_center, vec2(16.0, 16.0)), icon, t.icon, t.accent);
+    if !compact {
+        ui.painter().text(pos2(r.min.x + 26.0, r.center().y), Align2::LEFT_CENTER, label, font, t.text);
+    }
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
-    if resp.on_hover_text(tip).clicked() {
+    if resp.on_hover_text(if compact { format!("{label}\n{tip}") } else { tip.to_owned() }).clicked() {
         let _ = app.run(id, json!({}));
     }
 }
@@ -280,6 +283,7 @@ fn search_box(app: &mut MailApp, ui: &mut Ui, rect: Rect) {
     let scopes = scopes();
     let now = app.session.view.scope;
     let label = scopes.iter().find(|(scope, ..)| *scope == now).map_or(tl!("Current Folder"), |(_, name, _)| *name);
+    let label = if mailcraft_engine::cmd::filing::is_unfiled_view(&app.session) { tl!("Inbox and unfiled") } else { label };
     let sresp = ui.interact(scope_rect, ui.scope_id().with("search_scope"), Sense::click());
     if sresp.hovered() {
         ui.painter().rect_filled(scope_rect, 4.0, t.hover);
@@ -298,12 +302,13 @@ fn search_box(app: &mut MailApp, ui: &mut Ui, rect: Rect) {
 
 /// Where a search looks, by name and by `view.search`'s code (#493): this folder, it and its
 /// subfolders, its mailbox, or every mailbox.
-pub(crate) fn scopes() -> [(Scope, &'static str, &'static str); 4] {
+pub(crate) fn scopes() -> [(Scope, &'static str, &'static str); 5] {
     [
         (Scope::Folder, tl!("Current Folder"), "folder"),
         (Scope::Subfolders, tl!("Subfolders"), "subfolders"),
         (Scope::Mailbox, tl!("Current Mailbox"), "mailbox"),
         (Scope::Everywhere, tl!("All Mailboxes"), "everywhere"),
+        (Scope::Inboxes, tl!("All inboxes"), "inboxes"),
     ]
 }
 
@@ -332,6 +337,8 @@ pub(crate) fn caret_at_end(ctx: &egui::Context, text: &str) {
 pub fn title_bar(app: &mut MailApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let mac = app.integrated_titlebar;
+    let windows = app.windows_titlebar;
+    let compact = windows && ui.available_width() < 1100.0;
     // The first button stands over the module bar's icons.
     let left = if mac { MAC_CONTENT_LEFT as i8 } else { 10 };
     let (search_h, avatar_h) = if mac { (22.0, 22.0) } else { (SEARCH_BOX, 30.0) };
@@ -339,17 +346,20 @@ pub fn title_bar(app: &mut MailApp, ui: &mut Ui) {
         .exact_size(if mac { MAC_TITLE_BAR } else { TITLE_BAR })
         // One colour with the tabs under it, and no line between the two.
         .show_separator_line(false)
-        .frame(egui::Frame::NONE.fill(t.title_bar).inner_margin(egui::Margin { left, right: 10, top: 0, bottom: 0 }))
+        .frame(egui::Frame::NONE.fill(t.title_bar).inner_margin(egui::Margin { left, right: if windows { 0 } else { 10 }, top: 0, bottom: 0 }))
         .show(ui, |ui| {
             let full = ui.max_rect();
-            // Drag the window by the title bar (integrated title bar on macOS).
-            let drag = ui.interact(full, ui.scope_id().with("title_drag"), Sense::click_and_drag());
-            if drag.drag_started() {
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
-            }
-            if drag.double_clicked() {
-                let max = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!max));
+            // Windows uses the native hit regions below: dragging, double click,
+            // system menu and Snap stay with the OS instead of competing UI events.
+            if !windows {
+                let drag = ui.interact(full, ui.scope_id().with("title_drag"), Sense::click_and_drag());
+                if drag.drag_started() {
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+                }
+                if drag.double_clicked() {
+                    let max = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
+                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!max));
+                }
             }
             let mut qat_end = full.min.x;
             let mut right_start = full.max.x;
@@ -358,6 +368,9 @@ pub fn title_bar(app: &mut MailApp, ui: &mut Ui) {
                 // MailCraft's mark, then the Quick Access Toolbar: Send/Receive, Undo, Redo.
                 let (mark, _) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
                 icons::app_mark(ui.painter(), mark);
+                if windows {
+                    app.window_header.system_menu = Some(mark.expand(4.0));
+                }
                 ui.add_space(8.0);
                 let sync_tip = if app.syncing() { tl!("Sending and receiving…") } else { tl!("Send/Receive All Folders") };
                 qat_button(ui, app, "sync", sync_tip, "ui.sync");
@@ -367,6 +380,10 @@ pub fn title_bar(app: &mut MailApp, ui: &mut Ui) {
                 qat_button(ui, app, "redo", redo.trim(), "edit.redo");
                 qat_end = ui.min_rect().max.x;
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if windows {
+                        app.window_header.maximize = crate::window_chrome::buttons(app, ui);
+                        ui.add_space(8.0);
+                    }
                     // The account in use.
                     let me = app
                         .session
@@ -382,19 +399,27 @@ pub fn title_bar(app: &mut MailApp, ui: &mut Ui) {
                         let _ = app.run("ui.backstage", json!({"value": true, "page": "info"}));
                     }
                     ui.add_space(8.0);
-                    diagnostics_pill(ui, app, avatar_h.min(26.0));
+                    diagnostics_pill(ui, app, avatar_h.min(26.0), compact);
                     ui.add_space(4.0);
-                    report_pill(ui, app, avatar_h.min(26.0));
+                    report_pill(ui, app, avatar_h.min(26.0), compact);
                     right_start = ui.min_rect().min.x;
                 });
             });
             // The search box, centred, as wide as the space allows.
             let room = (right_start - qat_end - 40.0).max(0.0);
             let w = room.min(520.0);
+            if windows {
+                app.window_header.drag = crate::window_chrome::drag_strip(full, qat_end + 8.0, right_start - 8.0);
+                app.window_header.layer = Some(ui.layer_id());
+            }
             app.search_box_shown = w >= 220.0;
             if w >= 220.0 {
                 let cx = full.center().x.clamp(qat_end + 20.0 + w / 2.0, (right_start - 20.0 - w / 2.0).max(qat_end + 20.0 + w / 2.0));
-                search_box(app, ui, Rect::from_center_size(pos2(cx, full.center().y), vec2(w, search_h)));
+                let search = Rect::from_center_size(pos2(cx, full.center().y), vec2(w, search_h));
+                if windows {
+                    app.window_header.exclusions.push(search);
+                }
+                search_box(app, ui, search);
             }
         });
 }
@@ -471,7 +496,23 @@ pub fn status_bar(app: &mut MailApp, ui: &mut Ui) {
                         let folder = app.session.view.folder;
                         st(ui, &tln!(shown, "{n} item", "{n} items"), t.text_dim);
                         // (Counted once per change, not at every frame: `Session::folder_counts`.)
-                        let unread = app.session.folder_counts().unread(folder);
+                        let counts = app.session.folder_counts();
+                        let unread = if mailcraft_engine::cmd::filing::is_unfiled_view(&app.session) {
+                            mailcraft_engine::cmd::filing::unfiled_folders(&app.session, app.session.view.filing.unwrap_or(0))
+                                .into_iter()
+                                .fold(0usize, |total, id| total.saturating_add(counts.unread(id)))
+                        } else if app.session.view.scope == Scope::Inboxes {
+                            app.session
+                                .mailbox
+                                .folders
+                                .iter()
+                                .filter(|f| f.kind == mailcraft_model::FolderKind::Inbox)
+                                .fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)))
+                        } else if let Some(category) = mailcraft_engine::gmail::in_view(&app.session) {
+                            counts.gmail(folder, category).unread
+                        } else {
+                            counts.unread(folder)
+                        };
                         if unread > 0 {
                             st(ui, &crate::i18n::fmt(tl!("Unread: {n}"), &[("n", &unread.to_string())]), t.text_dim);
                         }

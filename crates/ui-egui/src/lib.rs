@@ -89,6 +89,7 @@ pub mod favorites_sync;
 #[cfg(test)]
 mod field_drag_tests;
 pub mod files;
+mod filing;
 mod find_replace;
 mod folder_properties;
 mod font_index;
@@ -98,6 +99,9 @@ pub mod forms;
 mod forms_date_tests;
 #[cfg(test)]
 mod frame_bench_tests;
+mod gmail_tabs;
+#[cfg(test)]
+mod gmail_tabs_tests;
 #[cfg(test)]
 #[path = "google_credential_security_tests.rs"]
 mod google_credential_security_tests;
@@ -153,6 +157,7 @@ pub mod rule_sync;
 #[cfg(test)]
 mod rule_sync_tests;
 pub mod scheduling;
+mod search_folders;
 mod search_index_ui;
 #[cfg(test)]
 mod search_index_ui_tests;
@@ -207,6 +212,7 @@ pub mod theme;
 #[cfg(test)]
 mod theme_choice_tests;
 pub mod unconfirmed;
+mod unified_inbox;
 #[cfg(test)]
 mod update_switches_tests;
 pub mod updates;
@@ -214,6 +220,7 @@ mod view_source;
 #[cfg(test)]
 mod view_source_tests;
 pub mod widgets;
+pub mod window_chrome;
 pub mod window_geometry;
 pub mod window_places;
 pub mod windows;
@@ -1073,6 +1080,9 @@ const SAVING_SHOWN_AFTER_MS: u64 = 700;
 /// UI-level commands (`ui.*`): id, label, location, params. They change the window, not the
 /// mailbox, and are listed with the engine's commands in command search and `engine.commands`.
 pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
+    ("ui.minimizeMainWindow", "Minimize", "Window", "{}"),
+    ("ui.toggleMaximizeMainWindow", "Maximize or Restore", "Window", "{}"),
+    ("ui.closeMainWindow", "Close", "Window", "{} — normal close; unsaved drafts still require the existing save decision"),
     ("ui.tab", "Show Ribbon Tab", "Ribbon", r#"{"tab": "Home"|"Send / Receive"|"Folder"|"View"|"Help"}"#),
     ("ui.backstage", "File", "Ribbon", r#"{"value"?: bool, "page"?: "info"|"open"|"options"|"about"}"#),
     ("ui.collapseRibbon", "Collapse the Ribbon", "Ribbon", r#"{"value"?: bool}"#),
@@ -1480,6 +1490,9 @@ pub struct MailApp {
     pub status_msg: Option<(String, f64)>,
     /// macOS: the window has no title bar; leave room for the traffic lights.
     pub integrated_titlebar: bool,
+    /// Windows: native caption behavior and controls share the existing top row.
+    pub windows_titlebar: bool,
+    pub window_header: window_chrome::WindowHeader,
     /// The search box's text while it is being typed.
     pub(crate) search_text: String,
     pub(crate) search_focus: bool,
@@ -1835,6 +1848,8 @@ impl MailApp {
             people_picked: Vec::new(),
             status_msg: None,
             integrated_titlebar: false,
+            windows_titlebar: false,
+            window_header: Default::default(),
             search_text: String::new(),
             search_focus: false,
             advanced_search: None,
@@ -2046,13 +2061,20 @@ impl MailApp {
         updates::sanitize(&mut self.ui);
         self.session.prefs = self.ui.options.clone();
         // Layout choices carry over; the folder, the day and the search start fresh.
+        // All inboxes is a folder-independent layout, so it can survive a restart without
+        // keeping message text, selection or another mailbox's folder identity.
         let saved = self.ui.view.clone();
         let v = &mut self.session.view;
         (v.sort, v.sort_descending, v.conversations, v.reading_pane, v.folder_pane, v.calendar, v.task_filter) =
             (saved.sort, saved.sort_descending, saved.conversations, saved.reading_pane, saved.folder_pane, saved.calendar, saved.task_filter);
+        if saved.scope == mailcraft_engine::Scope::Inboxes {
+            v.scope = mailcraft_engine::Scope::Inboxes;
+        }
         // How People and Tasks are arranged, likewise.
         v.people_sort = saved.people_sort;
         v.task_sort = saved.task_sort;
+        // Gmail's categories as folders or as tabs (#911).
+        v.gmail_tabs = saved.gmail_tabs;
         // One account's tasks and contacts only in the mailbox they were chosen in: in another,
         // the same id is somebody else's account, or none, and the list starts on All accounts.
         let mailbox = &self.session.mailbox;
@@ -2423,6 +2445,7 @@ impl MailApp {
         let s = |k: &str| p.get(k).and_then(Value::as_str);
         let b = |k: &str| p.get(k).and_then(Value::as_bool);
         Some(match id {
+            "ui.minimizeMainWindow" | "ui.toggleMaximizeMainWindow" | "ui.closeMainWindow" => window_chrome::command(self, id),
             "ui.source" => source_pane::command(self, p),
             "ui.searchIndex" => search_index_ui::command(self, p),
             "ui.searchCase" => search_index_ui::case_command(self, p),
@@ -4525,6 +4548,16 @@ impl MailApp {
             self.session.mailbox.folder(self.session.view.folder).and_then(|f| self.session.mailbox.account(f.account)).map(|a| a.name.clone());
         match self.session.view.module {
             Module::Mail => {
+                if let Some(search) = self.session.view.search_folder.and_then(|id| self.session.mailbox.search_folders.iter().find(|s| s.id == id)) {
+                    return search.name.clone();
+                }
+                if self.session.view.filing.is_some() {
+                    let folder = self.session.mailbox.folder_path(self.session.view.folder);
+                    return format!("{} — {folder}", tl!("Unified filing"));
+                }
+                if self.session.view.scope == mailcraft_engine::Scope::Inboxes {
+                    return tl!("All inboxes").to_owned();
+                }
                 let folder = self.session.mailbox.folder(self.session.view.folder).map_or(tl!("Mail"), crate::nav::folder_name);
                 match account.filter(|a| !a.is_empty()) {
                     Some(a) => i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", folder), ("mailbox", &a)]),
@@ -5087,19 +5120,26 @@ impl MailApp {
         let t0 = now_ms();
         let ctx = ui.ctx().clone();
         self.apply_language();
+        self.window_header = Default::default();
+        self.hit.clear();
         // Fonts installed by `logic` take effect on the next frame.
         if self.fonts_frames < 2 {
+            if self.windows_titlebar {
+                chrome::title_bar(self, ui);
+            }
             self.fonts_frames += 1;
             ctx.request_repaint();
             return;
         }
         // Waiting for the mailbox: the opening screen and nothing else.
         if self.opening.is_some() {
+            if self.windows_titlebar {
+                chrome::title_bar(self, ui);
+            }
             opening::show(self, ui);
             return;
         }
         let t = theme::Tokens::get(&ctx);
-        self.hit.clear();
         // What was chosen in a text's menu, for a text of the main window, before anything reads
         // the input.
         let menus = text_menu::deliver(&ctx);
@@ -5126,12 +5166,18 @@ impl MailApp {
         search_index_ui::escape(self, &ctx);
         // Shortcuts first, so the frame shows what the key did.
         keys::global_shortcuts(self, &ctx);
+        // Native controls remain available in Backstage as well as the mailbox.
+        if self.windows_titlebar {
+            chrome::title_bar(self, ui);
+        }
         if self.ui.backstage {
             backstage::show(self, ui);
         } else {
             // The module bar stands beside the tabs and the ribbon, from under the title bar down
             // to the status bar across the window's foot: both are laid out before the ribbon.
-            chrome::title_bar(self, ui);
+            if !self.windows_titlebar {
+                chrome::title_bar(self, ui);
+            }
             chrome::sync_bar_rest(self, ui.ctx());
             chrome::status_bar(self, ui);
             // The question about checking for new versions, at the first starts: above the status bar.

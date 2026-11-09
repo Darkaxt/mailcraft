@@ -110,6 +110,13 @@ fn append(value: &mut String, text: &str) {
 }
 
 impl Mailbox {
+    /// A per-message filing exception never broadens a sender's standing rule.
+    pub fn filing_rule_overridden(&self, message: &Message, rule: &Rule) -> bool {
+        message
+            .filing_override
+            .is_some_and(|destination| rule.actions.iter().any(|action| matches!(action, Action::MoveTo(folder) if *folder != destination)))
+    }
+
     /// Inspect original and sequential importance states independently of Stop. A priority
     /// winner must not hide two definitions claiming different destinations.
     pub fn conflicting_filing_rules(&self, message: Id, now: bool) -> Vec<&Rule> {
@@ -118,6 +125,9 @@ impl Mailbox {
         let mut importance = message.importance;
         for index in self.rules_in_order(message.account) {
             let Some(rule) = self.rules.get(index) else { continue };
+            if self.filing_rule_overridden(message, rule) {
+                continue;
+            }
             if self.validate_rule_actions(&rule.actions).is_err() {
                 // The normal evaluator reports and pauses this incomplete definition.
                 continue;

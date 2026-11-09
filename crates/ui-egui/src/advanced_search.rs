@@ -301,6 +301,7 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context, anchor: Rect, button:
     let week_start = app.session.prefs.week_start;
     let mut filters = app.ui.advanced_filters;
     let (mut search, mut clear, mut enter) = (false, false, false);
+    let mut save_folder = false;
     let problems = day_problems(&panel.received_from, &panel.received_to);
     let ok = problems == (None, None);
     // Taken before drawing: a list in the panel that a click closes in this frame was open.
@@ -471,11 +472,20 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context, anchor: Rect, button:
                     search = crate::widgets::primary_button(ui, tl!("Search"), ok).clicked();
                 });
             });
+            let response = ui.add_enabled(ok, egui::Button::new(tl!("Save as search folder…")));
+            app.hit.add("advancedSaveSearch", 0, response.rect);
+            save_folder = response.clicked();
         });
     });
     let rect = area.response.rect;
     app.hit.add("advancedSearch", 0, rect);
     app.ui.advanced_filters = filters;
+    if save_folder {
+        if let Some(query) = panel.query() {
+            let _ = app.run("ui.dialog", json!({"name":"searchFolder","query":query,"scope":panel.scope}));
+        }
+        return;
+    }
     if clear {
         panel.fields = Advanced::default();
         panel.received_from.clear();

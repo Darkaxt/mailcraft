@@ -65,6 +65,10 @@ pub(crate) struct State {
 }
 
 impl State {
+    pub(crate) fn window_is_hidden(&self) -> bool {
+        self.hidden || self.native_visible == Some(false)
+    }
+
     pub(crate) fn inspect(&self) -> Value {
         json!({"hiddenRequested": self.hidden, "nativeVisible": self.native_visible, "nativeFocused": self.native_focused,
             "mode": if self.headless { "headless" } else { "desktop" },

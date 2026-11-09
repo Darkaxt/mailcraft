@@ -472,6 +472,15 @@ impl Tokens {
         palette.tokens(dark)
     }
 
+    /// A message's explicit light-page override still honours the owner's accent and
+    /// high-contrast palette; it must not substitute the built-in default palette.
+    pub(crate) fn page(ctx: &egui::Context, light: bool) -> Tokens {
+        if !light {
+            return Self::get(ctx);
+        }
+        ctx.data(|d| d.get_temp::<Palette>(Palette::slot())).unwrap_or_else(Palette::builtin).tokens(false)
+    }
+
     /// A chip's fill, from a colour of the mailbox (a category's, a calendar's).
     pub fn data_fill(&self, rgb: Color32) -> Color32 {
         rgb.linear_multiply(self.data_tint)

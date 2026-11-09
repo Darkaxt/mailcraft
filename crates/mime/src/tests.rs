@@ -525,6 +525,8 @@ fn message() -> impl Strategy<Value = Message> {
             account: 3,
             folder: 5,
             filing_source_account: 9,
+            filing_source_alias: Some("private-alias@example.org".into()),
+            filing_override: Some(15),
             rule_processing: Some(Box::new(RuleProcessing::WaitingForContent)),
             uid: 11,
             draft: true,
@@ -534,6 +536,8 @@ fn message() -> impl Strategy<Value = Message> {
             flag_due: Some(1),
             synced: Some(mailcraft_model::sync::RemoteFlags { uid: 11, read: true, ..Default::default() }),
             not_downloaded: 62_914_560,
+            gmail_category: Some(mailcraft_model::GmailCategory::Social),
+            gmail_id: 42,
             server: Some(mailcraft_model::sync::ServerMessage { id: "AAMkAGI2-not-carried".into(), ..Default::default() }),
             unfetched: false,
             refetch: false,
@@ -607,6 +611,8 @@ proptest! {
         prop_assert_eq!(&back.categories, &want.categories);
         prop_assert_eq!(&back.headers, &want.headers);
         prop_assert_eq!(back.filing_source_account, 0, "filing provenance is local, not an email header");
+        prop_assert!(back.filing_source_alias.is_none(), "local receiving-alias provenance must not enter exported email");
+        prop_assert!(back.filing_override.is_none(), "local one-time filing state must not enter exported email");
         prop_assert!(back.rule_processing.is_none(), "local rule processing must not enter exported email");
         prop_assert_eq!(back, want);
     }

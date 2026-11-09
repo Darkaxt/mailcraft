@@ -73,3 +73,41 @@ fn listing_messages_leaves_the_owners_folder_search_and_selection() {
     let text = r.content[0]["text"].as_str().unwrap_or("");
     assert!(text.contains("\"messages\""), "{text}");
 }
+
+#[test]
+fn omitted_query_uses_the_selected_saved_search_and_explicit_folder_does_not() {
+    let mut mailbox = mailcraft_engine::model::Mailbox::with_local_account("Owner", "owner@example.org");
+    let account = mailbox.accounts[0].id;
+    let inbox = mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    for subject in ["SavedQueryNeedle", "Different mail"] {
+        mailbox.add_message(mailcraft_engine::model::Message { account, folder: inbox, subject: subject.into(), ..Default::default() }).unwrap();
+    }
+    let mut h = Headless::new(Session::new(mailbox), Vec::new());
+    let pol = Policy { files: None, allow: Vec::new() };
+    let inbox = h.session.mailbox.folders.iter().find(|f| f.kind == FolderKind::Inbox).unwrap().id;
+    let id = h
+        .session
+        .run("folder.newSearchFolder", &json!({"name":"Selected subject","query":"subject:SavedQueryNeedle","scope":"mailbox","folder":inbox}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    h.session.run("searchFolders.select", &json!({"id":id})).unwrap();
+    let expected = h.session.run("mail.list", &json!({})).unwrap();
+    assert_eq!(expected["total"], 1, "the fixture must exercise a strict subset of mail");
+    let view = h.session.view.clone();
+    let selection = h.session.sel.clone();
+    let result = call_tool(&mut h, &pol, "list_messages", &json!({}));
+    assert!(!result.is_error, "{:?}", result.content);
+    let actual: serde_json::Value = serde_json::from_str(result.content[0]["text"].as_str().unwrap()).unwrap();
+    let ids = |value: &serde_json::Value| value["messages"].as_array().unwrap().iter().map(|row| row["id"].as_u64().unwrap()).collect::<Vec<_>>();
+    assert_eq!(actual["total"], expected["total"]);
+    assert_eq!(ids(&actual), ids(&expected));
+    let expected = h.session.run("mail.list", &json!({"folder":inbox})).unwrap();
+    let result = call_tool(&mut h, &pol, "list_messages", &json!({"folder":inbox}));
+    assert!(!result.is_error, "{:?}", result.content);
+    let actual: serde_json::Value = serde_json::from_str(result.content[0]["text"].as_str().unwrap()).unwrap();
+    assert_eq!(actual["total"], expected["total"]);
+    assert_eq!(ids(&actual), ids(&expected));
+    assert_eq!(h.session.view, view);
+    assert_eq!(h.session.sel, selection);
+}

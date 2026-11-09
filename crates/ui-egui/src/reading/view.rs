@@ -221,6 +221,9 @@ struct Key {
     /// In whole points.
     width: u32,
     dark: bool,
+    high_contrast: bool,
+    /// Colours baked into native text jobs, fills and borders; not just light versus dark.
+    palette: [Color32; 6],
     /// A light page ([`on_light_page`]) in a dark window: turned on as the window turns dark,
     /// `dark` (the page's) stays as it was. In the light theme the page is the window's own, and
     /// turning the switch lays nothing out again.
@@ -444,7 +447,7 @@ pub fn doc_shown(ctx: &egui::Context, message: &Arc<Message>, place: Place, can_
 pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place, access: Access) {
     let ctx = ui.ctx().clone();
     let light = on_light_page(app, place);
-    let t = if light { Tokens::light() } else { Tokens::get(&ctx) };
+    let t = Tokens::page(&ctx, light);
     // In steps of a few points, so that dragging the pane's edge does not lay a long message out
     // again for every pixel.
     let width = ((ui.available_width().min(super::MAX_TEXT_WIDTH) / WIDTH_STEP).floor() * WIDTH_STEP).max(1.0);
@@ -485,6 +488,8 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
         width: width as u32,
         zoom: zoom.to_bits(),
         dark: t.dark,
+        high_contrast: t.high_contrast,
+        palette: [t.surface, t.text, t.text_dim, t.accent_text, t.border_strong, t.panel],
         light: light && Tokens::get(&ctx).dark,
         scale: ctx.pixels_per_point().to_bits(),
         line: ctx.fonts_mut(|f| f.row_height(&regular(super::layout::BASE_SIZE))).to_bits(),

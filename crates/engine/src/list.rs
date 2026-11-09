@@ -12,6 +12,11 @@ use serde::Serialize;
 
 use crate::{Filter, Scope, Session, SortBy};
 
+/// Filing changes storage ownership, not the observed origin of a combined-view thread.
+pub(crate) fn conversation_account(s: &Session, m: &Message) -> Id {
+    if s.origin_conversations() { m.origin_account() } else { m.account }
+}
+
 /// One row of the message list.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Row {
@@ -192,9 +197,15 @@ pub fn in_view(s: &Session) -> impl Fn(&Message) -> bool + '_ {
 /// The folders the list looks in ([`in_view`]), or, for a search of every mailbox (`true`),
 /// the folders it leaves out.
 fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
+    if crate::cmd::search_folders::active_problem(s).is_some() {
+        return (false, HashSet::new());
+    }
+    if crate::cmd::filing::is_unfiled_view(s) {
+        return (false, crate::cmd::filing::unfiled_folders(s, s.view.filing.unwrap_or(0)));
+    }
     let mb = &s.mailbox;
     let folder = s.view.folder;
-    let scope = if Query::parse(&s.view.search).is_empty() { Scope::Folder } else { s.view.scope };
+    let scope = if Query::parse(&s.view.search).is_empty() && s.view.scope != Scope::Inboxes { Scope::Folder } else { s.view.scope };
     // Deleted and junk mail stays out of a search of a whole mailbox (`account`) or of all.
     let hidden = |account: Option<Id>| -> HashSet<Id> {
         mb.folders
@@ -214,6 +225,7 @@ fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
             (false, of_account.map(|f| f.id).collect())
         }
         Scope::Everywhere => (true, hidden(None)),
+        Scope::Inboxes => (false, mb.folders.iter().filter(|f| f.kind == FolderKind::Inbox).map(|f| f.id).collect()),
     };
     (everywhere, folders)
 }
@@ -263,7 +275,11 @@ pub(crate) fn lists(s: &Session, ids: &[Id]) -> std::collections::HashSet<Id> {
     let in_view = in_view(s);
     let me = me(s);
     let kept = s.kept();
-    let shows = |m: &Message| in_view(m) && (filtered(s, m, &me) || kept.as_ref().is_some_and(|kept| kept.contains(&m.id)));
+    // (The folder's messages are looked through only for conversations of a Gmail category.)
+    let gmail = crate::gmail::Shown::of(s, s.mailbox.messages.values().map(|m| m.as_ref()));
+    let shows = |m: &Message| {
+        in_view(m) && ((gmail.as_ref().is_none_or(|g| g.keeps(m)) && filtered(s, m, &me)) || kept.as_ref().is_some_and(|kept| kept.contains(&m.id)))
+    };
     ids.iter().copied().filter(|id| s.mailbox.message(*id).is_some_and(shows)).collect()
 }
 
@@ -279,11 +295,15 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
     let kept = s.kept();
     let mut kept_only = Vec::new();
     let mut unfetched = 0usize;
-    let mut shown: Vec<&Message> = looked_at(s, everywhere, &folders)
+    let looked = looked_at(s, everywhere, &folders);
+    // A Gmail category of the Inbox shows the Inbox's mail Gmail put in it (#911).
+    let gmail = crate::gmail::Shown::of(s, looked.iter().copied());
+    let mut shown: Vec<&Message> = looked
         .into_iter()
         .filter(|m| {
             unfetched = unfetched.saturating_add(usize::from(m.unfetched));
-            let hit = filtered(s, m, &me)
+            let hit = gmail.as_ref().is_none_or(|g| g.keeps(m))
+                && filtered(s, m, &me)
                 && (query.is_empty()
                     || match decided.get(&m.id).or_else(|| searched.get(&m.id).filter(|_| m.body_is_kept())) {
                         Some(hit) => *hit,
@@ -318,7 +338,7 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
         let threads = s.threads();
         let mut index: HashMap<(Id, ThreadKey), usize> = HashMap::new();
         for m in &shown {
-            match index.entry((m.account, threads.key(m.id))) {
+            match index.entry((conversation_account(s, m), threads.key(m.id))) {
                 std::collections::hash_map::Entry::Occupied(at) => {
                     if let Some(row) = out.get_mut(*at.get()) {
                         row.members.push(m.id);
@@ -446,6 +466,24 @@ fn elsewhere(
 ) {
     let mb = &s.mailbox;
     let folder = s.view.folder;
+    if s.view.search_folder.is_some() || s.view.filing.is_some() || s.view.scope == Scope::Inboxes {
+        let shown: HashSet<Id> = rows.iter().flat_map(|r| r.members.iter()).copied().collect();
+        let mut skipped: HashMap<Id, HashSet<Id>> = HashMap::new();
+        for m in mb.messages.values().filter(|m| !shown.contains(&m.id)) {
+            let Some(row) = index.get(&(conversation_account(s, m), threads.key(m.id))).and_then(|i| rows.get_mut(*i)) else { continue };
+            if skipped.entry(m.account).or_insert_with(|| mb.conversation_skips(m.account, folder).into_iter().collect()).contains(&m.folder) {
+                continue;
+            }
+            let hit = filtered(s, m, me);
+            if hit || kept.is_some_and(|kept| kept.contains(&m.id)) {
+                row.others.push(m.id);
+                if !hit {
+                    kept_only.push(m.id);
+                }
+            }
+        }
+        return;
+    }
     let Some(account) = mb.folder(folder).map(|f| f.account) else { return };
     let skips = mb.conversation_skips(account, folder);
     // The account's other folders, from their own lists when the session has them counted
@@ -485,7 +523,7 @@ fn opened(s: &Session, threads: &ThreadIndex, rows: Vec<Row>) -> Vec<Row> {
     let open: HashSet<&(Id, ThreadKey)> = s.view.open.iter().collect();
     let mut out = Vec::with_capacity(rows.len());
     for mut row in rows {
-        row.open = row.conversation() && mb.message(row.id).is_some_and(|m| open.contains(&(m.account, threads.key(m.id))));
+        row.open = row.conversation() && mb.message(row.id).is_some_and(|m| open.contains(&(conversation_account(s, m), threads.key(m.id))));
         if !row.open {
             out.push(row);
             continue;

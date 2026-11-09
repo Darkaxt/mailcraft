@@ -479,19 +479,24 @@ fn search_bar(app: &mut MailApp, ui: &mut Ui, found: usize) {
     let t = Tokens::get(ui.ctx());
     let mb = &app.session.mailbox;
     let folder = mb.folder(app.session.view.folder);
-    let scope = match app.session.view.scope {
-        mailcraft_engine::Scope::Everywhere => tl!("All Mailboxes").to_string(),
-        // The account in view, by the name the folder pane gives it (#493).
-        mailcraft_engine::Scope::Mailbox => folder
-            .and_then(|f| mb.account(f.account))
-            .map(|a| if a.name.trim().is_empty() { a.email.trim().to_string() } else { a.name.trim().to_string() })
-            .filter(|n| !n.is_empty())
-            .unwrap_or_else(|| tl!("Current Mailbox").to_string()),
-        mailcraft_engine::Scope::Subfolders => {
-            folder.map(|f| crate::i18n::fmt(tl!("{folder} and its subfolders"), &[("folder", &crate::nav::folder_label(mb, f))])).unwrap_or_default()
+    let scope = if mailcraft_engine::cmd::filing::is_unfiled_view(&app.session) {
+        tl!("Inbox and unfiled").to_string()
+    } else {
+        match app.session.view.scope {
+            mailcraft_engine::Scope::Inboxes => tl!("All inboxes").to_string(),
+            mailcraft_engine::Scope::Everywhere => tl!("All Mailboxes").to_string(),
+            // The account in view, by the name the folder pane gives it (#493).
+            mailcraft_engine::Scope::Mailbox => folder
+                .and_then(|f| mb.account(f.account))
+                .map(|a| if a.name.trim().is_empty() { a.email.trim().to_string() } else { a.name.trim().to_string() })
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| tl!("Current Mailbox").to_string()),
+            mailcraft_engine::Scope::Subfolders => folder
+                .map(|f| crate::i18n::fmt(tl!("{folder} and its subfolders"), &[("folder", &crate::nav::folder_label(mb, f))]))
+                .unwrap_or_default(),
+            // (A shared mailbox's folder with the mailbox it is in, #70.)
+            mailcraft_engine::Scope::Folder => folder.map(|f| crate::nav::folder_label(mb, f)).unwrap_or_default(),
         }
-        // (A shared mailbox's folder with the mailbox it is in, #70.)
-        mailcraft_engine::Scope::Folder => folder.map(|f| crate::nav::folder_label(mb, f)).unwrap_or_default(),
     };
     let said = match found {
         0 => crate::i18n::fmt(tl!("No results in {scope}"), &[("scope", &scope)]),
@@ -522,8 +527,18 @@ fn search_bar(app: &mut MailApp, ui: &mut Ui, found: usize) {
 
 fn list(app: &mut MailApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
+    if let Some(why) = mailcraft_engine::cmd::search_folders::active_problem(&app.session) {
+        ui.colored_label(t.orange, tl!("This search folder's scope is unavailable."));
+        ui.label(why);
+        if ui.button(tl!("Edit search folder…")).clicked() {
+            let _ = app.run("ui.dialog", json!({"name":"searchFolder","id":app.session.view.search_folder}));
+        }
+        return;
+    }
     ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
     list_header(app, ui);
+    // Gmail's categories, when they are tabs above a Gmail Inbox's list (#911).
+    crate::gmail_tabs::row(app, ui);
     let rows = app.session.rows();
     search_bar(app, ui, mailcraft_engine::list::listed(&rows));
     // Coverage is explicit: a pending or missing source cannot prove a negative
@@ -729,7 +744,10 @@ fn size_label(s: &mailcraft_engine::Session, m: &Message) -> Option<String> {
 /// one folder (its subfolders, its mailbox or every mailbox), as Outlook's rows do (#195, #493);
 /// in one folder the owner knows which it is.
 fn shows_folder(s: &mailcraft_engine::Session) -> bool {
-    s.view.scope != mailcraft_engine::Scope::Folder && !mailcraft_model::search::Query::parse(&s.view.search).is_empty()
+    s.view.search_folder.is_some()
+        || s.view.filing.is_some()
+        || s.view.scope == mailcraft_engine::Scope::Inboxes
+        || (s.view.scope != mailcraft_engine::Scope::Folder && !mailcraft_model::search::Query::parse(&s.view.search).is_empty())
 }
 
 /// The previews of the rows the list drew last, so that drawing them again reads no message a
@@ -829,6 +847,21 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     // A message listed under two categories is two rows, each with ids of its own.
     let key = (row.id, row.copy);
     let resp = ui.interact(rect, ui.scope_id().with(("msg", key)), Sense::click_and_drag());
+    if app.session.view.search_folder.is_some() || app.session.view.filing.is_some() || app.session.view.scope == mailcraft_engine::Scope::Inboxes {
+        let account = app
+            .session
+            .mailbox
+            .account(m.origin_account())
+            .map(|a| if a.email.is_empty() { a.name.clone() } else { a.email.clone() })
+            .unwrap_or_else(|| format!("{} #{}", tl!("Unavailable account"), m.origin_account()));
+        resp.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::Role::ListItem,
+                true,
+                format!("{} — {} — {} — {}", m.from.full(), m.subject, account, m.origin_alias().unwrap_or_default()),
+            )
+        });
+    }
     app.hit.add("message", row.id, rect);
     let unread = row.unread > 0;
     // The strip down the left edge is a switch between read and unread. It sits on top of the
@@ -890,6 +923,15 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     // accent edge (quieter while the list has no focus); a flag's tint is laid first, so it shows
     // through the selection rather than being replaced by it.
     let card = body.shrink2(vec2(4.0, 1.0));
+    let origin_color = app.session.mailbox.account(m.origin_account()).map(|account| account.origin_row_color(m.origin_alias().as_deref()));
+    let origin_tint =
+        (app.session.view.search_folder.is_some() || app.session.view.filing.is_some() || app.session.view.scope == mailcraft_engine::Scope::Inboxes)
+            .then_some(origin_color)
+            .flatten()
+            .and_then(|color| crate::unified_inbox::row_tint(&t, color));
+    if let Some(tint) = origin_tint {
+        p.rect_filled(card, 6.0, tint);
+    }
     let flag_tint = matches!(follow_up, FollowUp::Flagged | FollowUp::Overdue);
     if flag_tint {
         if selected {
@@ -906,7 +948,15 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     }
     if !selected && (resp.hovered() || read_resp.hovered() || arrow.as_ref().is_some_and(egui::Response::hovered) || quick.is_some()) {
         // The pointer's shade goes over a flagged row's tint.
-        p.rect_filled(card, 6.0, t.hover_subtle);
+        p.rect_filled(card, 6.0, origin_tint.map(|tint| crate::unified_inbox::mix(tint, t.hover_subtle, 0.25)).unwrap_or(t.hover_subtle));
+    }
+    // Keep origin visible when the ordinary row wash is covered by selection or a flag.
+    // The text label remains the non-colour cue, including in high-contrast mode.
+    if origin_tint.is_some()
+        && let Some(color) = origin_color
+    {
+        let stripe = Rect::from_min_max(pos2(card.left() + 2.0, card.top() + 5.0), pos2(card.left() + 5.0, card.bottom() - 5.0));
+        p.rect_filled(stripe, 1.5, crate::theme::c32(color));
     }
     // Past its due date, its text is red.
     let overdue = follow_up == FollowUp::Overdue;
@@ -1071,7 +1121,24 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     // (And under an open conversation, a message of another folder: a reply in Sent Items, #503.)
     let elsewhere = row.under.is_some() && m.folder != app.session.view.folder;
     if let Some(folder) = (shows_folder(&app.session) || elsewhere).then(|| app.session.mailbox.folder(m.folder)).flatten() {
-        let label = crate::nav::result_folder_label(&app.session.mailbox, folder);
+        let label = if app.session.view.search_folder.is_some()
+            || app.session.view.filing.is_some()
+            || app.session.view.scope == mailcraft_engine::Scope::Inboxes
+        {
+            let account = app
+                .session
+                .mailbox
+                .account(m.origin_account())
+                .map(|a| if a.email.is_empty() { a.name.clone() } else { a.email.clone() })
+                .unwrap_or_else(|| format!("{} #{}", tl!("Unavailable account"), m.origin_account()));
+            let origin = match m.origin_alias() {
+                Some(alias) => format!("{account} · {alias}"),
+                None => account.to_owned(),
+            };
+            crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", crate::nav::folder_name(folder)), ("mailbox", &origin)])
+        } else {
+            crate::nav::result_folder_label(&app.session.mailbox, folder)
+        };
         let end = sx;
         sx = paint_result_folder(p, pos2(end, tail_y), &label, &t) - 6.0;
         app.hit.add("messageFolder", row.id, Rect::from_min_max(pos2(sx + 6.0, tail_y - 7.0), pos2(end, tail_y + 7.0)));

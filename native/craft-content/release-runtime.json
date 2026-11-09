@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "platform": "windows-x64",
+  "manifestSha256": "b559f65164c4f347e1671371db0e6bf2a6ad2569748f9738b0334360d544ed1f",
+  "sourceFiles": {
+    "native/craft-content/sources.json": "f811f0a89bb47f44a6b2f91adf891e66200b74f2cd474a4ca2f23cf1f3779400",
+    "native/craft-content/ocr-sources.json": "29d8e3015c2b755d590a006360a47ec5eade69514ab640627d94b722ad08b3f4",
+    "native/craft-content/worker.rs": "5cdb185b0e4015b3aa804db8d0af3a0ab9083c76ae3fc34f2f583abab71331f9",
+    "native/craft-content/extraction.rs": "4a11f4d9c3fcb8d3a6504feee346f49daab5a40a9ee2fd26c230c50d4d0875b9",
+    "crates/craft-content/src/lib.rs": "5872b018dd097ac00bbaaf7e5dd0678043d4badb7cb4bee3d642d43b84165e27",
+    "crates/craft-content/src/paging.rs": "0d37d413ea662d235e5d8fa6b612705a64efd199852d434386fe722bf36b754b",
+    "crates/craft-content/src/protocol.rs": "7d6db1a43df0e9917cae908c0ea936edde6f73d9087ae448babcfa0f6d1e8a17"
+  }
+}
