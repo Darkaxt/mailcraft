@@ -36,6 +36,8 @@ image = { workspace = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { workspace = true }
 tempfile = { workspace = true }
+rusqlite = { workspace = true }
+craft-content = { workspace = true, features = ["runtime"] }
 
 # `O_NONBLOCK` for opening a file named from outside (`io::regular_file`).
 [target.'cfg(unix)'.dependencies]

@@ -19,6 +19,8 @@ const NOW: i64 = 1_791_993_600;
 /// Shown as they are on purpose, or not the window's own text yet. Each later slice of the French
 /// interface takes its words out of here.
 const ALLOWED: &[&str] = &[
+    // Case-toggle glyph, with a separate translated accessible name/tooltip.
+    "Aa",
     // The program's name, and the names of products and providers.
     "MailCraft",
     "Microsoft",

@@ -3,7 +3,7 @@
 //! #367: what is in quotes is text, even when it reads like a keyword.
 
 use crate::Message;
-use crate::search::{Query, ServerTerm, keyword_pills, keyword_spans, suggestions};
+use crate::search::{Query, keyword_pills, keyword_spans, suggestions};
 
 fn finds(q: &str, m: &Message) -> bool {
     Query::parse(q).matches(m, 0)
@@ -26,7 +26,8 @@ fn a_keyword_in_quotes_is_text() {
     assert!(finds("\"from: ada\"", &budget));
     // A `-` before the quotes leaves the words out; one inside them is text.
     assert!(!finds("-\"is:unread\"", &notes()) && finds("-\"is:unread\"", &unread()));
-    assert!(finds("\"-is:unread\"", &notes()) && !finds("\"-is:unread\"", &unread()));
+    assert!(!finds("\"-is:unread\"", &notes()) && !finds("\"-is:unread\"", &unread()));
+    assert!(finds("\"-is:unread\"", &Message { subject: "Notes on -is:unread".into(), ..notes() }));
 }
 
 /// A keyword before a value in quotes takes it, whatever the value reads like.
@@ -49,10 +50,23 @@ fn the_box_shows_quoted_text_as_text() {
     assert!(suggestions(q, q.len(), &[crate::Category { name: "Green".into(), color: crate::Rgb(0, 0, 0) }]).is_empty());
 }
 
-/// A server is asked for the words in quotes, as for any other words.
+/// Literal punctuation needs complete local source, not provider tokenization.
 #[test]
-fn a_server_is_asked_for_the_words() {
+fn quoted_text_stays_local_even_when_other_terms_are_provider_searchable() {
     let split = Query::parse("\"is:unread\"").for_server();
-    assert!(split.local.is_empty());
-    assert!(matches!(split.terms.as_slice(), [ServerTerm::Words { field: None, .. }]), "{:?}", split.terms);
+    assert!(split.terms.is_empty());
+    assert!(split.local.matches(&notes(), 0) && !split.local.matches(&unread(), 0));
+    for clause in [
+        r#"body:"is:unread""#,
+        "header:trace",
+        "attachmenttext:invoice",
+        "case:sensitive from:Ada@example.org",
+        "alias:shop@example.org",
+        "originalfrom:sender@example.org",
+    ] {
+        let query = Query::parse(&format!("budget {clause}"));
+        let split = query.for_server();
+        assert!(split.terms.is_empty(), "{clause}");
+        assert_eq!(split.local, query, "the whole query needs complete retained source: {clause}");
+    }
 }

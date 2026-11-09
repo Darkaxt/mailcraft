@@ -967,12 +967,15 @@ pub enum WordIndex {
     /// None is kept: the browser, a mailbox kept in no file, or a host that didn't ask for one
     /// ([`Session::index_words`]). A search reads the messages themselves.
     Off,
-    /// Its file is being read, or messages are being read into it in the background (`done` of
-    /// `total`; both 0 while there is nothing to count yet): what it hasn't got yet is searched
-    /// as without an index, more slowly.
+    /// Retained messages and attachments are being indexed (`done` of `total`;
+    /// both 0 before inventory). Unsearched sources remain explicit gaps.
     Building { done: usize, total: usize },
     /// It holds every message as it is.
     Complete,
+    /// Work has finished, but missing, failed or unsupported sources remain.
+    Partial,
+    /// The maintained index could not complete its owned operation.
+    Problem,
 }
 
 /// The clock commands read; tests and scripts pin it.
@@ -1168,6 +1171,9 @@ pub struct Session {
     /// host that wants it (the desktop app), never by a command's params. Off, a search reads
     /// the messages themselves, as it always does in the browser. Never saved.
     pub index_words: bool,
+    /// Explicit finite offline qualification only, never a saved preference or
+    /// a GUI/MCP default. Render captures must outlive their verification reader.
+    pub index_render_evidence: Option<std::path::PathBuf>,
     /// The language of the window the owner reads this session in, set by the host (the desktop
     /// and the browser follow the owner's choice; the CLI and a headless MCP server leave it
     /// English). What the engine writes for a person is to follow it; commands, their parameters
@@ -1176,7 +1182,11 @@ pub struct Session {
     /// The word index of the mailbox file, while [`Session::index_words`] is on and the mailbox
     /// is kept in a file ([`crate::words`]).
     #[cfg(not(target_arch = "wasm32"))]
-    words: Option<crate::words::Words>,
+    words: Option<crate::content_index::Index>,
+    #[cfg(not(target_arch = "wasm32"))]
+    index_query_origin: crate::content_index::QueryOrigin,
+    #[cfg(not(target_arch = "wasm32"))]
+    index_initialization_problem: Option<(PathBuf, String)>,
 }
 
 /// Message `id` was `old` and is `new`, the same message with more or less of it in memory.
@@ -1288,9 +1298,14 @@ impl Session {
             search_pass: None,
             searched_for: None,
             index_words: false,
+            index_render_evidence: None,
             interface_language: mailcraft_i18n::Lang::English,
             #[cfg(not(target_arch = "wasm32"))]
             words: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            index_query_origin: crate::content_index::QueryOrigin::Window,
+            #[cfg(not(target_arch = "wasm32"))]
+            index_initialization_problem: None,
         };
         s.view.date = s.today();
         s.normalize();
@@ -1602,6 +1617,9 @@ impl Session {
     /// as [`Session::search_time`] allows; what it didn't get to is counted in
     /// [`Session::unsearched`].
     pub fn rows(&mut self) -> Arc<Vec<Row>> {
+        self.poll_content_index();
+        #[cfg(not(target_arch = "wasm32"))]
+        self.words_in_step(!mailcraft_model::search::Query::parse(&self.view.search).is_empty());
         let key = |s: &Session| s.list_key();
         let list = self.list_of();
         Stays::follow(&mut self.sel.stays, &self.sel.messages, &list);
@@ -1634,20 +1652,24 @@ impl Session {
         let day = self.today();
         let list_now = self.list_state();
         #[cfg(not(target_arch = "wasm32"))]
-        self.words_in_step(!mailcraft_model::search::Query::parse(&self.view.search).is_empty());
-        #[cfg(not(target_arch = "wasm32"))]
         let (decided, unverified) = self.search_words();
         #[cfg(target_arch = "wasm32")]
         let (decided, unverified) = (std::collections::HashMap::new(), 0);
-        let searched = match &self.search_pass {
-            // Only content came in or went since this list was searched (a result opened): what
-            // was found stands, and nothing is brought in for it again.
-            Some((_, hits)) if self.searched_for.as_deref() == Some(list_now.as_str()) => hits.clone(),
-            _ => {
-                let hits = self.load_bodies_for_search(&decided);
-                self.unsearched = self.unsearched.saturating_add(unverified);
-                self.searched_for = self.search_pass.is_some().then_some(list_now);
-                hits
+        let indexed = self.native_content_index_enabled();
+        let searched = if indexed {
+            self.unsearched = unverified;
+            std::collections::HashMap::new()
+        } else {
+            match &self.search_pass {
+                // Only content came in or went since this list was searched (a result opened): what
+                // was found stands, and nothing is brought in for it again.
+                Some((_, hits)) if self.searched_for.as_deref() == Some(list_now.as_str()) => hits.clone(),
+                _ => {
+                    let hits = self.load_bodies_for_search(&decided);
+                    self.unsearched = self.unsearched.saturating_add(unverified);
+                    self.searched_for = self.search_pass.is_some().then_some(list_now);
+                    hits
+                }
             }
         };
         // A list searched across midnight may have matched `received:today` on either day: it is
@@ -1923,11 +1945,25 @@ impl Session {
         };
         let mut words = match self.words.take() {
             Some(words) if words.mailbox() == path => words,
-            _ => crate::words::Words::open(&path, self.mailbox.messages.values().cloned().collect()),
+            _ => {
+                if self.index_initialization_problem.as_ref().is_some_and(|(failed, _)| failed == &path) {
+                    return;
+                }
+                match crate::content_index::Index::open(&path, self.index_render_evidence.clone()) {
+                    Ok(index) => {
+                        self.index_initialization_problem = None;
+                        index
+                    }
+                    Err(why) => {
+                        self.index_initialization_problem = Some((path, why));
+                        return;
+                    }
+                }
+            }
         };
-        // Also once the background is done: what came while it read is looked at then.
-        if search || words.account_gone(&self.mailbox) || (!words.building() && !words.complete()) {
-            words.in_step(&self.mailbox, &|m| self.kept_text(m));
+        words.poll(self);
+        if search {
+            words.query(self.search_query(), self.index_query_origin)
         }
         self.words = Some(words);
     }
@@ -1942,67 +1978,16 @@ impl Session {
     /// to be searched as without an index.
     #[cfg(not(target_arch = "wasm32"))]
     fn search_words(&self) -> (std::collections::HashMap<Id, bool>, usize) {
-        use std::cell::Cell;
-        let mut decided = std::collections::HashMap::new();
         let query = self.search_query();
-        let Some(words) = self.words.as_ref().filter(|_| !query.is_empty()) else { return (decided, 0) };
-        let mut verify: Vec<Id> = Vec::new();
-        {
-            let guard = words.lock();
-            let Some(index) = guard.as_ref() else { return (decided, 0) };
-            let sets: Vec<Option<crate::words::Bits>> =
-                (0..query.len()).map(|i| query.words_of(i).map(|(fields, w)| index.matching(w, fields))).collect();
+        if let Some(index) = &self.words {
+            return index.decisions(self, &query);
+        }
+        if self.native_content_index_enabled() && query.reads_bodies() {
             let in_view = crate::list::in_view(self);
-            for m in self.mailbox.messages.values() {
-                let Some(slot) = index.slot_of(m.id) else { continue };
-                if !in_view(m) {
-                    continue;
-                }
-                let text_on_disk = crate::words::body_in_memory(m).is_none();
-                let unread_phrase = Cell::new(false);
-                let hit = query.matches_with(
-                    m,
-                    |at| self.offset_at(at),
-                    |i| {
-                        let set = sets.get(i)?.as_ref()?;
-                        if !set.has(slot) {
-                            return Some(false);
-                        }
-                        // A whole address (#301): its words only narrow the messages down, and the
-                        // address itself is looked at on each.
-                        if query.is_address_term(i) {
-                            return None;
-                        }
-                        let (fields, w) = query.words_of(i)?;
-                        if w.len() <= 1 {
-                            return Some(true);
-                        }
-                        // A phrase: its words one after another, looked at on the message.
-                        if fields & mailcraft_model::words::BODY != 0 && text_on_disk {
-                            unread_phrase.set(true);
-                            return Some(true);
-                        }
-                        None
-                    },
-                );
-                // Said to be there before it was looked at: the whole query is looked at on
-                // the text as it is (a phrase that is there may make a `-` term fail).
-                if unread_phrase.get() {
-                    verify.push(m.id);
-                } else {
-                    decided.insert(m.id, hit);
-                }
-            }
+            let ids: Vec<_> = self.mailbox.messages.values().filter(|message| in_view(message)).map(|message| message.id).collect();
+            return (ids.iter().map(|id| (*id, false)).collect(), ids.len());
         }
-        let deadline = std::time::Instant::now().checked_add(self.search_time);
-        let mut unread = 0;
-        for id in verify {
-            let in_time = deadline.is_none_or(|d| std::time::Instant::now() < d);
-            let hit = in_time && self.loaded_message_where(id, |_| false).is_ok_and(|m| query.matches_in(&m, |at| self.offset_at(at)));
-            unread += usize::from(!in_time);
-            decided.insert(id, hit);
-        }
-        (decided, unread)
+        (Default::default(), 0)
     }
 
     /// How far the word index a search answers from has got.
@@ -2011,11 +1996,16 @@ impl Session {
         if let Some(words) = &self.words {
             return match words.progress() {
                 Some((done, total)) => WordIndex::Building { done, total },
+                None if words.problem.is_some() => WordIndex::Problem,
                 None if words.complete() => WordIndex::Complete,
                 // Done reading, with what came while it read still to be looked at (when the
                 // list is next worked out): nothing to count.
-                None => WordIndex::Building { done: 0, total: 0 },
+                None => WordIndex::Partial,
             };
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.index_initialization_problem.is_some() {
+            return WordIndex::Problem;
         }
         WordIndex::Off
     }
@@ -2032,14 +2022,111 @@ impl Session {
     /// long as that takes: for the bench and tests, never the window.
     pub fn wait_for_word_index(&mut self) {
         #[cfg(not(target_arch = "wasm32"))]
-        for _ in 0..8 {
+        {
             self.words_in_step(false);
-            let Some(words) = &mut self.words else { return };
-            words.wait();
-            self.words_in_step(true);
-            if self.words.as_ref().is_none_or(|w| !w.building()) {
-                return;
+            if let Some(mut words) = self.words.take() {
+                words.wait(self);
+                self.words = Some(words);
             }
+        }
+    }
+
+    pub fn poll_content_index(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        self.words_in_step(false);
+    }
+
+    pub fn native_content_index_enabled(&self) -> bool {
+        cfg!(not(target_arch = "wasm32")) && self.index_words && self.path.is_some()
+    }
+
+    pub fn content_index_busy(&self) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(index) = &self.words {
+            return index.busy();
+        }
+        false
+    }
+
+    pub fn content_index_status(&self) -> Value {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(index) = &self.words {
+                let mut status = index.status();
+                if let Some(status) = status.as_object_mut() {
+                    status.insert("queryPending".into(), Value::Bool(index.query_pending(&self.search_query())));
+                }
+                return status;
+            }
+            if let Some((_, why)) = &self.index_initialization_problem {
+                return serde_json::json!({"enabled":true,"problem":why,"complete":false});
+            }
+        }
+        serde_json::json!({"enabled":false,"complete":false})
+    }
+
+    pub fn indexed_row(&self, message: &Message) -> Option<Value> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(index) = &self.words {
+            return index.row(message);
+        }
+        let _ = message;
+        None
+    }
+
+    pub fn indexed_preview(&self, message: &Message, max_chars: usize) -> Option<String> {
+        let row = self.indexed_row(message)?;
+        Some(mailcraft_html::text_preview(row.get("snippet")?.as_str()?, max_chars))
+    }
+
+    pub fn rows_for_agent(&mut self) -> Arc<Vec<Row>> {
+        #[cfg(not(target_arch = "wasm32"))]
+        let saved = std::mem::replace(&mut self.index_query_origin, crate::content_index::QueryOrigin::Agent);
+        let rows = self.rows();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.index_query_origin = saved;
+        }
+        rows
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn content_index_detail(
+        &mut self,
+        request: crate::content_index::DetailRequest,
+        token: Option<u64>,
+        close: bool,
+    ) -> Result<Value, String> {
+        self.poll_content_index();
+        self.words.as_mut().ok_or("the persistent native index is not enabled")?.detail(request, token, close)
+    }
+
+    pub fn retry_content_index(&mut self) -> Result<Value, String> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.poll_content_index();
+            if self.index_initialization_problem.is_some() || self.words.as_ref().is_some_and(|index| index.problem.is_some()) {
+                // End the original owned writer/reader and native tree before
+                // making another attempt. No primary data or unknown sidecar
+                // is removed, and unresolved worker work cannot be duplicated.
+                self.words.take();
+                self.index_initialization_problem = None;
+                self.poll_content_index();
+            }
+            self.words.as_mut().ok_or("the persistent native index is not enabled")?.retry()
+        }
+        #[cfg(target_arch = "wasm32")]
+        Err("persistent attachment indexing requires the native app".into())
+    }
+
+    /// Stop and join the owned derived-data workers before an explicitly
+    /// authorized whole-data removal. Later UI ticks cannot reopen the index.
+    pub fn stop_content_index(&mut self) {
+        self.index_words = false;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.words.take();
+            self.index_initialization_problem = None;
         }
     }
 
@@ -2055,16 +2142,8 @@ impl Session {
 
     /// The word index this session keeps, if any.
     #[cfg(all(test, not(target_arch = "wasm32")))]
-    pub(crate) fn words(&self) -> Option<&crate::words::Words> {
+    pub(crate) fn words(&self) -> Option<&crate::content_index::Index> {
         self.words.as_ref()
-    }
-
-    /// The text of message `m` that is kept outside memory, read from where it is kept (also when
-    /// reading it failed before, and the message says so in its place).
-    #[cfg(not(target_arch = "wasm32"))]
-    fn kept_text(&self, m: &Message) -> Option<String> {
-        let r = m.kept.as_deref()?.text?;
-        self.fetch(&r).ok().map(|bytes| text_of(&bytes))
     }
 
     // ---- content that isn't in memory ----

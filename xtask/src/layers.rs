@@ -35,6 +35,7 @@ impl Class {
 /// The layering table. Names are package names without the `mailcraft-`
 /// prefix.
 pub const TABLE: &[(&str, Class)] = &[
+    ("craft-content", Class::Standalone),
     ("time", Class::Layer(0)),
     ("control-key", Class::Standalone),
     ("charset", Class::Standalone),

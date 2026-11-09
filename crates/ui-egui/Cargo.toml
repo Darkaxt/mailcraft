@@ -43,6 +43,7 @@ serde_json = { workspace = true }
 toml = "1"
 
 [dev-dependencies]
+tempfile = { workspace = true }
 mailcraft-engine = { workspace = true, features = ["test-support"] }
 toml = "1"
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }

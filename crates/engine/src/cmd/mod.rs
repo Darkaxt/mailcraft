@@ -120,6 +120,7 @@ mod rules_merge_tests;
 pub mod rules_remote;
 #[cfg(test)]
 mod rules_remote_tests;
+pub mod search_index;
 #[cfg(test)]
 mod search_scope_tests;
 pub mod search_server;
@@ -197,6 +198,7 @@ pub fn registry() -> Registry {
     v.extend(tasks_remote::specs());
     v.extend(sync_progress::specs());
     v.extend(search_server::specs());
+    v.extend(search_index::specs());
     Registry::new(v)
 }
 
@@ -350,6 +352,15 @@ pub(crate) fn select_after_removal(s: &mut Session, before: &[Row], removed: &[I
 
 /// A message as agents see it in lists.
 pub fn message_summary(s: &Session, m: &Message) -> Value {
+    if let Some(mut row) = s.indexed_row(m) {
+        if let Some(snippet) = row.get("snippet").and_then(Value::as_str) {
+            let snippet = mailcraft_html::text_preview(snippet, 140);
+            if let Some(row) = row.as_object_mut() {
+                row.insert("snippet".into(), Value::String(snippet));
+            }
+        }
+        return row;
+    }
     json!({
         "id": m.id,
         "folder": m.folder,

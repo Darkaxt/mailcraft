@@ -9,16 +9,41 @@ use std::process::Command;
 
 pub const HEADER: &str = "// SPDX-FileCopyrightText: MailCraft contributors\n// SPDX-License-Identifier: MIT OR Apache-2.0\n";
 
-/// Whether `text` starts with the lines of [`HEADER`], whatever its line endings (a Windows
-/// checkout has CRLF).
-fn has_header(text: &str) -> bool {
-    let mut lines = text.lines();
-    HEADER.lines().all(|want| lines.next() == Some(want))
+// These seven imported adapters retain their actual MIT copyright/licence.
+// Their exact source and original hashes are recorded in native/craft-content/
+// sources.json. No directory or source file is exempt from the header check.
+fn expected_header(path: &str) -> &'static str {
+    match path {
+        "native/craft-content/adapters/gridcraft/engine.rs" => {
+            "// SPDX-FileCopyrightText: 2026 Protagonist Labs, Pathweft and MailCraft contributors\n// SPDX-License-Identifier: MIT\n"
+        }
+        "native/craft-content/adapters/wordcraft/engine.rs"
+        | "native/craft-content/adapters/deckcraft/engine.rs"
+        | "native/craft-content/adapters/pdfcraft/engine.rs"
+        | "native/craft-content/adapters/photocraft/engine.rs"
+        | "native/craft-content/adapters/vectorcraft/engine.rs"
+        | "native/craft-content/adapters/figcraft/engine.rs" => {
+            "// SPDX-FileCopyrightText: 2026 Protagonist Labs and Pathweft contributors\n// SPDX-License-Identifier: MIT\n"
+        }
+        _ => HEADER,
+    }
 }
 
-/// The Rust files among `files` whose text doesn't start with [`HEADER`].
+/// Whether `text` starts with the exact required lines, whatever its line endings (a Windows
+/// checkout has CRLF).
+fn has_header(text: &str, expected: &str) -> bool {
+    let mut lines = text.lines();
+    expected.lines().all(|want| lines.next() == Some(want))
+}
+
+/// Rust files lacking their exact first-party or preserved imported SPDX header.
 pub fn missing(files: &[String], read: impl Fn(&str) -> Option<String>) -> Vec<&str> {
-    files.iter().filter(|f| f.ends_with(".rs")).filter(|f| read(f).is_some_and(|text| !has_header(&text))).map(String::as_str).collect()
+    files
+        .iter()
+        .filter(|f| f.ends_with(".rs"))
+        .filter(|f| read(f).is_some_and(|text| !has_header(&text, expected_header(f))))
+        .map(String::as_str)
+        .collect()
 }
 
 pub fn run(root: &Path, fix: bool) -> Result<(), String> {
@@ -40,11 +65,15 @@ pub fn run(root: &Path, fix: bool) -> Result<(), String> {
     for f in &miss {
         let path = root.join(f);
         let text = std::fs::read_to_string(&path).map_err(|e| format!("{f}: {e}"))?;
-        std::fs::write(&path, format!("{HEADER}{text}")).map_err(|e| format!("{f}: {e}"))?;
+        std::fs::write(&path, format!("{}{text}", expected_header(f))).map_err(|e| format!("{f}: {e}"))?;
     }
     println!("spdx: added the lines to {} file(s)", miss.len());
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "spdx_import_tests.rs"]
+mod import_tests;
 
 #[cfg(test)]
 mod tests {

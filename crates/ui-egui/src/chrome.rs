@@ -130,7 +130,23 @@ fn search_box(app: &mut MailApp, ui: &mut Ui, rect: Rect) {
     // Advanced Search's button, at the right of the text as in Outlook: Mail's alone.
     let in_mail = app.session.view.module == Module::Mail;
     let advanced_w = if in_mail { 28.0 } else { 0.0 };
-    let edit_rect = Rect::from_min_max(pos2(rect.min.x + 28.0, rect.min.y + 1.0), pos2(rect.max.x - scope_w - advanced_w - 4.0, rect.max.y - 1.0));
+    let case_w = if in_mail && rect.width() >= 360.0 { 28.0 } else { 0.0 };
+    let edit_rect =
+        Rect::from_min_max(pos2(rect.min.x + 28.0, rect.min.y + 1.0), pos2(rect.max.x - scope_w - advanced_w - case_w - 4.0, rect.max.y - 1.0));
+    if case_w > 0.0 {
+        let area = Rect::from_center_size(pos2(rect.max.x - scope_w - advanced_w - case_w / 2.0 - 2.0, rect.center().y), vec2(24.0, 22.0));
+        let sensitive = mailcraft_model::search::Query::parse(&app.session.view.search).case_sensitive();
+        let response = ui.interact(area, ui.scope_id().with("search_case"), Sense::click());
+        response.widget_info(|| egui::WidgetInfo::selected(egui::Role::CheckBox, true, sensitive, tl!("Case sensitive search")));
+        app.hit.add("searchCase", 0, area);
+        if sensitive || response.hovered() {
+            ui.painter().rect_filled(area, 4.0, if sensitive { t.checked } else { t.hover });
+        }
+        ui.painter().text(area.center(), egui::Align2::CENTER_CENTER, "Aa", regular(12.0), if sensitive { t.accent_text } else { t.text_dim });
+        if response.on_hover_text(tl!("Match letter case. Quoted text also preserves punctuation, accents and spacing.")).clicked() && free {
+            let _ = app.execute("ui.searchCase", json!({"sensitive":!sensitive}));
+        }
+    }
     app.hit.add("searchBox", 0, rect);
     let advanced = Rect::from_center_size(pos2(rect.max.x - scope_w - advanced_w / 2.0 - 2.0, rect.center().y), vec2(24.0, 22.0));
     if in_mail {
@@ -652,28 +668,35 @@ fn progress_bar(ui: &mut Ui, t: &Tokens, label: &str, fraction: f32, key: &str) 
     (resp, track)
 }
 
-/// The word index being built (R6.2), in the status bar: "Indexing mail: 45%" and its bar, as
-/// Send/Receive shows its progress. Nothing when it isn't being built; the bar's memory of how
-/// far it got goes when it is done.
+/// Progress and gaps remain discoverable even with an empty search. The panel
+/// explains current coverage rather than implying that missing data was read.
 fn indexing_bar(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     let key = "status_index_bar";
-    let mailcraft_engine::WordIndex::Building { done, total } = app.session.word_index() else {
-        ui.ctx().data_mut(|d| d.remove::<f32>(egui::Id::unique(key)));
-        return;
+    let label = match app.session.word_index() {
+        mailcraft_engine::WordIndex::Partial => tl!("Search has gaps"),
+        mailcraft_engine::WordIndex::Problem => tl!("Search needs attention"),
+        _ => tl!("Search coverage"),
     };
-    if total == 0 {
-        // Its file being read, or a moment's look at what came since: nothing to count.
-        ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
-        return;
+    // Reserve the action before the progress bar takes remaining space.
+    let compact = ui.available_width() < 140.0;
+    let response = ui.small_button(if compact { tl!("Search") } else { label }).on_hover_text(label);
+    app.hit.add("searchCoverage", 0, response.rect);
+    if response.clicked() {
+        let _ = app.execute("ui.searchIndex", json!({"view":"overview"}));
     }
-    let fraction = (done.min(total) as f64 / total as f64) as f32;
-    let percent = ((fraction * 100.0).floor() as u32).min(100);
-    let label = crate::i18n::fmt(tl!("Indexing mail: {percent}%"), &[("percent", &percent.to_string())]);
-    ui.add_space(10.0);
-    let (resp, track) = progress_bar(ui, t, &label, fraction, key);
-    app.hit.add("indexBar", 0, track);
-    resp.on_hover_text(tl!("Building the index search answers from; until it is done, some older mail is searched more slowly"));
-    ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+    if let mailcraft_engine::WordIndex::Building { done, total } = app.session.word_index() {
+        if total > 0 && ui.available_width() > 180.0 {
+            let fraction = (done.min(total) as f64 / total as f64) as f32;
+            let percent = ((fraction * 100.0).floor() as u32).min(100);
+            let label = crate::i18n::fmt(tl!("Indexing mail: {percent}%"), &[("percent", &percent.to_string())]);
+            ui.add_space(10.0);
+            let (response, track) = progress_bar(ui, t, &label, fraction, key);
+            app.hit.add("indexBar", 0, track);
+            response.on_hover_text(tl!("Indexing retained messages and attachments. Unavailable sources remain visible in Search coverage."));
+        }
+    } else {
+        ui.ctx().data_mut(|data| data.remove::<f32>(egui::Id::unique(key)));
+    }
 }
 
 /// Forget how far the bar of the last run got, once no run is under way.

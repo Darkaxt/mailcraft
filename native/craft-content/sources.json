@@ -1,0 +1,826 @@
+{
+  "version": 1,
+  "source": {
+    "repository": "https://github.com/Darkaxt/Pathweft.git",
+    "revision": "51d7aab00aa4173ae8bb2ede3e39b7f790f97ca3",
+    "scope": "Safe MIT Rust engine adapters only; exact file hashes identify any source-checkout changes"
+  },
+  "licence": {
+    "path": "LICENSE-Pathweft",
+    "sha256": "5f4a23b47effe7a1cd120a3848ff59e482e1f3778af9d75fb777677f5eaa844a"
+  },
+  "apps": [
+    {
+      "engine": "wordcraft",
+      "donor": {
+        "version": "0.15.2",
+        "sourceCommit": "edfea68101220c9bdc4b2b0ccf4acd9612bedb6e",
+        "sourceArchive": "wordcraft-edfea68101220c9bdc4b2b0ccf4acd9612bedb6e.zip",
+        "sourceSha256": "5bf985365d5cd6e06a564cd1f79fc7fd672820f000c83bc018e1d43df5e191ab",
+        "sourceUrl": "https://codeload.github.com/storytold/wordcraft/zip/edfea68101220c9bdc4b2b0ccf4acd9612bedb6e"
+      },
+      "fonts": {
+        "sourceCommit": "b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archive": "craft-fonts-b076417b5880bd4154bd22f00695b1d28c6bea83.zip",
+        "archiveUrl": "https://codeload.github.com/storytold/craft-fonts/zip/b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archiveSha256": "f5b09678d7212ccdc47884d3ce50e66dcab0fa07c7603a32ac0b4a826a5d6415",
+        "notices": [
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/ATTRIBUTION.md",
+            "sha256": "aa2aa7eec68c32ac2da6ff7162ca9100ab3680e4c7b98365fc7c74ddd4167d07"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/LICENSE-APACHE",
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/LICENSE-MIT",
+            "sha256": "e360d6f5941863521687517eee951fac3328ee9f379fcb11bb5031fe6614fc8f"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/biz-ud-mincho/OFL.txt",
+            "sha256": "ef0ed524b3bd012f37015e986809eed6f67905456ebfc1ebd7fcc2765282ee01"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/biz-ud-pgothic/OFL.txt",
+            "sha256": "e753d7155d53c747d037a445e584c8ecfca6dd79846db610417e282a736b28bc"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/lxgw-wenkai-lite/OFL.txt",
+            "sha256": "0333a85fe077b6849f8e417acc44e8bd879442ceb681e271acf93e2d57fd4e2e"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/nanum-gothic/OFL.txt",
+            "sha256": "eeacf16032901d0ed0456876ec77b8f0fda6b3fecec7d972f8543eb602e6c30f"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-arabic/OFL.txt",
+            "sha256": "07fc70bfeb985cc1a87a8587d0a0c80bab11c86c9dc3fd95b6f0cb332f983e96"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-cjk-sc/OFL.txt",
+            "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-devanagari/OFL.txt",
+            "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-georgian/OFL.txt",
+            "sha256": "8c02263c5d73d40544f9ed91e30c4e947407057a3cc430d7b786189aeceff6df"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-hebrew/OFL.txt",
+            "sha256": "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-symbols-2/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-symbols/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/noto-sans-thai/OFL.txt",
+            "sha256": "2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0"
+          },
+          {
+            "path": "vendor/Office/licenses/wordcraft/craft-fonts/fonts/shippori-mincho/OFL.txt",
+            "sha256": "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38"
+          }
+        ]
+      },
+      "dependencies": {
+        "wordcraft-doc": {
+          "workspace": true
+        },
+        "wordcraft-docx": {
+          "workspace": true
+        },
+        "wordcraft-docbin": {
+          "workspace": true
+        },
+        "wordcraft-formats": {
+          "workspace": true
+        },
+        "wordcraft-layout": {
+          "workspace": true
+        },
+        "wordcraft-render": {
+          "workspace": true
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/wordcraft/engine.rs",
+        "sha256": "18d0b90784ffaf03e29d0156d75374d8f6a1744f680a46d42a44289dc7cdcbc1",
+        "originalSha256": "f424923d7dbfacc5611dcd55c394149102f8771cbcf0e0f3cf382163bf8f7e2c"
+      }
+    },
+    {
+      "engine": "gridcraft",
+      "donor": {
+        "version": "0.16.1",
+        "sourceCommit": "e581bc95b2a17d2a744a115478a20a1c2ad1ef72",
+        "sourceArchive": "gridcraft-e581bc95b2a17d2a744a115478a20a1c2ad1ef72.zip",
+        "sourceSha256": "89d8e912420b914f48dafd7d06f2a82505f67176b97694dbd0e38315c1a28a66",
+        "sourceUrl": "https://codeload.github.com/storytold/gridcraft/zip/e581bc95b2a17d2a744a115478a20a1c2ad1ef72"
+      },
+      "fonts": null,
+      "dependencies": {
+        "gridcraft-engine": {
+          "workspace": true
+        },
+        "gridcraft-xlsx": {
+          "workspace": true
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/gridcraft/engine.rs",
+        "sha256": "891e3e673288c15616b2361907e0344b324bb6d98e534a71d7f68b0221a7f3e9",
+        "originalSha256": "3e3df8797cc4532f74ea1a5dce8416968e934cb8fa5f0a33fee6a1f29fbe9a30"
+      }
+    },
+    {
+      "engine": "deckcraft",
+      "donor": {
+        "version": "0.15.1",
+        "sourceCommit": "9bac60ff53029039c82083ee574c22d74c1541f1",
+        "sourceArchive": "deckcraft-9bac60ff53029039c82083ee574c22d74c1541f1.zip",
+        "sourceSha256": "3da4e673d1addcff9207f79a285471767deec109f46764532d3c7d98566c7f80",
+        "sourceUrl": "https://codeload.github.com/storytold/deckcraft/zip/9bac60ff53029039c82083ee574c22d74c1541f1"
+      },
+      "fonts": {
+        "sourceCommit": "37827adc41fd165f9a9234ac40f94dbad353aa69",
+        "archive": "craft-fonts-37827adc41fd165f9a9234ac40f94dbad353aa69.zip",
+        "archiveUrl": "https://codeload.github.com/storytold/craft-fonts/zip/37827adc41fd165f9a9234ac40f94dbad353aa69",
+        "archiveSha256": "6fb4b49f8ad2916c66f27ddfad2ddc2c567daefc56f36802045f836147ffb88e",
+        "notices": [
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/ATTRIBUTION.md",
+            "sha256": "5ffc2bfba3b480451cb98c5dd50887999b81168022f8fb005c46c1cb2ea7c37a"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/LICENSE-APACHE",
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/LICENSE-MIT",
+            "sha256": "e360d6f5941863521687517eee951fac3328ee9f379fcb11bb5031fe6614fc8f"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/biz-ud-mincho/OFL.txt",
+            "sha256": "ef0ed524b3bd012f37015e986809eed6f67905456ebfc1ebd7fcc2765282ee01"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/biz-ud-pgothic/OFL.txt",
+            "sha256": "e753d7155d53c747d037a445e584c8ecfca6dd79846db610417e282a736b28bc"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/caladea/OFL.txt",
+            "sha256": "ccdab61d371d8c8683a128a92cd7d498dbdb1d37689f7cb21f1bf6b16658d213"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/carlito/OFL.txt",
+            "sha256": "58402f82a7c332a700294988fe7554fbb0a63a8d27ccc1ee3bbc640311990a00"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/inter/OFL.txt",
+            "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/lato/OFL.txt",
+            "sha256": "74ba064d03f1f1c4a952da936c3eb71866c34404916734de3cae73b34357e59e"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/liberation-mono/OFL.txt",
+            "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/liberation-sans/OFL.txt",
+            "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/liberation-serif/OFL.txt",
+            "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/lxgw-wenkai-lite/OFL.txt",
+            "sha256": "0333a85fe077b6849f8e417acc44e8bd879442ceb681e271acf93e2d57fd4e2e"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/merriweather/OFL.txt",
+            "sha256": "a7ba785ad99b6eae0444ab89910e512d4af9865937fddbcb5c72c4f59f55d6ad"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/montserrat/OFL.txt",
+            "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/nanum-gothic/OFL.txt",
+            "sha256": "eeacf16032901d0ed0456876ec77b8f0fda6b3fecec7d972f8543eb602e6c30f"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-arabic/OFL.txt",
+            "sha256": "07fc70bfeb985cc1a87a8587d0a0c80bab11c86c9dc3fd95b6f0cb332f983e96"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-cjk-sc/OFL.txt",
+            "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-devanagari/OFL.txt",
+            "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-georgian/OFL.txt",
+            "sha256": "8c02263c5d73d40544f9ed91e30c4e947407057a3cc430d7b786189aeceff6df"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-hebrew/OFL.txt",
+            "sha256": "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-symbols-2/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-symbols/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/noto-sans-thai/OFL.txt",
+            "sha256": "2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/nunito-sans/OFL.txt",
+            "sha256": "efbb0c9e864cef973982d9a17567e6be5c3d1759695574586f3f18c7ecca064b"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/open-sans/OFL.txt",
+            "sha256": "fbbbcfef55318de350562559b671360de6d597112ecc5c73881b05092db89602"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/playfair-display/OFL.txt",
+            "sha256": "566be814f8e96e93dfa16101331557eb6b5467e9e03f627c0910fe93ca12300e"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/poppins/OFL.txt",
+            "sha256": "6be04893d770899a015649c7aa3b582f871b272f8747a92b78b17c3e5c8b2573"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/roboto/OFL.txt",
+            "sha256": "061402327a96aadb0bfb694a960ed289ecd38d383e396243831ab81feb109c41"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/shippori-mincho/OFL.txt",
+            "sha256": "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/source-sans-3/OFL.txt",
+            "sha256": "89ad2c4f66dd29127527493e729c31e731f111cf10faf5774c3db9275ed0c22c"
+          },
+          {
+            "path": "vendor/Office/licenses/deckcraft/craft-fonts/fonts/source-serif-4/OFL.txt",
+            "sha256": "75784a295293a8992f5a8d99210566e0064a012e6dab6731305e3787f15896c7"
+          }
+        ]
+      },
+      "dependencies": {
+        "deckcraft-model": {
+          "workspace": true
+        },
+        "deckcraft-pptx": {
+          "workspace": true
+        },
+        "deckcraft-render": {
+          "workspace": true
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/deckcraft/engine.rs",
+        "sha256": "b2e660bbb43de19f285ffca9f22fd67e5ad7d76ce86261a612d1fa1386812619",
+        "originalSha256": "087a6ff9a8b74e3256516c89496c438aa5942efd21eab2b73285f6495d8b7051"
+      }
+    },
+    {
+      "engine": "pdfcraft",
+      "donor": {
+        "version": "0.18.2",
+        "sourceCommit": "7faa4f35cefb0dea04137ec475bdc770945c22cd",
+        "sourceArchive": "pdfcraft-7faa4f35cefb0dea04137ec475bdc770945c22cd.zip",
+        "sourceSha256": "95776ed84bdb9e824863e5abb8dc21cf2e224569eb5044eb8d6fe2e16e0124a6",
+        "sourceUrl": "https://codeload.github.com/storytold/pdfcraft/zip/7faa4f35cefb0dea04137ec475bdc770945c22cd"
+      },
+      "fonts": {
+        "sourceCommit": "b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archive": "craft-fonts-b076417b5880bd4154bd22f00695b1d28c6bea83.zip",
+        "archiveUrl": "https://codeload.github.com/storytold/craft-fonts/zip/b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archiveSha256": "f5b09678d7212ccdc47884d3ce50e66dcab0fa07c7603a32ac0b4a826a5d6415",
+        "notices": [
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/ATTRIBUTION.md",
+            "sha256": "aa2aa7eec68c32ac2da6ff7162ca9100ab3680e4c7b98365fc7c74ddd4167d07"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/LICENSE-APACHE",
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/LICENSE-MIT",
+            "sha256": "e360d6f5941863521687517eee951fac3328ee9f379fcb11bb5031fe6614fc8f"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/biz-ud-mincho/OFL.txt",
+            "sha256": "ef0ed524b3bd012f37015e986809eed6f67905456ebfc1ebd7fcc2765282ee01"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/biz-ud-pgothic/OFL.txt",
+            "sha256": "e753d7155d53c747d037a445e584c8ecfca6dd79846db610417e282a736b28bc"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/lxgw-wenkai-lite/OFL.txt",
+            "sha256": "0333a85fe077b6849f8e417acc44e8bd879442ceb681e271acf93e2d57fd4e2e"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/nanum-gothic/OFL.txt",
+            "sha256": "eeacf16032901d0ed0456876ec77b8f0fda6b3fecec7d972f8543eb602e6c30f"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-arabic/OFL.txt",
+            "sha256": "07fc70bfeb985cc1a87a8587d0a0c80bab11c86c9dc3fd95b6f0cb332f983e96"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-cjk-sc/OFL.txt",
+            "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-devanagari/OFL.txt",
+            "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-georgian/OFL.txt",
+            "sha256": "8c02263c5d73d40544f9ed91e30c4e947407057a3cc430d7b786189aeceff6df"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-hebrew/OFL.txt",
+            "sha256": "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-symbols-2/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-symbols/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/noto-sans-thai/OFL.txt",
+            "sha256": "2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0"
+          },
+          {
+            "path": "vendor/Office/licenses/pdfcraft/craft-fonts/fonts/shippori-mincho/OFL.txt",
+            "sha256": "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38"
+          }
+        ]
+      },
+      "dependencies": {
+        "pdfcraft-render": {
+          "workspace": true
+        },
+        "pdfcraft-cos": {
+          "workspace": true
+        },
+        "pdfcraft-model": {
+          "workspace": true
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/pdfcraft/engine.rs",
+        "sha256": "967c06e00429eb47d6c2db59bb9e02adf5d4672a954334844001445e3575a077",
+        "originalSha256": "db48f44d39bb0214857dea47b6928971e272e9d2ecfd48f1fa15d854519c4401"
+      }
+    },
+    {
+      "engine": "photocraft",
+      "donor": {
+        "version": "0.20.2",
+        "sourceCommit": "7c12f647150f8e7b2e07718f7993b1fcaa57fefe",
+        "sourceArchive": "photocraft-7c12f647150f8e7b2e07718f7993b1fcaa57fefe.zip",
+        "sourceSha256": "c25c9d0998792e29ff55ff00a740445142751233f1988c93cebeee22a27b3581",
+        "sourceUrl": "https://codeload.github.com/storytold/photocraft/zip/7c12f647150f8e7b2e07718f7993b1fcaa57fefe"
+      },
+      "fonts": {
+        "sourceCommit": "b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archive": "craft-fonts-b076417b5880bd4154bd22f00695b1d28c6bea83.zip",
+        "archiveUrl": "https://codeload.github.com/storytold/craft-fonts/zip/b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archiveSha256": "f5b09678d7212ccdc47884d3ce50e66dcab0fa07c7603a32ac0b4a826a5d6415",
+        "notices": [
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/ATTRIBUTION.md",
+            "sha256": "aa2aa7eec68c32ac2da6ff7162ca9100ab3680e4c7b98365fc7c74ddd4167d07"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/LICENSE-APACHE",
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/LICENSE-MIT",
+            "sha256": "e360d6f5941863521687517eee951fac3328ee9f379fcb11bb5031fe6614fc8f"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/biz-ud-mincho/OFL.txt",
+            "sha256": "ef0ed524b3bd012f37015e986809eed6f67905456ebfc1ebd7fcc2765282ee01"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/biz-ud-pgothic/OFL.txt",
+            "sha256": "e753d7155d53c747d037a445e584c8ecfca6dd79846db610417e282a736b28bc"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/lxgw-wenkai-lite/OFL.txt",
+            "sha256": "0333a85fe077b6849f8e417acc44e8bd879442ceb681e271acf93e2d57fd4e2e"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/nanum-gothic/OFL.txt",
+            "sha256": "eeacf16032901d0ed0456876ec77b8f0fda6b3fecec7d972f8543eb602e6c30f"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-arabic/OFL.txt",
+            "sha256": "07fc70bfeb985cc1a87a8587d0a0c80bab11c86c9dc3fd95b6f0cb332f983e96"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-cjk-sc/OFL.txt",
+            "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-devanagari/OFL.txt",
+            "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-georgian/OFL.txt",
+            "sha256": "8c02263c5d73d40544f9ed91e30c4e947407057a3cc430d7b786189aeceff6df"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-hebrew/OFL.txt",
+            "sha256": "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-symbols-2/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-symbols/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/noto-sans-thai/OFL.txt",
+            "sha256": "2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0"
+          },
+          {
+            "path": "vendor/Office/licenses/photocraft/craft-fonts/fonts/shippori-mincho/OFL.txt",
+            "sha256": "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38"
+          }
+        ]
+      },
+      "dependencies": {
+        "photocraft-doc": {
+          "workspace": true
+        },
+        "photocraft-format": {
+          "workspace": true
+        },
+        "photocraft-io": {
+          "workspace": true
+        },
+        "photocraft-compose": {
+          "workspace": true
+        },
+        "photocraft-cms": {
+          "workspace": true
+        },
+        "photocraft-text": {
+          "workspace": true
+        },
+        "photocraft-raster": {
+          "workspace": true
+        },
+        "zip": {
+          "version": "=9.1.0",
+          "default-features": false
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/photocraft/engine.rs",
+        "sha256": "3d0be533a561df92377cc1e7ca190292b398c53a19c2ed8a65b0dd14870ab1a1",
+        "originalSha256": "3276c21ebd8da226fe87ec2bf4537fa55d7e5c9d876010bbc39f7b03c2e23f47"
+      }
+    },
+    {
+      "engine": "vectorcraft",
+      "donor": {
+        "version": "0.21.1",
+        "sourceCommit": "f6aa4309b4e11a6844e156120560b4beabf17fe9",
+        "sourceArchive": "vectorcraft-f6aa4309b4e11a6844e156120560b4beabf17fe9.zip",
+        "sourceSha256": "8014f09e85602c7bd62f0a9490e3a687631cc3ecd3b591790029394a70faf424",
+        "sourceUrl": "https://codeload.github.com/storytold/vectorcraft/zip/f6aa4309b4e11a6844e156120560b4beabf17fe9"
+      },
+      "fonts": {
+        "sourceCommit": "b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archive": "craft-fonts-b076417b5880bd4154bd22f00695b1d28c6bea83.zip",
+        "archiveUrl": "https://codeload.github.com/storytold/craft-fonts/zip/b076417b5880bd4154bd22f00695b1d28c6bea83",
+        "archiveSha256": "f5b09678d7212ccdc47884d3ce50e66dcab0fa07c7603a32ac0b4a826a5d6415",
+        "notices": [
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/ATTRIBUTION.md",
+            "sha256": "aa2aa7eec68c32ac2da6ff7162ca9100ab3680e4c7b98365fc7c74ddd4167d07"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/LICENSE-APACHE",
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/LICENSE-MIT",
+            "sha256": "e360d6f5941863521687517eee951fac3328ee9f379fcb11bb5031fe6614fc8f"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/biz-ud-mincho/OFL.txt",
+            "sha256": "ef0ed524b3bd012f37015e986809eed6f67905456ebfc1ebd7fcc2765282ee01"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/biz-ud-pgothic/OFL.txt",
+            "sha256": "e753d7155d53c747d037a445e584c8ecfca6dd79846db610417e282a736b28bc"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/lxgw-wenkai-lite/OFL.txt",
+            "sha256": "0333a85fe077b6849f8e417acc44e8bd879442ceb681e271acf93e2d57fd4e2e"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/nanum-gothic/OFL.txt",
+            "sha256": "eeacf16032901d0ed0456876ec77b8f0fda6b3fecec7d972f8543eb602e6c30f"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-arabic/OFL.txt",
+            "sha256": "07fc70bfeb985cc1a87a8587d0a0c80bab11c86c9dc3fd95b6f0cb332f983e96"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-cjk-sc/OFL.txt",
+            "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-devanagari/OFL.txt",
+            "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-georgian/OFL.txt",
+            "sha256": "8c02263c5d73d40544f9ed91e30c4e947407057a3cc430d7b786189aeceff6df"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-hebrew/OFL.txt",
+            "sha256": "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-symbols-2/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-symbols/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/noto-sans-thai/OFL.txt",
+            "sha256": "2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0"
+          },
+          {
+            "path": "vendor/Office/licenses/vectorcraft/craft-fonts/fonts/shippori-mincho/OFL.txt",
+            "sha256": "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38"
+          }
+        ]
+      },
+      "dependencies": {
+        "vectorcraft-doc": {
+          "workspace": true
+        },
+        "vectorcraft-format": {
+          "workspace": true
+        },
+        "vectorcraft-render": {
+          "workspace": true
+        },
+        "vectorcraft-svg": {
+          "workspace": true
+        },
+        "vectorcraft-pdf": {
+          "workspace": true
+        },
+        "vectorcraft-color": {
+          "workspace": true
+        },
+        "vectorcraft-text": {
+          "workspace": true,
+          "features": [
+            "bundled-fonts"
+          ]
+        },
+        "zip": {
+          "version": "=9.1.3",
+          "default-features": false
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/vectorcraft/engine.rs",
+        "sha256": "e61447c1c50f2f24bf88189f742f378f20b40e09416b0cb1de2804a50ff999fc",
+        "originalSha256": "541aad4ccb4f9728f55b0f4c9c4f5958d8c12c23c876441ac1181a0a6cfe7e8c"
+      }
+    },
+    {
+      "engine": "figcraft",
+      "donor": {
+        "version": "0.15.1",
+        "sourceCommit": "9ab2c65ae23b66c10d6e4b1d282df9b28c692bf9",
+        "sourceArchive": "figcraft-9ab2c65ae23b66c10d6e4b1d282df9b28c692bf9.zip",
+        "sourceSha256": "308cfa3ce074e24152e44856bc6d0bc6a147d973980c8c3bd5275030138914d9",
+        "sourceUrl": "https://codeload.github.com/storytold/figcraft/zip/9ab2c65ae23b66c10d6e4b1d282df9b28c692bf9"
+      },
+      "fonts": {
+        "sourceCommit": "37827adc41fd165f9a9234ac40f94dbad353aa69",
+        "archive": "craft-fonts-37827adc41fd165f9a9234ac40f94dbad353aa69.zip",
+        "archiveUrl": "https://codeload.github.com/storytold/craft-fonts/zip/37827adc41fd165f9a9234ac40f94dbad353aa69",
+        "archiveSha256": "6fb4b49f8ad2916c66f27ddfad2ddc2c567daefc56f36802045f836147ffb88e",
+        "notices": [
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/ATTRIBUTION.md",
+            "sha256": "5ffc2bfba3b480451cb98c5dd50887999b81168022f8fb005c46c1cb2ea7c37a"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/LICENSE-APACHE",
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/LICENSE-MIT",
+            "sha256": "e360d6f5941863521687517eee951fac3328ee9f379fcb11bb5031fe6614fc8f"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/biz-ud-mincho/OFL.txt",
+            "sha256": "ef0ed524b3bd012f37015e986809eed6f67905456ebfc1ebd7fcc2765282ee01"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/biz-ud-pgothic/OFL.txt",
+            "sha256": "e753d7155d53c747d037a445e584c8ecfca6dd79846db610417e282a736b28bc"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/caladea/OFL.txt",
+            "sha256": "ccdab61d371d8c8683a128a92cd7d498dbdb1d37689f7cb21f1bf6b16658d213"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/carlito/OFL.txt",
+            "sha256": "58402f82a7c332a700294988fe7554fbb0a63a8d27ccc1ee3bbc640311990a00"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/inter/OFL.txt",
+            "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/lato/OFL.txt",
+            "sha256": "74ba064d03f1f1c4a952da936c3eb71866c34404916734de3cae73b34357e59e"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/liberation-mono/OFL.txt",
+            "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/liberation-sans/OFL.txt",
+            "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/liberation-serif/OFL.txt",
+            "sha256": "93fed46019c38bbe566b479d22148e2e8a1e85ada614accb0211c37b2c61c19b"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/lxgw-wenkai-lite/OFL.txt",
+            "sha256": "0333a85fe077b6849f8e417acc44e8bd879442ceb681e271acf93e2d57fd4e2e"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/merriweather/OFL.txt",
+            "sha256": "a7ba785ad99b6eae0444ab89910e512d4af9865937fddbcb5c72c4f59f55d6ad"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/montserrat/OFL.txt",
+            "sha256": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/nanum-gothic/OFL.txt",
+            "sha256": "eeacf16032901d0ed0456876ec77b8f0fda6b3fecec7d972f8543eb602e6c30f"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-arabic/OFL.txt",
+            "sha256": "07fc70bfeb985cc1a87a8587d0a0c80bab11c86c9dc3fd95b6f0cb332f983e96"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-cjk-sc/OFL.txt",
+            "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-devanagari/OFL.txt",
+            "sha256": "a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-georgian/OFL.txt",
+            "sha256": "8c02263c5d73d40544f9ed91e30c4e947407057a3cc430d7b786189aeceff6df"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-hebrew/OFL.txt",
+            "sha256": "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-symbols-2/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-symbols/OFL.txt",
+            "sha256": "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/noto-sans-thai/OFL.txt",
+            "sha256": "2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/nunito-sans/OFL.txt",
+            "sha256": "efbb0c9e864cef973982d9a17567e6be5c3d1759695574586f3f18c7ecca064b"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/open-sans/OFL.txt",
+            "sha256": "fbbbcfef55318de350562559b671360de6d597112ecc5c73881b05092db89602"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/playfair-display/OFL.txt",
+            "sha256": "566be814f8e96e93dfa16101331557eb6b5467e9e03f627c0910fe93ca12300e"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/poppins/OFL.txt",
+            "sha256": "6be04893d770899a015649c7aa3b582f871b272f8747a92b78b17c3e5c8b2573"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/roboto/OFL.txt",
+            "sha256": "061402327a96aadb0bfb694a960ed289ecd38d383e396243831ab81feb109c41"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/shippori-mincho/OFL.txt",
+            "sha256": "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/source-sans-3/OFL.txt",
+            "sha256": "89ad2c4f66dd29127527493e729c31e731f111cf10faf5774c3db9275ed0c22c"
+          },
+          {
+            "path": "vendor/Office/licenses/figcraft/craft-fonts/fonts/source-serif-4/OFL.txt",
+            "sha256": "75784a295293a8992f5a8d99210566e0064a012e6dab6731305e3787f15896c7"
+          }
+        ]
+      },
+      "dependencies": {
+        "figcraft-doc": {
+          "workspace": true
+        },
+        "figcraft-format": {
+          "workspace": true
+        },
+        "figcraft-render": {
+          "workspace": true
+        },
+        "figcraft-text": {
+          "workspace": true
+        },
+        "zip": {
+          "version": "=9.1.1",
+          "default-features": false
+        },
+        "serde_json": {
+          "workspace": true
+        }
+      },
+      "adapter": {
+        "path": "adapters/figcraft/engine.rs",
+        "sha256": "a55bd9468448a5cbc734981711c745b2bd2ff531b40f9ea237b195eefd7d738b",
+        "originalSha256": "52b9edea103e6febc3abadac35c85bd44f5718818052d44ae3cdc3fee50da2fd"
+      }
+    }
+  ]
+}

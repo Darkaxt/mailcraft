@@ -36,6 +36,13 @@ existing mail and save services. Microsoft To Do connection is now manual and of
 by default. Neither change establishes broader provider acceptance or a memory
 bound for the mailbox, content caches and search index.
 
+Persistent native mailboxes now use [offline content search](content-search.md):
+a derived SQLite FTS5 index of retained message fields and supported attachment
+contents, database-backed previews, exact quoted/case matching and located local
+OCR. Missing, failed and unsupported content remains explicit. The older word
+index and memory figures below describe historical measurements; they are not
+new performance measurements for this index or proof of undiscovered mail.
+
 | # | Gap | B | Evidence | Impact | Hours | Doc |
 |---|---|---|---|---|---|---|
 | 1 | **Limited live interoperability.** MailCraft is in daily use on one Microsoft 365 mailbox. Windows acceptance now also covers Gmail/Workspace OAuth, real app-password authentication, restart/reconnect and explicit conversion with downloaded mail preserved; SMTP authentication was checked without sending. Other providers, self-hosted servers, real outbound delivery for this Google contribution and other desktop platforms still need broader acceptance. Automated tests remain synthetic; no CI job runs against a mail server in a container | B | `crates/net/src/fake.rs`; [Google acceptance scope](google-accounts.md#what-has-been-verified-and-what-has-not) | People on untested servers, platforms or organisation policies | 20–40 | [ROADMAP.md](../ROADMAP.md#the-beta-checklist) |
@@ -93,6 +100,7 @@ bound for the mailbox, content caches and search index.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-07 | patch | AU3-V1: gap 5: Autodiscover asks before the sign-in goes to any host in the owner's domain but its Autodiscover host and the hosts its SRV record names, naming the host whole |
 | 2026-11-05 | minor | #815 part 3: gap 12: a `.pst` file's contacts and distribution lists import too; calendar, tasks and notes left for a later part |
 | 2026-11-05 | minor | #815 part 2: gap 12: a `.pst` file's mail imports (preview), with its report; calendar, contacts, tasks and notes left for a later part |
 | 2026-11-05 | minor | #745: gap 8: selecting copies nothing, a change to the mailbox costs what it changed (chunked messages) and the conversations are kept through it: a click 1.3–3.9 ms, a Shift+click 0.1 ms, Undo of 1,000 deletes 30 + 14 ms at 326,000 messages |

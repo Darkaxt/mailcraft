@@ -135,7 +135,7 @@ fn tab_with_no_list_leaves_the_box() {
 fn a_take_is_only_of_what_was_offered_for_the_text_now() {
     let mut h = window();
     typed(&mut h, "c");
-    assert_eq!(offered(&h), ["cc:", "category:"]);
+    assert_eq!(offered(&h), ["cc:", "case:", "category:"]);
     h.input_mut().events.extend([
         egui::Event::Text("a".into()),
         egui::Event::Key { key: egui::Key::Tab, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE },
@@ -145,7 +145,7 @@ fn a_take_is_only_of_what_was_offered_for_the_text_now() {
     h.run_steps(3);
     assert_eq!(search(&h), "ca");
     // The list offered for `ca` takes Tab from the very next frame.
-    assert_eq!(offered(&h), ["category:"]);
+    assert_eq!(offered(&h), ["case:", "category:"]);
     h.input_mut().events.extend([
         egui::Event::Text("t".into()),
         egui::Event::Key { key: egui::Key::Tab, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE },

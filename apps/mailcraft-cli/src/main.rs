@@ -10,6 +10,8 @@ use std::process::ExitCode;
 use mailcraft_engine::Session;
 use mailcraft_model::Mailbox;
 use serde_json::{Value, json};
+#[cfg(test)]
+mod index_tests;
 
 const USAGE: &str = "\
 mailcraft-cli — MailCraft from the command line
@@ -38,8 +40,14 @@ USAGE:
                                                 .ics (the calendar), .vcf (the contacts),
                                                 .mailcraft (everything, in one file)
   mailcraft-cli convert <in> <out>              between .mailcraft, .eml, .mbox, .ics and .vcf
-  mailcraft-cli run [--file F | --sample] --cmd 'id={json}' [--cmd ...] [--save OUT] [--print]
-                                                run commands headlessly, then save
+  mailcraft-cli run [--file F | --sample] --cmd 'id={json}' [--cmd ...] [--save OUT] [--print] [--index] [--render-evidence DIR]
+                                                run commands headlessly, then save; --index
+                                                maintains/waits for the offline file's content
+                                                index between commands (requires --file).
+                                                Never open the live app's mailbox in parallel.
+                                                --render-evidence retains finite native PNG
+                                                evidence in an existing new qualification DIR;
+                                                requires --index. No GUI default is changed.
   mailcraft-cli sync <mailbox> [--account EMAIL]
                                                 Send/Receive with the account's mail server; the
                                                 password is read from MAILCRAFT_PASSWORD. An account
@@ -419,18 +427,47 @@ fn run(args: &[String]) -> Result<(), Failure> {
             Ok(())
         }
         "run" => {
-            positionals("run", &rest, &[value("--file"), flag("--sample"), value("--cmd"), value("--save"), flag("--print")])?;
+            positionals(
+                "run",
+                &rest,
+                &[value("--file"), flag("--sample"), value("--cmd"), value("--save"), flag("--print"), flag("--index"), value("--render-evidence")],
+            )?;
+            let indexed = rest.iter().any(|argument| argument == "--index");
+            if indexed && arg_value(&rest, "--file").is_none() {
+                return Err("run: --index requires an explicit offline --file; do not open the live app's mailbox in parallel".to_owned().into());
+            }
+            let evidence = arg_value(&rest, "--render-evidence");
+            if evidence.is_some() && !indexed {
+                return Err("run: --render-evidence requires finite --file/--index mode".to_owned().into());
+            }
             let mut s = match (arg_value(&rest, "--file"), rest.iter().any(|a| a == "--sample")) {
                 (Some(f), _) => open(&f)?,
                 (None, true) => sample(),
                 (None, false) => Session::new(Mailbox::with_local_account("", "")),
             };
             let print = rest.iter().any(|a| a == "--print");
+            if indexed {
+                s.index_render_evidence = evidence.map(Into::into);
+                s.index_words = true;
+                s.wait_for_word_index();
+                if s.word_index() == mailcraft_engine::WordIndex::Problem {
+                    return Err(format!("run: offline index failed: {}", s.content_index_status()).into());
+                }
+            }
             let mut i = 0;
             while let Some(a) = rest.get(i) {
                 if a == "--cmd" {
                     let (id, params) = parse_cmd(rest.get(i + 1).ok_or_else(missing)?)?;
                     let r = s.run(&id, &params).map_err(|e| format!("{id}: {e}"))?;
+                    if indexed {
+                        // Observe actual original writer/reader completion; no
+                        // command is replayed and no timer decides readiness.
+                        s.index_words = true;
+                        s.wait_for_word_index();
+                        if s.word_index() == mailcraft_engine::WordIndex::Problem {
+                            return Err(format!("{id}: offline index failed: {}", s.content_index_status()).into());
+                        }
+                    }
                     if print {
                         print_json(&json!({"command": id, "result": r}))?;
                     }

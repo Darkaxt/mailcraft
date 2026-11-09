@@ -57,6 +57,25 @@ fn asked(s: &mut Session) -> Vec<mailcraft_model::sync::GraphSearchRequest> {
     serde_json::from_value(s.run("sync.graphSearchRequest", &json!({})).unwrap()["requests"].clone()).unwrap()
 }
 
+#[test]
+fn complete_source_queries_never_dispatch_partial_provider_searches() {
+    let (mut s, _, _, _) = session();
+    for query in [
+        r#"budget body:"exact phrase beyond the preview""#,
+        "budget header:trace",
+        "budget attachmenttext:invoice",
+        "budget case:sensitive from:Ada@example.org",
+        "budget alias:shop@example.org",
+    ] {
+        search(&mut s, query, "everywhere");
+        assert!(crate::cmd::search_server::offered_reason(&s).is_some(), "{query}");
+        assert!(s.run("sync.graphSearchRequest", &json!({})).is_err(), "{query}");
+        assert!(!s.server_search.asked(), "no provider request was dispatched: {query}");
+    }
+    search(&mut s, "budget from:ada@example.org", "everywhere");
+    assert!(!asked(&mut s).is_empty(), "ordinary explicit provider search remains available");
+}
+
 fn answer(s: &mut Session, request: &mailcraft_model::sync::GraphSearchRequest, messages: Vec<GraphMessage>, next: &str) -> Value {
     let result = GraphSearchResult {
         account: request.account,

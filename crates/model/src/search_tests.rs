@@ -42,7 +42,8 @@ fn a_whole_address_finds_that_address_alone() {
     assert!(finds("cc:KIT@example.org", &copied) && !finds("to:kit@example.org", &copied));
     assert!(!finds("-from:ada@example.org", &msg()) && finds("-from:adam@example.org", &msg()));
     // A part of one is words, as before: a word starts a word.
-    assert!(finds("from:ada", &from("adam@example.org")) && finds("from:example.org", &msg()) && finds("from:\"ada love\"", &msg()));
+    assert!(finds("from:ada", &from("adam@example.org")) && finds("from:example.org", &msg()));
+    assert!(finds("from:\"Ada Lovelace\"", &msg()) && !finds("from:\"ada love\"", &msg()), "quotes require complete words");
     // Accents written either way stay as they are.
     let decomposed = "u\u{0308}nal@bu\u{0308}cher.example";
     assert!(finds(&format!("from:{decomposed}"), &from(decomposed)) && !finds(&format!("from:{decomposed}"), &from("unal@bucher.example")));
@@ -59,6 +60,18 @@ fn a_whole_address_finds_that_address_alone() {
     );
     // A message with no sender address is found by no address.
     assert!(!finds("from:ada@example.org", &from("")) && !finds("from:ada@example.org", &Message::default()));
+}
+
+#[test]
+fn explicit_case_sensitive_addresses_preserve_the_typed_spelling() {
+    let exact = from(" Ada@Example.org ");
+    for field in ["from", "to", "cc", "transportfrom"] {
+        let message = Message { to: vec![exact.from.clone()], cc: vec![exact.from.clone()], ..exact.clone() };
+        assert!(finds(&format!("case:sensitive {field}:Ada@Example.org"), &message), "{field}");
+        assert!(!finds(&format!("case:sensitive {field}:ada@example.org"), &message), "{field}");
+        assert!(finds(&format!("case:insensitive {field}:ada@example.org"), &message), "{field}");
+        assert!(!finds(&format!("case:sensitive -{field}:Ada@Example.org"), &message), "{field}");
+    }
 }
 
 #[test]
@@ -144,29 +157,27 @@ fn a_server_is_given_the_address_whole_and_its_results_are_checked() {
     }
 }
 
-/// A phrase longer than a server is given is looked at here too, so the server's answer is
-/// checked for what it wasn't asked.
+/// Literal phrases require complete source rather than a provider body preview.
 #[test]
 fn what_a_server_is_given_less_of_is_looked_at_here() {
     let q = "from:ada@example.org subject:\"one two three four five six seven eight nine\"";
     let split = Query::parse(q).for_server();
-    assert_eq!(split.terms.len(), 2);
+    assert!(split.terms.is_empty());
     assert_eq!(split.local.len(), 2);
     let eight = Message { subject: "one two three four five six seven eight".into(), ..msg() };
     let nine = Message { subject: "one two three four five six seven eight nine".into(), ..msg() };
     assert!(!split.local.matches(&eight, 0) && split.local.matches(&nine, 0));
-    // In the body or an attachment's name, the server's alone: a message found there has only a
-    // preview of its body here, and no attachments.
+    // A provider row has neither a complete body nor attachment names/content;
+    // it must not stand in for the native index's exact source verification.
     for q in [
         "body:\"one two three four five six seven eight nine\"",
         "attachment:\"one two three four five six seven eight\"",
         "\"one two three four five six seven eight nine\"",
     ] {
         let split = Query::parse(q).for_server();
-        assert!(split.terms.len() == 1 && split.local.is_empty(), "{q}");
+        assert!(split.terms.is_empty() && split.local.len() == 1, "{q}");
     }
-    // A phrase a server is given whole is the server's alone, as before.
-    assert_eq!(Query::parse("from:ada@example.org subject:\"budget review\"").for_server().local.len(), 1);
+    assert_eq!(Query::parse("from:ada@example.org subject:\"budget review\"").for_server().local.len(), 2);
 }
 
 /// A plus-address stays in one piece, for the server too; elsewhere `+` parts words.
@@ -180,10 +191,10 @@ fn a_plus_address_stays_whole() {
     let bare = Query::parse("ada+news@example.org").for_server();
     assert_eq!(bare.terms, [ServerTerm::Words { field: None, words: vec!["ada+news@example.org".into()] }]);
     let among = Query::parse("subject:\"from ada+news@example.org today\"").for_server();
-    assert_eq!(
-        among.terms,
-        [ServerTerm::Words { field: Some(ServerField::Subject), words: vec!["from".into(), "ada+news@example.org".into(), "today".into()] }]
-    );
+    assert!(among.terms.is_empty());
+    let exact = Message { subject: "from ada+news@example.org today".into(), ..msg() };
+    assert!(among.local.matches(&exact, 0));
+    assert!(!among.local.matches(&Message { subject: "from ada news@example.org today".into(), ..msg() }, 0));
     // Not an address: `+` parts it, as every other mark does.
     let words = Query::parse("c+plus +budget+").for_server();
     assert_eq!(words.terms[0], ServerTerm::Words { field: None, words: vec!["c".into(), "plus".into()] });

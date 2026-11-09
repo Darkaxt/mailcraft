@@ -655,7 +655,7 @@ pub(crate) fn drop_repeats(i: &mut egui::InputState, keys: &[Key]) {
 /// Whether the window takes command keys now: not while File (backstage), a dialog or an agent's
 /// question is open (#503). The menu bar asks the same, so its items are greyed then.
 pub fn takes_commands(app: &MailApp) -> bool {
-    !app.ui.backstage && app.dialog.is_none() && app.asking.is_empty()
+    !app.ui.backstage && app.dialog.is_none() && app.asking.is_empty() && !app.search_index_pane.is_open()
 }
 
 /// What the window runs for a command asked for by a key or from the menu bar: nothing when the

@@ -38,7 +38,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("mail.filingStatus", "Inspect Filing State", "Mail", filing_status).reads().params(
             r#"{"id": number} — read stored placement/source-removal state for exactly one message, without fetching content, running sync or changing selection. Recorded provider ids are the last native server observation, not a new server lookup; pending placement is not a confirmed remote copy."#,
         ),
-        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number, "folder"?: number | "Inbox/Projects", "query"?: string} — the message list in view; with `folder` or `query` the list of that folder or search, read without moving the window to it"#),
+        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "Inbox/Projects", "query"?: string} — bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone."#),
         CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_movable),
         CommandSpec::new("mail.deletePermanently", "Delete Permanently", "Home › Delete", delete_permanently)
             .key("Shift+Delete")
@@ -639,11 +639,12 @@ fn get(s: &mut Session, v: &Value) -> CmdResult {
 
 fn list(s: &mut Session, v: &Value) -> CmdResult {
     let limit = p::u64(v, "limit").unwrap_or(200).min(10_000) as usize;
+    let offset = usize::try_from(p::u64(v, "offset").unwrap_or(0)).map_err(|_| bad("the list offset is too large for this platform"))?;
     // A named folder or a search is read from a view of its own: the owner's folder, search and
     // selection stay as they are (#620).
     let looks_elsewhere = v.get("folder").is_some_and(|f| !f.is_null()) || v.get("query").is_some_and(|q| !q.is_null());
     if !looks_elsewhere {
-        return list_in_view(s, limit);
+        return list_in_view(s, limit, offset);
     }
     let folder = match v.get("folder").filter(|f| !f.is_null()) {
         None => s.view.folder,
@@ -655,7 +656,10 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
             }
         },
     };
-    let query: String = p::str(v, "query").unwrap_or("").chars().filter(|c| !c.is_control()).take(2000).collect();
+    let query = p::str(v, "query").unwrap_or("").to_owned();
+    if let Some(why) = mailcraft_model::search::Query::parse(&query).error() {
+        return Err(bad(why));
+    }
     let (view, sel) = (s.view.clone(), s.sel.clone());
     s.view.folder = folder;
     s.view.module = crate::Module::Mail;
@@ -665,23 +669,26 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
     if s.view.folder != view.folder || s.view.search != view.search {
         s.view.open.clear();
     }
-    let out = list_in_view(s, limit);
+    let out = list_in_view(s, limit, offset);
     s.view = view;
     s.sel = sel;
     out
 }
 
 /// The list of the folder and search in view.
-fn list_in_view(s: &mut Session, limit: usize) -> CmdResult {
-    let rows = s.rows();
+fn list_in_view(s: &mut Session, limit: usize, offset: usize) -> CmdResult {
+    let rows = s.rows_for_agent();
     let items: Vec<Value> = rows
         .iter()
+        .skip(offset)
         .take(limit)
         .filter_map(|r| {
-            // A windowless opening keeps bodies on disk. Fetch only the rows
-            // requested here for their snippets, through the same bounded body
-            // cache and unavailable-content handling as mail.get, not attachments.
-            let _ = s.load_where(r.id, |_| false);
+            // Indexed previews come from queryable metadata without body I/O.
+            // Explicitly unindexed readers retain their existing bounded,
+            // body-only preview for just the returned rows.
+            if !s.native_content_index_enabled() {
+                let _ = s.load_where(r.id, |_| false);
+            }
             let mut m = message_summary(s, s.mailbox.message(r.id)?);
             if let Some(o) = m.as_object_mut() {
                 if r.conversation() {
@@ -708,7 +715,10 @@ fn list_in_view(s: &mut Session, limit: usize) -> CmdResult {
             Some(m)
         })
         .collect();
-    Ok(json!({"folder": s.view.folder, "total": listed(&rows), "rows": rows.len(), "messages": items}))
+    let next = offset.saturating_add(items.len());
+    Ok(json!({"folder":s.view.folder,"total":listed(&rows),"rows":rows.len(),"messages":items,
+        "offset":offset,"nextOffset":(next<rows.len()).then_some(next),"searchIndex":s.content_index_status(),
+        "unsearched":s.unsearched}))
 }
 
 fn delete(s: &mut Session, v: &Value) -> CmdResult {

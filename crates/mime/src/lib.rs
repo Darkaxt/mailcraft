@@ -15,6 +15,7 @@
 
 mod address;
 mod charset;
+pub mod content;
 mod header;
 mod mailto;
 mod mbox;

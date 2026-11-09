@@ -30,6 +30,8 @@ pub mod arrivals;
 pub mod catalog;
 pub mod cmd;
 pub mod composing;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod content_index;
 mod conversations;
 pub mod counts;
 pub mod import_pst;

@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "sourcePreparation": true,
+  "nativeExecution": false,
+  "tesseract": {
+    "repository": "https://github.com/tesseract-ocr/tesseract",
+    "version": "5.5.4",
+    "commit": "7e548e6eff172f38f97664afe7f7ce40db36c8d6",
+    "release": "https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.4",
+    "archive": {
+      "url": "https://codeload.github.com/tesseract-ocr/tesseract/tar.gz/7e548e6eff172f38f97664afe7f7ce40db36c8d6",
+      "bytes": 1971321,
+      "sha256": "445603ab1d0a63df552e193a600d9d5c4021aff36e144f3091af149e5efb381a",
+      "sha512": "6314765671d99ad1e699d30d5a184436273155026976655b08453d7e168b91c05232a6fb9e40cfea0ba8822f227fbf70a79390a64a8245557f76bbff8c3ecf8f",
+      "gitBlob": null
+    }
+  },
+  "models": {
+    "repository": "https://github.com/tesseract-ocr/tessdata_fast",
+    "commit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+    "files": [
+      {
+        "language": "eng",
+        "path": "tessdata/eng.traineddata",
+        "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata",
+        "bytes": 4113088,
+        "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+        "sha512": "90aadb5e0c368781f94add808f6b4dd31d8e244c9fecbe6a233070cac9a4fc071fd23a09e4a7e041db8e26880a6debbdf32a6b701c28687b2ed1cac81f4c1d14",
+        "gitBlob": "bbef4675053b5b468cdb477053e28b1c698ba08e"
+      },
+      {
+        "language": "spa",
+        "path": "tessdata/spa.traineddata",
+        "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/spa.traineddata",
+        "bytes": 2294433,
+        "sha256": "6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd3f898a40ea6b464",
+        "sha512": "901e8c0c6dc50f57c723922061d5a98b223f1b499b9af1546b072dd70772c5a3ffa33ddbc76295b115bd586863f3d653602bdb6d1fce28a59a86d296efa24241",
+        "gitBlob": "72e901f13ca52cfe34cf239a368b9ed3c0ddaf26"
+      },
+      {
+        "language": "ell",
+        "path": "tessdata/ell.traineddata",
+        "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/ell.traineddata",
+        "bytes": 1419514,
+        "sha256": "4fba8a0b461038d51f1c20d043d4f2ac38c4e778f1b90830847f7bd8fa3ba726",
+        "sha512": "c2d483c117801b277bffdc16237c439f59896e5988b5d642483f351cf249359ad826153c50be8fa25e44cc6a19e8d6d0ba871a889618797e216858725902a143",
+        "gitBlob": "ed98ae1a88d84414da316e6eeab3232f2c68639b"
+      }
+    ]
+  },
+  "licences": [
+    {
+      "repository": "tesseract",
+      "url": "https://raw.githubusercontent.com/tesseract-ocr/tesseract/7e548e6eff172f38f97664afe7f7ce40db36c8d6/LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sha512": "98f6b79b778f7b0a15415bd750c3a8a097d650511cb4ec8115188e115c47053fe700f578895c097051c9bc3dfb6197c2b13a15de203273e1a3218884f86e90e8",
+      "gitBlob": null
+    },
+    {
+      "repository": "tessdata_fast",
+      "url": "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/87416418657359cb625c412a48b6e1d6d41c29bd/LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "sha512": "98f6b79b778f7b0a15415bd750c3a8a097d650511cb4ec8115188e115c47053fe700f578895c097051c9bc3dfb6197c2b13a15de203273e1a3218884f86e90e8",
+      "gitBlob": null
+    }
+  ],
+  "networkPolicy": "Source acquisition only; recognition remains local with pinned models"
+}

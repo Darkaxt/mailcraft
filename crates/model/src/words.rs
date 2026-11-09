@@ -26,8 +26,10 @@ pub const TO: u8 = 4;
 pub const CC: u8 = 8;
 pub const BODY: u8 = 16;
 pub const ATTACHMENT: u8 = 32;
+pub const HEADERS: u8 = 64;
+pub const ATTACHMENT_CONTENT: u8 = 128;
 /// Every part.
-pub const ALL: u8 = SUBJECT | FROM | TO | CC | BODY | ATTACHMENT;
+pub const ALL: u8 = SUBJECT | FROM | TO | CC | BODY | ATTACHMENT | HEADERS | ATTACHMENT_CONTENT;
 
 /// Call `f` with each piece of text of `m` that search reads and the part it is in, until it
 /// returns `true`; returns whether it did. The subject, the name and the address of each person it
@@ -50,6 +52,8 @@ pub fn texts_with<'a>(m: &'a Message, body: &'a str, hidden: &'a str, mut f: imp
         || f(BODY, body)
         || (!hidden.is_empty() && f(BODY, hidden))
         || m.attachments.iter().any(|a| f(ATTACHMENT, &a.name))
+        || m.bcc.iter().any(|a| f(HEADERS, &a.name) || f(HEADERS, &a.email))
+        || m.headers.iter().any(|(name, value)| f(HEADERS, name) || f(HEADERS, value))
 }
 
 /// Whether `c` is a combining mark (an accent written after its letter): dropped from a word.
@@ -58,7 +62,7 @@ pub(crate) fn is_mark(c: char) -> bool {
 }
 
 /// Whether `c` is written without spaces around its words: each is a word by itself.
-fn stands_alone(c: char) -> bool {
+pub(crate) fn stands_alone(c: char) -> bool {
     matches!(c,
         '\u{3040}'..='\u{30FF}'   // Hiragana, Katakana
         | '\u{3400}'..='\u{4DBF}' // CJK Extension A
@@ -69,7 +73,7 @@ fn stands_alone(c: char) -> bool {
 }
 
 /// The letters a lower-case letter with an accent (or a letter written as two) reads as.
-fn plain(c: char) -> Option<&'static str> {
+pub(crate) fn plain(c: char) -> Option<&'static str> {
     Some(match c {
         'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' | 'ǎ' | 'ǻ' | 'ȁ' | 'ȃ' | 'ạ' | 'ả' | 'ấ' | 'ầ' | 'ẩ' | 'ẫ' | 'ậ' | 'ắ' | 'ằ' | 'ẳ'
         | 'ẵ' | 'ặ' => "a",

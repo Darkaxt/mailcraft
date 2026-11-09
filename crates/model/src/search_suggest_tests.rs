@@ -37,7 +37,7 @@ fn the_start_of_a_keyword_offers_it() {
     assert_eq!(offered("cat"), ["category:"]);
     assert_eq!(offered("-cat"), ["-category:"]);
     assert_eq!(offered("CAT"), ["category:"]);
-    assert_eq!(offered("c"), ["cc:", "category:"]);
+    assert_eq!(offered("c"), ["cc:", "case:", "category:"]);
     assert_eq!(offered("ha"), ["has:"]);
     assert_eq!(offered("to"), ["to:"]);
     assert_eq!(offered("rec"), ["received:"]);

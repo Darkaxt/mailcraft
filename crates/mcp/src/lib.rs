@@ -112,11 +112,15 @@ mod content_availability_tests;
 #[cfg(test)]
 mod files_tests;
 #[cfg(test)]
+mod framing_tests;
+#[cfg(test)]
 mod gate_tests;
 #[cfg(test)]
 mod hidden_text_tests;
 #[cfg(test)]
 mod lifecycle_tests;
+#[cfg(test)]
+mod server_tests;
 #[cfg(test)]
 mod shared_window_tests;
 #[cfg(test)]

@@ -18,9 +18,12 @@
 //! asks for nothing. Inside double quotes, `\"` is a double quote and `\\` a backslash.
 //!
 //! A word matches the start of a word, ignoring case and accents (`meet` finds "Meeting",
-//! `gvozdar` finds "Gvožđar"); a phrase, its words one after another ([`crate::words`]). `from:`,
+//! `gvozdar` finds "Gvožđar"). Double-quoted text preserves punctuation, accents and whitespace,
+//! with complete word edges. `case:sensitive` makes text comparisons case-sensitive;
+//! `case:insensitive` (the default) uses Unicode default case folding. `from:`,
 //! `to:` and `cc:` with a whole address (`from:ada@example.org`, or with a quoted name,
-//! `from:"\"ada smith\"@example.org"`) match that address and no other, ignoring case (#301): an
+//! `from:"\"ada smith\"@example.org"`) match that address and no other, ignoring ASCII case by
+//! default (#301); explicit `case:sensitive` compares its original spelling: an
 //! international domain written in `xn--` form and the same domain in its own letters are two
 //! addresses (`ada@xn--bcher-kva.example` doesn't find `ada@bücher.example`). A category matches
 //! anywhere in its name. Text with no letters or digits in it (`-`, `@`) asks for nothing.
@@ -33,10 +36,11 @@ use crate::words::{self, ATTACHMENT, BODY, CC, FROM, SUBJECT, TO};
 use crate::{Address, Category, FlagStatus, Importance, Message, Rgb, contains_ci};
 
 pub mod advanced;
+pub mod text;
 pub use advanced::{Advanced, Field, Reading};
 
-/// Longest query read and most terms kept (the rest is ignored).
-const MAX_QUERY: usize = 2_000;
+/// Input bounds. A query beyond either bound is rejected rather than shortened.
+const MAX_QUERY: usize = text::MAX_QUERY_BYTES;
 const MAX_TERMS: usize = 64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -55,6 +59,7 @@ enum Kind {
     Address {
         fields: u8,
         address: String,
+        spelling: String,
         words: Vec<String>,
     },
     /// Explicit forwarding identity; never narrowed by the transport word index.
@@ -191,12 +196,15 @@ impl Kind {
 struct Term {
     negate: bool,
     kind: Kind,
+    text: Option<text::TextTerm>,
 }
 
 /// A parsed search.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Query {
     terms: Vec<Term>,
+    case_sensitive: bool,
+    issue: Option<String>,
 }
 
 /// Split on spaces outside double quotes; the quotes are dropped, and inside them `\"` is a
@@ -241,6 +249,21 @@ fn tokens(s: &str) -> Vec<(String, Range<usize>)> {
         out.push((cur, start..end));
     }
     out
+}
+
+/// Escapes have meaning inside quotes only, exactly as in `tokens`.
+fn quotes_closed(s: &str) -> bool {
+    let mut quoted = false;
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if quoted && ch == '\\' && chars.next_if(|next| matches!(next, '"' | '\\')).is_some() {
+            continue;
+        }
+        if ch == '"' {
+            quoted = !quoted;
+        }
+    }
+    !quoted
 }
 
 /// A keyword and its value as they stand in the text of a query (bytes): what the search box
@@ -309,7 +332,7 @@ fn keyword_kind(body: &str) -> Option<Kind> {
     let v = value.to_string();
     let words_in = |fields: u8, v: &str| Kind::Words { fields, words: words::words(v), raw: raw_words(v) };
     let address_in = |fields: u8, v: &str| match is_address(v) {
-        true => Kind::Address { fields, address: address_key(v), words: words::words(v) },
+        true => Kind::Address { fields, address: address_key(v), spelling: v.trim().to_owned(), words: words::words(v) },
         false => words_in(fields, v),
     };
     Some(match key.to_ascii_lowercase().as_str() {
@@ -333,6 +356,8 @@ fn keyword_kind(body: &str) -> Option<Kind> {
         "transportfrom" => address_in(FROM, &v),
         "subject" => words_in(SUBJECT, &v),
         "body" => words_in(BODY, &v),
+        "header" => words_in(words::HEADERS, &v),
+        "attachmenttext" => words_in(words::ATTACHMENT_CONTENT, &v),
         "category" | "categories" => Kind::Category(v),
         "attachment" | "attachments" => words_in(ATTACHMENT, &v),
         "has" | "hasattachment" | "hasattachments" => match v.to_ascii_lowercase().as_str() {
@@ -437,6 +462,12 @@ const OFFERED: &[&str] = &[
     "cc",
     "subject",
     "body",
+    "header",
+    "attachmenttext",
+    "case",
+    "alias",
+    "originalfrom",
+    "transportfrom",
     "category",
     "attachment",
     "has",
@@ -835,13 +866,13 @@ struct Scanned {
     keyword: Option<Kind>,
 }
 
-/// The terms of `s`, within the longest query read and the most terms kept. `from: stuart` is
+/// The terms of the query. `from: stuart` is
 /// `from:stuart`, as Outlook reads it: a keyword with nothing after its colon takes what comes
 /// next. With nothing next (the owner is still typing it), or another keyword, it is no term at
 /// all (#194). What is in quotes is text (#367).
 fn scan(s: &str) -> Vec<Scanned> {
     let mut out = Vec::new();
-    let mut tokens = tokens(s).into_iter().take(MAX_TERMS).peekable();
+    let mut tokens = tokens(s).into_iter().peekable();
     while let Some((token, at)) = tokens.next() {
         let (negate, quoted) = opening(s, &at);
         let body = if negate { token.strip_prefix('-').unwrap_or(&token) } else { token.as_str() };
@@ -859,6 +890,36 @@ fn scan(s: &str) -> Vec<Scanned> {
 }
 
 impl Query {
+    /// Rewrite only explicit case directives; quoted source text and other
+    /// filters keep their original bytes. Used by the search box's Aa control.
+    pub fn with_case(s: &str, sensitive: bool) -> Result<String, &'static str> {
+        if s.len() > text::MAX_QUERY_BYTES {
+            return Err("search query is longer than 16384 UTF-8 bytes");
+        }
+        let mut ranges: Vec<_> = scan(s)
+            .into_iter()
+            .filter(|term| !opening(s, &term.range).1 && term.body.split_once(':').is_some_and(|(key, _)| key.eq_ignore_ascii_case("case")))
+            .map(|term| term.range)
+            .collect();
+        ranges.extend(tokens(s).into_iter().filter(|(token, at)| !opening(s, at).1 && token.eq_ignore_ascii_case("case:")).map(|(_, at)| at));
+        ranges.sort_by_key(|range| range.start);
+        let mut remaining = String::new();
+        let mut cursor = 0;
+        for range in ranges {
+            if range.start < cursor {
+                continue;
+            }
+            remaining.push_str(s.get(cursor..range.start).ok_or("invalid case directive boundary")?);
+            cursor = range.end;
+        }
+        remaining.push_str(s.get(cursor..).ok_or("invalid case directive boundary")?);
+        let query = if sensitive { format!("case:sensitive {}", remaining.trim()) } else { remaining.trim().into() };
+        if query.len() > text::MAX_QUERY_BYTES {
+            return Err("search query is longer than 16384 UTF-8 bytes");
+        }
+        Ok(query)
+    }
+
     /// One positive receiving-alias restriction, for the native virtual-folder selection.
     pub fn receiving_alias(&self) -> Option<&str> {
         let mut aliases = self.terms.iter().filter_map(|term| match &term.kind {
@@ -869,20 +930,87 @@ impl Query {
         aliases.all(|alias| alias == first).then_some(first)
     }
     pub fn parse(s: &str) -> Query {
-        let terms = scan(s)
-            .into_iter()
-            .map(|term| Term {
-                negate: term.negate,
-                kind: term.keyword.unwrap_or_else(|| Kind::Words { fields: words::ALL, words: words::words(&term.body), raw: raw_words(&term.body) }),
-            })
-            // Text with no words in it asks for nothing.
-            .filter(|t| !t.kind.asks_nothing())
-            .collect();
-        Query { terms }
+        let mut query = Query::default();
+        if s.len() > text::MAX_QUERY_BYTES {
+            query.issue = Some("search query is longer than 16384 UTF-8 bytes".into());
+            return query;
+        }
+        if !quotes_closed(s) {
+            query.issue = Some("close the double-quoted search text".into());
+            return query;
+        }
+        let scanned = scan(s);
+        for term in &scanned {
+            if !opening(s, &term.range).1
+                && let Some((key, value)) = term.body.split_once(':')
+                && key.eq_ignore_ascii_case("case")
+            {
+                if term.negate {
+                    query.issue = Some("a case mode cannot be negated".into());
+                    return query;
+                }
+                query.case_sensitive = match value.to_ascii_lowercase().as_str() {
+                    "sensitive" => true,
+                    "insensitive" => false,
+                    _ => {
+                        query.issue = Some("case mode is sensitive or insensitive".into());
+                        return query;
+                    }
+                };
+            }
+        }
+        for term in scanned {
+            if !opening(s, &term.range).1 && term.body.split_once(':').is_some_and(|(key, _)| key.eq_ignore_ascii_case("case")) {
+                continue;
+            }
+            let is_keyword = term.keyword.is_some();
+            let kind =
+                term.keyword.unwrap_or_else(|| Kind::Words { fields: words::ALL, words: words::words(&term.body), raw: raw_words(&term.body) });
+            let content = if let Kind::Words { fields, .. } = &kind {
+                let source = if is_keyword { term.body.split_once(':').map_or(term.body.as_str(), |(_, value)| value) } else { term.body.as_str() };
+                let literal = s.get(term.range.clone()).is_some_and(|source| source.contains('"'));
+                match text::TextTerm::new(*fields, source.to_owned(), literal, query.case_sensitive) {
+                    Ok(content) => Some(content),
+                    Err(why) => {
+                        query.issue = Some(why.into());
+                        return query;
+                    }
+                }
+            } else {
+                None
+            };
+            // Quoted punctuation is meaningful even though it contains no words.
+            if content.as_ref().map_or_else(|| kind.asks_nothing(), text::TextTerm::is_empty) {
+                continue;
+            }
+            query.terms.push(Term { negate: term.negate, kind, text: content });
+        }
+        if query.terms.len() > MAX_TERMS {
+            query.issue = Some("search query contains more than 64 terms".into());
+        }
+        query
     }
 
     pub fn is_empty(&self) -> bool {
-        self.terms.is_empty()
+        self.issue.is_none() && self.terms.is_empty()
+    }
+
+    pub fn error(&self) -> Option<&str> {
+        self.issue.as_deref()
+    }
+
+    pub fn case_sensitive(&self) -> bool {
+        self.case_sensitive
+    }
+
+    /// Native full-text lookup uses the same complete text and exact verifier
+    /// as the in-memory search. Metadata predicates retain their typed semantics.
+    pub fn text_of(&self, index: usize) -> Option<&text::TextTerm> {
+        self.terms.get(index)?.text.as_ref()
+    }
+
+    pub fn term_negated(&self, index: usize) -> bool {
+        self.terms.get(index).is_some_and(|term| term.negate)
     }
 
     /// Whether it needs the day it is made on ([`Query::on`]): a date without a year, a day in
@@ -912,6 +1040,9 @@ impl Query {
     /// word) and its words, folded, one after another. Other terms (`is:`, dates, `category:`)
     /// say `None`.
     pub fn words_of(&self, i: usize) -> Option<(u8, &[String])> {
+        if self.text_of(i).is_some_and(|text| text.literal || text.case_sensitive) {
+            return None;
+        }
         match &self.terms.get(i)?.kind {
             Kind::Words { fields, words, .. } | Kind::Address { fields, words, .. } => Some((*fields, words)),
             _ => None,
@@ -926,16 +1057,33 @@ impl Query {
 
     /// Whether term `i` reads a message's text.
     pub fn term_reads_body(&self, i: usize) -> bool {
-        self.words_of(i).is_some_and(|(fields, _)| fields & BODY != 0)
+        self.text_of(i).is_some_and(|text| text.fields & (BODY | words::ATTACHMENT_CONTENT) != 0)
     }
 
-    /// The query split for a server's search (R6.2): words, phrases and `from:`, `to:`, `cc:`,
+    /// The query split for a server's search (R6.2): ordinary words and `from:`, `to:`, `cc:`,
     /// `subject:`, `body:` and `attachment:` with them, `has:attachment`, and `importance:` high
     /// or low go to the server; a term with `-` in front, `is:`, `category:`, dates, normal
     /// importance, and whatever is past [`MAX_SERVER_TERMS`] are left to check here. A message the
     /// server finds for the first matches the whole query when it matches the second.
+    /// Source-exact/native-content queries stay entirely local: provider rows only contain previews.
     pub fn for_server(&self) -> ServerQuery {
+        // Graph result rows contain a body preview, not complete source text,
+        // raw headers or attachment content. Splitting a mixed query would
+        // therefore reject real matches while checking its local remainder.
+        // Keep the entire query on the persistent source index when it needs
+        // source-exact semantics; provider tokenization cannot establish them.
+        if self.issue.is_some()
+            || self.case_sensitive
+            || self.terms.iter().any(|term| {
+                matches!(term.kind, Kind::ReceivingAlias(_) | Kind::OriginalFrom(_))
+                    || term.text.as_ref().is_some_and(|text| text.literal || matches!(text.fields, words::HEADERS | words::ATTACHMENT_CONTENT))
+            })
+        {
+            return ServerQuery { local: self.clone(), ..Default::default() };
+        }
         let mut out = ServerQuery::default();
+        out.local.case_sensitive = self.case_sensitive;
+        out.local.issue.clone_from(&self.issue);
         for term in &self.terms {
             let sent = match (&term.kind, term.negate) {
                 (_, true) => None,
@@ -1014,6 +1162,9 @@ impl Query {
     /// [`Query::matches_in`], with what `known` says of a term (whether `m` has what term `i` asks
     /// for, before its `-`; a word index's answer) in place of looking at `m`; `None`: look.
     pub fn matches_with(&self, m: &Message, offset: impl Fn(Timestamp) -> i32, known: impl Fn(usize) -> Option<bool>) -> bool {
+        if self.issue.is_some() {
+            return false;
+        }
         let local = |at: Timestamp| DateTime::from_timestamp(at, offset(at)).date;
         let day = || local(m.date);
         // When it came in; a message that doesn't say is taken to have come in when it was sent.
@@ -1024,11 +1175,13 @@ impl Query {
         }
         self.terms.iter().enumerate().all(|(i, t)| {
             let hit = known(i).unwrap_or_else(|| match &t.kind {
-                Kind::Words { fields, words, .. } => {
-                    words::texts(m, &m.body.text, |field, text| field & fields != 0 && words::starts_in(text, words))
-                }
-                Kind::Address { fields, address, .. } => {
-                    let is = |a: &crate::Address| address_key(&a.email) == *address;
+                Kind::Words { fields, words, .. } => words::texts(m, &m.body.text, |field, source| {
+                    field & fields != 0 && t.text.as_ref().map_or_else(|| words::starts_in(source, words), |text| text.matches(source))
+                }),
+                Kind::Address { fields, address, spelling, .. } => {
+                    let is = |a: &crate::Address| {
+                        if self.case_sensitive { a.email.trim() == spelling } else { address_key(&a.email) == *address }
+                    };
                     (fields & FROM != 0 && is(&m.from)) || (fields & TO != 0 && m.to.iter().any(is)) || (fields & CC != 0 && m.cc.iter().any(is))
                 }
                 Kind::ReceivingAlias(address) => {
@@ -1117,7 +1270,8 @@ mod tests {
     fn words_match_word_starts_ignoring_case_and_accents() {
         assert!(hit("budg") && hit("rev") && hit("ESTIM") && hit("lovelace"));
         assert!(!hit("udget") && !hit("view") && !hit("ngine") && !hit("ovelace"));
-        assert!(hit("\"budget rev\"") && hit("from:\"ada love\"") && !hit("from:\"ada charles\""));
+        assert!(hit("\"Budget review\"") && hit("from:\"Ada Lovelace\"") && !hit("from:\"ada charles\""));
+        assert!(!hit("\"budget rev\"") && !hit("from:\"ada love\""), "quoted words are complete literal text, not word prefixes");
         let m = Message { subject: "Sjednica u četvrtak".into(), from: Address::new("Đorđe Gvožđar", "dg@example.org"), ..Default::default() };
         for q in ["gvozdar", "from:GVOŽĐAR", "dorde", "cetvrtak", "četvrtak", "subject:sjed"] {
             assert!(Query::parse(q).matches(&m, 0), "{q}");
@@ -1145,22 +1299,21 @@ mod tests {
     /// two together are the whole query.
     #[test]
     fn a_query_splits_into_what_a_server_understands_and_what_is_checked_here() {
-        let split =
-            Query::parse(r#"Budget from:ada@example.org subject:"Q4 plan" has:attachment is:unread -lunch importance:low category:red"#).for_server();
+        let split = Query::parse("Budget from:ada@example.org subject:plan has:attachment is:unread -lunch importance:low category:red").for_server();
         let words = |field, w: &[&str]| ServerTerm::Words { field, words: w.iter().map(|w| w.to_string()).collect() };
         assert_eq!(
             split.terms,
             [
                 words(None, &["Budget"]),
                 words(Some(ServerField::From), &["ada@example.org"]),
-                words(Some(ServerField::Subject), &["Q4", "plan"]),
+                words(Some(ServerField::Subject), &["plan"]),
                 ServerTerm::HasAttachment,
                 ServerTerm::Importance(Importance::Low),
             ]
         );
         assert_eq!(split.local.len(), 4, "the address (#301), is:unread, -lunch, category:red");
         assert!(!split.local.matches(&msg(), 0), "its category is blue");
-        let unread_red = Message { categories: vec!["Red".into()], ..msg() };
+        let unread_red = Message { subject: "Q4 plan".into(), categories: vec!["Red".into()], ..msg() };
         assert!(split.local.matches(&unread_red, 0));
         // Accents and case as typed; punctuation at a word's ends trimmed; an address whole.
         assert_eq!(Query::parse("Gvožđar, (ada@example.org).").for_server().terms, [words(None, &["Gvožđar"]), words(None, &["ada@example.org"])]);
@@ -1184,8 +1337,7 @@ mod tests {
             "FROM:  Stuart   Subject: IQA",
             "from: stuart subject:",
             "from: stuart su",
-            "subject: \"iqa audit\"",
-            "subject: \"iqa audit s\"",
+            "subject: \"[IQA] Audit\"",
             "subject: from:stuart",
         ] {
             assert!(on(q), "{q}");
@@ -1194,6 +1346,7 @@ mod tests {
             assert!(!on(q), "{q}");
         }
         assert!(on("-from: ada"));
+        assert!(!on("subject: \"iqa audit\"") && !on("subject: \"[IQA] Audit s\""), "quotes preserve punctuation and complete word edges");
         assert_eq!(Query::parse("from: stuart subject: iqa"), Query::parse("from:stuart subject:iqa"));
         assert_eq!(Query::parse("-from: stuart"), Query::parse("-from:stuart"));
         // Nothing after the keyword (yet): no condition, the rest as it is.

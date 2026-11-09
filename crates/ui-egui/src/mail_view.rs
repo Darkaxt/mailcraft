@@ -526,13 +526,20 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     list_header(app, ui);
     let rows = app.session.rows();
     search_bar(app, ui, mailcraft_engine::list::listed(&rows));
-    // A search covers what is here: of a message not fetched yet, its headers and preview (R3.2).
+    // Coverage is explicit: a pending or missing source cannot prove a negative
+    // match. Inspecting it leaves the current folder and selection in place.
     if !app.session.view.search.trim().is_empty() {
+        let query = mailcraft_model::search::Query::parse(&app.session.view.search);
+        if let Some(why) = query.error() {
+            egui::Frame::NONE.inner_margin(egui::Margin::symmetric(12, 4)).show(ui, |ui| {
+                ui.colored_label(t.red, why);
+            });
+        }
         // (Counted as the list was built, not at every frame.)
         let partly = app.session.unfetched_in_view();
         if partly > 0 {
             let said = crate::i18n::fmt(
-                tl!("{count} messages weren't searched in full: only their beginning is here until they download."),
+                tl!("{count} messages are not fully downloaded. Their missing content cannot be searched offline."),
                 &[("count", &partly.to_string())],
             );
             egui::Frame::NONE.inner_margin(egui::Margin { left: 12, right: 12, top: 4, bottom: 4 }).show(ui, |ui| {
@@ -541,26 +548,21 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
             });
         }
     }
-    // While the word index is being built, what it hasn't got yet is searched more slowly (R6.2).
-    if !app.session.view.search.trim().is_empty() && matches!(app.session.word_index(), mailcraft_engine::WordIndex::Building { .. }) {
-        let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::hover());
-        ui.painter().rect_filled(r, 0.0, t.panel);
-        let text = tl!("Still indexing: some older mail is searched more slowly");
-        paint_clipped(ui.painter(), pos2(r.min.x + 10.0, r.min.y + 4.0), r.width() - 20.0, text, regular(11.5), t.text_dim);
-        app.hit.add("stillIndexing", 0, r);
-    }
-    // A search that reads the text of messages goes as far into older mail as its time allows,
-    // and says how far that was.
     if app.session.unsearched > 0 && !app.session.view.search.trim().is_empty() {
-        let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::hover());
-        ui.painter().rect_filled(r, 0.0, t.panel);
         let n = app.session.unsearched;
         let text = tln!(
             n,
-            "{n} older message wasn't searched: its text isn't loaded yet",
-            "{n} older messages weren't searched: their text isn't loaded yet"
+            "{n} message still has unsearched content. Results are incomplete.",
+            "{n} messages still have unsearched content. Results are incomplete."
         );
-        paint_clipped(ui.painter(), pos2(r.min.x + 10.0, r.min.y + 4.0), r.width() - 20.0, &text, regular(11.5), t.text_dim);
+        egui::Frame::NONE.inner_margin(egui::Margin::symmetric(12, 4)).show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(egui::RichText::new(text).font(regular(11.5)).color(t.text_dim));
+                if ui.link(tl!("Inspect coverage")).clicked() {
+                    let _ = app.execute("ui.searchIndex", json!({"view":"overview"}));
+                }
+            });
+        });
     }
     let one_line = app.session.prefs.one_line;
     // The rows of a search on the server keep the height the preview lines ask for.
@@ -1103,7 +1105,8 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     // Then the preview: whole words, as many lines as asked for, and no mark where it stops.
     let preview_end = text_end.min(sx - 6.0);
     if lines > 0 && preview_end - left > 4.0 {
-        let said = preview(ui, &m, usize::from(lines) * 200);
+        let max_chars = usize::from(lines) * 200;
+        let said: Arc<str> = app.session.indexed_preview(&m, max_chars).map(Arc::from).unwrap_or_else(|| preview(ui, &m, max_chars));
         let format =
             egui::text::TextFormat { font_id: regular(LIST_TEXT), color: t.text_dim, line_height: Some(PREVIEW_PITCH), ..Default::default() };
         let mut job = egui::text::LayoutJob::default();

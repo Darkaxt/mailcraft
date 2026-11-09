@@ -153,6 +153,9 @@ pub mod rule_sync;
 #[cfg(test)]
 mod rule_sync_tests;
 pub mod scheduling;
+mod search_index_ui;
+#[cfg(test)]
+mod search_index_ui_tests;
 mod search_pills;
 #[cfg(test)]
 mod search_pills_tests;
@@ -350,6 +353,10 @@ pub struct Services {
     /// Desktop registration supplied by the host's build or process environment. Kept in
     /// memory, never in UI preferences; not an owner access or refresh token.
     pub google_client_secret: String,
+    /// While Google reviews the project's registration (Testing mode), only the testers added to
+    /// it by hand can sign in with Google, and anyone else gets Google's "Access blocked" page: so
+    /// a new Gmail account starts on an app password, Google sign-in second with how to join.
+    pub google_testers_only: bool,
     /// Keep the mailbox where the host stores it (the browser's storage); called a moment after
     /// each change. Desktop saves to the mailbox file instead (see `saver`).
     pub persist: Option<Box<dyn Fn(&[u8]) -> Result<(), String>>>,
@@ -1296,6 +1303,18 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "Reading pane",
         r#"{"on"?: bool, "page"?: "next"|"previous", "export"?: bool} — show selectable HTML/plain text in the reading pane; export prepares a complete reconstructed .eml and opens the native save picker. Headless/programmatic callers use mail.sourcePage and mail.exportEml, with explicit close"#,
     ),
+    (
+        "ui.searchIndex",
+        "Search Coverage",
+        "Search",
+        r#"{"on"?:bool,"view"?:"overview"|"gaps"|"sources"|"details","id"?:number,"attachment"?:number,"field"?:string,"section"?:"gaps"|"sources","page"?:"next"|"previous"} — inspect coverage or located sources in an in-app panel; preserves the mailbox and selection"#,
+    ),
+    (
+        "ui.searchCase",
+        "Case Sensitive Search",
+        "Search",
+        r#"{"sensitive"?:bool} — set or toggle case mode in the current search without changing its other terms"#,
+    ),
     ("ui.toggleAliases", "Expand or Collapse Alias Filters", "Folder", r#"{"account": number} — changes only the alias section's expanded state"#),
     (
         "ui.openWindow",
@@ -1449,6 +1468,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
 pub struct MailApp {
     pub(crate) lifecycle: app_lifecycle::State,
     pub(crate) source_pane: source_pane::Pane,
+    pub(crate) search_index_pane: search_index_ui::Pane,
     pub session: Session,
     pub ui: UiState,
     pub services: Services,
@@ -1933,6 +1953,7 @@ impl MailApp {
             ctx: None,
             file_dialog: None,
             source_pane: Default::default(),
+            search_index_pane: Default::default(),
             opened_waiting: Default::default(),
             hit: Default::default(),
             reminders: Default::default(),
@@ -2403,6 +2424,8 @@ impl MailApp {
         let b = |k: &str| p.get(k).and_then(Value::as_bool);
         Some(match id {
             "ui.source" => source_pane::command(self, p),
+            "ui.searchIndex" => search_index_ui::command(self, p),
+            "ui.searchCase" => search_index_ui::case_command(self, p),
             "ui.removeAllData" => self.remove_all_data(),
             "ui.openDataFolder" => self.open_data_folder(),
             "ui.confirmServers" => self.confirm_servers(),
@@ -4587,8 +4610,10 @@ impl MailApp {
         }
         opening::after(self, ctx);
         self.session.poll_source_exports();
+        self.session.poll_content_index();
         source_pane::tick(self);
-        if self.session.source_export_busy() {
+        search_index_ui::tick(self);
+        if self.session.source_export_busy() || self.session.content_index_busy() {
             // Diagnostic repaint cadence only; actual producer completion ends
             // the wait, never a deadline or an assumed successful export.
             ctx.request_repaint_after(std::time::Duration::from_millis(200));
@@ -5098,6 +5123,7 @@ impl MailApp {
         // window's Escape ends the search (#329).
         advanced_search::follow(self);
         advanced_search::escape(self, &ctx);
+        search_index_ui::escape(self, &ctx);
         // Shortcuts first, so the frame shows what the key did.
         keys::global_shortcuts(self, &ctx);
         if self.ui.backstage {
@@ -5123,6 +5149,7 @@ impl MailApp {
         }
         windows::compose_window::back(self, fronted);
         sync_panel::show(self, &ctx);
+        search_index_ui::show(self, &ctx);
         dialogs::show(self, &ctx);
         reminders::show(self, &ctx);
         // What was chosen in a text's menu, once everything that has one is drawn.

@@ -375,9 +375,10 @@ mod in_step {
         s.view.scope = crate::Scope::Everywhere;
         s.wait_for_word_index();
         let _ = s.rows();
-        let words = s.words().unwrap();
-        let guard = words.lock();
-        found(guard.as_ref().unwrap(), query, words::ALL)
+        s.wait_for_word_index();
+        let mut ids: Vec<_> = s.rows().iter().map(|row| row.id).collect();
+        ids.sort_unstable();
+        ids
     }
 
     /// #301: a whole address after `from:` finds that sender's mail alone, answered from the word
@@ -491,27 +492,29 @@ mod in_step {
         let mut s = session(&path);
         let meeting = id_of(&s, "Meeting");
         assert_eq!(finds(&mut s, "zymurgy"), [meeting]);
-        let file = crate::store::words_file(&path);
+        let file = crate::store::content_index_file(&path);
         assert!(file.is_file());
         #[cfg(unix)]
         assert_eq!(std::os::unix::fs::PermissionsExt::mode(&std::fs::metadata(&file).unwrap().permissions()) & 0o077, 0, "for its owner only");
-        let len = std::fs::metadata(&file).unwrap().len();
         drop(s);
+        let len = std::fs::metadata(&file).unwrap().len();
         let mut again = session(&path);
         assert_eq!(finds(&mut again, "zymurgy"), [meeting]);
         assert_eq!(std::fs::metadata(&file).unwrap().len(), len, "nothing had to be read again");
-        // Junk where the index was: built again, never a crash.
+        // An unrelated file at the selected name is preserved and reported.
+        // The new format never guesses deletion authority from a suffix.
         drop(again);
         std::fs::write(&file, b"MCWORDS\0\x01\0\0\0\0\0\0\0junk junk junk junk").unwrap();
         let mut third = session(&path);
-        assert_eq!(finds(&mut third, "zymurgy"), [meeting]);
-        assert!(Index::open(&file).is_ok());
+        assert!(finds(&mut third, "zymurgy").is_empty());
+        assert_eq!(third.word_index(), crate::WordIndex::Problem);
+        assert_eq!(std::fs::read(&file).unwrap(), b"MCWORDS\0\x01\0\0\0\0\0\0\0junk junk junk junk");
         // Off: no index.
         third.index_words = false;
         third.view.search = "anything".into();
         let _ = third.rows();
         assert!(third.words().is_none());
-        assert!(super::super::remove(&path).is_ok() && !file.exists());
+        assert!(file.exists(), "turning indexing off does not remove an unrecognized file");
     }
 
     #[test]
@@ -521,12 +524,16 @@ mod in_step {
         let mut s = session(&path);
         let rota = id_of(&s, "Rota");
         assert_eq!(finds(&mut s, "nightingale"), [rota]);
-        let file = crate::store::words_file(&path);
-        let holds = |file: &std::path::Path| std::fs::read(file).unwrap().windows(11).any(|w| w == b"nightingale");
+        let file = crate::store::content_index_file(&path);
+        let holds = |file: &std::path::Path| {
+            let database = rusqlite::Connection::open_with_flags(file, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+            database.query_row("SELECT EXISTS(SELECT 1 FROM units WHERE raw LIKE '%nightingale%')", [], |row| row.get::<_, bool>(0)).unwrap()
+        };
         assert!(holds(&file));
         s.run("account.remove", &json!({"id": work})).unwrap();
         s.view.search.clear();
         let _ = s.rows();
+        s.wait_for_word_index();
         assert!(!holds(&file), "gone without a search");
         assert_eq!(finds(&mut s, "zymurgy").len(), 1);
     }
@@ -538,8 +545,11 @@ mod in_step {
     fn mail_gone_while_the_index_was_closed_takes_its_words_off_the_disk() {
         let tmp = Temp::new("closed");
         let (path, _, work) = kept(&tmp);
-        let file = crate::store::words_file(&path);
-        let holds = |file: &std::path::Path| std::fs::read(file).unwrap().windows(11).any(|w| w == b"nightingale");
+        let file = crate::store::content_index_file(&path);
+        let holds = |file: &std::path::Path| {
+            let database = rusqlite::Connection::open_with_flags(file, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+            database.query_row("SELECT EXISTS(SELECT 1 FROM units WHERE raw LIKE '%nightingale%')", [], |row| row.get::<_, bool>(0)).unwrap()
+        };
         assert_eq!(finds(&mut session(&path), "nightingale").len(), 1);
         assert!(holds(&file));
 
@@ -580,11 +590,11 @@ mod background {
         path
     }
 
-    fn count(s: &Session, query: &str) -> usize {
-        let words = s.words().unwrap();
-        let guard = words.lock();
-        let index = guard.as_ref().unwrap();
-        found(index, query, words::ALL).len()
+    fn count(s: &mut Session, query: &str) -> usize {
+        s.view.scope = crate::Scope::Everywhere;
+        s.view.search = query.into();
+        s.wait_for_word_index();
+        s.rows().len()
     }
 
     #[test]
@@ -594,20 +604,22 @@ mod background {
         let mut s = session(&path);
         assert_eq!(s.word_index(), WordIndex::Off, "nothing until the list is first shown");
         let _ = s.rows();
-        assert!(matches!(s.word_index(), WordIndex::Building { total: 3_000, .. } | WordIndex::Complete), "{:?}", s.word_index());
+        assert!(matches!(s.word_index(), WordIndex::Building { .. } | WordIndex::Complete), "{:?}", s.word_index());
         s.wait_for_word_index();
         assert_eq!(s.word_index(), WordIndex::Complete);
-        assert_eq!(count(&s, "note"), 3_000);
-        assert_eq!(count(&s, "word2999"), 1);
+        assert_eq!(count(&mut s, "note"), 3_000);
+        assert_eq!(count(&mut s, "word2999"), 1);
         // Stopped part of the way (the window closed): the next time it goes on from there.
         drop(s);
-        std::fs::remove_file(crate::store::words_file(&path)).unwrap();
+        let wal = PathBuf::from(format!("{}-wal", crate::store::content_index_file(&path).display()));
+        assert!(!wal.exists(), "all owned readers must exit before the final writer checkpoints on normal close");
+        std::fs::remove_file(crate::store::content_index_file(&path)).unwrap();
         let mut s = session(&path);
         let _ = s.rows();
         drop(s);
         let mut s = session(&path);
         s.wait_for_word_index();
-        assert_eq!((s.word_index(), count(&s, "note")), (WordIndex::Complete, 3_000));
+        assert_eq!((s.word_index(), count(&mut s, "note")), (WordIndex::Complete, 3_000), "{}", s.content_index_status());
     }
 
     #[test]
@@ -626,7 +638,7 @@ mod background {
         let _ = s.rows();
         assert!(matches!(s.word_index(), WordIndex::Building { .. }), "left to the background: {:?}", s.word_index());
         s.wait_for_word_index();
-        assert_eq!((s.word_index(), count(&s, "download")), (WordIndex::Complete, READ_NOW_MOST + 10));
+        assert_eq!((s.word_index(), count(&mut s, "download")), (WordIndex::Complete, READ_NOW_MOST + 10));
     }
 }
 
@@ -651,7 +663,9 @@ mod answered {
         let filler = " Nothing else of note this week, all is well with the project.".repeat(30);
         let mut add = |folder: Id, subject: &str, from: &str, text: &str, file: Option<&str>| {
             let mut m = Message { folder, date: mb.messages.len() as i64, ..message(0, subject, from, &format!("{text}{filler}")) };
-            m.attachments = file.map(|f| vec![Attachment::new(f, "application/pdf", vec![7; 10])]).unwrap_or_default();
+            // This fixture tests file-name search. Its payload is plain text;
+            // native PDF/Office import uses separate real-format fixtures.
+            m.attachments = file.map(|f| vec![Attachment::new(f, "text/plain", vec![7; 10])]).unwrap_or_default();
             m.read = subject.starts_with('R');
             mb.add_message(m).unwrap();
         };
@@ -670,6 +684,9 @@ mod answered {
     fn found(s: &mut Session, query: &str, scope: Scope) -> Vec<String> {
         s.view.search = query.into();
         s.view.scope = scope;
+        if s.index_words {
+            s.wait_for_word_index();
+        }
         let rows = s.rows();
         let mut subjects: Vec<String> = rows.iter().map(|r| s.mailbox.message(r.id).unwrap().subject.clone()).collect();
         subjects.sort();
@@ -766,10 +783,11 @@ mod answered {
         // A phrase in a text kept on disk is checked on that text, still without bringing it in.
         assert_eq!(found(&mut s, "\"meeting notes\"", Scope::Everywhere), ["Picnic"]);
         assert_eq!(s.loads(), loads);
-        // Out of time for checking it: counted, not found.
+        // Completed persistent query verification does not inherit the legacy
+        // UI-thread scan allowance or turn its expiry into a false negative.
         s.search_time = Duration::ZERO;
-        assert!(found(&mut s, "\"the meeting\"", Scope::Everywhere).is_empty());
-        assert_eq!(s.unsearched, 2, "two hold both words");
+        assert_eq!(found(&mut s, "\"the meeting\"", Scope::Everywhere), ["Picnic"]);
+        assert_eq!((s.loads(), s.unsearched), (loads, 0));
     }
 
     #[test]

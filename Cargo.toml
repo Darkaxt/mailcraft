@@ -4,7 +4,7 @@ members = ["crates/*", "apps/*", "xtask"]
 default-members = ["crates/*", "apps/mailcraft", "apps/mailcraft-cli", "xtask"]
 
 [workspace.package]
-version = "0.11.0"
+version = "0.11.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
@@ -32,6 +32,7 @@ mailcraft-engine = { path = "crates/engine" }
 mailcraft-mcp = { path = "crates/mcp" }
 mailcraft-control-key = { path = "crates/control-key" }
 mailcraft-ui-egui = { path = "crates/ui-egui" }
+craft-content = { path = "crates/craft-content" }
 
 # foundation
 thiserror = "2"
@@ -83,6 +84,16 @@ flate2 = { version = "1", default-features = false, features = ["rust_backend"] 
 # `mailcraft-net`'s `graph::favorites`). MIT, Rust throughout, and nothing but `memchr` under it. It reads no DTD and expands no entity: a reference in the text is handed over as such.
 # Already in the tree (a build tool of the Linux windowing crates uses it); desktop and CLI only.
 quick-xml = { version = "0.42", default-features = false }
+# Persistent native content/metadata search; SQLite is bundled and has FTS5.
+rusqlite = { version = "0.41.1", default-features = false, features = ["bundled", "hooks", "limits"] }
+# Streaming Unicode full case folding, shared by literal matching and the index.
+caseless = "0.2.2"
+# Streaming HTML tokenization for full retained text, without a DOM or renderer.
+html5ever = "0.40.1"
+# Own finite extraction process trees, with actual descendant-exit waits.
+process-wrap = { version = "10.0.1", default-features = false, features = ["std", "job-object", "creation-flags", "process-group"] }
+win32job = "2.0.3"
+cosca = { version = "=0.6.0", default-features = false }
 # NTLMv2 sign-in to Exchange servers (#252, E4), written from MS-NLMP: MD4 (the hash of the
 # password), MD5 and HMAC. RustCrypto, pure Rust, MIT OR Apache-2.0, and wasm-clean; `hmac` is
 # already in the tree. Used by `mailcraft-ews` only.

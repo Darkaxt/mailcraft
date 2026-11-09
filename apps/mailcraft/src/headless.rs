@@ -189,6 +189,8 @@ fn pump(
 
 #[cfg(test)]
 mod headless_tests;
+#[cfg(all(test, windows))]
+mod index_native_tests;
 #[cfg(test)]
 mod opening_retention_tests;
 #[cfg(test)]

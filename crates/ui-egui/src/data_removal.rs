@@ -170,6 +170,7 @@ impl MailApp {
         self.data_removed = true;
         self.services.sync_cancel.store(true, std::sync::atomic::Ordering::Relaxed);
         self.sync_queue.clear();
+        self.session.stop_content_index();
         let mailbox = self.session.path.take();
         self.autosave = false;
         self.session.close_all_composing();

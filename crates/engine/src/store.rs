@@ -169,6 +169,14 @@ pub fn words_file(path: &Path) -> PathBuf {
     path.with_file_name(name)
 }
 
+/// The maintained derived content index. Its format identity is checked inside
+/// SQLite; the suffix alone never authorizes replacing an existing file.
+pub fn content_index_file(path: &Path) -> PathBuf {
+    let mut name = path.as_os_str().to_os_string();
+    name.push(".content-v1.sqlite");
+    PathBuf::from(name)
+}
+
 /// Reads content of one mailbox file from the content folder beside it, checked as [`fetch`]
 /// checks it, without keeping it in the cache: for reading through many bodies once (the word
 /// index), which would otherwise push out of the cache what is wanted again.

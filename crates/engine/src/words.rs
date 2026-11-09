@@ -49,6 +49,9 @@ pub const VERSION: u32 = 1;
 
 const MAGIC: &[u8; 8] = b"MCWORDS\0";
 const HEADER_LEN: u64 = 16;
+// Version1 belongs to the retired six-field index. New located header and
+// attachment-content fields are stored in the separate versioned SQLite index.
+const LEGACY_FIELDS: u8 = words::SUBJECT | words::FROM | words::TO | words::CC | words::BODY | words::ATTACHMENT;
 
 /// Most different words one message counts (the rest of a very long message is not indexed).
 pub const MAX_DOC_WORDS: usize = 20_000;
@@ -217,6 +220,9 @@ impl Doc {
     pub fn with_hidden(m: &Message, body: &str, hidden: &str, fp: u64) -> Doc {
         let mut seen: HashMap<String, u8> = HashMap::new();
         words::texts_with(m, body, hidden, |field, text| {
+            if field & LEGACY_FIELDS == 0 {
+                return false;
+            }
             words::each(text, |w| {
                 let full = seen.len() >= MAX_DOC_WORDS;
                 match seen.get_mut(w) {
@@ -315,7 +321,7 @@ impl Postings {
                 Some(last) if gap > 0 => last.checked_add(gap)?,
                 Some(_) => return None,
             };
-            if slot as usize >= slots || mask == 0 || mask & !words::ALL != 0 {
+            if slot as usize >= slots || mask == 0 || mask & !LEGACY_FIELDS != 0 {
                 return None;
             }
             out.last = Some(slot);
@@ -461,7 +467,7 @@ impl Index {
                 for _ in 0..n {
                     let word = usize::try_from(varint(p, &mut at)?).ok()?;
                     let mask = byte_at(p, &mut at)?;
-                    if mask == 0 || mask & !words::ALL != 0 || !self.postings.get_mut(word)?.push(slot, mask) {
+                    if mask == 0 || mask & !LEGACY_FIELDS != 0 || !self.postings.get_mut(word)?.push(slot, mask) {
                         return None;
                     }
                 }
@@ -886,30 +892,6 @@ pub struct Words {
     stepped: bool,
     /// Messages the last [`Words::in_step`] left out of the index (for the background to read).
     left: usize,
-}
-
-impl Words {
-    /// Inspect existing resident buffers without starting a build, reading content
-    /// or waiting for the background index's mutex.
-    pub(crate) fn memory_profile(&self) -> serde_json::Value {
-        let guard = match self.shared.index.try_lock() {
-            Ok(guard) => guard,
-            Err(std::sync::TryLockError::Poisoned(why)) => why.into_inner(),
-            Err(std::sync::TryLockError::WouldBlock) => return serde_json::json!({"available": false, "busy": true}),
-        };
-        let Some(index) = guard.as_ref() else { return serde_json::json!({"loaded": false}) };
-        serde_json::json!({
-            "loaded": true, "building": self.shared.building.load(Ordering::Relaxed),
-            "words": index.lookup.len(), "slots": index.slots.len(),
-            "wordTextBytes": index.lookup.keys().fold(0u64, |n, word| n.saturating_add(word.len() as u64)),
-            "postingCapacityBytes": index.postings.iter().fold(0u64, |n, p| n.saturating_add(p.bytes.capacity() as u64)),
-            "postingStructCapacityBytes": (index.postings.capacity() as u64).saturating_mul(std::mem::size_of::<Postings>() as u64),
-            "slotCapacityBytes": (index.slots.capacity() as u64).saturating_mul(std::mem::size_of::<Slot>() as u64),
-            "pendingCapacityBytes": index.pending.capacity(),
-            "byIdCapacity": index.by_id.capacity(),
-            "exclusions": "BTree/HashMap node overhead and allocator slack are not counted."
-        })
-    }
 }
 
 struct Shared {

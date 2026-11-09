@@ -20,6 +20,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 regex = { workspace = true }
 mailcraft-charset = { workspace = true }
+caseless = { workspace = true }
 
 [dev-dependencies]
 mailcraft-i18n = { workspace = true, features = ["test-support"] }

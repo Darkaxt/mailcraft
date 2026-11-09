@@ -192,7 +192,11 @@ fn inside(file: &Path, settings: Option<&Path>) -> bool {
 /// without a mailbox (harmless, swept) and never a mailbox without its content.
 fn tier(name: &str, is_dir: bool) -> u8 {
     let mailbox = name.starts_with("mailbox.");
-    match (mailbox, is_dir || name.ends_with(".words")) {
+    let derived = name.ends_with(".words")
+        || name.ends_with(".content-v1.sqlite")
+        || name.ends_with(".content-v1.sqlite-wal")
+        || name.ends_with(".content-v1.sqlite-shm");
+    match (mailbox, is_dir || derived) {
         (true, false) => 0,
         (true, true) => 1,
         _ => 2,

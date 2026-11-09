@@ -35,15 +35,17 @@ fn subjects(result: &GraphSearchResult) -> Vec<&str> {
 fn what_goes_to_the_server_is_what_its_search_understands() {
     assert_eq!(search_value("budget").as_deref(), Some(r#""budget""#));
     assert_eq!(
-        search_value(r#"budget from:ada@example.org subject:"q4 plan" has:attachment is:important"#).as_deref(),
-        Some(r#""budget AND from:ada@example.org AND subject:\"q4 plan\" AND hasAttachments:true AND importance:high""#)
+        search_value("budget from:ada@example.org subject:plan has:attachment is:important").as_deref(),
+        Some(r#""budget AND from:ada@example.org AND subject:plan AND hasAttachments:true AND importance:high""#)
     );
+    assert_eq!(search_value(r#"budget from:ada@example.org subject:"q4 plan" has:attachment is:important"#), None);
     // What it has no words for is checked here: nothing of it goes.
     assert_eq!(search_value("budget -lunch is:unread category:red after:2026-01-01 importance:normal").as_deref(), Some(r#""budget""#));
     assert_eq!(search_value("is:unread"), None);
     assert_eq!(search_value(""), None);
     // The syntax's own words and marks are only words in it.
-    assert_eq!(search_value(r#"AND OR (x) a\b c*d "e"f"#).as_deref(), Some(r#""and AND or AND x AND \"a b\" AND \"c d\" AND ef""#));
+    assert_eq!(search_value(r#"AND OR (x) a\b c*d ef"#).as_deref(), Some(r#""and AND or AND x AND \"a b\" AND \"c d\" AND ef""#));
+    assert_eq!(search_value(r#"AND OR (x) a\b c*d "e"f"#), None);
     // Case and accents as the owner wrote them: the server folds them as it does.
     assert_eq!(search_value("Gvožđar").as_deref(), Some(r#""Gvožđar""#));
     // #301: a whole address goes whole, one with a `+` in quotes, where the syntax reads `+` as
@@ -114,7 +116,7 @@ fn a_keyword_with_a_space_after_its_colon_goes_as_one_clause() {
     assert_eq!(search_value("from:stuart subject:iqa").as_deref(), both);
     assert_eq!(search_value("from: stuart subject:").as_deref(), Some(r#""from:stuart""#));
     assert_eq!(search_value("from: stuart su").as_deref(), Some(r#""from:stuart AND su""#));
-    assert_eq!(search_value("subject: \"IQA audit\"").as_deref(), Some(r#""subject:\"IQA audit\"""#));
+    assert_eq!(search_value("subject: \"IQA audit\""), None);
     assert_eq!(search_value("subject:"), None);
 }
 

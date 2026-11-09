@@ -184,6 +184,7 @@ fn keywords_that_would_not_be_read_at_the_end_go_at_the_start() {
     let w = written(&many, |a| a.from = "ada".into());
     assert_eq!(w, format!("from:ada {many}"));
     assert_eq!(read(&w).from, "ada");
+    assert_eq!(crate::search::Query::parse(&w).error(), Some("search query contains more than 64 terms"));
 }
 
 /// A keyword with nothing after its colon asks for nothing while a keyword follows it: taking that

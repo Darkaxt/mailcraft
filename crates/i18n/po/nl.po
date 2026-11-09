@@ -905,6 +905,11 @@ msgid "All of them"
 msgstr "Allemaal"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "All source details"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "All the conditions must hold"
@@ -1574,6 +1579,16 @@ msgid "Attachments can't be opened here: save it with Save As instead."
 msgstr "Bijlagen kunnen hier niet worden geopend: sla de bijlage in plaats daarvan op met Opslaan als."
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Attachments pending"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Attachments: {discovered} discovered, {downloaded} downloaded"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Attendance"
@@ -1861,12 +1876,6 @@ msgstr "Agenda naar voren brengen"
 msgid "Bring in"
 msgstr "Inlezen"
 
-#. interface
-#: crates/ui-egui/src/chrome.rs
-#, fuzzy
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
-msgstr "De index waar zoeken de antwoorden uit haalt, wordt opgebouwd; totdat die klaar is, worden sommige oudere berichten langzamer doorzocht"
-
 #. command label, ribbon
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -2086,9 +2095,19 @@ msgstr ""
 msgid "Cancelled"
 msgstr "Geannuleerd"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Case Sensitive Search"
+msgstr ""
+
 #. interface
-#: crates/ui-egui/src/forms.rs
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/search_index_ui.rs
 msgid "Case sensitive"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Case sensitive search"
 msgstr ""
 
 #. interface, name
@@ -2524,7 +2543,7 @@ msgid "Clipboard"
 msgstr "Klembord"
 
 #. interface, ribbon
-#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs
+#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs
 #, fuzzy
 msgid "Close"
 msgstr "Sluiten"
@@ -2920,6 +2939,11 @@ msgstr "Kan '{subject}' niet verzenden: {why}. Het wordt vastgehouden in Postvak
 #, fuzzy
 msgid "Country"
 msgstr "Land"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Coverage is not available yet."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
@@ -4121,6 +4145,11 @@ msgid "FAILED"
 msgstr "MISLUKT"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Failed"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "Failed check."
@@ -4889,6 +4918,11 @@ msgstr "Aanmelden met Google is niet geconfigureerd voor deze build. Gebruik een
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
+msgid "Google sign-in is open only to invited testers while Google reviews MailCraft. To join, email systems@ucscaregroup.co.uk."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Google sign-in needs Google's IMAP server"
 msgstr "Aanmelden met Google heeft de IMAP-server van Google nodig"
@@ -5442,10 +5476,20 @@ msgid "Increase Indent"
 msgstr "Inspringing vergroten"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Indexed"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "Indexing mail: {percent}%"
 msgstr "E-mail indexeren: {percent}%"
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Indexing retained messages and attachments. Unavailable sources remain visible in Search coverage."
+msgstr ""
 
 #. command label, interface, name, ribbon location
 #: crates/engine/src/cmd/account.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
@@ -5505,6 +5549,11 @@ msgid "Inspect Message Source"
 msgstr ""
 
 #. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Inspect Native Extraction Coverage"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/rules.rs
 msgid "Inspect Pending Classification"
 msgstr ""
@@ -5519,6 +5568,21 @@ msgstr ""
 #, fuzzy
 msgid "Inspect View"
 msgstr "Weergave inspecteren"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Inspect coverage"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Inspecting the original search snapshot…"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Inspection failed. See the error above, then refresh when its cause is resolved."
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -6633,6 +6697,11 @@ msgstr "Als ongelezen markeren"
 msgid "Match case"
 msgstr "Identieke hoofdletters/kleine letters"
 
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Match letter case. Quoted text also preserves punctuation, accents and spacing."
+msgstr ""
+
 #. date and time
 #: crates/i18n/src/date.rs
 #, fuzzy
@@ -6720,6 +6789,11 @@ msgid "Message source"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Message {id}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Message {message}, after {completed} actions: {why}"
 msgstr ""
@@ -6783,6 +6857,11 @@ msgstr "Berichten op een lichte achtergrond"
 #, fuzzy
 msgid "Messages to download per folder"
 msgstr "Berichten om per map te downloaden"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Messages: {discovered} discovered, {downloaded} downloaded"
+msgstr ""
 
 #. name
 #: crates/model/src/mailbox.rs
@@ -6913,6 +6992,11 @@ msgstr "Tweede voornaam"
 #, fuzzy
 msgid "Minimize"
 msgstr "Minimaliseer"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Missing content"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/nav.rs
@@ -7421,7 +7505,7 @@ msgid "Newest on top"
 msgstr "Nieuwste bovenaan"
 
 #. interface
-#: crates/ui-egui/src/reading/remote.rs
+#: crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/search_index_ui.rs
 #, fuzzy
 msgid "Next"
 msgstr "Volgende"
@@ -7620,6 +7704,11 @@ msgstr "Geen vervaldatum"
 #, fuzzy
 msgid "No end date"
 msgstr "Geen einddatum"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "No entries on this page."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms/junk.rs
@@ -8696,6 +8785,11 @@ msgstr "Achterstallig: moest klaar zijn op {when}"
 msgid "Overlay"
 msgstr "Overlappen"
 
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Overview"
+msgstr ""
+
 #. date and time, interface
 #: crates/i18n/src/date.rs crates/ui-egui/src/calendar_view.rs
 #, fuzzy
@@ -8751,6 +8845,11 @@ msgid "Part of your mailbox is damaged"
 msgstr "Een deel van uw postvak is beschadigd"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Partial"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Password"
@@ -8790,6 +8889,11 @@ msgstr "Plak of schrijf de HTML van de handtekening"
 #, fuzzy
 msgid "Pattern"
 msgstr "Patroon"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Pending"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/ribbon.rs
@@ -9062,7 +9166,7 @@ msgid "Preview: the mail and the contacts are brought in for now. Calendar items
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/reading/remote.rs
+#: crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/search_index_ui.rs
 #, fuzzy
 msgid "Previous"
 msgstr "Vorige"
@@ -9201,6 +9305,11 @@ msgstr "Stop MailCraft"
 #, fuzzy
 msgid "Range"
 msgstr "Bereik"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Re-read retained missing or failed content. Does not download or change mail."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/advanced_search.rs
@@ -9381,6 +9490,11 @@ msgstr "Typen opnieuw"
 #, fuzzy
 msgid "Redo {what}"
 msgstr "{what} opnieuw"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Refresh"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -9845,6 +9959,16 @@ msgstr "Opnieuw starten om bij te werken"
 msgid "Restart to update is the owner's click."
 msgstr "Opnieuw starten om bij te werken is de klik van de eigenaar."
 
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Retry Missing or Failed Search Content"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Retry unavailable content"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/source_pane.rs
 msgid "Return to the rendered message"
@@ -10174,8 +10298,8 @@ msgstr "Postvak opslaan"
 msgid "Save Mailbox As"
 msgstr "Postvak opslaan als"
 
-#. command label
-#: crates/engine/src/cmd/file.rs
+#. command label, interface
+#: crates/engine/src/cmd/file.rs crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Save Message As"
 msgstr "Bericht opslaan als"
@@ -10374,7 +10498,7 @@ msgid "Scripts and agents"
 msgstr "Scripts en agenten"
 
 #. command label, interface, ribbon, ribbon location
-#: crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/search_index.rs crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Search"
 msgstr "Zoeken"
@@ -10412,6 +10536,21 @@ msgid "Search Commands"
 msgstr "Opdrachten zoeken"
 
 #. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Search Coverage"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Search Coverage Gaps"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Search Index Coverage"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/people.rs
 #, fuzzy
 msgid "Search People"
@@ -10442,10 +10581,25 @@ msgid "Search contacts"
 msgstr "Contactpersonen zoeken"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/search_index_ui.rs
+msgid "Search coverage"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Search covers retained messages on this device. Mail that has not been discovered or downloaded is not assumed to be indexed."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Search folders"
 msgstr "Mappen zoeken"
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Search has gaps"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/advanced_search.rs
@@ -10464,6 +10618,11 @@ msgstr "E-mail zoeken"
 #, fuzzy
 msgid "Search mail (try from:, has:attachment, is:unread)"
 msgstr "E-mail zoeken (probeer from:, has:attachment, is:unread)"
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Search needs attention"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/chrome.rs
@@ -11798,12 +11957,6 @@ msgid "Status:"
 msgstr "Status:"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "Still indexing: some older mail is searched more slowly"
-msgstr "Nog bezig met indexeren: een deel van de oudere e-mail wordt trager doorzocht"
-
-#. interface
 #: crates/ui-egui/src/sync_panel.rs
 #, fuzzy
 msgid "Stop"
@@ -12897,6 +13050,11 @@ msgid "The search for your Exchange server was sent on to {host}, which isn't in
 msgstr "Het zoeken naar uw Exchange-server is doorgestuurd naar {host}, dat niet in het eigen domein van uw adres ligt."
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The selected message, as .eml"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "The sender uses your name, but this message came from {real}, which isn't one of your addresses."
@@ -13865,6 +14023,11 @@ msgid "This message carries no invitation."
 msgstr "Dit bericht bevat geen uitnodiging."
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "This message changed while it was being inspected. Refresh to inspect its current content."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "This message didn't come from the address of the meeting's organizer."
@@ -14326,6 +14489,11 @@ msgid "Top Level"
 msgstr "Bovenste niveau"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Total entries: {count}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Total messages"
@@ -14473,6 +14641,11 @@ msgid "Type your e-mail address and MailCraft finds the rest: Microsoft 365, Out
 msgstr "Typ uw e-mailadres en MailCraft zoekt de rest: Microsoft 365, Outlook.com, Google en andere providers, of een postvak alleen op dit apparaat"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Unavailable"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/import_pst.rs
 msgid "Under a folder on this computer:"
 msgstr ""
@@ -14500,6 +14673,11 @@ msgstr "Typen ongedaan maken"
 #, fuzzy
 msgid "Undo {what}"
 msgstr "{what} ongedaan maken"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
+msgstr ""
 
 #. interface, name
 #: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/folder_properties.rs
@@ -14553,6 +14731,11 @@ msgid "Unsaved Message"
 msgstr "Niet-opgeslagen bericht"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Unsupported"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/windows.rs
 #, fuzzy
 msgid "Untitled"
@@ -14599,6 +14782,11 @@ msgstr "{folder} op de server bijgewerkt"
 #, fuzzy
 msgid "Updates"
 msgstr "Updates"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Updating coverage. The last observed counts are shown below."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/chrome.rs
@@ -14927,11 +15115,21 @@ msgstr "Wanneer u overschakelt:"
 msgid "Where"
 msgstr "Waar"
 
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Where Search Text Matched"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Where they differ, the kept contact has:"
 msgstr "Waar ze verschillen, heeft de behouden contactpersoon:"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Where this message matched"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
@@ -16207,6 +16405,11 @@ msgstr "groter dan {mb} MB: haal het binnen via Bestand › Importeren"
 msgid "limit is an integer from 4 to 65536 bytes"
 msgstr ""
 
+#. what a command says
+#: crates/engine/src/cmd/search_index.rs
+msgid "located persistent search requires the native app"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/reminders.rs
 #, fuzzy
@@ -16228,6 +16431,11 @@ msgstr "maand"
 #. what a command says
 #: crates/engine/src/import_pst.rs
 msgid "more than {max} folders"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/search_index.rs
+msgid "native extraction coverage requires the desktop app"
 msgstr ""
 
 #. name
@@ -16592,6 +16800,11 @@ msgstr "eigenaar"
 #, fuzzy
 msgid "past"
 msgstr "voorbij"
+
+#. what a command says
+#: crates/engine/src/cmd/search_index.rs
+msgid "persistent search coverage requires the native app"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/picture.rs crates/engine/src/cmd/signature.rs
@@ -17053,6 +17266,11 @@ msgstr ""
 #. what a command says
 #: crates/engine/src/source_exports.rs
 msgid "the offset is past the end of this source"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/content_index/query.rs
+msgid "the original content-reader worker exited without its result"
 msgstr ""
 
 #. what a command says
@@ -17738,9 +17956,8 @@ msgstr "{counted} · Gepauzeerd tot de volgende Verzenden/ontvangen"
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr "{count} berichten zijn niet volledig doorzocht: alleen het begin is hier tot ze zijn gedownload."
+msgid "{count} messages are not fully downloaded. Their missing content cannot be searched offline."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -18469,6 +18686,13 @@ msgstr[0] "{n} bericht verwijderd"
 msgstr[1] "{n} berichten verwijderd"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "{n} message still has unsearched content. Results are incomplete."
+msgid_plural "{n} messages still have unsearched content. Results are incomplete."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "{n} message that came back empty after a refused delete is being downloaded again."
@@ -18604,14 +18828,6 @@ msgstr "{n} van {total}"
 #, fuzzy
 msgid "{n} of {total} so far."
 msgstr "{n} van {total} tot nu toe."
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] "{n} ouder bericht is niet doorzocht: de tekst is nog niet geladen"
-msgstr[1] "{n} oudere berichten zijn niet doorzocht: hun tekst is nog niet geladen"
 
 #. interface
 #: crates/ui-egui/src/chrome.rs
@@ -18995,6 +19211,24 @@ msgstr "„{subject}” was te groot om te downloaden: alleen de koptekst is hie
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” is niet op de server gevonden, dus het kan niet als bijlage worden doorgestuurd"
+
+#, fuzzy
+#~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
+#~ msgstr "De index waar zoeken de antwoorden uit haalt, wordt opgebouwd; totdat die klaar is, worden sommige oudere berichten langzamer doorzocht"
+
+#, fuzzy
+#~ msgid "Still indexing: some older mail is searched more slowly"
+#~ msgstr "Nog bezig met indexeren: een deel van de oudere e-mail wordt trager doorzocht"
+
+#, fuzzy
+#~ msgid "{count} messages weren't searched in full: only their beginning is here until they download."
+#~ msgstr "{count} berichten zijn niet volledig doorzocht: alleen het begin is hier tot ze zijn gedownload."
+
+#, fuzzy
+#~ msgid "{n} older message wasn't searched: its text isn't loaded yet"
+#~ msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
+#~ msgstr[0] "{n} ouder bericht is niet doorzocht: de tekst is nog niet geladen"
+#~ msgstr[1] "{n} oudere berichten zijn niet doorzocht: hun tekst is nog niet geladen"
 
 #, fuzzy
 #~ msgid "it changes an account or a sign-in"

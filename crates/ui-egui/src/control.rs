@@ -164,6 +164,8 @@ pub fn inspect(app: &mut MailApp, ctx: &egui::Context) -> Value {
         "syncing": app.syncing(),
         "saving": app.saving_inspect(),
         "source": app.source_pane.inspect(),
+        "searchIndex": app.session.content_index_status(),
+        "searchCoveragePanel": app.search_index_pane.inspect(),
         // A mailbox being read in the background (File › Open).
         "opening": crate::opening::ahead_inspect(app),
         "status": app.status_msg.as_ref().map(|(m, _)| m.clone()),
@@ -322,7 +324,9 @@ fn dispatch(app: &mut MailApp, ctx: &egui::Context, req: &ControlRequest) -> Out
         "ui.inspect" => ok(inspect(app, ctx)),
         // Whether the mailbox is open (while it opens, this alone is answered: `opening`), and
         // the one being read in the background, if any.
-        "app.status" => ok(json!({"mailbox": "open", "opening": crate::opening::ahead_inspect(app), "lifecycle": app.lifecycle_status()})),
+        "app.status" => ok(
+            json!({"mailbox": "open", "opening": crate::opening::ahead_inspect(app), "lifecycle": app.lifecycle_status(),"searchIndex":app.session.content_index_status()}),
+        ),
         "app.lifecycle" => match app.lifecycle_action(ctx, p, req.close_receipt.as_ref()) {
             Ok(value) => ok(value),
             Err(why) => err(why),

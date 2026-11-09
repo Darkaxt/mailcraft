@@ -295,6 +295,9 @@ impl Reading {
         let gap = |s: &str| if s.is_empty() || s.ends_with(char::is_whitespace) { "" } else { " " };
         let at_end = format!("{out}{}{added}", gap(&out));
         let wanted = |q: &str| {
+            if Query::parse(q).error().is_some() {
+                return false;
+            }
             let read = Reading::of(q).fields;
             changed.iter().all(|f| read.same(fields, *f))
         };

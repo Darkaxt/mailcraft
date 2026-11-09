@@ -108,6 +108,11 @@ impl Access {
 }
 
 const SAFE: &[&str] = &[
+    "search.indexStatus",
+    "search.sources",
+    "search.gaps",
+    "search.coverageDetails",
+    "search.retryIndex",
     // A result the servers found for the owner's search, opened (and so fetched) as any message.
     "search.openServerResult",
     // File: content goes in and out as `data`; a path is refused separately.
@@ -417,6 +422,8 @@ const SAFE: &[&str] = &[
     "ui.toggleFolder",
     "ui.toggleAliases",
     "ui.source",
+    "ui.searchIndex",
+    "ui.searchCase",
     "ui.openWindow",
     "ui.eventWindow",
     "ui.clearPictureCache",

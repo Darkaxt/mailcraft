@@ -15,7 +15,7 @@ fn tool(server: &mut Server, id: usize, name: &str) -> Result<Value, String> {
     tool_args(server, id, name, json!({}))
 }
 
-fn tool_args(server: &mut Server, id: usize, name: &str, arguments: Value) -> Result<Value, String> {
+pub(super) fn tool_args(server: &mut Server, id: usize, name: &str, arguments: Value) -> Result<Value, String> {
     let line = json!({"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {"name": name, "arguments": arguments}});
     let reply = server.handle_line(&line.to_string()).ok_or("missing MCP reply")?;
     let reply: Value = serde_json::from_str(&reply).map_err(|e| e.to_string())?;

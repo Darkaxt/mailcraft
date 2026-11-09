@@ -127,7 +127,10 @@ fn filter(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn search(s: &mut Session, v: &Value) -> CmdResult {
-    let query: String = p::req_str(v, "query")?.chars().filter(|c| !c.is_control()).take(2000).collect();
+    let query = p::req_str(v, "query")?.to_owned();
+    if query.len() > mailcraft_model::search::text::MAX_QUERY_BYTES {
+        return Err(bad("search query is longer than 16384 UTF-8 bytes"));
+    }
     if let Some(scope) = p::str(v, "scope") {
         s.view.scope = parse_enum::<Scope>(scope).ok_or_else(|| bad("`scope` is folder, subfolders, mailbox or everywhere"))?;
     }
@@ -137,7 +140,9 @@ fn search(s: &mut Session, v: &Value) -> CmdResult {
     }
     s.view.search = query;
     s.view.module = Module::Mail;
-    Ok(json!({"query": s.view.search, "scope": s.view.scope, "found": crate::list::listed(&s.rows())}))
+    let found = crate::list::listed(&s.rows());
+    Ok(json!({"query":s.view.search,"scope":s.view.scope,"found":found,
+        "queryError":mailcraft_model::search::Query::parse(&s.view.search).error(),"searchIndex":s.content_index_status()}))
 }
 
 /// What the search box offers for the word being typed in `query`, the cursor at byte `cursor`
@@ -165,7 +170,10 @@ pub fn search_suggestions(s: &Session, query: &str, cursor: usize) -> Vec<Sugges
 }
 
 fn search_suggestions_command(s: &mut Session, v: &Value) -> CmdResult {
-    let query: String = p::req_str(v, "query")?.chars().take(2000).collect();
+    let query = p::req_str(v, "query")?.to_owned();
+    if query.len() > mailcraft_model::search::text::MAX_QUERY_BYTES {
+        return Err(bad("search query is longer than 16384 UTF-8 bytes"));
+    }
     // The cursor and the answer's places in characters, as the search box counts them.
     let chars = query.chars().count();
     let cursor = p::u64(v, "cursor").map_or(chars, |c| usize::try_from(c).unwrap_or(usize::MAX).min(chars));
