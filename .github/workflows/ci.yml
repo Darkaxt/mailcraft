@@ -96,9 +96,11 @@ jobs:
         run: cargo check --locked --target i686-pc-windows-msvc --package cosca --lib
         env:
           CARGO_BUILD_JOBS: 1
-      - name: Runtime release-input identity regression
+      - name: Runtime release-input identity and draft preservation regressions
         if: runner.os == 'Windows'
-        run: python -B -m unittest discover -s packaging/windows -p test_runtime_input.py
+        run: |
+          python -B -m unittest discover -s packaging/windows -p test_runtime_input.py
+          python -B -m unittest discover -s packaging/ci -p test_refresh_draft.py
 
   # cargo-deny (deny.toml): RustSec advisories, licences, duplicate crates, sources. Its own job,
   # since it needs no build; `ci` skips the step it would otherwise run.

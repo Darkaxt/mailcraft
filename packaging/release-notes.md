@@ -35,6 +35,7 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- Preserve the source-pinned native runtime asset when refreshing the prepared release draft, keeping its numeric download identity and verified checksum intact.
 - Complete message exports preserve a retained signed or encrypted MIME body while streaming verified content, report its provenance, and refuse missing or damaged originals instead of silently reconstructing them.
 - Help › Report a Problem no longer offers Send by Email: reports go through GitHub, so they arrive in one place where they can be triaged. A way to send a report without a GitHub account is coming ([#956](https://github.com/GITHUB_REPOSITORY/issues/956)).
 - Text in Calibri, Cambria and other fonts that carry small bitmaps beside their outlines is drawn whole again: since 0.11.0 most of its letters were missing, drawn in white ([#889](https://github.com/GITHUB_REPOSITORY/issues/889)).

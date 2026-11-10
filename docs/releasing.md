@@ -40,6 +40,14 @@ does not execute a worker, OCR or a program built by the preceding job. The
 existing release checks and explicit final publication still apply. Dry runs
 also need this prepared input for their selected version.
 
+The draft refresh uses the committed numeric release ID and preserves the exact
+runtime asset ID, name, size and digest. It verifies the matching local ZIP and
+checksum entry before replacing generated outputs, and independently reads back
+the complete asset set. It never reuploads that pinned input or treats a failed
+draft-by-tag lookup as permission to create another release. Published releases,
+changed source/notes and unexpected owner assets are preserved. An uncertain
+upload stops the workflow for inspection; it is not automatically retried.
+
 For local packaging, pass the exact qualified folder with
 `packaging/windows/package.ps1 -Arch x64 -ContentRuntime <folder>` (or set
 `MAILCRAFT_CONTENT_RUNTIME` for that child only). Build-only compilation does not
@@ -52,7 +60,7 @@ retire disposable package/download trees with the installed transactional-cleanu
 helper; no packaging script recursively deletes a previous tree. Preserve the
 versioned final MSI/portable/runtime ZIPs and required release receipts.
 
-> **Last reviewed:** 2026-10-18 · **Last updated:** 2026-11-09 · **Change:** minor · **Status:** releases v0.1.0 to v0.5.0 were built and published by `release.yml` and `package.yml` on GitHub's runners, for every platform in the table below; v0.5.0 is the first with MailCraft's own release signature (`SHA256SUMS.txt.sig`, verified by the in-use key), and none is signed by the operating systems' signatures yet (gap #18).
+> **Last reviewed:** 2026-10-18 · **Last updated:** 2026-11-10 · **Change:** minor · **Status:** releases v0.1.0 to v0.5.0 were built and published by `release.yml` and `package.yml` on GitHub's runners, for every platform in the table below; v0.5.0 is the first with MailCraft's own release signature (`SHA256SUMS.txt.sig`, verified by the in-use key), and none is signed by the operating systems' signatures yet (gap #18).
 
 This file is MailCraft's release recipe. The scripts in `packaging/` are WordCraft's with MailCraft's
 names, and differ from them only where the program does (what it opens, its description, its
@@ -422,6 +430,7 @@ and in the Flatpak (which is granted `org.freedesktop.secrets` for it).
 
 | Date | Change |
 |---|---|
+| 2026-11-10 | Preserve the prepared numeric release and runtime input identities while refreshing generated draft outputs. |
 | 2026-11-09 | patch: pin the unpublished native input's numeric asset identity before the final source commit; bind final draft source/notes before tagging, fetch before compiling with read-only repository permissions, and retain canonical source-hash bytes |
 | 2026-11-09 | minor: fork checksum trust, selected Windows x64 native runtime handoff, and final portable/MSI release preparation |
 | 2026-11-07 | AU3-04: release programs are built in jobs without signing material and handed on by digest; the jobs that sign never run cargo or a built program, the programs are run in check jobs without secrets, the checksums are signed with OpenSSL, and `cargo xtask workflows` checks the shape |

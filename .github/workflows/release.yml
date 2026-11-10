@@ -293,9 +293,9 @@ jobs:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
           VERSION: ${{ needs.version.outputs.version }}
         run: cp -- "$BUNDLE" "artifacts/mailcraft-$VERSION.intoto.jsonl"
-      # Always a draft: a maintainer checks it and publishes it by hand. A re-run replaces the files
-      # of the draft; a release that is already published is never changed here.
-      - name: Create the draft release, or replace the files of the draft a re-run made
+      # The fork prepares its input draft before tagging. Its source-pinned
+      # runtime asset must retain the same numeric identity across refreshes.
+      - name: Refresh the prepared draft while preserving the selected runtime input
         working-directory: artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -303,27 +303,13 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           PRERELEASE: ${{ needs.version.outputs.prerelease }}
         run: |
-          tag="v$VERSION"
-          title="MailCraft v$VERSION"
-          pre=()
-          if [ "$PRERELEASE" = "true" ]; then pre=(--prerelease); fi
           # The notes name the repository they are published in (a fork's point at the fork).
           sed "s|GITHUB_REPOSITORY|$GITHUB_REPOSITORY|g" "$GITHUB_WORKSPACE/packaging/release-notes.md" >"$RUNNER_TEMP/notes.md"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            if [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" != "true" ]; then
-              echo "::error::release $tag is already published; the workflow only makes and refreshes drafts"
-              exit 1
-            fi
-            gh release view "$tag" --json assets --jq '.assets[].name' | while read -r asset; do
-              gh release delete-asset "$tag" "$asset" --yes
-            done
-            gh release upload "$tag" --clobber -- *
-          else
-            gh release create "$tag" --draft --title "$title" --target "$GITHUB_SHA" \
-              --notes-file "$RUNNER_TEMP/notes.md" "${pre[@]}" -- *
-          fi
+          python3 "$GITHUB_WORKSPACE/packaging/ci/refresh-draft.py" \
+            --repository "$GH_REPO" --version "$VERSION" --commit "$GITHUB_SHA" \
+            --artifacts . --notes "$RUNNER_TEMP/notes.md" --prerelease "$PRERELEASE"
           {
-            echo "Draft release **$title** at \`${GITHUB_SHA::9}\`: check it, then publish it by hand."
+            echo "Draft release **MailCraft v$VERSION** at \`${GITHUB_SHA::9}\`: check it, then publish it by hand."
             echo
             sed 's/^/    /' SHA256SUMS.txt
           } >>"$GITHUB_STEP_SUMMARY"
