@@ -1,0 +1,287 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+use std::os::fd::AsRawFd;
+
+use super::{fd_path, id_of_handle, LeafDir};
+#[cfg(target_os = "linux")]
+use crate::test_groups::{cgroup, Group};
+
+/// `fd_path` names the calling thread's own descriptor, even in a thread that no longer shares
+/// the process's descriptor table: there `/proc/self/fd/<n>` is the thread-group leader's `<n>`.
+///
+/// Container seccomp profiles refuse `unshare`, which the unconfined cgroup lane permits.
+#[skuld::test]
+fn cgroup_fd_path_names_the_calling_threads_own_descriptor(#[fixture(cgroup)] _group: &Group) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (leader_file, thread_file) = (dir.path().join("leader"), dir.path().join("thread"));
+    std::fs::write(&leader_file, "").expect("create the leader's file");
+    std::fs::write(&thread_file, "").expect("create the thread's file");
+    // One descriptor number, shared until the thread unshares.
+    let shared = std::fs::File::open(&leader_file).expect("open the leader's file");
+    let n = shared.as_raw_fd();
+
+    let thread_file_ = thread_file.clone();
+    let named = std::thread::spawn(move || {
+        // SAFETY: `unshare(CLONE_FILES)` gives this thread a private copy of the table.
+        assert_eq!(
+            unsafe { libc::unshare(libc::CLONE_FILES) },
+            0,
+            "unshare: {}",
+            std::io::Error::last_os_error()
+        );
+        let own = std::fs::File::open(&thread_file_).expect("open the thread's file");
+        // SAFETY: `n` is open in this thread's private table; replacing it touches only that table.
+        assert_eq!(unsafe { libc::dup2(own.as_raw_fd(), n) }, n, "dup2");
+        // SAFETY: `n` is open in this thread's table for the borrow's whole life.
+        let borrowed = unsafe { std::os::fd::BorrowedFd::borrow_raw(n) };
+        std::fs::metadata(fd_path(borrowed)).expect("stat through fd_path")
+    })
+    .join()
+    .expect("the thread");
+
+    use std::os::unix::fs::MetadataExt as _;
+    let expected = std::fs::metadata(&thread_file).expect("stat the thread's file");
+    assert_eq!(
+        (named.dev(), named.ino()),
+        (expected.dev(), expected.ino()),
+        "fd_path must name this thread's descriptor, not the leader's"
+    );
+    drop(shared);
+}
+
+/// A leaf whose directory was made but could not be held is removed again, not leaked.
+#[skuld::test]
+fn a_leaf_that_cannot_be_held_after_its_mkdir_is_removed() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    crate::containment::cgroup::fault::set_force_leaf_open_failure(true);
+    let err = match LeafDir::create(dir.path(), "cosca-unheld") {
+        Err(e) => e,
+        Ok(_) => panic!("the forced open failure must fail the creation"),
+    };
+    assert!(
+        !crate::containment::cgroup::fault::take_force_leaf_open_failure(),
+        "the seam must be consumed"
+    );
+    assert_eq!(err.raw_os_error(), Some(libc::EMFILE), "got {err}");
+    assert!(
+        !dir.path().join("cosca-unheld").exists(),
+        "the made directory must be removed"
+    );
+}
+
+/// Mounts are never crossed by the child sweep. A bind mount inside a leaf keeps whatever it
+/// shows: an unprivileged run cannot mount, so the lane runs this one.
+#[skuld::test]
+fn cgroup_the_child_sweep_never_crosses_a_mount(#[fixture(cgroup)] _group: &Group) {
+    let victim = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir_all(victim.path().join("keep/me")).expect("make the victim's empty dirs");
+    let victim_path = victim.path().to_path_buf();
+    // The lane's own cgroup, which may hold child cgroups.
+    let own = std::fs::read_to_string("/proc/self/cgroup").expect("read /proc/self/cgroup");
+    let parent = std::path::Path::new("/sys/fs/cgroup").join(
+        own.lines()
+            .find_map(|l| l.strip_prefix("0::/"))
+            .expect("a unified line"),
+    );
+    let name = format!("cosca-{}-sweep", std::process::id());
+    let sub = parent.join(&name).join("sub");
+    let sub_in_thread = sub.clone();
+    // Removes the leaf and its child cgroup on every exit, a panic included.
+    let _cleanup = RemoveCgroups {
+        child: sub.clone(),
+        leaf: parent.join(&name),
+    };
+
+    let swept = std::thread::spawn(move || {
+        use std::ffi::CString;
+
+        let c = |p: &std::path::Path| CString::new(p.as_os_str().as_encoded_bytes()).expect("no NUL");
+        // SAFETY: plain syscalls on valid NUL-terminated strings. `unshare` gives this thread
+        // alone a mount namespace; making it private first keeps the bind below in it.
+        unsafe {
+            assert_eq!(
+                libc::unshare(libc::CLONE_NEWNS),
+                0,
+                "unshare: {}",
+                std::io::Error::last_os_error()
+            );
+            assert_eq!(
+                libc::mount(
+                    std::ptr::null(),
+                    c(std::path::Path::new("/")).as_ptr(),
+                    std::ptr::null(),
+                    libc::MS_REC | libc::MS_PRIVATE,
+                    std::ptr::null()
+                ),
+                0,
+                "make / private: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+        let leaf = LeafDir::create(&parent, &name).expect("create the leaf");
+        let sub = sub_in_thread;
+        std::fs::create_dir(&sub).expect("make a child cgroup");
+        // SAFETY: as above.
+        unsafe {
+            assert_eq!(
+                libc::mount(
+                    c(&victim_path).as_ptr(),
+                    c(&sub).as_ptr(),
+                    std::ptr::null(),
+                    libc::MS_BIND,
+                    std::ptr::null()
+                ),
+                0,
+                "bind the victim over the child: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+        leaf.remove_children()
+    })
+    .join()
+    .expect("the sweeping thread");
+
+    // The dropping thread's namespace, and its bind, are gone with it: nothing is mounted in ours.
+    let mounts = std::fs::read_to_string("/proc/self/mountinfo").expect("read mountinfo");
+    assert!(
+        !mounts.lines().any(|l| l.contains(&*sub.to_string_lossy())),
+        "the bind must not outlive its namespace; refusing to clean up"
+    );
+    let survived = victim.path().join("keep/me").is_dir();
+
+    swept.expect("the sweep");
+    assert!(
+        survived,
+        "the sweep crossed the mount and deleted the victim's directories"
+    );
+}
+
+/// Removes a child cgroup and its leaf by `rmdir` alone, unless the child is still a mount point in this namespace:
+/// nothing is removed through a mount. Mountinfo that cannot be read fails the test: it is not "no mount".
+struct RemoveCgroups {
+    child: std::path::PathBuf,
+    leaf: std::path::PathBuf,
+}
+
+impl Drop for RemoveCgroups {
+    fn drop(&mut self) {
+        match crate::test_groups::cgroup_leaf::is_mounted(&self.child) {
+            Ok(false) => {}
+            Ok(true) => return report(format!("{} is mounted; refusing to clean up", self.child.display())),
+            Err(why) => return report(format!("{why}; refusing to clean up {}", self.child.display())),
+        }
+        for path in [&self.child, &self.leaf] {
+            match std::fs::remove_dir(path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => report(format!("could not remove {}: {e}", path.display())),
+            }
+        }
+    }
+}
+
+fn report(message: String) {
+    crate::test_groups::fail_unless_panicking(message);
+}
+
+/// `rmdir` removes the leaf it holds.
+#[skuld::test]
+fn rmdir_removes_the_held_leaf() {
+    let parent = tempfile::tempdir().expect("tempdir");
+    let leaf = parent.path().join("cosca-held");
+    std::fs::create_dir(&leaf).expect("make the leaf");
+    LeafDir::open_for_test(&leaf).rmdir().expect("rmdir");
+    assert!(!leaf.exists());
+}
+
+/// A leaf at `<tempdir>/<name>` with a `cgroup.events`, held.
+fn held_leaf(name: &str) -> (tempfile::TempDir, std::path::PathBuf, LeafDir) {
+    let parent = tempfile::tempdir().expect("tempdir");
+    let leaf = parent.path().join(name);
+    std::fs::create_dir(&leaf).expect("make the leaf");
+    std::fs::write(leaf.join("cgroup.events"), "populated 0\n").expect("write cgroup.events");
+    let dir = LeafDir::open_for_test(&leaf);
+    (parent, leaf, dir)
+}
+
+/// A leaf removed by another party is `ENOENT`.
+#[skuld::test]
+fn rmdir_of_a_leaf_removed_since_is_enoent() {
+    let (_parent, leaf, dir) = held_leaf("cosca-removed");
+    std::fs::remove_dir_all(&leaf).expect("remove the leaf");
+    assert_eq!(dir.rmdir().expect_err("gone").raw_os_error(), Some(libc::ENOENT));
+}
+
+/// A leaf removed, and its name taken by another directory since: `ENOENT`, and the other
+/// directory is left alone.
+#[skuld::test]
+fn rmdir_spares_a_directory_that_took_a_removed_leafs_name() {
+    let (_parent, leaf, dir) = held_leaf("cosca-replaced");
+    std::fs::remove_dir_all(&leaf).expect("remove the leaf");
+    std::fs::create_dir(&leaf).expect("make a stranger under the leaf's name");
+
+    assert_eq!(dir.rmdir().expect_err("gone").raw_os_error(), Some(libc::ENOENT));
+    assert!(leaf.exists(), "the stranger under the leaf's name must survive");
+}
+
+/// A live leaf whose name now names another directory: an error, not `Ok` or `ENOENT`, since the
+/// leaf is still there; the other directory is left alone.
+#[skuld::test]
+fn rmdir_spares_a_directory_that_took_a_live_leafs_name() {
+    let (parent, leaf, dir) = held_leaf("cosca-swapped");
+    std::fs::rename(&leaf, parent.path().join("elsewhere")).expect("move the leaf away");
+    std::fs::create_dir(&leaf).expect("make a stranger under the leaf's name");
+
+    let e = dir.rmdir().expect_err("the leaf is still there");
+    assert_ne!(e.raw_os_error(), Some(libc::ENOENT), "{e}");
+    assert!(leaf.exists(), "the stranger under the leaf's name must survive");
+}
+
+/// The same holds for a symlink that took the name: it is not followed.
+#[skuld::test]
+fn rmdir_spares_a_symlink_that_took_a_live_leafs_name() {
+    let (parent, leaf, dir) = held_leaf("cosca-linked");
+    let moved = parent.path().join("moved");
+    std::fs::rename(&leaf, &moved).expect("move the leaf away");
+    std::os::unix::fs::symlink(&moved, &leaf).expect("link the leaf's name to it");
+
+    let e = dir.rmdir().expect_err("the leaf is still there");
+    assert_ne!(e.raw_os_error(), Some(libc::ENOENT), "{e}");
+    assert!(
+        moved.exists(),
+        "the leaf behind the link must not be removed through it"
+    );
+}
+
+/// A cgroup id is all 64 bits of a kernfs file handle, read in this machine's byte order; any
+/// other handle is no cgroup's.
+#[skuld::test]
+fn a_cgroup_id_is_decoded_from_its_kernfs_handle() {
+    const HIGH: u64 = 0x1_0000_0007;
+    assert_eq!(
+        id_of_handle(0xfe, 8, HIGH.to_ne_bytes()).expect("a kernfs handle"),
+        HIGH
+    );
+    // `FILEID_INO32_GEN`, as tmpfs gives: an inode and a generation, not a cgroup id.
+    id_of_handle(1, 8, HIGH.to_ne_bytes()).expect_err("not a kernfs handle");
+    id_of_handle(0xfe, 4, HIGH.to_ne_bytes()).expect_err("too short for a kernfs id");
+}
+
+/// A sweep that cannot read the id of a child cgroup removes it all the same, unrecorded, and says
+/// so at `debug` with the cause: a leaf left behind for it would leak a cgroup. The stand-in's
+/// directories are no cgroups, so their ids cannot be read. Mutant: "an unreadable id is silent".
+#[skuld::test]
+fn a_sweep_that_cannot_read_a_childs_id_removes_it_unrecorded_and_says_why() {
+    crate::log_capture::install();
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sub = dir.path().join("unrecorded-sub-9f3a");
+    std::fs::create_dir(&sub).expect("make the child");
+    let leaf = LeafDir::open_for_test(dir.path());
+    let mark = crate::log_capture::mark();
+    assert_eq!(leaf.remove_children().expect("the sweep"), 1);
+    assert!(!sub.exists(), "the child is removed");
+    let logs = crate::log_capture::records_since_on_current_thread(mark, "unrecorded-sub-9f3a");
+    assert_eq!(logs.len(), 1, "{logs:?}");
+    assert_eq!(logs[0].0, log::Level::Debug);
+    assert!(logs[0].1.contains("removed unrecorded"), "{logs:?}");
+}

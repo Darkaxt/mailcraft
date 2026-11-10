@@ -34,11 +34,22 @@ def selected(source):
     lock = json.loads((ROOT / "native/craft-content/release-runtime.json").read_text(encoding="utf-8"))
     if lock["version"] != 1 or lock["platform"] != "windows-x64":
         raise ValueError("Unsupported release runtime selection")
+    qualified = lock["qualifiedSourceFiles"]
+    line_endings = lock["qualifiedLineEndings"]
+    if set(qualified) != set(lock["sourceFiles"]) or set(line_endings) != set(qualified):
+        raise ValueError("The qualified/canonical source proof is incomplete")
     for name, expected in lock["sourceFiles"].items():
         path = ROOT / name
         copier.plain(path)
-        if digest(path) != expected:
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != expected or b"\r" in raw:
             raise ValueError(f"Requalify the runtime after changing its source: {name}")
+        mode = line_endings[name]
+        if mode not in ("lf", "crlf"):
+            raise ValueError("Only the recorded LF/CRLF byte equivalence is supported")
+        original = raw if mode == "lf" else raw.replace(b"\n", b"\r\n")
+        if hashlib.sha256(original).hexdigest() != qualified[name]:
+            raise ValueError(f"Canonical source no longer reconstructs the exact qualified input: {name}")
     if digest(source / "runtime.json") != lock["manifestSha256"]:
         raise ValueError("The runtime is not the independently selected qualified manifest")
     return copier

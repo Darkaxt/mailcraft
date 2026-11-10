@@ -14,11 +14,25 @@ manifest and its exact source inputs. Requalify and update that selection if an
 adapter, shared protocol or selected source changes. Do not substitute the latest
 installed Craft engines for these source-bound workers.
 
+`sourceFiles` pins canonical LF checkout bytes. `qualifiedSourceFiles` retains
+the original qualified byte hashes, and `qualifiedLineEndings` records whether
+those exact bytes were LF or CRLF. Packaging requires both hashes: it reconstructs
+the original qualified bytes from the canonical file and refuses any other
+change. The exact source files have LF attributes so Windows and Unix validate
+the same source, without weakening a hash or rebuilding unchanged worker payloads.
+
 Before pushing the final version tag, prepare a ZIP of the qualified runtime's
 contents (with `runtime.json` at the ZIP root) and attach it to that version's
 draft release as `mailcraft-<version>-windows-x64-content-runtime.zip`. This is an
-unpublished release input, not an intermediate product publication. The existing
-Windows build job binds every member to the committed manifest and hands the
+unpublished release input, not an intermediate product publication. Record its
+exact repository, version tag, numeric asset ID, file name, byte count and SHA-256
+in `release-runtime.json`'s `releaseInput` before the final source commit. A draft
+may be prepared against `main`; bind its final target commit and assembled release
+notes after CI passes and before tagging. Download the input by its numeric asset
+API, whose permission is `Contents:read`; draft-by-tag discovery is not a reliable
+input address. Compiler jobs retain read-only repository access. The existing
+Windows build job fetches this prerequisite before compiling, binds every member
+to the committed manifest and hands the
 runtime on with its existing SHA-256 job digest. The signing/package job copies
 the same runtime into the portable tree and generated MSI component fragment,
 and retains the input ZIP in the final checksum-bound release asset set. It
@@ -408,6 +422,7 @@ and in the Flatpak (which is granted `org.freedesktop.secrets` for it).
 
 | Date | Change |
 |---|---|
+| 2026-11-09 | patch: pin the unpublished native input's numeric asset identity before the final source commit; bind final draft source/notes before tagging, fetch before compiling with read-only repository permissions, and retain canonical source-hash bytes |
 | 2026-11-09 | minor: fork checksum trust, selected Windows x64 native runtime handoff, and final portable/MSI release preparation |
 | 2026-11-07 | AU3-04: release programs are built in jobs without signing material and handed on by digest; the jobs that sign never run cargo or a built program, the programs are run in check jobs without secrets, the checksums are signed with OpenSSL, and `cargo xtask workflows` checks the shape |
 | 2026-11-06 | Pull requests leave status lines alone; the release pull request sets each one from the rows it joins in |

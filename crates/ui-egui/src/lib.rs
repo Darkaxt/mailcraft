@@ -99,6 +99,9 @@ pub mod forms;
 mod forms_date_tests;
 #[cfg(test)]
 mod frame_bench_tests;
+mod gmail_move;
+#[cfg(test)]
+mod gmail_move_tests;
 mod gmail_tabs;
 #[cfg(test)]
 mod gmail_tabs_tests;
@@ -913,6 +916,13 @@ pub struct UiState {
     /// A message's body on a light page in the light theme's colours, as its sender made it, also
     /// when the window is dark: the reading pane and a message's own window, not its header.
     pub light_messages: bool,
+    /// Explicit reader appearance; absent preserves the older lightMessages preference.
+    pub message_theme: Option<reading::MessageTheme>,
+    /// The complete draft preview defaults to a light page, independent from the reader.
+    pub draft_preview_theme: reading::MessageTheme,
+    /// An active preview is bound to the current mailbox opening and composer only.
+    #[serde(skip)]
+    pub preview_compose: Option<(u64, u64)>,
     /// File › Options › Mail, "Open new messages, replies and forwards in a new window" (#286):
     /// New Email, a reply or a forward the owner starts opens in a window of its own rather than
     /// in the reading pane. Off unless the owner turns it on; kept as `repliesInWindow`.
@@ -1023,6 +1033,9 @@ impl Default for UiState {
             high_contrast: false,
             accent: theme::Accent::default(),
             light_messages: false,
+            message_theme: None,
+            draft_preview_theme: reading::MessageTheme::Light,
+            preview_compose: None,
             replies_in_window: false,
             interface_size: theme::InterfaceSize::default(),
             window: None,
@@ -1101,6 +1114,18 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         r#"{"account": number, "enabled": bool} — off by default; enabling asks for native owner consent, never as part of checking mail"#,
     ),
     ("ui.theme", "Interface Theme", "File › Options", r#"{"value": "light"|"dark"|"system"}"#),
+    (
+        "ui.messageTheme",
+        "Message Appearance",
+        "Reading pane",
+        r#"{"target"?: "reader"|"draft", "value": "light"|"dark"|"app"} — display only; independent reader and draft preview choices, no HTML or network change"#,
+    ),
+    (
+        "ui.composePreview",
+        "Preview Message",
+        "Message",
+        r#"{"on"?: bool} — toggle a read-only rendering of the current unsaved draft; never saves or sends"#,
+    ),
     ("ui.highContrast", "High Contrast", "File › Options", r#"{"on": true|false}"#),
     ("ui.accent", "Accent Colour", "File › Options", r#"{"accent": "blue"|"teal"|"violet"|"graphite"}"#),
     (
@@ -1409,7 +1434,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.reportProblem",
         "Report a Problem",
         "Help",
-        r#"{"what": string, "title"?: string, "expected"?: string, "via"?: "github"|"email" (default github), "diagnostics"?: bool, "path"?: string (github: where the diagnostics file is saved), "open"?: bool (default true)} — by hand without `what`: the Report a Problem window. github: opens the repository's new-issue page in the system's browser, filled in with the title, what was typed, the version and the platform, and nothing else (never the diagnostics, never more than 8,000 characters: text that doesn't fit is refused); with `diagnostics`, the same text as `ui.copyDiagnostics` is saved to `path` (without one it is answered as `name` and `data`), to attach on the page. email: starts a new message to MailCraft's maintainers from an account that sends mail, with the diagnostics attached when asked; nothing is sent until Send is pressed. `open: false` only answers what would be opened. MailCraft posts nothing itself. Answers {"via", "url"?, "length"?, "saved"?, "attached"?}"#,
+        r#"{"what": string, "title"?: string, "expected"?: string, "via"?: "github" (the default and only way; email went in #956), "diagnostics"?: bool, "path"?: string (github: where the diagnostics file is saved), "open"?: bool (default true)} — by hand without `what`: the Report a Problem window. github: opens the repository's new-issue page in the system's browser, filled in with the title, what was typed, the version and the platform, and nothing else (never the diagnostics, never more than 8,000 characters: text that doesn't fit is refused); with `diagnostics`, the same text as `ui.copyDiagnostics` is saved to `path` (without one it is answered as `name` and `data`), to attach on the page. `open: false` only answers what would be opened. MailCraft posts nothing itself. Answers {"via", "url", "length", "saved"?, "name"?, "data"?}"#,
     ),
     ("ui.copyLinkAddress", "Copy Link Address", "Message", r#"{"url": string} — a link's address (http, https, mailto or tel) to the clipboard"#),
     (
@@ -1480,6 +1505,13 @@ pub struct MailApp {
     pub(crate) source_pane: source_pane::Pane,
     pub(crate) search_index_pane: search_index_ui::Pane,
     pub session: Session,
+    /// The system's certification authorities for mail, read off the window's thread by the host
+    /// (#30): handed to the session when they come, and the window never waits for them.
+    pub trust_anchors_arriving: Option<std::sync::mpsc::Receiver<Vec<Vec<u8>>>>,
+    /// How many rows of the list may still have their Digital signature checked this frame, and
+    /// whether one was left for the next (#30: the list never checks many in one frame).
+    pub(crate) row_checks_left: u32,
+    pub(crate) row_checks_wanted: bool,
     pub ui: UiState,
     pub services: Services,
     pub dialog: Option<dialogs::Dialog>,
@@ -1842,6 +1874,9 @@ impl MailApp {
         let own_mailbox = session.path.as_ref().map(|p| unconfirmed::kept_path(&p.to_string_lossy()));
         MailApp {
             session,
+            trust_anchors_arriving: None,
+            row_checks_left: 1,
+            row_checks_wanted: false,
             ui: UiState::default(),
             services,
             dialog: None,
@@ -2497,8 +2532,11 @@ impl MailApp {
             }
             "ui.lightMessages" => {
                 self.ui.light_messages = b("value").unwrap_or(!self.ui.light_messages);
+                self.ui.message_theme = None;
                 Ok(json!({"value": self.ui.light_messages}))
             }
+            "ui.messageTheme" => reading::appearance::command(self, p),
+            "ui.composePreview" => reading::appearance::preview_command(self, p),
             "ui.collapseRibbon" => {
                 self.ui.ribbon_collapsed = b("value").unwrap_or(!self.ui.ribbon_collapsed);
                 Ok(json!({"value": self.ui.ribbon_collapsed}))
@@ -4593,6 +4631,23 @@ impl MailApp {
     /// drops, saving.
     pub fn logic(&mut self, ctx: &egui::Context) {
         self.apply_language();
+        // The system's authorities for mail, once the host has read them: what was checked
+        // without them is checked again (#30).
+        if let Some(rx) = &self.trust_anchors_arriving {
+            match rx.try_recv() {
+                Ok(ders) => {
+                    self.session.set_trust_anchors(&ders);
+                    self.trust_anchors_arriving = None;
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => self.trust_anchors_arriving = None,
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            }
+        }
+        // One row's Digital signature a frame (#30); one left over asks for the next frame.
+        self.row_checks_left = 1;
+        if std::mem::take(&mut self.row_checks_wanted) {
+            ctx.request_repaint();
+        }
         // A .pst import whose window went while it read (closed, or another dialog put in its
         // place) has stopped: what came in is one step to undo, and Undo is free again.
         if self.session.importing_pst() && !matches!(&self.dialog, Some(dialogs::Dialog::ImportPst(d)) if d.is_importing()) {

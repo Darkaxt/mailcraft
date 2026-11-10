@@ -3,6 +3,24 @@
   "platform": "windows-x64",
   "manifestSha256": "b559f65164c4f347e1671371db0e6bf2a6ad2569748f9738b0334360d544ed1f",
   "sourceFiles": {
+    "native/craft-content/sources.json": "b07c52ae91a0655b79a01215ec47b55baff66f77a4f555327dc1ce39871374d0",
+    "native/craft-content/ocr-sources.json": "49d8e98328bd9211609e20b1df6f715a2f7caa5a6fa66da6ed971d46b4fcec5e",
+    "native/craft-content/worker.rs": "42d38b131793cc87c5ec98ed76c6596f0eeb33190395203c3070758a3dedb8f7",
+    "native/craft-content/extraction.rs": "d473848d58d966834ac2c46c819324d6f250a0d9cb0057984bac8f78a6a9157a",
+    "crates/craft-content/src/lib.rs": "5872b018dd097ac00bbaaf7e5dd0678043d4badb7cb4bee3d642d43b84165e27",
+    "crates/craft-content/src/paging.rs": "0d37d413ea662d235e5d8fa6b612705a64efd199852d434386fe722bf36b754b",
+    "crates/craft-content/src/protocol.rs": "7d6db1a43df0e9917cae908c0ea936edde6f73d9087ae448babcfa0f6d1e8a17"
+  },
+  "releaseInput": {
+    "repository": "Darkaxt/mailcraft",
+    "tag": "v0.11.2",
+    "releaseId": 438925362,
+    "assetId": 726879196,
+    "name": "mailcraft-0.11.2-windows-x64-content-runtime.zip",
+    "bytes": 235535253,
+    "sha256": "6fb499b56f4f243824f9e7dd0e9e8fc3914cf732bb9865e44a5a875adff33a03"
+  },
+  "qualifiedSourceFiles": {
     "native/craft-content/sources.json": "f811f0a89bb47f44a6b2f91adf891e66200b74f2cd474a4ca2f23cf1f3779400",
     "native/craft-content/ocr-sources.json": "29d8e3015c2b755d590a006360a47ec5eade69514ab640627d94b722ad08b3f4",
     "native/craft-content/worker.rs": "5cdb185b0e4015b3aa804db8d0af3a0ab9083c76ae3fc34f2f583abab71331f9",
@@ -10,5 +28,14 @@
     "crates/craft-content/src/lib.rs": "5872b018dd097ac00bbaaf7e5dd0678043d4badb7cb4bee3d642d43b84165e27",
     "crates/craft-content/src/paging.rs": "0d37d413ea662d235e5d8fa6b612705a64efd199852d434386fe722bf36b754b",
     "crates/craft-content/src/protocol.rs": "7d6db1a43df0e9917cae908c0ea936edde6f73d9087ae448babcfa0f6d1e8a17"
+  },
+  "qualifiedLineEndings": {
+    "native/craft-content/sources.json": "crlf",
+    "native/craft-content/ocr-sources.json": "crlf",
+    "native/craft-content/worker.rs": "crlf",
+    "native/craft-content/extraction.rs": "crlf",
+    "crates/craft-content/src/lib.rs": "lf",
+    "crates/craft-content/src/paging.rs": "lf",
+    "crates/craft-content/src/protocol.rs": "lf"
   }
 }

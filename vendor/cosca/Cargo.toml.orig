@@ -1,0 +1,375 @@
+[package]
+name = "cosca"
+version = "0.6.0"
+edition = "2021"
+authors = ["Anna Zhukova"]
+description = "Unified cross-platform subprocess management: spawning, stdio, process trees, stable identity, and elevation."
+license = "Apache-2.0"
+repository = "https://github.com/bindreams/cosca"
+readme = "README.md"
+keywords = ["subprocess", "process", "spawn", "elevation", "cross-platform"]
+categories = ["os", "development-tools", "asynchronous"]
+exclude = ["/build.rs", "/testbin", "/tests", "/.github", "/.claude", "/.config", "/prek.toml", "/clippy.toml"]
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc", "aarch64-apple-darwin"]
+
+[features]
+pty = []
+tokio = ["dep:tokio"]
+# Serialize a ProcessIdRecord so an identity survives a supervisor restart.
+serde = ["dep:serde"]
+
+[dependencies]
+thiserror = "2"
+log = "0.4"
+# Zeroize the password held for Auth::Stdin so it never lingers in freed memory.
+zeroize = "1"
+# Only ProcessIdRecord is (de)serializable; `derive` is for its field attributes.
+serde = { version = "1", optional = true, features = ["derive"] }
+# `macros` is required by the library, not only tests: `communicate` uses `tokio::try_join!`,
+# which is gated behind tokio's `macros` feature. `net` is solely for `AsyncFd` (the
+# reactor-native death-watch); `time` solely for the grace bound on it. `sync` backs the
+# per-instance wait observer (a `#[cfg(test)]` oneshot seam) the raw async backend is tested with.
+tokio = { version = "1", optional = true, features = ["process", "rt", "io-util", "macros", "net", "sync", "time"] }
+
+[dev-dependencies]
+tempfile = "3"
+# A concrete format to pin the persisted wire form against.
+serde_json = "1"
+# `test-util`: `start_paused` virtual clock for the deadline tests. Dev-only.
+tokio = { version = "1", features = ["test-util"] }
+# The test harness for `harness = false` targets.
+skuld = { version = "0.6.0", features = ["tokio"] }
+# Only tests/block_on_socket.rs: an integration test cannot reach the crate-private `SharedChild`,
+# and needs a deadline-bounded wait on a child it also kills from another handle.
+shared_child = { version = "1", features = ["timeout"] }
+# Pins at compile time that a spawn failure cannot be made from a plain error without its answer
+# (`src/child/spawn/failure_tests.rs`).
+static_assertions = "1"
+
+[target.'cfg(windows)'.dev-dependencies]
+# Every feature below except `Wdk_System_SystemServices`, `Win32_Security_Authorization` and the Task
+# Scheduler ones is already enabled on the main `windows` dependency further down this file —
+# integration tests reach that dependency directly, they are not walled off from it. Those are the
+# genuine additions:
+# - `Wdk_System_SystemServices`: only `windows_path_resolution`'s `provenance.rs` needs it, for
+#   `RtlGetVersion` (stamps each measurement with its OS build).
+# - `Win32_Security_Authorization`: only `resolve_windows_tests.rs` needs it, for
+#   `SetNamedSecurityInfoW`, `GetNamedSecurityInfoW`, `SetEntriesInAclW`, `EXPLICIT_ACCESS_W` and
+#   `TRUSTEE_W`, to build a real deny ACE on a real Windows host rather than simulate one. (Its
+#   thread-impersonation guard needs no feature beyond `Win32_Security`/`Win32_System_Threading`,
+#   both already enabled: `DuplicateTokenEx` lives in the former, `SetThreadToken` in the latter.)
+# - `Win32_System_Diagnostics_Debug`, `Win32_System_LibraryLoader` and `Win32_System_Memory`: only `test_frozen.rs`
+#   needs them, to start a thread in a suspended child that blocks for good (`WriteProcessMemory`, `GetProcAddress`
+#   on ntdll for an address valid in both processes, `VirtualAllocEx`).
+# - `Win32_System_TaskScheduler` (with `Win32_System_Ole` and `Win32_System_Variant`, which its `Connect` needs):
+#   only the `windows_elevation_routes` harness needs it, to ask the Task Scheduler COM API whether a probe's task
+#   is gone, rather than read a `schtasks` exit code.
+#
+# Declaring them here, in dev-dependencies, keeps them out of the published crate's own
+# dependency footprint for downstream consumers who only pull in `[dependencies]`. The `windows_*`
+# probes (not specific to either feature above) call GetFullPathNameW, GetFileInformationByHandleEx,
+# ShellExecuteExW, the token APIs, the CreateProcess* family, SetHandleInformation, RtlGetVersion,
+# RegGetValueW and CompareStringOrdinal directly (RtlGetVersion and RegGetValueW stamp each
+# measurement with its OS build; CompareStringOrdinal orders an environment block's keys the same
+# case-insensitive way CreateProcess* itself does) to MEASURE the platform rather than to use
+# cosca; `windows_shell_execute` calls ShellExecuteExW from an STA and writes one volatile App
+# Paths key in HKLM and one in HKCU (see its module doc).
+windows = { version = "0.62", features = [
+    "Wdk_System_SystemServices",
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Networking_WinSock",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
+    "Win32_System_TaskScheduler",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(windows)'.dependencies]
+# Unpredictable merge-target pipe names (std parity: std randomizes its anon-pipe names).
+# `std` for the `io::Error` conversion.
+getrandom = { version = "0.4", features = ["std"] }
+# `get_osfhandle`/`isatty`: the testbin maps CRT fds to OS handles and classifies devices.
+libc = "0.2"
+# `Win32_Networking_WinSock` is compile-time bindings only, for the testbin's `WSAEventSelect`-based
+# death-watched accept (`tests/common/accept.rs`, included by `#[path]`): a `[[bin]]` target cannot
+# see the dev-dependencies' feature.
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Networking_WinSock",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Threading",
+    "Win32_System_JobObjects",
+    "Win32_System_IO",
+    "Win32_System_Console",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Environment",
+    "Win32_Security",
+    "Win32_System_SystemServices",
+    "Win32_System_Com",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(unix)'.dependencies]
+# 0.2.187 added `proc_bsdshortinfo` and `PROC_PIDT_SHORTBSDINFO`; 0.2.189 is what is locked.
+libc = "0.2.189"
+nix = { version = "0.31", features = ["signal", "process", "event", "term", "fs", "user"] }
+# Typed `fcntl` wrappers: the raw call is variadic, and the right argument width differs per libc.
+rustix = { version = "1", features = ["fs", "net", "event", "stdio"] }
+# The random part of a cgroup leaf's name and of the elevation shim's private directory's.
+getrandom = "0.4"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Broadcasts a cgroup leaf's drain from its pump to every wait, sync and async alike.
+event-listener = "5"
+# cgroup syscalls; typed `ioctl`, `prctl`, `pidfd_open`; `mm`: the fork guard's wipe-on-fork page.
+rustix = { version = "1", features = ["process", "event", "net", "thread", "mm"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# `task_info(TASK_AUDIT_TOKEN)`: the fork guard's identity of the process; also raw Mach threads for
+# the tracer helper's thread-listing tests.
+mach2 = "0.7"
+# Reads the ACL that decides who may rename entries of a directory the shim channel lives under.
+exacl = "0.13"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+# `pty`: `ioctl_tiocgptpeer`.
+rustix = { version = "1", default-features = false, features = ["mount", "pty"] }
+
+[lib]
+# The lib's unit tests run on skuld (`src/lib.rs` has the `main`).
+harness = false
+
+[[test]]
+name = "block_on_socket"
+path = "tests/block_on_socket.rs"
+harness = false
+
+[[test]]
+name = "elevation"
+path = "tests/elevation.rs"
+harness = false
+
+[[test]]
+name = "elevation_pkexec_version"
+path = "tests/elevation_pkexec_version.rs"
+harness = false
+
+[[test]]
+name = "foundation_smoke"
+path = "tests/foundation_smoke.rs"
+harness = false
+
+[[test]]
+name = "graceful"
+path = "tests/graceful.rs"
+harness = false
+
+[[test]]
+name = "identity_lifecycle"
+path = "tests/identity_lifecycle.rs"
+harness = false
+
+[[test]]
+name = "payload_race"
+path = "tests/payload_race.rs"
+harness = false
+
+[[test]]
+name = "spawn_lock_reentry"
+path = "tests/spawn_lock_reentry.rs"
+harness = false
+
+[[test]]
+name = "tokio_foreign"
+path = "tests/tokio_foreign.rs"
+harness = false
+
+[[test]]
+name = "spawn_io"
+path = "tests/spawn_io.rs"
+harness = false
+
+[[test]]
+name = "tokio_control"
+path = "tests/tokio_control.rs"
+harness = false
+
+[[test]]
+name = "tokio_io"
+path = "tests/tokio_io.rs"
+harness = false
+
+[[test]]
+name = "group_teardown_setuid"
+path = "tests/group_teardown_setuid.rs"
+harness = false
+
+[[test]]
+name = "linux_pidfd_wait"
+path = "tests/linux_pidfd_wait.rs"
+harness = false
+
+[[test]]
+name = "macos_fdmarker"
+path = "tests/macos_fdmarker.rs"
+harness = false
+
+[[test]]
+name = "windows_breakaway"
+path = "tests/windows_breakaway.rs"
+harness = false
+
+[[test]]
+name = "windows_console"
+path = "tests/windows_console.rs"
+harness = false
+
+[[test]]
+name = "windows_console_identity"
+path = "tests/windows_console_identity.rs"
+harness = false
+
+[[test]]
+name = "windows_creation_flags"
+path = "tests/windows_creation_flags.rs"
+harness = false
+
+[[test]]
+name = "windows_false_success"
+path = "tests/windows_false_success.rs"
+harness = false
+
+[[test]]
+name = "windows_job_object"
+path = "tests/windows_job_object.rs"
+harness = false
+
+[[test]]
+name = "lifecycle"
+path = "tests/lifecycle.rs"
+harness = false
+
+[[test]]
+name = "linux_pidfd_refused"
+path = "tests/linux_pidfd_refused.rs"
+harness = false
+
+[[test]]
+name = "process"
+path = "tests/process.rs"
+harness = false
+
+[[test]]
+name = "process_root"
+path = "tests/process_root.rs"
+harness = false
+
+[[test]]
+name = "raw_windows"
+path = "tests/raw_windows.rs"
+harness = false
+
+[[test]]
+name = "raw_windows_async"
+path = "tests/raw_windows_async.rs"
+harness = false
+
+[[test]]
+name = "windows_elevation_routes"
+path = "tests/windows_elevation_routes.rs"
+harness = false
+
+[[test]]
+name = "windows_env_block"
+path = "tests/windows_env_block.rs"
+harness = false
+
+[[test]]
+name = "windows_path_logic"
+path = "tests/windows_path_logic.rs"
+harness = false
+
+[[test]]
+name = "windows_path_resolution"
+path = "tests/windows_path_resolution.rs"
+harness = false
+
+[[test]]
+name = "windows_process_cwd"
+path = "tests/windows_process_cwd.rs"
+harness = false
+
+[[test]]
+name = "windows_shell_execute"
+path = "tests/windows_shell_execute.rs"
+harness = false
+
+[[test]]
+name = "windows_shell_resolution"
+path = "tests/windows_shell_resolution.rs"
+harness = false
+
+[[test]]
+name = "windows_suspended"
+path = "tests/windows_suspended.rs"
+harness = false
+
+[[test]]
+name = "windows_testbin_ack"
+path = "tests/windows_testbin_ack.rs"
+harness = false
+
+[[bin]]
+name = "cosca_testbin"
+path = "testbin/main.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "cosca_testbin_gui"
+path = "testbin/gui.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "cosca_testbin_image"
+path = "testbin/image_report.rs"
+test = false
+doc = false
+
+# Long-path aware, by the manifest `build.rs` embeds in this binary alone.
+[[bin]]
+name = "cosca_testbin_cwd"
+path = "testbin/cwd.rs"
+test = false
+doc = false
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+
+[lints.clippy]
+# `all` is a group; priority -1 lets the individual entries below override it.
+all = { level = "warn", priority = -1 }
+# Every `#[allow]` needs a `reason`, in all targets including tests. `disallowed-methods` exemptions
+# are `#[expect]`, so a stale one fails too.
+allow_attributes_without_reason = "deny"

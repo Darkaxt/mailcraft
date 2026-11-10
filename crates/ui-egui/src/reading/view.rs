@@ -224,10 +224,6 @@ struct Key {
     high_contrast: bool,
     /// Colours baked into native text jobs, fills and borders; not just light versus dark.
     palette: [Color32; 6],
-    /// A light page ([`on_light_page`]) in a dark window: turned on as the window turns dark,
-    /// `dark` (the page's) stays as it was. In the light theme the page is the window's own, and
-    /// turning the switch lays nothing out again.
-    light: bool,
     /// The display scale and the height of a line of text, as bits: the fonts or the zoom changed.
     scale: u32,
     line: u32,
@@ -305,7 +301,7 @@ impl Store {
                 self.entries.retain(|e| e.place != place || e.message.id != message.id || message.id == 0);
                 let (kept, room) = match place {
                     Place::Pane => (self.entries.iter().filter(|e| e.place == Place::Pane).count(), KEPT),
-                    Place::Window(_) | Place::Quote | Place::Preview => {
+                    Place::Window(_) | Place::Quote | Place::Preview | Place::DraftPreview(_) => {
                         // A window shows one message, and a window that is gone shows none.
                         self.entries.retain(|e| e.place == Place::Pane || (e.place != place && e.used.saturating_add(2) >= frame));
                         (self.entries.iter().filter(|e| e.place != Place::Pane).count(), KEPT_IN_WINDOWS)
@@ -362,11 +358,11 @@ pub fn doc_where(ctx: &egui::Context, message: &Arc<Message>, place: Place, can_
 
 /// A first guess at the width and theme the body will be laid out at in the room `ui` has, for a
 /// message whose blocks are made before the body is: the room less the body's margins, and the
-/// page's theme (light on a light page, [`on_light_page`]). [`show`] then fits the blocks to the
+/// chosen message theme. [`show`] then fits the blocks to the
 /// width it really lays out at.
 pub fn env_of(app: &MailApp, ui: &Ui, place: Place) -> Env {
     let width = (ui.available_width() - BODY_MARGINS).min(super::MAX_TEXT_WIDTH);
-    Env::for_pane(width, Tokens::get(ui.ctx()).dark && !on_light_page(app, place))
+    Env::for_pane(width, super::appearance::dark(app, ui.ctx(), place))
 }
 
 /// The left and right margins of the body, which the room it is laid out in is less than the pane.
@@ -446,8 +442,8 @@ pub fn doc_shown(ctx: &egui::Context, message: &Arc<Message>, place: Place, can_
 /// as they have come.
 pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place, access: Access) {
     let ctx = ui.ctx().clone();
-    let light = on_light_page(app, place);
-    let t = Tokens::page(&ctx, light);
+    let dark = super::appearance::dark(app, &ctx, place);
+    let t = Tokens::message(&ctx, dark);
     // In steps of a few points, so that dragging the pane's edge does not lay a long message out
     // again for every pixel.
     let width = ((ui.available_width().min(super::MAX_TEXT_WIDTH) / WIDTH_STEP).floor() * WIDTH_STEP).max(1.0);
@@ -490,7 +486,6 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
         dark: t.dark,
         high_contrast: t.high_contrast,
         palette: [t.surface, t.text, t.text_dim, t.accent_text, t.border_strong, t.panel],
-        light: light && Tokens::get(&ctx).dark,
         scale: ctx.pixels_per_point().to_bits(),
         line: ctx.fonts_mut(|f| f.row_height(&regular(super::layout::BASE_SIZE))).to_bits(),
         remote: showing.then(|| entry.doc.remote.iter().filter(|url| matches!(pictures.remote_peek(url), Some(Remote::Ready(_)))).count()),
@@ -508,12 +503,7 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
         if entry.next.as_ref().is_none_or(|(next, _)| *next != key) {
             entry.next = Some((
                 key,
-                Laid::new(width)
-                    .showing_remote(showing)
-                    .on_light_page(light)
-                    .sender_dark(entry.doc.sender_dark)
-                    .cut(entry.doc.cuts.clone())
-                    .zoomed(zoom),
+                Laid::new(width).showing_remote(showing).in_theme(dark).sender_dark(entry.doc.sender_dark).cut(entry.doc.cuts.clone()).zoomed(zoom),
             ));
             #[cfg(test)]
             {
@@ -523,7 +513,7 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
     } else {
         entry.key = Some(key);
         entry.laid =
-            Laid::new(width).showing_remote(showing).on_light_page(light).sender_dark(entry.doc.sender_dark).cut(entry.doc.cuts.clone()).zoomed(zoom);
+            Laid::new(width).showing_remote(showing).in_theme(dark).sender_dark(entry.doc.sender_dark).cut(entry.doc.cuts.clone()).zoomed(zoom);
         entry.next = None;
         #[cfg(test)]
         {
@@ -593,19 +583,20 @@ fn wheel_zoom(app: &mut MailApp, ui: &Ui) {
 /// Whether a message's body is shown on a light page in the light theme's colours, whatever the
 /// window's theme: the owner asked for it, and it is a message being read (not the original
 /// under a reply being written, nor File › Signatures' sample).
+#[cfg(test)]
 pub fn on_light_page(app: &MailApp, place: Place) -> bool {
-    app.ui.light_messages && matches!(place, Place::Pane | Place::Window(_))
+    matches!(place, Place::Pane | Place::Window(_)) && app.ui.message_theme.map_or(app.ui.light_messages, |theme| theme == super::MessageTheme::Light)
 }
 
-/// What the body scrolls on: the light theme's page when [`on_light_page`] (the edges of the
-/// scrolling fade to it too), with the light theme's visuals in `ui` for what egui draws on it,
-/// its scroll bars; else the window's own.
+/// What the body scrolls on: the selected message palette, including scrollbar
+/// visuals, while headers and the surrounding app retain their own appearance.
 pub fn page(app: &MailApp, place: Place, ui: &mut Ui) -> egui::Frame {
-    if !on_light_page(app, place) {
+    let dark = super::appearance::dark(app, ui.ctx(), place);
+    if dark == Tokens::get(ui.ctx()).dark {
         return egui::Frame::NONE;
     }
-    *ui.visuals_mut() = ui.ctx().style_of(egui::Theme::Light).visuals.clone();
-    egui::Frame::NONE.fill(Tokens::light().surface)
+    *ui.visuals_mut() = ui.ctx().style_of(if dark { egui::Theme::Dark } else { egui::Theme::Light }).visuals.clone();
+    egui::Frame::NONE.fill(Tokens::message(ui.ctx(), dark).surface)
 }
 
 /// Look at what is laid out of a message's body where it is shown, when it is shown there.

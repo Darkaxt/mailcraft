@@ -191,6 +191,47 @@ fn retained_streams_validate_length_and_hash_without_loading_the_model() {
 }
 
 #[test]
+fn protected_mime_exports_from_retained_bytes_with_truthful_provenance() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("protected.mailcraft");
+    let (mut session, id) = fixture();
+    let protected = mailcraft_mime::parse_fetched(include_bytes!("../../smime/testdata/detached.eml"));
+    let original = protected.original.as_ref().unwrap().data.clone();
+    let reference = store::stash(&path, &store::Digest::of(&original), &original).unwrap();
+    let old = session.mailbox.message(id).unwrap();
+    let mut protected = Message { id, account: old.account, folder: old.folder, ..protected };
+    protected.original.as_mut().unwrap().kept = Some(reference);
+    protected.original.as_mut().unwrap().data = Arc::new(Vec::new());
+    session.mailbox.messages.insert(id, Arc::new(protected));
+    session.path = Some(path.clone());
+    session.mailbox_changed();
+    let before = session.mailbox.messages.get(&id).unwrap().clone();
+    let token = ready(&mut session, "mail.exportEml", id);
+    let answer = session.run("mail.exportEml", &json!({"id":id,"token":token})).unwrap();
+    assert_eq!(answer["provenance"], "preservedMimeBody");
+    assert_eq!(answer["originalMimeAvailable"], true);
+    assert_eq!(answer["headersReconstructed"], true);
+    let bytes = crate::cmd::base64_decode(answer["data"].as_str().unwrap()).unwrap();
+    assert_eq!(mailcraft_mime::parse_fetched(&bytes).original, Some(mailcraft_model::Original::new(bytes.clone()).unwrap()));
+    assert!(mailcraft_mime::protection(&bytes).is_some());
+    assert_eq!(session.mailbox.messages.get(&id).unwrap(), &before);
+    let destination = directory.path().join("protected.eml");
+    let exported = session.run("file.exportMessage", &json!({"id":id,"token":token,"path":destination.to_string_lossy()})).unwrap();
+    assert_eq!(exported["provenance"], "preservedMimeBody");
+    assert_eq!(std::fs::read(&destination).unwrap(), bytes);
+    // A later same-length corruption must fail at the original stream's EOF,
+    // never acknowledge a reconstructed substitute or overwrite prior output.
+    let mut corrupt = original.as_ref().clone();
+    *corrupt.last_mut().unwrap() ^= 1;
+    std::fs::write(blob_path(&path, &original), corrupt).unwrap();
+    let token = ready(&mut session, "mail.exportEml", id);
+    assert!(session.run("mail.exportEml", &json!({"id":id,"token":token})).is_err());
+    assert!(session.run("file.exportMessage", &json!({"id":id,"path":destination.to_string_lossy()})).is_err());
+    assert_eq!(std::fs::read(destination).unwrap(), bytes);
+    close(&mut session, "mail.exportEml", id, token);
+}
+
+#[test]
 fn missing_or_damaged_content_cannot_be_exported_as_a_complete_file() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("mailbox.mailcraft");

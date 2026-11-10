@@ -16,6 +16,9 @@ fn expected_header(path: &str) -> &'static str {
     if path.starts_with("vendor/winit/") {
         return "// SPDX-FileCopyrightText: The winit contributors\n// SPDX-License-Identifier: Apache-2.0\n";
     }
+    if path.starts_with("vendor/cosca/") {
+        return "// SPDX-FileCopyrightText: Anna Zhukova\n// SPDX-License-Identifier: Apache-2.0\n";
+    }
     match path {
         "native/craft-content/adapters/gridcraft/engine.rs" => {
             "// SPDX-FileCopyrightText: 2026 Protagonist Labs, Pathweft and MailCraft contributors\n// SPDX-License-Identifier: MIT\n"

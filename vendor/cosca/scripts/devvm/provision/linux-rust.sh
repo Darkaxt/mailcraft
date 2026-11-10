@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+# Installs a Rust toolchain (via rustup), a C linker (via apt), and cargo-nextest for the
+# `vagrant` user, so `devvm.py run <linux guest> -- cargo nextest run ...` has something to
+# run — Rust needs a system `cc` to link even pure-Rust binaries. Idempotent: each step skips
+# itself if already done.
+set -euo pipefail
+
+# apt packages: a C linker, and what the ELEVATION group's Linux tests elevate through.
+APT_PACKAGES=()
+if command -v cc >/dev/null 2>&1; then
+    echo "devvm: cc already present, skipping build-essential"
+else
+    APT_PACKAGES+=(build-essential)
+fi
+if command -v pkexec >/dev/null 2>&1 && command -v doas >/dev/null 2>&1 && command -v pkaction >/dev/null 2>&1; then
+    echo "devvm: pkexec, polkit and doas already present, skipping their apt install"
+else
+    APT_PACKAGES+=(polkitd pkexec opendoas)
+fi
+
+if [ "${#APT_PACKAGES[@]}" -gt 0 ]; then
+    # A freshly booted guest can still be running cloud-init, and unattended-upgrade can hold the
+    # dpkg lock at any time. Wait for cloud-init: exit 0 is "done" and 2 is "done, recoverable
+    # errors"; any other status fails the provision. Stop the apt units so no new run starts.
+    # Stopping them does not end a run in progress (KillMode=process), so apt itself waits for
+    # its lock, without a bound. Put back the units that were active, even if apt fails.
+    if command -v cloud-init >/dev/null 2>&1; then
+        CLOUD_INIT_STATUS=0
+        sudo cloud-init status --wait >/dev/null || CLOUD_INIT_STATUS=$?
+        case "$CLOUD_INIT_STATUS" in
+        0) ;;
+        2) echo "devvm: cloud-init finished with exit status 2 (recoverable errors), continuing" >&2 ;;
+        *)
+            echo "devvm: cloud-init status --wait failed with exit status $CLOUD_INIT_STATUS" >&2
+            exit 1
+            ;;
+        esac
+    fi
+
+    APT_TIMERS=(apt-daily.timer apt-daily-upgrade.timer)
+    APT_SERVICES=(apt-daily.service apt-daily-upgrade.service unattended-upgrades.service)
+    RESTORE_UNITS=()
+    restore_apt_units() {
+        local unit
+        for unit in "${RESTORE_UNITS[@]}"; do
+            sudo systemctl start "$unit" || echo "devvm: could not restart $unit" >&2
+        done
+        RESTORE_UNITS=()
+    }
+    trap restore_apt_units EXIT
+    # Timers first so nothing restarts a service we are about to stop. Only the timers and
+    # unattended-upgrades.service are restored: the apt-daily*.service oneshots are timer-driven.
+    for unit in "${APT_TIMERS[@]}" unattended-upgrades.service; do
+        if systemctl is-active --quiet "$unit"; then
+            RESTORE_UNITS+=("$unit")
+        fi
+    done
+    for unit in "${APT_TIMERS[@]}" "${APT_SERVICES[@]}"; do
+        # A unit this image does not have is expected; any other failure to stop one is not.
+        if [ "$(systemctl show --property=LoadState --value "$unit")" = not-found ]; then
+            continue
+        fi
+        sudo systemctl stop "$unit" || {
+            echo "devvm: could not stop $unit" >&2
+            exit 1
+        }
+    done
+
+    APT_WAIT=(-o DPkg::Lock::Timeout=-1)
+    sudo apt-get "${APT_WAIT[@]}" update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get "${APT_WAIT[@]}" install -qq -y --no-install-recommends "${APT_PACKAGES[@]}" >/dev/null
+
+    restore_apt_units
+    trap - EXIT
+fi
+
+if command -v cargo >/dev/null 2>&1; then
+    echo "devvm: cargo already present ($(cargo --version)), skipping rustup install"
+else
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+    echo '. "$HOME/.cargo/env"' >>"$HOME/.bashrc"
+    echo "devvm: installed $("$HOME/.cargo/bin/cargo" --version)"
+fi
+
+# This version matches CI's own cargo-nextest pin (`NEXTEST_VERSION` in
+# .github/workflows/ci.yaml). Installing the same version here means `devvm.py run <linux
+# guest> -- cargo nextest run ...` matches what CI actually runs, instead of whatever a
+# fresh install would resolve to today.
+#
+# Downloads nextest's own prebuilt release tarball rather than `cargo install
+# cargo-nextest --locked` (compiling it from source). Measured directly (2026-09-23, on the
+# Windows guest, but the same tradeoff applies here): compiling cargo-nextest from source ran
+# for over an hour without finishing under this project's typical emulated/virtualized guest
+# CPU — not hung, just too slow to be workable for a throwaway VM that gets destroyed and
+# recreated often. The prebuilt binary is standalone; it doesn't need to have been built with
+# the same toolchain as whatever `cargo` ends up building cosca's own test binaries with.
+#
+# SHA-256 of each release asset. Checked before extracting (below) so a corrupted or tampered
+# download is a hard failure, never silently `tar -x`'d. Each tag shares a line with its
+# checksum so Renovate moves both together.
+NEXTEST_TAG_X86_64="cargo-nextest-0.9.148" NEXTEST_SHA256_X86_64="223ba936714cc861a9cdedad5a8eb664dfdd69d6fbdf6cea6aa8184f523290dc"
+NEXTEST_TAG_AARCH64="cargo-nextest-0.9.148" NEXTEST_SHA256_AARCH64="81469eb963ef883fd590e60189e77d6aba3d91b418591d3391f50fe3e9480d2b"
+if [ "$NEXTEST_TAG_X86_64" != "$NEXTEST_TAG_AARCH64" ]; then
+    echo "devvm: cargo-nextest tags disagree: $NEXTEST_TAG_X86_64 vs $NEXTEST_TAG_AARCH64" >&2
+    exit 1
+fi
+NEXTEST_VERSION="${NEXTEST_TAG_X86_64#cargo-nextest-}"
+CARGO="$HOME/.cargo/bin/cargo"
+# `cargo nextest --version` is multi-line ("cargo-nextest X (hash date)", then "release:
+# X", "commit-hash: ...", "commit-date: ...", "host: ..." - confirmed directly, 2026-09-23).
+# `head -n1` before `awk` matters: piping all lines through `awk '{print $2}'` prints one
+# $2 per input line (X duplicated, then the hash/date/host values), which both corrupts this
+# log line and breaks the comparison below every time (a multi-line INSTALLED_VERSION can
+# never equal NEXTEST_VERSION, so the "already present" skip would never fire).
+INSTALLED_VERSION="$("$CARGO" nextest --version 2>/dev/null | head -n1 | awk '{print $2}' || true)"
+if [ "$INSTALLED_VERSION" = "$NEXTEST_VERSION" ]; then
+    echo "devvm: cargo-nextest $NEXTEST_VERSION already present, skipping"
+else
+    case "$(uname -m)" in
+    x86_64)
+        NEXTEST_TARGET="x86_64-unknown-linux-gnu"
+        NEXTEST_SHA256="$NEXTEST_SHA256_X86_64"
+        ;;
+    aarch64)
+        NEXTEST_TARGET="aarch64-unknown-linux-gnu"
+        NEXTEST_SHA256="$NEXTEST_SHA256_AARCH64"
+        ;;
+    *)
+        echo "devvm: no known cargo-nextest release target for uname -m '$(uname -m)'" >&2
+        exit 1
+        ;;
+    esac
+    NEXTEST_TARBALL="/tmp/cargo-nextest-$NEXTEST_VERSION.tar.gz"
+    curl --proto '=https' --tlsv1.2 -sSf -L -o "$NEXTEST_TARBALL" \
+        "https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-$NEXTEST_VERSION/cargo-nextest-$NEXTEST_VERSION-$NEXTEST_TARGET.tar.gz"
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        ACTUAL_SHA256="$(sha256sum "$NEXTEST_TARBALL" | awk '{print $1}')"
+    else
+        ACTUAL_SHA256="$(shasum -a 256 "$NEXTEST_TARBALL" | awk '{print $1}')"
+    fi
+    if [ "$ACTUAL_SHA256" != "$NEXTEST_SHA256" ]; then
+        echo "devvm: cargo-nextest download checksum mismatch: expected $NEXTEST_SHA256, got $ACTUAL_SHA256" >&2
+        rm -f "$NEXTEST_TARBALL"
+        exit 1
+    fi
+
+    mkdir -p "$HOME/.cargo/bin"
+    tar -xzf "$NEXTEST_TARBALL" -C "$HOME/.cargo/bin" cargo-nextest
+    rm -f "$NEXTEST_TARBALL"
+    # A broken extraction (corrupt tarball past the checksum check, wrong binary for this
+    # host's libc, ...) can leave a cargo-nextest that exists but doesn't actually run - the
+    # checksum above only confirms the download matches what was published, not that the
+    # extracted binary works on THIS guest. Verify the installed version, mirroring
+    # windows-rust.ps1's own post-extraction check.
+    INSTALLED_VERSION_AFTER="$("$CARGO" nextest --version 2>/dev/null | head -n1 | awk '{print $2}' || true)"
+    if [ "$INSTALLED_VERSION_AFTER" != "$NEXTEST_VERSION" ]; then
+        echo "devvm: cargo-nextest install verification failed - expected version $NEXTEST_VERSION, got '$INSTALLED_VERSION_AFTER'" >&2
+        exit 1
+    fi
+    echo "devvm: installed cargo-nextest $INSTALLED_VERSION_AFTER"
+fi

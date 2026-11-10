@@ -34,6 +34,9 @@ pub mod composing;
 pub mod content_index;
 mod conversations;
 pub mod counts;
+mod digital_signature;
+#[cfg(test)]
+mod digital_signature_tests;
 pub mod gmail;
 pub mod import_pst;
 pub mod import_tree;

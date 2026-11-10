@@ -14,6 +14,8 @@ pub enum ContentPart {
     Text,
     Html,
     Attachment(usize),
+    /// The complete canonical signed/encrypted MIME retained when it arrived.
+    Original,
 }
 
 type Fields = Vec<(&'static str, String)>;
@@ -57,6 +59,9 @@ pub fn write_to<'a>(
 ) -> io::Result<()> {
     if nonce.len() != 32 || !nonce.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "a fresh 128-bit boundary nonce is required"));
+    }
+    if message.original.is_some() && !message.draft {
+        return write_original(message, opts, open, out);
     }
     let mut counter = 0u32;
     let calendar = calendar_form(message, open)?;
@@ -134,8 +139,55 @@ pub fn write_to<'a>(
         mixed.extend(files);
         multipart("mixed", "", mixed, nonce, &mut counter)
     };
-    out.write_all(&write::headers(message, opts))?;
+    let mut headers = write::headers(message, opts);
+    write_field(&mut headers, "MIME-Version", "1.0");
+    out.write_all(&headers)?;
     write_body(&body, open, out, &format!("=_mc_{nonce}_"))
+}
+
+/// Retained protected MIME already has canonical line endings (or binary parts
+/// whose bytes must never change). Only the top-level headers are reconstructed;
+/// the signed/encrypted body is copied unchanged and the reader validates EOF.
+fn write_original<'a>(
+    message: &Message,
+    opts: &WriteOptions,
+    open: &mut dyn FnMut(ContentPart) -> io::Result<Box<dyn Read + 'a>>,
+    out: &mut dyn Write,
+) -> io::Result<()> {
+    const MAX_HEADERS: usize = 4 << 20;
+    const CHUNK: usize = 64 << 10;
+    let original = open(ContentPart::Original)?;
+    let mut original = BufReader::with_capacity(CHUNK, original.take(mailcraft_model::MAX_ORIGINAL as u64 + 1));
+    let mut headers = Vec::new();
+    loop {
+        let start = headers.len();
+        let room = MAX_HEADERS.saturating_sub(start).saturating_add(1);
+        let count = Read::by_ref(&mut original).take(room as u64).read_until(b'\n', &mut headers)?;
+        if headers.len() > MAX_HEADERS || count == 0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "the retained original has an incomplete or oversized MIME header"));
+        }
+        if matches!(headers.get(start..), Some(b"\r\n" | b"\n")) {
+            break;
+        }
+    }
+    let (_, unexpected_body) = crate::header::split(&headers, true);
+    if !unexpected_body.is_empty() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "the retained original has a malformed MIME header"));
+    }
+    let (fields, _) = crate::protected::content_of(&headers)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "the retained original's MIME fields cannot be written safely"))?;
+    for chunk in write::headers(message, opts).chunks(CHUNK) {
+        out.write_all(chunk)?;
+    }
+    for chunk in fields.chunks(CHUNK) {
+        out.write_all(chunk)?;
+    }
+    out.write_all(b"\r\n")?;
+    let body_bytes = io::copy(&mut original, out)?;
+    if (headers.len() as u64).saturating_add(body_bytes) > mailcraft_model::MAX_ORIGINAL as u64 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "the retained original exceeds its allowed size"));
+    }
+    Ok(())
 }
 
 fn multipart(kind: &str, params: &str, children: Vec<Body>, nonce: &str, counter: &mut u32) -> Body {

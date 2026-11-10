@@ -1,0 +1,862 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+use super::build_argv;
+use crate::elevation::{Auth, Backend};
+use std::ffi::{OsStr, OsString};
+
+fn s(v: &[&str]) -> Vec<OsString> {
+    v.iter().map(|x| OsString::from(*x)).collect()
+}
+fn env(pairs: &[(&str, &str)]) -> Vec<(OsString, OsString)> {
+    pairs
+        .iter()
+        .map(|(k, v)| (OsString::from(*k), OsString::from(*v)))
+        .collect()
+}
+
+#[skuld::test]
+fn sudo_noninteractive_names_env_in_preserve_env_with_terminator() {
+    let argv = build_argv(
+        Backend::Sudo,
+        OsStr::new("/usr/bin/sudo"),
+        &Auth::NonInteractive,
+        OsStr::new("/usr/bin/systemctl"),
+        &s(&["restart", "nginx"]),
+        &env(&[("FOO", "bar")]),
+    )
+    .unwrap();
+    assert_eq!(
+        argv,
+        s(&[
+            "/usr/bin/sudo",
+            "-n",
+            "--preserve-env=FOO",
+            "--",
+            "/usr/bin/systemctl",
+            "restart",
+            "nginx"
+        ])
+    );
+    // The VALUE never appears in argv (it is set in sudo's own env by the rewrite).
+    assert!(!argv.iter().any(|a| a.to_string_lossy().contains("bar")));
+}
+
+#[skuld::test]
+fn sudo_preserve_env_joins_multiple_names() {
+    let argv = build_argv(
+        Backend::Sudo,
+        OsStr::new("/usr/bin/sudo"),
+        &Auth::NonInteractive,
+        OsStr::new("id"),
+        &[],
+        &env(&[("A", "1"), ("B", "2")]),
+    )
+    .unwrap();
+    assert_eq!(argv, s(&["/usr/bin/sudo", "-n", "--preserve-env=A,B", "--", "id"]));
+}
+
+#[skuld::test]
+fn sudo_interactive_no_env_has_no_flags() {
+    let argv = build_argv(
+        Backend::Sudo,
+        OsStr::new("/usr/bin/sudo"),
+        &Auth::Interactive,
+        OsStr::new("id"),
+        &s(&["-u"]),
+        &[],
+    )
+    .unwrap();
+    assert_eq!(argv, s(&["/usr/bin/sudo", "--", "id", "-u"]));
+}
+
+#[skuld::test]
+fn sudo_stdin_uses_dash_s() {
+    let argv = build_argv(
+        Backend::Sudo,
+        OsStr::new("/usr/bin/sudo"),
+        &Auth::Stdin(crate::elevation::Secret::new("pw")),
+        OsStr::new("id"),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(argv, s(&["/usr/bin/sudo", "-S", "--", "id"]));
+}
+
+#[skuld::test]
+fn sudo_askpass_uses_dash_a() {
+    let argv = build_argv(
+        Backend::Sudo,
+        OsStr::new("/usr/bin/sudo"),
+        &Auth::Askpass("/usr/bin/ssh-askpass".into()),
+        OsStr::new("id"),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(argv, s(&["/usr/bin/sudo", "-A", "--", "id"]));
+}
+
+#[skuld::test]
+fn sudo_rejects_an_unforwardable_env_name() {
+    for bad in [("A,B", "1"), ("A=C", "1"), ("PÄTH", "1"), ("", "1"), ("1BAD", "1")] {
+        let r = build_argv(
+            Backend::Sudo,
+            OsStr::new("/usr/bin/sudo"),
+            &Auth::NonInteractive,
+            OsStr::new("id"),
+            &[],
+            &env(&[bad]),
+        );
+        assert!(
+            matches!(r, Err(crate::error::Error::Unsupported { .. })),
+            "expected reject for {bad:?}"
+        );
+    }
+}
+
+#[skuld::test]
+fn doas_noninteractive_no_env_emits_dash_n() {
+    let argv = build_argv(
+        Backend::Doas,
+        OsStr::new("/usr/bin/doas"),
+        &Auth::NonInteractive,
+        OsStr::new("id"),
+        &s(&["-u"]),
+        &[],
+    )
+    .unwrap();
+    assert_eq!(argv, s(&["/usr/bin/doas", "-n", "--", "id", "-u"]));
+}
+
+#[skuld::test]
+fn pkexec_gui_disables_internal_agent_and_uses_no_terminator() {
+    // No `--` for pkexec (its option loop mis-parses it); --disable-internal-agent pins
+    // the graphical-only contract.
+    let argv = build_argv(
+        Backend::Pkexec,
+        OsStr::new("/usr/bin/pkexec"),
+        &Auth::Gui,
+        OsStr::new("id"),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(
+        argv,
+        s(&["/usr/bin/pkexec", "--disable-internal-agent", "--keep-cwd", "id"])
+    );
+    assert!(
+        !argv.iter().any(|a| a == &OsString::from("--")),
+        "pkexec must not emit a -- terminator"
+    );
+}
+
+/// An `=` in the program path is safe under pkexec, which parses no assignments. (A leading
+/// `-` is refused before the argv is built: `cwd::pkexec_refuses_a_leading_dash_program`.)
+#[skuld::test]
+fn pkexec_takes_a_program_with_equals_as_written() {
+    let ok = build_argv(
+        Backend::Pkexec,
+        OsStr::new("/usr/bin/pkexec"),
+        &Auth::Gui,
+        OsStr::new("/opt/we=ird"),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(
+        ok,
+        s(&[
+            "/usr/bin/pkexec",
+            "--disable-internal-agent",
+            "--keep-cwd",
+            "/opt/we=ird"
+        ])
+    );
+}
+
+#[skuld::test]
+fn terminator_protects_a_program_with_equals_or_leading_dash() {
+    let eq = build_argv(
+        Backend::Sudo,
+        OsStr::new("/usr/bin/sudo"),
+        &Auth::NonInteractive,
+        OsStr::new("/opt/we=ird"),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(eq, s(&["/usr/bin/sudo", "-n", "--", "/opt/we=ird"]));
+    let dash = build_argv(
+        Backend::Doas,
+        OsStr::new("/usr/bin/doas"),
+        &Auth::Interactive,
+        OsStr::new("-prog"),
+        &[],
+        &[],
+    )
+    .unwrap();
+    assert_eq!(dash, s(&["/usr/bin/doas", "--", "-prog"]));
+}
+
+#[path = "posix_tests/pkexec_probe.rs"]
+mod pkexec_probe;
+#[path = "posix_tests/shim_argv.rs"]
+mod shim_argv;
+
+#[cfg(unix)]
+#[skuld::test]
+fn resolve_in_path_var_finds_an_executable_in_a_temp_dir() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let f = dir.path().join("sudo");
+    std::fs::write(&f, b"#!/bin/sh\ntrue\n").unwrap();
+    std::fs::set_permissions(&f, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let got = super::resolve_in_path_var(dir.path().as_os_str(), "sudo");
+    assert_eq!(got, Some(f));
+}
+
+#[cfg(unix)]
+#[skuld::test]
+fn resolve_skips_a_non_executable_same_named_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let f = dir.path().join("sudo");
+    std::fs::write(&f, b"not exec").unwrap(); // mode 0644 — no exec bit
+    let got = super::resolve_in_path_var(dir.path().as_os_str(), "sudo");
+    assert_eq!(got, None, "a non-executable file named sudo must be skipped");
+}
+
+#[cfg(unix)]
+#[skuld::test]
+fn empty_path_element_is_not_resolved_from_cwd() {
+    // `resolve_in_path_var` is PURE (it takes the PATH string as a parameter), so
+    // this is tested directly against explicit PATH values — no process-global
+    // chdir, and thus no cross-test race and no leaked CWD on a mid-test panic.
+
+    // A single empty PATH element must be skipped, never treated as "." (CWD).
+    assert_eq!(super::resolve_in_path_var(OsStr::new(""), "sudo"), None);
+
+    // A mid-string empty element is skipped too: put a non-matching dir, then the
+    // empty element, then the real match — so the empty branch is actually exercised
+    // (matching in an earlier element would let a skip bug pass silently).
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let sudo = dir.path().join("sudo");
+    std::fs::write(&sudo, b"#!/bin/sh\ntrue\n").unwrap();
+    std::fs::set_permissions(&sudo, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let path_var = format!("/nonexistent::{}", dir.path().display());
+    let got = super::resolve_in_path_var(OsStr::new(&path_var), "sudo");
+    assert_eq!(
+        got,
+        Some(sudo),
+        "a mid-string empty PATH element must be skipped, not resolved"
+    );
+
+    // A PATH consisting only of empty elements resolves nothing.
+    assert_eq!(super::resolve_in_path_var(OsStr::new(":"), "sudo"), None);
+}
+
+const FIXTURE_RELATIVE_PATH_ELEMENTS_MARKER: &str = "COSCA_FIXTURE_RELATIVE_PATH_ELEMENTS";
+
+/// A relative `PATH` element (`relbin`, `.`) names a directory under the cwd at detection time, and
+/// a backend found there would be exec-checked against one directory and run from another — or
+/// not found by path at all. `relbin/sudo` and `./sudo` are planted in the fixture's real cwd, so
+/// skipping them is observable only if the element is refused rather than merely missed.
+#[cfg(unix)]
+#[skuld::test]
+fn relative_path_elements_are_never_resolved() {
+    use std::os::unix::fs::PermissionsExt;
+    let cwd = tempfile::tempdir().unwrap();
+    for dir in ["relbin", "abs", "."] {
+        let sudo = cwd.path().join(dir).join("sudo");
+        std::fs::create_dir_all(sudo.parent().unwrap()).unwrap();
+        std::fs::write(&sudo, b"#!/bin/sh\ntrue\n").unwrap();
+        std::fs::set_permissions(&sudo, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    crate::test_child::run_fixture_with_cwd(
+        crate::test_child::fixture_path!(fixture_relative_path_elements_are_never_resolved),
+        cwd.path(),
+        FIXTURE_RELATIVE_PATH_ELEMENTS_MARKER,
+    );
+}
+
+/// The child half of [`relative_path_elements_are_never_resolved`], run with the prepared
+/// directory as its real cwd; inert in an ordinary suite run.
+#[cfg(unix)]
+#[skuld::test]
+fn fixture_relative_path_elements_are_never_resolved() {
+    let Some(cwd) = crate::test_child::expected_cwd(FIXTURE_RELATIVE_PATH_ELEMENTS_MARKER) else {
+        return;
+    };
+    for relative in ["relbin", ".", "./relbin"] {
+        assert_eq!(
+            super::resolve_in_path_var(OsStr::new(relative), "sudo"),
+            None,
+            "{relative}"
+        );
+    }
+    let abs = cwd.join("abs");
+    let path_var = format!("relbin:{}", abs.display());
+    assert_eq!(
+        super::resolve_in_path_var(OsStr::new(&path_var), "sudo"),
+        Some(abs.join("sudo")),
+        "a relative element must be skipped, not resolved ahead of an absolute one"
+    );
+}
+
+#[cfg(unix)]
+mod rewrite_tests {
+    use super::super::{password_line, rewrite_with_host, PendingPassword, PosixRewrite};
+    use crate::command::{Command, CommandInput, EnvOp};
+    use crate::elevation::plan::{BackendSet, Host, Os};
+    use crate::elevation::{Auth, Backend, ElevatedStdio, ElevatedVia};
+    use crate::error::Error;
+    use crate::stdio::{Fd, ResolvedStdio, Stdio};
+    use std::ffi::OsString;
+    use std::path::PathBuf;
+
+    pub(super) fn sudo_host() -> Host {
+        Host {
+            elevated: false,
+            has_tty: true,
+            available: BackendSet {
+                sudo: Some(PathBuf::from("/usr/bin/sudo")),
+                doas: Some(PathBuf::from("/usr/bin/doas")),
+                pkexec: None,
+                osascript: None,
+            },
+            os: Os::Unix,
+            arg_max: None,
+            pkexec_version: crate::elevation::pkexec::PkexecVersion::NotProbed,
+            pkexec_pin: None,
+        }
+    }
+
+    pub(super) fn derived_argv(rw: &PosixRewrite) -> Vec<OsString> {
+        match rw.derived.as_ref().expect("derived").input() {
+            CommandInput::Argv(v) => v.clone(),
+            other => panic!("expected Argv, got {other:?}"),
+        }
+    }
+
+    #[skuld::test]
+    fn rewrite_is_nondestructive_and_reports_wrapped_backend() {
+        let mut c = Command::new();
+        c.args(["id", "-u"])
+            .env("LD_PRELOAD", "/evil.so")
+            .env("FOO", "bar")
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        let rw = rewrite_with_host(&mut c, &sudo_host()).expect("rewrite");
+        let report = rw.report.as_ref().expect("report");
+        assert_eq!(report.via, ElevatedVia::Wrapped(Backend::Sudo));
+        assert_eq!(report.stripped_env, vec![OsString::from("LD_PRELOAD")]);
+        assert_eq!(report.stdio, ElevatedStdio::Passthrough);
+        let a = derived_argv(&rw);
+        assert_eq!(a[0], OsString::from("/usr/bin/sudo"));
+        assert!(a.contains(&OsString::from("--preserve-env=FOO")));
+        // Value is set in sudo's own env, never in argv; LD_PRELOAD is stripped everywhere.
+        assert!(!a.iter().any(|x| x.to_string_lossy().contains("bar")));
+        assert!(!a.iter().any(|x| x.to_string_lossy().contains("LD_PRELOAD")));
+        let derived = rw.derived.as_ref().unwrap();
+        assert!(derived
+            .env_ops()
+            .iter()
+            .any(|o| matches!(o, EnvOp::Set(k, v) if k == "FOO" && v == "bar")));
+        assert!(!derived
+            .env_ops()
+            .iter()
+            .any(|o| matches!(o, EnvOp::Set(k, _) if k == "LD_PRELOAD")));
+        // The caller's Command is untouched (no double-wrap on reuse).
+        assert!(matches!(c.input(), CommandInput::Argv(v) if v == &[OsString::from("id"), OsString::from("-u")]));
+        assert_eq!(c.env_ops().len(), 2, "caller env ops must be intact");
+    }
+
+    #[skuld::test]
+    fn rewrite_twice_yields_identical_derived_argv() {
+        let mut c = Command::new();
+        c.args(["id"])
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        let a1 = derived_argv(&rewrite_with_host(&mut c, &sudo_host()).unwrap());
+        let a2 = derived_argv(&rewrite_with_host(&mut c, &sudo_host()).unwrap());
+        assert_eq!(a1, a2, "reusing an elevated Command must not double-wrap");
+    }
+
+    #[skuld::test]
+    fn env_remove_or_clear_plus_elevate_is_unsupported() {
+        let mut c = Command::new();
+        c.args(["id"])
+            .env_clear()
+            .env("KEEP", "1")
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        assert!(matches!(
+            rewrite_with_host(&mut c, &sudo_host()),
+            Err(Error::Unsupported { .. })
+        ));
+        let mut c2 = Command::new();
+        c2.args(["id"])
+            .env("A", "1")
+            .env_remove("A")
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        assert!(matches!(
+            rewrite_with_host(&mut c2, &sudo_host()),
+            Err(Error::Unsupported { .. })
+        ));
+    }
+
+    #[skuld::test]
+    fn doas_or_pkexec_with_env_is_unsupported() {
+        let doas_host = Host {
+            available: BackendSet {
+                sudo: None,
+                doas: Some(PathBuf::from("/usr/bin/doas")),
+                pkexec: None,
+                osascript: None,
+            },
+            ..sudo_host()
+        };
+        let mut c = Command::new();
+        c.args(["id"])
+            .env("A", "1")
+            .elevation_backend(Backend::Doas)
+            .elevation_auth(Auth::NonInteractive);
+        assert!(matches!(
+            rewrite_with_host(&mut c, &doas_host),
+            Err(Error::Unsupported { .. })
+        ));
+
+        let pk_host = Host {
+            available: BackendSet {
+                sudo: None,
+                doas: None,
+                pkexec: Some(PathBuf::from("/usr/bin/pkexec")),
+                osascript: None,
+            },
+            ..sudo_host()
+        };
+        let mut c2 = Command::new();
+        c2.args(["id"])
+            .env("A", "1")
+            .elevation_backend(Backend::Pkexec)
+            .elevation_auth(Auth::Gui);
+        assert!(matches!(
+            rewrite_with_host(&mut c2, &pk_host),
+            Err(Error::Unsupported { .. })
+        ));
+    }
+
+    #[skuld::test]
+    fn askpass_path_is_carried_in_the_backend_env() {
+        let mut c = Command::new();
+        c.args(["id"])
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::Askpass(PathBuf::from("/usr/bin/ssh-askpass")));
+        let rw = rewrite_with_host(&mut c, &sudo_host()).expect("rewrite");
+        assert!(rw
+            .derived
+            .as_ref()
+            .unwrap()
+            .env_ops()
+            .iter()
+            .any(|o| matches!(o, EnvOp::Set(k, v) if k == "SUDO_ASKPASS" && v == "/usr/bin/ssh-askpass")));
+    }
+
+    #[skuld::test]
+    fn stdin_auth_wires_fd0_to_a_file_and_defers_the_write() {
+        let mut c = Command::new();
+        c.args(["id"])
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::Stdin(crate::elevation::Secret::new("pw")));
+        let rw = rewrite_with_host(&mut c, &sudo_host()).expect("rewrite");
+        // Stdio::from_file(reader) resolves to ResolvedStdio::File(_).
+        assert!(matches!(
+            rw.derived.as_ref().unwrap().fds().get(&Fd::STDIN),
+            Some(ResolvedStdio::File(_))
+        ));
+        assert!(
+            rw.password_write.is_some(),
+            "the password write is deferred to after spawn"
+        );
+        // fd0 is the password channel, not the caller's stdin — reported honestly.
+        assert_eq!(rw.report.as_ref().unwrap().stdio, ElevatedStdio::StdinConsumed);
+    }
+
+    #[skuld::test]
+    fn stdin_auth_with_caller_configured_fd0_is_unsupported() {
+        let mut c = Command::new();
+        c.args(["id"])
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::Stdin(crate::elevation::Secret::new("pw")));
+        c.stdin(Stdio::pipe()).unwrap();
+        assert!(matches!(
+            rewrite_with_host(&mut c, &sudo_host()),
+            Err(Error::Unsupported { .. })
+        ));
+    }
+
+    #[skuld::test]
+    fn fd_ge_3_elevated_is_unsupported() {
+        let mut c = Command::new();
+        c.args(["id"])
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        c.fd(3, Stdio::pipe_out()).unwrap();
+        assert!(matches!(
+            rewrite_with_host(&mut c, &sudo_host()),
+            Err(Error::Unsupported { .. })
+        ));
+    }
+
+    #[skuld::test]
+    fn commandline_elevated_is_unsupported() {
+        let mut c = Command::new();
+        c.commandline("id -u")
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        assert!(matches!(
+            rewrite_with_host(&mut c, &sudo_host()),
+            Err(Error::Unsupported { .. })
+        ));
+    }
+
+    pub(super) fn elevated_sudo_host() -> Host {
+        Host {
+            elevated: true,
+            ..sudo_host()
+        }
+    }
+
+    #[skuld::test]
+    fn already_elevated_requested_sanitizes_into_a_derived_with_no_backend() {
+        // The RunAsIs (requested but already elevated) branch: no wrapper, but the
+        // sanitizer STILL runs — a dangerous forwarded var must never reach the root
+        // child, and the report carries the real stripped list.
+        let mut c = Command::new();
+        c.args(["id", "-u"])
+            .env("LD_PRELOAD", "/evil.so")
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        let rw = rewrite_with_host(&mut c, &elevated_sudo_host()).expect("rewrite");
+        // A derived command IS built (non-destructive), but there is no backend wrapper.
+        let derived = rw
+            .derived
+            .as_ref()
+            .expect("already-elevated still derives a sanitized command");
+        assert!(rw.backend_path.is_none());
+        assert!(rw.password_write.is_none());
+        let report = rw.report.as_ref().unwrap();
+        assert_eq!(report.via, ElevatedVia::AlreadyElevated);
+        assert_eq!(report.stripped_env, vec![OsString::from("LD_PRELOAD")]);
+        // The derived program is the ORIGINAL command, not a backend.
+        assert!(matches!(derived.input(), CommandInput::Argv(v) if v == &[OsString::from("id"), OsString::from("-u")]));
+        // The dangerous var is gone from the derived env even under root.
+        assert!(!derived
+            .env_ops()
+            .iter()
+            .any(|o| matches!(o, EnvOp::Set(k, _) if k == "LD_PRELOAD")));
+        // The caller's Command is left untouched.
+        assert_eq!(c.env_ops().len(), 1, "caller env ops must be intact");
+    }
+
+    #[skuld::test]
+    fn structural_config_gates_are_privilege_independent() {
+        // Same structurally-invalid requests must be rejected whether or not the caller
+        // is already elevated (Config gates run before the RunAsIs short-circuit).
+        for host in [sudo_host(), elevated_sudo_host()] {
+            let mut a = Command::new();
+            a.args(["id"])
+                .elevation_backend(Backend::Sudo)
+                .elevation_auth(Auth::NonInteractive);
+            a.fd(3, Stdio::pipe_out()).unwrap();
+            assert!(
+                matches!(rewrite_with_host(&mut a, &host), Err(Error::Unsupported { .. })),
+                "fd>=3 must reject with elevated={}",
+                host.elevated
+            );
+
+            let mut b = Command::new();
+            b.args(["id"])
+                .env("A", "1")
+                .elevation_backend(Backend::Doas)
+                .elevation_auth(Auth::NonInteractive);
+            let doas_host = Host {
+                available: BackendSet {
+                    sudo: None,
+                    doas: Some(PathBuf::from("/usr/bin/doas")),
+                    pkexec: None,
+                    osascript: None,
+                },
+                ..host.clone()
+            };
+            assert!(
+                matches!(rewrite_with_host(&mut b, &doas_host), Err(Error::Unsupported { .. })),
+                ".env()+doas must reject with elevated={}",
+                host.elevated
+            );
+
+            let mut d = Command::new();
+            d.commandline("id -u")
+                .elevation_backend(Backend::Sudo)
+                .elevation_auth(Auth::NonInteractive);
+            assert!(
+                matches!(rewrite_with_host(&mut d, &host), Err(Error::Unsupported { .. })),
+                "commandline() must reject with elevated={}",
+                host.elevated
+            );
+        }
+    }
+
+    #[skuld::test]
+    fn password_line_is_presized_and_appends_a_newline() {
+        // A realloc while appending '\n' would leave an un-zeroized plaintext copy in the
+        // freed buffer. `with_capacity(len+1)` guarantees AT LEAST len+1 so the push never
+        // reallocates; assert the invariant (capacity >= len), not an exact capacity.
+        let secret = b"hunter2";
+        let line = password_line(secret);
+        assert_eq!(line, b"hunter2\n");
+        assert!(
+            line.capacity() >= line.len(),
+            "buffer must be pre-sized so the push never reallocates"
+        );
+    }
+
+    #[skuld::test]
+    fn write_after_spawn_writes_password_and_newline_then_eof() {
+        use std::io::Read;
+        let (mut reader, writer) = std::io::pipe().unwrap();
+        let pp = PendingPassword {
+            writer,
+            secret: crate::elevation::Secret::new("pw"),
+        };
+        pp.write_after_spawn().expect("password delivered");
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf).unwrap();
+        assert_eq!(buf, b"pw\n", "the secret plus a trailing newline, then EOF");
+    }
+
+    #[skuld::test]
+    fn write_after_spawn_is_ok_when_the_backend_never_reads_fd0() {
+        // A cached-credential / NOPASSWD sudo closes fd0 without reading: not an AuthFailed.
+        let (reader, writer) = std::io::pipe().unwrap();
+        drop(reader);
+        let pp = PendingPassword {
+            writer,
+            secret: crate::elevation::Secret::new("pw"),
+        };
+        assert!(
+            pp.write_after_spawn().is_ok(),
+            "reader-gone with zero bytes written is not a failure"
+        );
+    }
+
+    #[skuld::test]
+    fn write_after_spawn_delivers_a_password_larger_than_the_pipe_buffer() {
+        // Forces the partial-write path: the buffer fills, `write` returns WouldBlock after
+        // a partial write, and the writer must poll for writability (a real fd event, no
+        // timer) and finish — never truncate and report a false success.
+        use std::io::Read;
+        let (mut reader, writer) = std::io::pipe().unwrap();
+        let secret_bytes = vec![b'x'; 1 << 20]; // 1 MiB, far exceeds the ~64 KiB pipe buffer
+        let pp = PendingPassword {
+            writer,
+            secret: crate::elevation::Secret::new(secret_bytes.clone()),
+        };
+        let drain = std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            reader.read_to_end(&mut buf).unwrap();
+            buf
+        });
+        pp.write_after_spawn().expect("large password delivered in full");
+        let got = drain.join().unwrap();
+        assert_eq!(got.len(), secret_bytes.len() + 1);
+        assert_eq!(&got[..secret_bytes.len()], &secret_bytes[..]);
+        assert_eq!(got[secret_bytes.len()], b'\n');
+    }
+
+    // ===== macOS graphical elevation, planned on ANY unix host =====
+
+    pub(super) fn macos_gui_host(elevated: bool) -> Host {
+        Host {
+            elevated,
+            has_tty: false,
+            available: BackendSet {
+                sudo: Some(PathBuf::from("/usr/bin/sudo")),
+                doas: None,
+                pkexec: None,
+                osascript: Some(PathBuf::from("/usr/bin/osascript")),
+            },
+            os: Os::MacOs,
+            arg_max: Some(1_048_576),
+            pkexec_version: crate::elevation::pkexec::PkexecVersion::NotProbed,
+            pkexec_pin: None,
+        }
+    }
+
+    #[skuld::test]
+    fn macos_gui_rewrites_to_osascript() {
+        let mut c = Command::new();
+        c.args(["/usr/bin/id", "-u"]).elevation_auth(Auth::Gui);
+        let rw = rewrite_with_host(&mut c, &macos_gui_host(false)).expect("macos gui rewrite");
+        let derived = rw.derived.expect("a derived command");
+        let CommandInput::Argv(argv) = derived.input() else {
+            panic!("argv expected")
+        };
+        assert_eq!(argv[0], OsString::from("/usr/bin/osascript"));
+        assert_eq!(argv[1], OsString::from("-e"));
+        assert!(argv[2].to_str().unwrap().contains("with administrator privileges"));
+        assert_eq!(rw.backend_path, Some(PathBuf::from("/usr/bin/osascript")));
+        assert!(rw.password_write.is_none());
+        let report = rw.report.expect("a report");
+        assert_eq!(report.via, ElevatedVia::MacosOsascript);
+        assert_eq!(report.stdio, ElevatedStdio::OsascriptRelay);
+    }
+
+    #[skuld::test]
+    fn macos_gui_uses_the_macos_gate_not_the_posix_one() {
+        // .contain() is legal under sudo and illegal under osascript; the gate
+        // choice is what makes the difference, so assert the macOS message.
+        let mut c = Command::new();
+        c.args(["/usr/bin/id"]).contain().elevation_auth(Auth::Gui);
+        // `PosixRewrite` has no `Debug`, so the error is named rather than the whole
+        // Result — the same reason the sibling arms below spell `Ok(_)` out.
+        match rewrite_with_host(&mut c, &macos_gui_host(false)) {
+            Err(Error::Unsupported { platform, .. }) => assert_eq!(platform, "macos"),
+            Err(other) => panic!("expected a macos Unsupported, got {other}"),
+            Ok(_) => panic!("expected a macos Unsupported, got a successful rewrite"),
+        }
+    }
+
+    #[skuld::test]
+    fn the_macos_gui_gate_is_privilege_independent() {
+        // The crate's stated invariant: a structural verdict is a property of the
+        // REQUEST, never of ambient privilege. If this flipped, a developer testing
+        // as root would see .contain() accepted and ship it, and every unprivileged
+        // user would hit a hard Unsupported at runtime.
+        for elevated in [false, true] {
+            let mut c = Command::new();
+            c.args(["/usr/bin/id"]).contain().elevation_auth(Auth::Gui);
+            match rewrite_with_host(&mut c, &macos_gui_host(elevated)) {
+                Err(Error::Unsupported { platform, .. }) => assert_eq!(platform, "macos"),
+                Err(other) => panic!("expected a macos Unsupported (elevated={elevated}), got {other}"),
+                Ok(_) => panic!("the verdict must not flip on ambient privilege (elevated={elevated})"),
+            }
+        }
+    }
+
+    #[skuld::test]
+    fn an_already_root_macos_gui_caller_runs_unwrapped() {
+        // With a clean config the short-circuit still applies: no osascript.
+        let mut c = Command::new();
+        c.args(["/usr/bin/id"]).elevation_auth(Auth::Gui);
+        let rw = rewrite_with_host(&mut c, &macos_gui_host(true)).expect("already-root rewrite");
+        assert_eq!(rw.report.expect("a report").via, ElevatedVia::AlreadyElevated);
+        assert!(rw.backend_path.is_none(), "no wrapper runs when already elevated");
+    }
+
+    #[skuld::test]
+    fn a_forced_backend_with_gui_gets_the_planners_verdict_not_the_trampolines() {
+        // Backend::Sudo + Auth::Gui never reaches osascript, so the message must be
+        // about the backend pairing, not about the authorization trampoline.
+        let mut c = Command::new();
+        c.args(["/usr/bin/id"])
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::Gui);
+        match rewrite_with_host(&mut c, &macos_gui_host(false)) {
+            Err(Error::Unsupported { detail, .. }) => {
+                assert!(detail.contains("Backend::Auto"), "{detail}");
+                assert!(!detail.contains("trampoline"), "{detail}");
+            }
+            Err(other) => panic!("expected Unsupported, got {other}"),
+            Ok(_) => panic!("Backend::Sudo + Auth::Gui must not resolve on macOS"),
+        }
+    }
+
+    #[skuld::test]
+    fn a_missing_osascript_keeps_the_honest_backend_verdict_through_the_dispatch() {
+        // The gate is chosen from the REQUEST, so a missing osascript still takes
+        // the macOS gate; it passes on this clean config, and the planner's honest
+        // BackendUnavailable then reaches the caller verbatim rather than being
+        // pre-empted by a structural complaint.
+        let mut host = macos_gui_host(false);
+        host.available.osascript = None;
+        let mut c = Command::new();
+        c.args(["/usr/bin/id"]).elevation_auth(Auth::Gui);
+        match rewrite_with_host(&mut c, &host) {
+            Err(Error::Elevation { kind, detail }) => {
+                assert_eq!(kind, crate::error::ElevationErrorKind::BackendUnavailable);
+                assert!(detail.contains("osascript"), "{detail}");
+            }
+            Err(other) => panic!("expected BackendUnavailable, got {other}"),
+            Ok(_) => panic!("a missing osascript must not resolve to a rewrite"),
+        }
+    }
+
+    #[skuld::test]
+    fn macos_non_gui_auth_still_takes_the_posix_path() {
+        let mut c = Command::new();
+        c.args(["/usr/bin/id"]).elevation_auth(Auth::NonInteractive);
+        let rw = rewrite_with_host(&mut c, &macos_gui_host(false)).expect("sudo rewrite");
+        assert_eq!(rw.backend_path, Some(PathBuf::from("/usr/bin/sudo")));
+    }
+
+    /// The rewrite must carry the marker suppression onto the derived command, or the derived `sudo …`
+    /// spawn would install a marker its own wrapper immediately destroys. Test it through the real
+    /// rewrite, not just the setter/getter pair.
+    #[skuld::test]
+    fn rewrite_suppresses_the_fd_marker_on_the_derived_command_while_keeping_containment() {
+        let mut c = Command::new();
+        c.args(["id", "-u"])
+            .contain_with(crate::ContainMode::Strongest)
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        let rw = rewrite_with_host(&mut c, &sudo_host()).expect("rewrite");
+        let derived = rw.derived.as_ref().expect("derived");
+        assert!(
+            derived.fd_marker_suppressed(),
+            "transfer_process_attrs must suppress the fd marker on the derived sudo command, or \
+             an elevated contained spawn would claim a guarantee sudo's closefrom destroys"
+        );
+        assert_eq!(
+            derived.contain_request().mode,
+            Some(crate::ContainMode::Strongest),
+            "the caller's containment REQUEST must still cross the rewrite unchanged — only the \
+             fd marker specifically is suppressed, not containment as a whole"
+        );
+    }
+
+    /// `RunAsIs`'s derived command spawns the ORIGINAL program directly — no `sudo`/`doas`/
+    /// `pkexec` wrapper, hence no `closefrom` to destroy the marker. Suppressing it there
+    /// would falsely claim a guarantee that already holds; a root process spawning a
+    /// contained child on this path must still get the marker.
+    #[skuld::test]
+    fn already_elevated_requested_does_not_suppress_the_fd_marker() {
+        let mut c = Command::new();
+        c.args(["id", "-u"])
+            .contain_with(crate::ContainMode::Strongest)
+            .elevation_backend(Backend::Sudo)
+            .elevation_auth(Auth::NonInteractive);
+        let rw = rewrite_with_host(&mut c, &elevated_sudo_host()).expect("rewrite");
+        let derived = rw.derived.as_ref().expect("derived");
+        assert!(
+            !derived.fd_marker_suppressed(),
+            "RunAsIs spawns the original program with no wrapper; suppressing the marker here \
+             is a false justification and loses setsid-proof containment for no reason"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[path = "posix_tests/cwd.rs"]
+mod cwd;
+
+#[cfg(unix)]
+#[path = "posix_tests/front.rs"]
+mod front;
+
+#[cfg(unix)]
+#[path = "posix_tests/setter.rs"]
+mod setter;

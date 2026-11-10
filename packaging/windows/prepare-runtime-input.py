@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path, PurePosixPath
+import re
 import shutil
 import stat
 import subprocess
@@ -17,6 +18,39 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 MAX_BYTES = 2 * 1024 * 1024 * 1024
 MAX_MEMBERS = 1000
+
+
+def download_runtime(selection, version, download_root):
+    """Read one immutable, checksum-pinned asset without draft-by-tag discovery."""
+    binding = selection.get("releaseInput", {})
+    name = f"mailcraft-{version}-windows-x64-content-runtime.zip"
+    if (binding.get("repository") != "Darkaxt/mailcraft" or binding.get("tag") != "v" + version
+            or binding.get("name") != name or type(binding.get("assetId")) is not int or binding["assetId"] <= 0
+            or type(binding.get("bytes")) is not int or not 0 < binding["bytes"] <= MAX_BYTES
+            or not isinstance(binding.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", binding["sha256"])):
+        raise ValueError("Pin the exact matching release input asset ID/name/size/SHA256 before packaging")
+    endpoint = f"repos/Darkaxt/mailcraft/releases/assets/{binding['assetId']}"
+    api = ["gh", "api", "--hostname", "github.com", endpoint]
+    metadata = json.loads(subprocess.check_output(api, text=True, encoding="utf-8"))
+    if (metadata.get("id") != binding["assetId"] or metadata.get("name") != name
+            or metadata.get("state") != "uploaded" or metadata.get("size") != binding["bytes"]
+            or metadata.get("digest") != "sha256:" + binding["sha256"]):
+        raise ValueError("GitHub runtime asset metadata differs from the committed identity")
+    if download_root.exists():
+        raise FileExistsError("Preserve the original download and uncertain result")
+    download_root.mkdir(parents=True)
+    archive = download_root / name
+    with archive.open("xb") as output:
+        # Numeric asset reads require Contents:read; no compiler write permission,
+        # PAT, signing secret, expiring URL or early publication is introduced.
+        # Binary response bytes go only to this exclusive file, never a terminal.
+        subprocess.run([*api, "--allow-escape-sequences", "--header", "Accept: application/octet-stream"],
+                       stdout=output, check=True)
+    with archive.open("rb") as stream:
+        actual = hashlib.file_digest(stream, "sha256").hexdigest()
+    if archive.stat().st_size != binding["bytes"] or actual != binding["sha256"]:
+        raise ValueError("Downloaded runtime differs from its committed asset checksum; preserve original failure")
+    return archive
 
 
 def main():
@@ -29,18 +63,15 @@ def main():
     if package["repository"] != "https://github.com/Darkaxt/mailcraft":
         raise ValueError("Use the fork's explicitly configured release source")
     name = f"mailcraft-{package['version']}-windows-x64-content-runtime.zip"
+    selection = json.loads((ROOT / "native/craft-content/release-runtime.json").read_text(encoding="utf-8"))
     archive = args.archive
     if archive is None:
         if args.download_root is None or args.download_root.exists():
             raise ValueError("Provide a new exact download scratch directory")
-        args.download_root.mkdir(parents=True)
-        subprocess.run(["gh", "release", "download", "v" + package["version"], "--repo", "Darkaxt/mailcraft", "--pattern", name,
-            "--dir", str(args.download_root)], check=True)
-        archive = args.download_root / name
+        archive = download_runtime(selection, package["version"], args.download_root)
     spec = importlib.util.spec_from_file_location("mailcraft_package_runtime", ROOT / "packaging/windows/content-runtime.py")
     support = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(support)
-    selection = json.loads((ROOT / "native/craft-content/release-runtime.json").read_text(encoding="utf-8"))
     output = args.handoff / "content-runtime"
     delivered = args.handoff / name
     if output.exists() or delivered.exists():

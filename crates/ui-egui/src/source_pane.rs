@@ -282,8 +282,14 @@ pub(crate) fn show(app: &mut MailApp, ui: &mut Ui) {
             if response.clicked(){action=Some(json!({"export":true}));}
             if active.export.is_some(){ui.spinner();ui.label(tl!("Preparing complete message…"));}
         });
-        ui.add(egui::Label::new(egui::RichText::new(tl!("Text only: nothing runs or downloads. Export reconstructs MIME; original bytes are unavailable.")).color(t.text_dim).size(11.5)).wrap())
-            .on_hover_text(tl!("The retained headers, decoded bodies and attachments are exported completely. Original MIME nesting, encoding and signatures cannot be recreated."));
+        let retained_original=app.session.mailbox.message(active.id).is_some_and(|message|!message.draft && message.original.is_some());
+        let (description,details)=if retained_original {
+            (tl!("Text only: nothing runs or downloads. Export preserves the retained protected MIME body."),tl!("The signed or encrypted MIME body is preserved byte for byte; safe message headers are reconstructed. Export fails if the retained original cannot be read completely."))
+        } else {
+            (tl!("Text only: nothing runs or downloads. Export reconstructs MIME; original bytes are unavailable."),tl!("The retained headers, decoded bodies and attachments are exported completely. Original MIME nesting, encoding and signatures cannot be recreated."))
+        };
+        ui.add(egui::Label::new(egui::RichText::new(description).color(t.text_dim).size(11.5)).wrap())
+            .on_hover_text(details);
         if let Some(error)=&reader.error{ui.colored_label(t.text,error);return;}
         if reader.wanted{ui.horizontal(|ui|{ui.spinner();ui.label(if reader.downloading{tl!("Downloading the complete message…")}else{tl!("Preparing source…")});});return;}
         let Some(answer)=&reader.answer else{return;};

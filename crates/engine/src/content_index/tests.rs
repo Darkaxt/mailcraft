@@ -90,6 +90,46 @@ fn fixture(path: &Path) -> (u64, u64, u64) {
 }
 
 #[test]
+fn original_parts_stream_from_memory_or_verified_storage_without_loading_display_content() {
+    use std::io::Read;
+
+    use super::input::{EXTRACTOR_VERSION, Input, reference};
+    use crate::Part;
+
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (id, _, _) = fixture(&path);
+    let (mut session, _) = open(&path);
+    let input = Input::new(&session, id, EXTRACTOR_VERSION).unwrap();
+    assert!(input.open(Part::Original).is_err());
+    let bytes = b"Content-Type: application/pkcs7-mime\r\n\r\nExact original bytes";
+    let message = Arc::make_mut(session.mailbox.messages.get_mut(&id).unwrap());
+    message.original = mailcraft_model::Original::new(bytes.to_vec());
+    let expected = reference(message, Part::Original).unwrap();
+    let input = Input::new(&session, id, EXTRACTOR_VERSION).unwrap();
+    let mut read = Vec::new();
+    input.open(Part::Original).unwrap().read_to_end(&mut read).unwrap();
+    assert_eq!(read, bytes);
+    let kept = crate::store::stash(&path, &crate::store::Digest::of(bytes), bytes).unwrap();
+    assert_eq!(kept, expected);
+    let original = Arc::make_mut(session.mailbox.messages.get_mut(&id).unwrap()).original.as_mut().unwrap();
+    original.kept = Some(kept);
+    original.data = Arc::new(Vec::new());
+    let input = Input::new(&session, id, EXTRACTOR_VERSION).unwrap();
+    assert_eq!(reference(&input.message, Part::Original).unwrap(), expected);
+    let mut read = Vec::new();
+    input.open(Part::Original).unwrap().read_to_end(&mut read).unwrap();
+    assert_eq!(read, bytes);
+    assert!(session.mailbox.message(id).unwrap().original.as_ref().unwrap().data.is_empty());
+    let hash = crate::store::Digest::of(bytes).hex();
+    let mut corrupt = bytes.to_vec();
+    *corrupt.last_mut().unwrap() ^= 1;
+    std::fs::write(crate::store::blob_dir(&path).join(&hash[..2]).join(hash), corrupt).unwrap();
+    let mut read = Vec::new();
+    assert!(input.open(Part::Original).unwrap().read_to_end(&mut read).is_err());
+}
+
+#[test]
 fn persistent_full_sources_case_quotes_and_snippets_survive_reopen_without_body_reads() {
     let scratch = tempfile::tempdir().unwrap();
     let path = scratch.path().join("mailbox.mailcraft");

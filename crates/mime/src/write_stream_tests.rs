@@ -16,6 +16,7 @@ fn open(message: &Message, part: ContentPart) -> io::Result<Box<dyn Read + '_>> 
         ContentPart::Text => message.body.text.as_bytes(),
         ContentPart::Html => message.body.html.as_deref().unwrap_or_default().as_bytes(),
         ContentPart::Attachment(index) => message.attachments.get(index).ok_or_else(|| io::Error::other("missing part"))?.data.as_slice(),
+        ContentPart::Original => message.original_bytes().ok_or_else(|| io::Error::other("missing original"))?,
     };
     Ok(Box::new(Cursor::new(bytes)))
 }
@@ -61,6 +62,65 @@ fn streamed_complete_mime_reopens_with_bodies_headers_inline_ids_and_files() {
         assert_eq!(actual.content_id, expected.content_id);
         assert_eq!(actual.inline, expected.inline);
     }
+}
+
+#[test]
+fn a_protected_export_keeps_the_original_signed_body_and_safe_current_headers() {
+    let mut message = crate::parse_fetched(crate::protected_tests::SMIME_SIGNED);
+    let original_body = crate::header::split(message.original_bytes().unwrap(), true).1.to_vec();
+    message.subject = "Filed receipt".into();
+    message.bcc = vec![Address::new("Private recipient", "private@example.org")];
+    // Decoded display parts are not a replacement for the signed MIME envelope.
+    message.body.text = "A display-only copy".into();
+    message.attachments.clear();
+    let mut bytes = Vec::new();
+    write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
+    assert_eq!(crate::header::split(&bytes, true).1, original_body);
+    let reopened = parse(&bytes);
+    assert_eq!(reopened.subject, "Filed receipt");
+    assert_eq!(reopened.body.text.trim(), "Signed text.");
+    assert_eq!(reopened.attachments.len(), 1);
+    assert!(reopened.bcc.is_empty());
+    assert!(!String::from_utf8_lossy(&bytes).contains("private@example.org"));
+}
+
+#[test]
+fn a_large_retained_protected_body_streams_without_opening_decoded_parts() {
+    let size = 20u64 << 20;
+    let header = b"Content-Type: application/pkcs7-mime; smime-type=enveloped-data\r\nContent-Transfer-Encoding: binary\r\n\r\n";
+    let message = Message {
+        original: Some(mailcraft_model::Original {
+            data: Arc::new(Vec::new()),
+            kept: Some(ContentRef { sha256: [0; 32], len: size + header.len() as u64 }),
+        }),
+        ..Default::default()
+    };
+    let mut output = Count(0);
+    write_to(
+        &message,
+        &WriteOptions::default(),
+        NONCE,
+        &mut |part| {
+            assert_eq!(part, ContentPart::Original);
+            Ok(Box::new(Cursor::new(header.as_slice()).chain(io::repeat(42).take(size))))
+        },
+        &mut output,
+    )
+    .unwrap();
+    assert!(output.0 >= size);
+    assert!(message.original.as_ref().unwrap().data.is_empty());
+}
+
+#[test]
+fn a_broken_original_never_falls_back_to_a_reconstructed_message() {
+    let message = Message {
+        original: mailcraft_model::Original::new(b"Not a MIME header\r\n\r\nUntrusted body".to_vec()),
+        body: Body { text: "Decoded fallback must not be published".into(), html: None },
+        ..Default::default()
+    };
+    let mut output = Vec::new();
+    assert!(write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut output).is_err());
+    assert!(output.is_empty());
 }
 
 struct Count(u64);

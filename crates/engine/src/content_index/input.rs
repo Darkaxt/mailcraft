@@ -70,6 +70,10 @@ fn parts(message: &Message, part: Part) -> Result<(Option<ContentRef>, &[u8])> {
             let file = message.attachments.get(index).ok_or("the attachment no longer exists")?;
             (file.kept.filter(|_| file.data.is_empty()), file.data.as_slice())
         }
+        Part::Original => {
+            let original = message.original.as_ref().filter(|original| original.is_there()).ok_or("the message keeps no original")?;
+            (original.kept.filter(|_| original.data.is_empty()), original.data.as_slice())
+        }
     })
 }
 

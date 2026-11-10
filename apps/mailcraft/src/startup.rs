@@ -19,6 +19,7 @@ pub(crate) struct Startup {
 
 impl Startup {
     pub fn builder(self, ctx: egui::Context, file_dialog: Option<file_dialogs::Hook>) -> mailcraft_ui_egui::opening::Build {
+        let anchors = trust_anchors();
         Box::new(move |arrival| {
             let (mailbox, path, unavailable, unchecked, damaged) =
                 (arrival.mailbox, arrival.path, arrival.unavailable, arrival.unchecked, arrival.damaged);
@@ -36,6 +37,7 @@ impl Startup {
             services.claim_mailbox =
                 self.claimer.map(|c| Box::new(move |path: &std::path::Path| c.claim(path)) as Box<dyn Fn(&std::path::Path) -> bool>);
             let mut app = MailApp::new(session, services);
+            app.trust_anchors_arriving = Some(anchors);
             app.autosave = kept;
             if let Some(path) = &app.session.path {
                 app.services.saver = background_saver(&ctx, path);

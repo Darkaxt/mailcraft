@@ -18,3 +18,17 @@
 
 # Retain source-import byte identities across Windows checkouts and recovery stashes.
 vendor/winit/** -text
+# Messages that are test vectors are kept byte for byte: a Digital signature covers their CRLF line ends.
+crates/smime/testdata/** binary
+fuzz/seeds/smime/** binary
+vendor/cosca/** -text
+
+# The native runtime is source-bound by byte hashes on every packaging host.
+native/craft-content/sources.json text eol=lf
+native/craft-content/ocr-sources.json text eol=lf
+native/craft-content/worker.rs text eol=lf
+native/craft-content/extraction.rs text eol=lf
+native/craft-content/release-runtime.json text eol=lf
+crates/craft-content/src/lib.rs text eol=lf
+crates/craft-content/src/paging.rs text eol=lf
+crates/craft-content/src/protocol.rs text eol=lf

@@ -4,6 +4,15 @@
 use super::{HEADER, expected_header, missing};
 
 #[test]
+fn vendored_process_dependency_retains_its_actual_apache_copyright() {
+    let path = "vendor/cosca/src/elevation/windows.rs";
+    let header = "// SPDX-FileCopyrightText: Anna Zhukova\n// SPDX-License-Identifier: Apache-2.0\n";
+    assert_eq!(expected_header(path), header);
+    assert!(missing(&[path.to_owned()], |_| Some(header.into())).is_empty());
+    assert_eq!(missing(&[path.to_owned()], |_| Some(HEADER.into())), [path]);
+}
+
+#[test]
 fn imported_adapters_require_their_actual_copyright_and_mit_licence() {
     let external = "native/craft-content/adapters/wordcraft/engine.rs";
     let modified = "native/craft-content/adapters/gridcraft/engine.rs";

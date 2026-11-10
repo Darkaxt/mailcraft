@@ -1,0 +1,537 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+//! `Child` graceful shutdown — the soft-then-hard escalation trio. A submodule of `child`
+//! so it can reach `Child`'s private `proc`/`id`.
+
+use std::process::ExitStatus;
+use std::time::Duration;
+
+use super::Child;
+use crate::error::Error;
+
+/// The `crate::wait::fault` grace-watch seam, consumed HERE rather than inside a specific
+/// backend so it applies uniformly to whichever watch `graceful_shutdown_tree` actually
+/// performs — root-only ([`crate::wait::block_until_exit`]) or whole-tree
+/// ([`crate::containment::Attached::wait_drained`]). Outside test builds the seam module does
+/// not exist at all, so this compiles to a constant `None`.
+#[cfg(test)]
+fn take_forced_watch_error() -> Option<Error> {
+    crate::wait::fault::take_force_watch_error().then(crate::wait::fault::forced_watch_error)
+}
+#[cfg(not(test))]
+fn take_forced_watch_error() -> Option<Error> {
+    None
+}
+
+impl Child {
+    /// Send the child its cooperative shutdown signal — a request to exit, not an order.
+    /// Signal-only: does not wait or reap.
+    ///
+    /// Which signal, and how far it goes, is per child: read it from
+    /// [`graceful_mechanism`](Child::graceful_mechanism). On Unix it is an identity-bound
+    /// `SIGTERM` to this process alone, so it cannot race a concurrent reap onto a recycled pid.
+    /// On Windows it is `CTRL_BREAK` to the child's own **console process group** — every child
+    /// spawned with [`contain`](crate::Command::contain), including a nested
+    /// [`Delegated`](crate::Containment::Delegated) one. A child that leads no group of its own
+    /// (an uncontained Windows spawn) is refused with `Unsupported`; `kill` is the
+    /// always-available alternative.
+    ///
+    /// **Windows blast radius.** The event reaches the child's whole console group, so an
+    /// ordinary descendant that stayed in that group is signalled too, while a nested
+    /// *contained* descendant — which leads a group of its own — is not.
+    ///
+    /// **The caller must hold a console** ([`Error::NoConsole`](crate::error::Error::NoConsole)
+    /// otherwise: a GUI-subsystem binary, a service, or a detached spawn cannot deliver console
+    /// control events). A child that owns its own console instead needs a process attached to
+    /// *that* console to signal it — it is not beyond a polite shutdown, just beyond this
+    /// process's reach.
+    ///
+    /// **Success does not prove delivery on Windows.** Windows reports success for an event
+    /// aimed at a group in another console and delivers nothing, and this process cannot rule
+    /// that case out: absence from its console list is equally the answer for a healthy child.
+    /// Each such call also leaves a dead entry in the caller's console process list.
+    ///
+    /// **Every error means nothing was sent and nothing was killed.** On Linux that includes a
+    /// refused `pidfd_open`, which is `Unsupported` (see [`Error::Unsupported`](crate::error::Error::Unsupported)).
+    ///
+    /// **A macOS graphically-elevated child** ([`ElevatedVia::MacosOsascript`](crate::elevation::ElevatedVia::MacosOsascript))
+    /// is refused while osascript runs, as its kill is (see [`kill`](Child::kill)): a `SIGTERM`
+    /// would end osascript, not the program.
+    ///
+    /// **Windows, before the child has run.** Between the spawn returning and the child
+    /// executing its first instructions it has not yet registered with any console; an event
+    /// delivered in that window ends it during loader init rather than through its own handler.
+    /// That is an abrupt end, not a failed one, and it is reported `Ok`. A caller that has
+    /// observed anything from the child — a byte of output, a handshake, an exit-status check —
+    /// is past the window and gets a real cooperative signal; a caller that wants the child gone
+    /// before it has run at all should use [`kill`](Child::kill), which is honest about being
+    /// forced.
+    ///
+    /// **macOS, a root launchd holds** is refused with nothing sent, and an `Unknown` root is signalled
+    /// through the handle, as for [`kill`](Child::kill).
+    pub fn terminate(&self) -> Result<(), Error> {
+        #[cfg(unix)]
+        {
+            // A front's refusal outranks a root launchd holds, as for `kill`.
+            if let crate::elevation::front::Gate::Closed(unkillable) = self.terminate_gate() {
+                return Err(unkillable);
+            }
+            self.refuse_unpinned("terminate", None)?;
+        }
+        crate::graceful::signal(self.graceful, self.id)
+    }
+
+    /// Cooperative-then-forced lone shutdown: [`terminate`](Child::terminate), wait up to
+    /// `grace` for the child to exit, then hard-kill it if it has not — reaping either way and
+    /// returning its `ExitStatus`. The status distinguishes a graceful exit from a forced one —
+    /// best-effort at the boundary: a child that exits of its own accord between the grace
+    /// elapsing and the kill landing reports its own status. Escalation proceeds even if the
+    /// child ignores the cooperative signal. `grace` is relative; `Duration::ZERO` signals,
+    /// polls once, then escalates.
+    ///
+    /// Every caveat on [`terminate`](Child::terminate) applies to the cooperative half, and a
+    /// cooperative-signal error propagates immediately: no grace is waited, nothing is killed,
+    /// and the child is left running for the caller to `kill`.
+    ///
+    /// **Windows: the two halves have different radii.** The cooperative half reaches the
+    /// child's whole console group; the forced half reaches only the child. So a descendant
+    /// that stayed in the child's group can be left told-to-exit but not killed: if the child
+    /// itself exits within `grace`, this returns `Ok` while that descendant — possibly hung
+    /// mid-shutdown — keeps running, with no hard backstop and no error. For a leaf child, the
+    /// common case, the two radii are identical. Two routes give matched radii: the tree
+    /// variants on a contained root ([`graceful_shutdown_tree`](Child::graceful_shutdown_tree)
+    /// plus [`kill_tree`](Child::kill_tree)), or each level shutting down its own children,
+    /// which works because a child that owns a console can politely signal its own
+    /// group-leading children.
+    ///
+    /// **Neither route is available to the holder of a nested contained child.** Its `_tree`
+    /// ops are `Unsupported` by design, and the root that owns its teardown lives in the
+    /// intermediate process that spawned it. What that holder can do is exactly this call: the
+    /// cooperative half reaches the nested child's own group and the forced half reaches the
+    /// child. Anything below it that left that group is the intermediate's business — and if the
+    /// intermediate is itself contained by *its* holder, `kill_tree` there is the backstop.
+    ///
+    /// A watch failure never skips the kill and reap; it surfaces only after they run, and a
+    /// kill/reap error takes precedence (the child then stays owned — `Drop`'s teardown
+    /// applies).
+    ///
+    /// An elevated child behind a front (see [`kill`](Child::kill)) that outlives the grace is killed
+    /// only through a cgroup that holds it. Outside one it is left running, and this answers
+    /// [`ElevationErrorKind::Unkillable`](crate::error::ElevationErrorKind::Unkillable).
+    ///
+    /// **macOS, a root launchd holds** is refused by the cooperative half, as for
+    /// [`kill`](Child::kill). A root orphaned during the grace is not killed: the escalation returns
+    /// [`Error::Unassessable`](crate::error::Error::Unassessable) saying the kill sent nothing though
+    /// the `SIGTERM` was sent, and the grace wait does not warn.
+    pub fn graceful_shutdown(&self, grace: Duration) -> Result<ExitStatus, Error> {
+        self.terminate()?;
+
+        // Quiet about a zombie launchd holds: the refusal below is the one report of it.
+        #[cfg(unix)]
+        let watch = self.wait_timeout_quiet(grace);
+        #[cfg(not(unix))]
+        let watch = self.wait_timeout(grace);
+        if let Ok(Some(status)) = &watch {
+            return Ok(*status); // exited within grace (already reaped by wait_timeout)
+        }
+        if let Err(e) = &watch {
+            log::debug!(
+                "graceful_shutdown({id}): watch error before escalation (subsumed if it also fails): {e}",
+                id = self.id.pid()
+            );
+        }
+        #[cfg(test)]
+        fault::run_hook(fault::HookPoint::BeforeEscalation);
+        // A root orphaned during the grace is no longer ours to kill.
+        #[cfg(unix)]
+        self.refuse_unpinned("kill", Some("the SIGTERM"))?;
+        // Escalate; an Err returns HERE, subsuming any watch Err (deliberate — mirrors kill_tree's
+        // both-fail disposition). A live front outside a cgroup is not signalled; any other child's
+        // refused kill stays the raw `Io`.
+        #[cfg(unix)]
+        match self.kill_gate() {
+            crate::elevation::front::Gate::Closed(unkillable) => return Err(unkillable),
+            // An exit is permanent, so a refused signal to an exited front changes nothing.
+            crate::elevation::front::Gate::Exited => match self.proc.kill() {
+                Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                    log::debug!("the kill of exited front pid {} was refused ({e})", self.id.pid());
+                }
+                other => other.map_err(Error::Io)?,
+            },
+            crate::elevation::front::Gate::Open => self.proc.kill().map_err(Error::Io)?,
+            // A live front in its cgroup: killed through it, and nothing signalled after it.
+            crate::elevation::front::Gate::CgroupOnly => {
+                self.attached
+                    .hard_kill_marking(&self.tree_killed)
+                    .map_err(|e| crate::elevation::front::cgroup_kill_failed(self.front, self.id.pid(), e))?;
+                self.cgroup_kill_reached()?;
+            }
+        }
+        #[cfg(not(unix))]
+        self.proc.kill().map_err(Error::Io)?;
+        #[cfg(test)]
+        fault::run_hook(fault::HookPoint::BeforeReap);
+        let status = self.wait()?;
+        watch?;
+        Ok(status)
+    }
+
+    /// Cooperative-then-forced shutdown of the contained tree: send the group its graceful
+    /// signal (`SIGTERM` via `killpg`/cgroup, or `CTRL_BREAK` to the job/console group), wait
+    /// up to `grace`, then hard-sweep any survivors and reap the root. Returns the root's
+    /// `ExitStatus`. Requires an actionable containment mechanism (errors `Unsupported`
+    /// otherwise — use [`graceful_shutdown`](Child::graceful_shutdown) for a lone child).
+    /// Works on all platforms.
+    ///
+    /// **What the grace-wait watches depends on the mechanism.** On one with a real kernel
+    /// drain edge ([`Containment::can_observe_drain`](crate::containment::Containment::can_observe_drain)
+    /// — cgroup v2, a Windows job object, the macOS fd marker), the whole `grace` is spent
+    /// watching the *entire tree* drain, and the hard sweep below runs only if `grace` elapses
+    /// before the tree does — never on a tree that already cleared on its own. On every other
+    /// mechanism (`ProcessGroup`, `Session`, `TreeWalk`) there is no kernel edge to observe
+    /// descendants draining, so the wait watches the **root only** and the sweep always runs
+    /// afterward regardless of what it saw, exactly as before this distinction existed.
+    ///
+    /// **Windows: what this actually signals, and what the grace costs.** `CTRL_BREAK` goes
+    /// to the root's **process group** only. A nested contained descendant leads its own
+    /// group and never receives it — so it does not exit during the grace, idles through the
+    /// whole window, and is then killed by the sweep (a job object *is* drain-observable, so
+    /// this shows up as `grace` fully elapsing rather than draining early, not as a skipped
+    /// wait). The call reports no error either way: on Windows the grace is spent regardless
+    /// of how much of the tree the signal reached. Size it accordingly, and treat
+    /// [`kill_tree`](Child::kill_tree) as the only op that reaches every member FROM THIS
+    /// HANDLE. The layers the group signal skips are not beyond a polite shutdown: the holder
+    /// of a nested descendant's own `Child` can drain it with
+    /// [`graceful_shutdown`](Child::graceful_shutdown) before this root is torn down, and a
+    /// chain in which each level shuts down its own children drains completely, because a
+    /// child that owns a console can politely signal its own group-leading children.
+    ///
+    /// **And success here does not prove the event was delivered.** A root that shares no
+    /// console with the caller is reported as success and reaches nobody — including a root
+    /// spawned with [`no_window`](crate::Command::no_window) or
+    /// `detached()`, which gets a console of its own. Such a root is
+    /// reported as [`GracefulMechanism::OtherConsoleGroup`](crate::GracefulMechanism::OtherConsoleGroup)
+    /// by [`graceful_mechanism`](Child::graceful_mechanism): that is what cosca recorded about
+    /// the *route* from this process, never an authority on whether a signal will arrive. It is
+    /// also not "this child cannot be shut down politely" — a process attached to the child's own
+    /// console can deliver the event. The cooperative op returns `Ok` and delivers nothing; the
+    /// forced ops ([`kill`](Child::kill) / [`kill_tree`](Child::kill_tree), and the escalation
+    /// half of [`graceful_shutdown_tree`](Child::graceful_shutdown_tree)) are unaffected.
+    ///
+    /// **The caller must also have a console.** The event is deliverable only within the
+    /// *calling* process's console, so a GUI-subsystem binary, a service, or anything spawned
+    /// detached fails up front: no signal is sent, no grace is waited, and the tree is left
+    /// running for the caller to `kill_tree` (which needs no console). The cause is
+    /// classified best-effort — usually [`Error::NoConsole`](crate::error::Error::NoConsole),
+    /// but a raw `Error::Io` when the crate cannot confirm it — so treat **any** error here
+    /// as "not delivered, tree still running".
+    ///
+    /// The grace-wait is **non-reaping** (watches exit without collecting it), so a subsequent
+    /// hard sweep runs while the root's pid — and thus the `killpg` group id — is still valid;
+    /// reaping first could let `killpg` hit a recycled group. A skipped or no-op sweep alike
+    /// preserve a graceful exit's status (the lone backstop no-ops on an already-dead root).
+    ///
+    /// A watch failure never skips the sweep and reap; a sweep error wins over it — and over
+    /// a graceful root exit (survivors may remain; the root is still reaped first when its
+    /// exit was observed, otherwise the child stays owned for `Drop`).
+    ///
+    /// **A refused or unconfirmed graceful signal never skips the grace wait and hard sweep
+    /// either.** If the initial group signal reaches a live member that refuses it, or a
+    /// member's post-signal state cannot be confirmed
+    /// ([`Error::Containment`](crate::error::Error::Containment) or
+    /// [`Error::Unassessable`](crate::error::Error::Unassessable) with no I/O `source` — see
+    /// [`terminate_tree`](Child::terminate_tree)), the grace is still waited and the sweep
+    /// still runs, so a member that only needed the follow-up `SIGKILL` does not strand the
+    /// rest of the tree. A subsequent successful sweep is fresher, positive proof the group
+    /// cleared, which supersedes the earlier refusal: it is logged and discarded, and this
+    /// call reports `Ok`. It resurfaces only indirectly, as the sweep's own error, if the
+    /// sweep then fails too. A genuine listing-mechanism failure (an `Unassessable` with an
+    /// I/O `source`) is not held — like `NoConsole`/`Unsupported`/`Io`, it returns
+    /// immediately: no signal is confirmed sent, so there is nothing for a grace wait or
+    /// sweep to act on yet.
+    ///
+    /// A refused Linux `pidfd_open` while watching the root is `Unsupported` (see [`Error::Unsupported`](crate::error::Error::Unsupported)); it is a
+    /// watch failure, so the sweep still runs.
+    ///
+    /// **macOS, a root the handle cannot vouch for** is signalled as for
+    /// [`terminate_tree`](Child::terminate_tree) and swept as for [`kill_tree`](Child::kill_tree). A
+    /// mechanism with no channel by identity ends the call up front, with nothing sent and no grace
+    /// waited. A root launchd holds has no exit status to collect: once the tree is down this returns
+    /// [`Error::Unassessable`](crate::error::Error::Unassessable) instead of waiting on a zombie that
+    /// is not this process's to reap.
+    pub fn graceful_shutdown_tree(&self, grace: Duration) -> Result<ExitStatus, Error> {
+        // Fail fast before sending any signal. terminate_tree/kill_tree re-check this guard
+        // internally; the redundancy is intentional so an uncontained child errors up front.
+        self.require_contained()?;
+
+        // The cooperative signal, by identity alone while the root is `Unpinned` or `Unknown`
+        // (see `terminate_tree`). With no channel by identity there is nothing to signal, wait for
+        // or sweep, so the call ends here with nothing sent.
+        #[cfg(target_os = "macos")]
+        let by_identity = match self.tree_signal_untrusted(
+            crate::containment::dispatch::TreeSignal::Term,
+            "graceful_shutdown_tree",
+            None,
+        ) {
+            Some(Err(e)) if !self.attached.names_tree_by_identity() => return Err(e),
+            other => other,
+        };
+        let term_signal = || {
+            #[cfg(target_os = "macos")]
+            if let Some(result) = by_identity {
+                return result;
+            }
+            self.terminate_tree_signalling()
+        };
+
+        #[cfg(test)]
+        let term_result = match fault::take_force_terminate() {
+            fault::Forced::None => term_signal(),
+            kind => Err(fault::forced_terminate_error(kind)),
+        };
+        #[cfg(not(test))]
+        let term_result = term_signal();
+
+        // Hold-and-continue ONLY for the error shapes #61's fix can produce as ORDINARY
+        // outcomes — a confirmed refusal (`Error::Containment`) or a per-member-unconfirmed
+        // state (`Error::Unassessable { source: None, .. }`, `group::decide`'s shape). Both mean
+        // a signal WAS attempted and reachable members WERE reached (`converge` delivers to
+        // everyone it can, refusers or not), so the grace wait is still meaningful and the sweep
+        // can still reach the rest. `Error::Unassessable { source: Some(_), .. }` — `group::
+        // state`'s OWN listing failed, before any member was even examined — is deliberately
+        // EXCLUDED from this arm and falls through to fail-fast below: `containment::fdmarker::
+        // is_teardown_mechanism_failure` classifies that identical shape as a genuine
+        // teardown-mechanism failure, not an ordinary #61 outcome, for the same reason (no
+        // delivery was even attempted) — holding for a grace wait and sweep that reflect nothing
+        // real would silently disagree with that classifier for the same error shape reaching a
+        // different call site. Every OTHER error (`NoConsole`, `Unsupported`, `Io`, ...) keeps the
+        // ORIGINAL fail-fast `?` — those mean no signal was sent at all (the documented contract
+        // on this exact function, unchanged by this issue), so waiting a grace period and
+        // hard-sweeping afterward would be new, undocumented behavior on a path #61 has nothing to
+        // do with.
+        let term = match term_result {
+            Ok(()) => Ok(()),
+            Err(e @ Error::Containment { .. }) | Err(e @ Error::Unassessable { source: None, .. }) => {
+                log::debug!(
+                    "graceful_shutdown_tree({id}): terminate_tree refused; the sweep's own outcome decides what surfaces: {e}",
+                    id = self.id.pid()
+                );
+                Err(e)
+            }
+            Err(e) => return Err(e), // unchanged pre-existing behavior: no signal sent, no grace, no sweep
+        };
+        #[cfg(test)]
+        fault::run_hook(fault::HookPoint::AfterTerminate);
+
+        // Watch-Err ordering: sweep + reap first, then surface (see graceful_shutdown above).
+        //
+        // `drained`: whether the sweep below is skippable. Only `TreeDrain::AllMembersExited`
+        // (`permits_skipping_sweep`) makes it true — positive kernel-confirmed proof the WHOLE
+        // tree exited, from a mechanism a live process cannot leave without exiting, so the
+        // sweep would be pure overhead. `AllMarkersClosed` (the macOS marker's advisory pipe
+        // EOF — see `TreeDrain`'s own doc) is NOT that proof: a live process can close its own
+        // copy of the marker descriptor and remain alive, undetectable by this edge alone, so
+        // it falls into the same "always sweep" bucket as `MembersRemain` and every mechanism
+        // with no drain edge at all. `root_exited`: whether the root specifically was observed
+        // to have exited. A skipped-sweep tree implies it. On the root-only-watch mechanism
+        // (the `else` arm below) it is that watch's own result. Everywhere else it comes from a
+        // fresh, non-blocking, zero-duration probe of the root alone, immediately below — a
+        // tree-wide verdict that isn't sufficient to skip the sweep says nothing about the root
+        // specifically (only some OTHER member may still be alive), and the probe costs nothing
+        // extra since `grace` was already fully spent by the tree-drain watch that just
+        // returned it. Used only below, to decide whether a best-effort reap is safe after a
+        // sweep failure.
+        let (drained, root_exited, watch_err) = if let Some(e) = take_forced_watch_error() {
+            (false, false, Some(e))
+        } else if self.containment().can_observe_drain() {
+            match self.attached.wait_drained(crate::wait::deadline_from(grace)) {
+                Ok(verdict) if verdict.permits_skipping_sweep() => (true, true, None),
+                // Not sufficient proof alone to skip the sweep (see the doc above) — fall back
+                // to the fresh, non-blocking, zero-duration root probe described there.
+                Ok(_) => match crate::wait::block_until_exit(self.id, Some(Duration::ZERO)) {
+                    Ok(exited) => (false, exited, None),
+                    Err(e) => (false, false, Some(e)),
+                },
+                Err(e) => (false, false, Some(e)),
+            }
+        } else {
+            match crate::wait::block_until_exit(self.id, Some(grace)) {
+                // NON-reaping grace-wait on the root only.
+                Ok(exited) => (false, exited, None),
+                Err(e) => (false, false, Some(e)),
+            }
+        };
+        if let Some(e) = &watch_err {
+            log::debug!(
+                "graceful_shutdown_tree({id}): watch error before escalation (subsumed if it also fails): {e}",
+                id = self.id.pid()
+            );
+        }
+        // A sweep Err subsumes any watch or terminate Err; it must propagate before the reap on
+        // a LIVE root (waiting unswept would hang), but once the root's exit was observed, the
+        // reap runs first so no zombie is stranded.
+        if !drained {
+            // The `#[cfg(test)]` arm lets a test PROVE the sweep is skipped when `drained`,
+            // not merely that it would have no-op'd: forcing this call to fail and then
+            // observing `Ok` from the whole function is only possible if this branch was
+            // never entered at all.
+            #[cfg(test)]
+            let sweep_result = if fault::take_force_kill_tree_error() {
+                Err(fault::forced_kill_tree_error())
+            } else {
+                self.kill_tree_after(Some("the SIGTERM"))
+            };
+            #[cfg(not(test))]
+            let sweep_result = self.kill_tree_after(Some("the SIGTERM"));
+            if let Err(sweep) = sweep_result {
+                // A zombie launchd holds is not ours to reap: waiting on it only warns.
+                if root_exited && !self.root_is_unpinned() {
+                    // Best-effort reap so an observed-exited root isn't left a zombie; `sweep`
+                    // (below) is already the error this call reports, so a failure here is
+                    // secondary — but every other discarded error in this module is still logged,
+                    // and a silent one here would obscure a second, independent failure mode.
+                    if let Err(e) = self.wait() {
+                        log::debug!(
+                            "graceful_shutdown_tree({id}): best-effort reap after a swept, exited root also failed: {e}",
+                            id = self.id.pid()
+                        );
+                    }
+                }
+                return Err(sweep);
+            }
+        }
+        #[cfg(test)]
+        fault::run_hook(fault::HookPoint::BeforeReap);
+        #[cfg(target_os = "macos")]
+        if self.root_is_unpinned() {
+            return Err(crate::signal::unpinned_status(self.id.pid(), "graceful_shutdown_tree"));
+        }
+        let status = self.wait()?;
+        if let Some(e) = watch_err {
+            return Err(e);
+        }
+        // The tree is confirmed clear here — either the drain watch observed the whole tree
+        // directly (`drained`), or the sweep just returned `Ok`: either way, positive,
+        // freshly-measured proof superseding whatever `term` held. Discard it here rather than
+        // returning it — an already-disproved refusal must never outrank the evidence that
+        // disproved it.
+        if let Err(e) = &term {
+            log::debug!(
+                "graceful_shutdown_tree({id}): tree confirmed clear; discarding the superseded terminate_tree refusal: {e}",
+                id = self.id.pid()
+            );
+        }
+        Ok(status)
+    }
+}
+
+/// Test-only fault-injection seam for a forced `terminate_tree` failure inside
+/// `graceful_shutdown_tree`, mirroring `crate::wait::fault`'s shape. Duplicated (not shared)
+/// with `crate::tokio::child::graceful::fault`: `mod graceful;` is private in both
+/// `src/child.rs` and `src/tokio/child.rs`, so a seam here is not nameable from the tokio tree
+/// without widening that visibility.
+#[cfg(test)]
+pub(crate) mod fault {
+    use std::cell::Cell;
+
+    /// Which `terminate_tree` failure to fabricate on the next call, on this thread.
+    /// `Containment` and `UnassessablePerMember` exercise the hold-and-continue path this
+    /// task adds — both ORDINARY #61 outcomes, a signal was attempted. `Unsupported` and
+    /// `UnassessableMechanism` exercise fail-fast paths: `Unsupported` models the
+    /// PRE-EXISTING console-less-caller shape (`NoConsole`/`Unsupported`) this task must not
+    /// touch; `UnassessableMechanism` models `Error::Unassessable { source: Some(_), .. }` —
+    /// `group::state`'s own listing failure, `crate::containment::fdmarker::is_teardown_mechanism_failure`'s
+    /// classification for the identical shape reaching `combine_group_errors` — which this task's
+    /// `graceful_shutdown_tree` match must treat the SAME way (fail-fast), not fold into the
+    /// per-member `Unassessable{source: None}` hold-and-continue case.
+    #[derive(Clone, Copy, PartialEq, Eq, Default)]
+    pub(crate) enum Forced {
+        #[default]
+        None,
+        Containment,
+        UnassessablePerMember,
+        UnassessableMechanism,
+        Unsupported,
+    }
+    thread_local! {
+        static FORCE_TERMINATE: Cell<Forced> = const { Cell::new(Forced::None) };
+        static FORCE_KILL_TREE_ERROR: Cell<bool> = const { Cell::new(false) };
+    }
+    pub(crate) fn set_force_terminate(kind: Forced) {
+        FORCE_TERMINATE.with(|f| f.set(kind));
+    }
+    pub(crate) fn take_force_terminate() -> Forced {
+        FORCE_TERMINATE.with(|f| f.replace(Forced::None))
+    }
+
+    /// Force the next `kill_tree` call inside `graceful_shutdown_tree` on THIS thread — the
+    /// sweep, not `terminate_tree` — to fail, so a test can prove it was skipped (`drained`)
+    /// rather than merely no-op'd on an already-empty group.
+    pub(crate) fn set_force_kill_tree_error(on: bool) {
+        FORCE_KILL_TREE_ERROR.with(|f| f.set(on));
+    }
+    pub(crate) fn take_force_kill_tree_error() -> bool {
+        FORCE_KILL_TREE_ERROR.with(|f| f.replace(false))
+    }
+    pub(crate) fn kill_tree_armed() -> bool {
+        FORCE_KILL_TREE_ERROR.with(|f| f.get())
+    }
+    pub(crate) fn forced_kill_tree_error() -> crate::error::Error {
+        crate::error::Error::Io(std::io::Error::other("forced kill_tree failure (test seam)"))
+    }
+
+    #[cfg(unix)]
+    pub(crate) use crate::graceful_hooks::at;
+    pub(crate) use crate::graceful_hooks::{release_at, run_hook, HookPoint};
+
+    /// RAII disarm for `FORCE_KILL_TREE_ERROR`: a test that arms this seam expecting the sweep
+    /// to skip (so the seam is never consumed by `take_force_kill_tree_error`) must still clear
+    /// it before the thread is reused by a later test — a bare last-line
+    /// `set_force_kill_tree_error(false)` would be skipped by an early return via a failed
+    /// assertion (panic unwinds through this guard's `Drop` regardless). Consuming the seam
+    /// normally (the sweep runs and calls `take_force_kill_tree_error`) already leaves it
+    /// disarmed, so this guard's own `drop` is then a harmless no-op.
+    #[must_use]
+    pub(crate) struct ArmedKillTreeError;
+    impl ArmedKillTreeError {
+        pub(crate) fn arm() -> Self {
+            set_force_kill_tree_error(true);
+            Self
+        }
+    }
+    impl Drop for ArmedKillTreeError {
+        fn drop(&mut self) {
+            set_force_kill_tree_error(false);
+        }
+    }
+    // No `armed()` here, unlike `crate::wait::fault`'s seam: `take_force_terminate` runs
+    // unconditionally at the very top of `graceful_shutdown_tree`, so by the time any test
+    // assertion runs the seam is ALWAYS already consumed — an `armed()` check would be
+    // tautologically true and, worse, an unused `pub(crate)` item once nothing calls it,
+    // which `cargo clippy -D warnings` would hard-fail on.
+    pub(crate) fn forced_terminate_error(kind: Forced) -> crate::error::Error {
+        match kind {
+            Forced::None => unreachable!("forced_terminate_error called with Forced::None"),
+            Forced::Containment => crate::error::Error::Containment {
+                detail: "forced term_group refusal (test seam)".into(),
+            },
+            Forced::UnassessablePerMember => crate::error::Error::Unassessable {
+                detail: "forced per-member unconfirmed state (test seam) — group::decide's shape".into(),
+                source: None,
+            },
+            Forced::UnassessableMechanism => crate::error::Error::Unassessable {
+                detail: "forced listing-mechanism failure (test seam) — group::state's shape".into(),
+                source: Some(std::io::Error::other("forced (test seam)")),
+            },
+            Forced::Unsupported => crate::error::Error::Unsupported {
+                op: "terminate_tree".into(),
+                platform: "test",
+                detail: "forced (test seam) — models NoConsole/Unsupported, NOT a #61 refusal".into(),
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "graceful_tests.rs"]
+mod graceful_tests;

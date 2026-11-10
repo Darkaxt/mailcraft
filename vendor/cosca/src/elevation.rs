@@ -1,0 +1,482 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+//! Cross-platform privilege elevation. Elevation wraps the CHILD (a
+//! `sudo`/`doas`/`pkexec` prefix on POSIX; `ShellExecuteEx("runas")` on
+//! Windows), never the calling process.
+
+use std::ffi::OsString;
+use std::path::PathBuf;
+
+use zeroize::Zeroize;
+
+// Effect-layer submodules are crate-internal (matching the `containment` convention); only the
+// public types below are exported. The one exception is `controlling_terminal_present`, a
+// `#[doc(hidden)]` probe the separate `testbin` binary (an external consumer) needs — re-exported
+// at this module's root so `posix` itself stays `pub(crate)`.
+// Pure and cross-tested, so it is compiled everywhere — but its only in-crate
+// caller is `posix.rs`, which is `cfg(unix)`. Off-unix every item is therefore
+// test-only, exactly like the `command.rs` accessors it calls.
+#[cfg_attr(
+    not(unix),
+    allow(
+        dead_code,
+        reason = "off-unix, macos's only in-crate caller is cfg(unix) posix.rs, so every item here is test-only"
+    )
+)]
+pub(crate) mod macos;
+// Only the unix kill paths consult the gate.
+#[cfg_attr(
+    not(unix),
+    allow(
+        dead_code,
+        reason = "only the unix kill paths consult the front gate; it is tested everywhere"
+    )
+)]
+pub(crate) mod front;
+// Pure, and a `Host` field everywhere; only the unix rewrite reads it.
+#[cfg_attr(
+    not(unix),
+    allow(
+        dead_code,
+        reason = "pure, and a `Host` field everywhere; only the unix rewrite reads it"
+    )
+)]
+pub(crate) mod pkexec;
+pub(crate) mod plan;
+#[cfg(unix)]
+#[path = "elevation/posix.rs"]
+pub(crate) mod posix;
+#[cfg_attr(
+    not(windows),
+    allow(dead_code, reason = "only the Windows ShellExecuteEx launch classifies its failures")
+)]
+pub(crate) mod runas_failure;
+pub(crate) mod sanitize;
+#[cfg_attr(
+    not(windows),
+    allow(
+        dead_code,
+        reason = "shell_file gates the ShellExecuteEx launch path (Windows-only); nothing calls it off-windows"
+    )
+)]
+pub(crate) mod shell_file;
+// No caller until the shim and the acceptor land.
+#[cfg(unix)]
+#[allow(
+    dead_code,
+    reason = "the shim is built bottom-up; the wire protocol lands before its users"
+)]
+pub(crate) mod shim;
+#[cfg(windows)]
+#[path = "elevation/windows.rs"]
+pub(crate) mod windows;
+
+#[cfg(unix)]
+#[doc(hidden)]
+pub use posix::controlling_terminal_present;
+
+/// One backend's words for the argv refusals every elevation path shares ([`elevation_argv`]).
+pub(crate) struct ArgvRefusals {
+    pub(crate) platform: &'static str,
+    /// Starts each `op`: `"{op_prefix} of an empty command"` and so on.
+    pub(crate) op_prefix: &'static str,
+    /// Why a `commandline()` command cannot be elevated here.
+    pub(crate) commandline: &'static str,
+    /// Why an elevated program is named by argv[0] alone, never by `executable()` or
+    /// `raw_executable()`.
+    pub(crate) setter: &'static str,
+}
+
+/// Why an elevated program is named by argv[0] alone. Names no backend: the refusal also reaches
+/// a caller that is already elevated, where none runs.
+pub(crate) const SETTER_REFUSAL: &str = "name the elevated program as argv[0] (set .args([program, ...])): the \
+     elevated program is the one argv[0] names, so neither executable()'s search nor \
+     raw_executable()'s exact file can be honoured";
+
+/// The argv an elevation backend can work from. Refused, as [`crate::error::Error::Unsupported`]
+/// in `words`' terms: a program set by `executable()` or `raw_executable()`, which is checked
+/// first, then no program (`Empty`, or an empty argv) and a `commandline()` command.
+///
+/// An elevated program is argv[0] as written: cosca neither searches for it nor completes it, and
+/// argv is never rewritten, so neither setter has anything to act on.
+///
+/// A `Command::new().elevate()` is `Empty`; the message must not claim a command line was elevated.
+pub(crate) fn elevation_argv<'a>(
+    cmd: &'a crate::command::Command,
+    words: &ArgvRefusals,
+) -> Result<&'a [OsString], crate::error::Error> {
+    use crate::command::{CommandInput, ExecutableSpec};
+    let refuse = |what: &str, detail: &str| crate::error::Error::Unsupported {
+        op: format!("{} {what}", words.op_prefix),
+        platform: words.platform,
+        detail: detail.into(),
+    };
+    if let Some(spec) = cmd.executable_spec() {
+        let setter = match spec {
+            ExecutableSpec::Search(_) => "executable",
+            ExecutableSpec::Exact(_) => "raw_executable",
+        };
+        return Err(refuse(&format!("of a program set by {setter}()"), words.setter));
+    }
+    let no_program = || {
+        refuse(
+            "of an empty command",
+            "set a program via .args([...]) before .elevate()",
+        )
+    };
+    let argv = match cmd.input() {
+        CommandInput::Argv(argv) => argv,
+        CommandInput::Empty => return Err(no_program()),
+        CommandInput::CommandLine(_) => return Err(refuse("of a commandline() command", words.commandline)),
+    };
+    if argv.is_empty() {
+        return Err(no_program());
+    }
+    Ok(argv)
+}
+
+/// What an elevation gate validated and the build then wraps: the program (argv[0]), its
+/// arguments, and `current_dir()` as given.
+#[cfg_attr(
+    not(unix),
+    allow(
+        dead_code,
+        reason = "Launch is only constructed by the unix-only macos.rs and posix.rs backends; dead off-unix"
+    )
+)]
+#[derive(Debug)]
+pub(crate) struct Launch {
+    pub(crate) program: OsString,
+    pub(crate) args: Vec<OsString>,
+    pub(crate) cwd: Option<PathBuf>,
+}
+pub use sanitize::EnvSanitizer;
+
+/// Is the CURRENT process already elevated (root on Unix, an elevated token on
+/// Windows)? A free function — no spawn needed.
+pub fn is_elevated() -> bool {
+    #[cfg(unix)]
+    {
+        posix::is_elevated()
+    }
+    #[cfg(windows)]
+    {
+        windows::is_elevated()
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        false
+    }
+}
+
+/// Which elevation program runs. `Auto` (default) detects among the CLI backends
+/// only — order `sudo` > `doas`. `pkexec`/graphical elevation is explicit-only (a
+/// library must not pop a polkit dialog unbidden).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Backend {
+    #[default]
+    Auto,
+    Sudo,
+    Doas,
+    /// Requires Linux and polkit 121 or later (`pkexec --keep-cwd`); an older pkexec takes the flag
+    /// for the program name. A spawn that would launch pkexec — `Auth::Gui`, not already root —
+    /// first runs `pkexec --version` and refuses one it cannot show to be 121 or later with
+    /// [`crate::error::Error::Unsupported`]. The pkexec on `PATH` is opened once, and both that
+    /// check and the launch exec the opened file (`/proc/self/fd/N`), so a pkexec replaced in
+    /// between is never run.
+    Pkexec,
+}
+
+/// How the backend authenticates. `Interactive` (default) prompts on the
+/// controlling TTY; with no controlling terminal it is a loud
+/// [`crate::error::ElevationErrorKind::NoTty`].
+///
+/// `Gui` is the system graphical authentication dialog — the one form of elevation
+/// that works in a windowed application, which has no controlling terminal to
+/// prompt on:
+///
+/// | Platform | `Auth::Gui` | Backend |
+/// |---|---|---|
+/// | Windows | the UAC consent gate | `Backend::Auto` |
+/// | macOS | Authorization Services, via `osascript` | `Backend::Auto` |
+/// | Linux | polkit, via `pkexec` | `Backend::Pkexec` |
+///
+/// The three are not interchangeable in what they can carry. Read
+/// [`ElevatedVia::MacosOsascript`] before using `Auth::Gui` on macOS: the elevated
+/// program leaves this process's tree, so stdio, exit-status fidelity, `kill()` and
+/// `.contain()` all behave differently there.
+#[derive(Debug, Clone, Default)]
+pub enum Auth {
+    #[default]
+    Interactive,
+    NonInteractive,
+    Askpass(PathBuf),
+    Stdin(Secret),
+    Gui,
+}
+
+/// How stdio was ACTUALLY wired for an elevated child — reported, never faked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ElevatedStdio {
+    /// POSIX: the child's stdio (fds 0-2) is wired exactly as the `Command`
+    /// configured it (`sudo`/`doas`/`pkexec` pass those fds straight
+    /// through). fd >= 3 on an elevated POSIX child is `Unsupported`, not
+    /// silently dropped.
+    Passthrough,
+    /// Windows `runas`: the child received its OWN console; the parent's streams
+    /// were not shared, regardless of any `inherit()` request.
+    OwnConsole,
+    /// POSIX [`Auth::Stdin`]: fd0 is the elevation password channel (EOF after
+    /// the password), not the caller's stdin.
+    StdinConsumed,
+    /// macOS [`Auth::Gui`]: the caller's stdio was NOT given to the elevated
+    /// program. The stdout/stderr you configure are **osascript's**, and what flows
+    /// through them is a relay, not the program's own streams:
+    ///
+    /// - the program's stdout is captured in full by `osascript` and written to
+    ///   osascript's stdout once the program exits — **buffered**, never streamed;
+    /// - that stdout round-trips through UTF-8 text and loses its final line
+    ///   ending, so byte-exact binary output does not survive;
+    /// - the program's **stderr is not relayed at all**. osascript's stderr carries
+    ///   AppleScript's own error text (which quotes the program's stderr when it
+    ///   exits non-zero), not the program's stream;
+    /// - the program's stdin comes from Authorization Services, not the caller.
+    ///   Configuring a pipe or file on fd0 is rejected, because nothing would ever
+    ///   read it;
+    /// - the relay is written only when the program exits, so killing or dropping
+    ///   the child early yields an empty or truncated capture with no signal that
+    ///   the program is still running. See [`ElevatedVia::MacosOsascript`];
+    /// - **on a non-zero exit there is no relay at all.** `do shell script` raises
+    ///   an AppleScript error instead of returning a result, so the program's
+    ///   stdout is discarded entirely and only osascript's error text reaches
+    ///   stderr. A caller that needs output on the failure path must have the
+    ///   program write it somewhere the caller reads, not rely on the relay.
+    OsascriptRelay,
+}
+
+/// How elevation was achieved. Distinct from [`Backend`]: `WindowsUac` is the
+/// dedicated Windows runas disposition (NOT `Backend::Auto`, a POSIX concept).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ElevatedVia {
+    /// A POSIX backend wrapped the child (the resolved backend that ran).
+    Wrapped(Backend),
+    /// Windows `ShellExecuteEx("runas")` elevated the child through UAC.
+    WindowsUac,
+    /// macOS `osascript … with administrator privileges` asked Authorization
+    /// Services to run the command as root.
+    ///
+    /// The elevated program is **not in this process's tree**. macOS runs it under
+    /// `com.apple.security.authtrampoline`, parented to `launchd`, so the tracked
+    /// [`crate::Child`] is the `osascript` front-end, not the program:
+    ///
+    /// - **Left alone, osascript outlives the program**: it blocks until the program
+    ///   exits, so [`crate::Child::wait`] returning means the elevated work is
+    ///   finished.
+    /// - **It cannot be killed or sent `SIGTERM`** while it runs: it is a front (see
+    ///   [`crate::Child::kill`]), and once it is gone the program's completion and
+    ///   exit status are unobservable.
+    /// - `wait` reports **osascript's** exit status. It is zero if and only if the
+    ///   elevated program exited zero; a non-zero code is osascript's, not the
+    ///   program's — and on that path the program's stdout is discarded rather than
+    ///   relayed (see [`ElevatedStdio::OsascriptRelay`]).
+    /// - A **cancelled** authentication dialog is one such non-zero exit, not a
+    ///   spawn-time [`crate::error::ElevationErrorKind::AuthDeclined`].
+    /// - Process containment cannot span the boundary, so `.contain()` is rejected
+    ///   up front.
+    /// - A `current_dir()` the caller can traverse but root cannot (NFS
+    ///   `root_squash`) fails the `cd` on the far side of the trampoline: the program
+    ///   never runs and the failure surfaces as a bare non-zero exit, because the
+    ///   explaining stderr is not relayed.
+    ///
+    /// The command text is visible to anyone able to inspect the running processes —
+    /// a real difference from `sudo` and from UAC. Do not put a secret in the argv of
+    /// an elevated macOS command.
+    ///
+    /// See [`ElevatedStdio::OsascriptRelay`] for what happens to stdio.
+    MacosOsascript,
+    /// The process was already elevated, so no wrapper was needed.
+    AlreadyElevated,
+}
+
+impl ElevatedVia {
+    /// Whether the child cosca spawns is a backend whose elevated program is its own child, and may
+    /// outlive it.
+    pub(crate) fn program_outlives_child(&self) -> bool {
+        matches!(self, ElevatedVia::Wrapped(_) | ElevatedVia::MacosOsascript)
+    }
+}
+
+/// The planner's privilege target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Privilege {
+    Unprivileged,
+    Elevated,
+}
+
+/// Achieved elevation state, queried via [`crate::Child::elevation`], mirroring
+/// [`crate::Child::containment`]. Present iff elevation was requested.
+#[derive(Debug, Clone)]
+pub struct ElevationReport {
+    pub via: ElevatedVia,
+    /// Vars the crate's own sanitizer dropped before forwarding (also `log`ged). The
+    /// vars that DO survive are forwarded to the backend but remain subject to the
+    /// site's own policy — sudo's `env_check`/`env_delete` and `secure_path` may still
+    /// filter or override a forwarded var, which the crate cannot observe.
+    pub stripped_env: Vec<OsString>,
+    pub stdio: ElevatedStdio,
+}
+
+/// The resolved elevation request carried on a [`crate::Command`] (crate-internal),
+/// mirroring `ContainRequest`.
+#[derive(Debug)]
+pub(crate) struct ElevationRequest {
+    pub enabled: bool,
+    pub backend: Backend,
+    pub auth: Auth,
+    pub sanitizer: EnvSanitizer,
+}
+
+impl Default for ElevationRequest {
+    fn default() -> ElevationRequest {
+        ElevationRequest {
+            enabled: false,
+            backend: Backend::Auto,
+            auth: Auth::Interactive,
+            sanitizer: EnvSanitizer::default(),
+        }
+    }
+}
+
+/// The single source of the "already elevated, no wrapper needed" report. Every
+/// sync/async spawn arm that short-circuits on ambient privilege calls this, so the
+/// literal is never hand-copied.
+// Consumed by the Windows `RunAsIs` arms only (the POSIX rewrite reports
+// `AlreadyElevated` through `PosixRewrite`), hence the gated allow.
+#[cfg_attr(
+    not(windows),
+    allow(
+        dead_code,
+        reason = "consumed only by the Windows RunAsIs arms; the POSIX rewrite reports AlreadyElevated through PosixRewrite instead"
+    )
+)]
+pub(crate) fn already_elevated_report(stdio: ElevatedStdio) -> ElevationReport {
+    ElevationReport {
+        via: ElevatedVia::AlreadyElevated,
+        stripped_env: Vec::new(),
+        stdio,
+    }
+}
+
+/// Map a raw kill/terminate `io::Error` on an ELEVATED wrapper child to the typed
+/// `Unkillable` error. EPERM (POSIX) and ACCESS_DENIED (Windows) both surface as
+/// `io::ErrorKind::PermissionDenied`; anything else, or a non-elevated child, stays `Io`.
+pub(crate) fn map_elevated_kill_error(err: std::io::Error, elevated_wrapper: bool) -> crate::error::Error {
+    use crate::error::{ElevationErrorKind, Error};
+    if elevated_wrapper && err.kind() == std::io::ErrorKind::PermissionDenied {
+        Error::Elevation {
+            kind: ElevationErrorKind::Unkillable,
+            detail: format!("could not signal the elevated child: {err}"),
+        }
+    } else {
+        Error::Io(err)
+    }
+}
+
+/// Whether `backend_path` is unusable as an elevation backend: missing, or (unix
+/// only) present but lacking the executable bit (cleared exec bit, `noexec` mount,
+/// SELinux denial). Non-unix has no portable executable-bit concept, so existence
+/// is the only check.
+// Reached from `remap_derived_spawn_error` on the unix sync spawn arm.
+#[cfg(unix)]
+fn backend_unusable(backend_path: &std::path::Path) -> bool {
+    use std::os::unix::ffi::OsStrExt;
+
+    let Ok(cpath) = std::ffi::CString::new(backend_path.as_os_str().as_bytes()) else {
+        return true; // a NUL byte in the path can never name a real file
+    };
+    // SAFETY: `cpath` is a valid, NUL-terminated C string for the lifetime of the call.
+    unsafe { libc::faccessat(libc::AT_FDCWD, cpath.as_ptr(), libc::X_OK, libc::AT_EACCESS) != 0 }
+}
+
+// Dead on non-unix: `remap_derived_spawn_error` has no non-unix production caller.
+#[allow(
+    dead_code,
+    reason = "remap_derived_spawn_error, its only caller, has no non-unix production call site"
+)]
+#[cfg(not(unix))]
+fn backend_unusable(backend_path: &std::path::Path) -> bool {
+    !backend_path.exists()
+}
+
+/// Remap a DERIVED-backend spawn error honestly. The derived command's program IS the
+/// elevation backend, but it also carries the caller's `current_dir()` — a bad cwd
+/// yields the same `NotFound`/`PermissionDenied` kinds. So only remap to
+/// `BackendUnavailable` when the backend path itself is unusable (missing, or on unix
+/// present-but-not-executable); otherwise the original `Io` survives. Either way the
+/// underlying `io::Error` and the backend path are embedded so the cause is never lost.
+// Consumed by the unix sync spawn arm (`crate::child::spawn::spawn`); dead on non-unix,
+// where the Windows arm delegates straight to `windows::spawn_elevated`.
+#[cfg_attr(
+    not(unix),
+    allow(
+        dead_code,
+        reason = "consumed only by the unix sync spawn arm; the Windows arm delegates straight to windows::spawn_elevated"
+    )
+)]
+pub(crate) fn remap_derived_spawn_error(
+    err: crate::error::Error,
+    backend_path: &std::path::Path,
+) -> crate::error::Error {
+    use crate::error::{ElevationErrorKind, Error};
+    match err {
+        Error::Io(e)
+            if matches!(
+                e.kind(),
+                std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied
+            ) && backend_unusable(backend_path) =>
+        {
+            Error::Elevation {
+                kind: ElevationErrorKind::BackendUnavailable,
+                detail: format!(
+                    "elevation backend {} could not be executed: {e}",
+                    backend_path.display()
+                ),
+            }
+        }
+        other => other,
+    }
+}
+
+/// A password supplied for [`Auth::Stdin`]. Zeroized on drop; its `Debug` is
+/// redacted so it never reaches a log line. `expose` is the only readout, used
+/// by the POSIX effect layer to feed `sudo -S`.
+#[derive(Clone)]
+pub struct Secret(Vec<u8>);
+
+impl Secret {
+    pub fn new(bytes: impl Into<Vec<u8>>) -> Secret {
+        Secret(bytes.into())
+    }
+    pub fn expose(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for Secret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Secret(<redacted>)")
+    }
+}
+
+impl Drop for Secret {
+    fn drop(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+#[cfg(test)]
+#[path = "elevation_tests.rs"]
+mod elevation_tests;

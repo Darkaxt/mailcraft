@@ -118,6 +118,34 @@ fn rules_ingestion_waits_for_full_body_survives_reopen_and_does_not_repeat_a_cop
 }
 
 #[test]
+fn a_protected_imap_refetch_completes_waiting_rules_before_filing() {
+    let (mut session, account, receiving, archive) = fixture();
+    add_rule(&mut session, account, archive, true, false);
+    graph_down::take_page(&mut session.mailbox, &mut ServerIndex::default(), account, &page(), &mut Down::default());
+    let id = session.mailbox.messages.values().next().unwrap().id;
+    assert!(session.mailbox.message(id).unwrap().rules_wait_for_content());
+    assert_eq!(session.mailbox.message(id).unwrap().folder, receiving);
+    // Check Again may be waiting for the same bytes needed by a body predicate.
+    session.mailbox.message_mut(id).unwrap().original_wanted = true;
+    let raw = b"From: billing@example.org\r\nSubject: Invoice\r\n\
+        Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; boundary=\"signed\"\r\n\r\n\
+        --signed\r\nContent-Type: text/plain\r\n\r\nOnly in the full body.\r\n\
+        --signed\r\nContent-Type: application/pkcs7-signature\r\n\r\nDummy signature\r\n--signed--\r\n";
+    let fetched = mailcraft_mime::parse_fetched(raw);
+    let original = fetched.original.clone();
+    assert!(original.is_some());
+    super::imap_again::take_again(&mut session.mailbox, id, fetched.clone());
+    let message = session.mailbox.message(id).unwrap();
+    assert_eq!(message.folder, archive);
+    assert_eq!(message.original, original);
+    assert!(!message.unfetched && message.rule_processing.is_none());
+    assert!(!message.original_wanted);
+    let queued = session.mailbox.queued.clone();
+    super::imap_again::take_again(&mut session.mailbox, id, fetched);
+    assert_eq!(session.mailbox.queued, queued, "the refetched signed message must not be filed twice");
+}
+
+#[test]
 fn rules_ingestion_pending_content_preserves_queued_mail_and_locally_edited_drafts() {
     let (mut s, account, receiving, archive) = fixture();
     add_rule(&mut s, account, archive, true, false);

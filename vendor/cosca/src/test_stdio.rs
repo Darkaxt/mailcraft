@@ -1,0 +1,64 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+//! Closes this test process's std fds, for the tests that reproduce a bug seen only with one of them
+//! free.
+//!
+//! Also mounted by `#[path]` into `tests/common` beside `test_own_process`, so it names its
+//! sibling through `super::`, never `crate::`.
+
+use std::os::fd::{AsRawFd as _, OwnedFd, RawFd};
+
+use super::test_own_process::Completion;
+
+/// Dups each of `fds` aside and closes the original, restoring it on drop even if the test panics.
+///
+/// Closing a std fd is process-wide, so the `&Completion` witness demands a process of the test's own.
+pub(crate) struct RestoreStdio {
+    saved: Vec<(RawFd, OwnedFd)>,
+}
+
+impl RestoreStdio {
+    pub(crate) fn close(_own_process: &Completion, fds: &[RawFd]) -> RestoreStdio {
+        let mut restore = RestoreStdio {
+            saved: Vec::with_capacity(fds.len()),
+        };
+        for &fd in fds {
+            // SAFETY: `fd` is open: the caller names a descriptor of this process to close.
+            let saved = rustix::io::fcntl_dupfd_cloexec(unsafe { rustix::fd::BorrowedFd::borrow_raw(fd) }, 3)
+                .unwrap_or_else(|e| panic!("dup fd {fd} aside before closing it: {e}"));
+            restore.saved.push((fd, saved));
+            // SAFETY: closing a descriptor number; the result is checked.
+            let closed = unsafe { libc::close(fd) };
+            assert_eq!(
+                closed,
+                0,
+                "close the test process' fd {fd}: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+        restore
+    }
+}
+
+impl Drop for RestoreStdio {
+    fn drop(&mut self) {
+        for (fd, saved) in &self.saved {
+            // Retries EINTR like `fd_map::dup2_onto`, and asserts the result: a failed restore
+            // would leave this process's std fd wrong for everything that runs after.
+            let ret = loop {
+                // SAFETY: dup2 onto `fd`; `saved` stays valid whatever this call's outcome.
+                let ret = unsafe { libc::dup2(saved.as_raw_fd(), *fd) };
+                if ret != -1 || std::io::Error::last_os_error().kind() != std::io::ErrorKind::Interrupted {
+                    break ret;
+                }
+            };
+            assert_eq!(
+                ret,
+                *fd,
+                "dup2({}, {fd}) while restoring failed: {}",
+                saved.as_raw_fd(),
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+}

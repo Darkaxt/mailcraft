@@ -1,4 +1,4 @@
-**MailCraft 0.11.1 in short** — the fork's integrated mail workflow
+**MailCraft 0.11.2 in short** — the fork's integrated mail workflow
 - One inbox for all accounts, with editable account and alias colours.
 - Local regex rules, folder-focused editing and filing conflict review.
 - Offline full-text search, attachment text and OCR with explicit coverage.
@@ -10,6 +10,9 @@
 - Updates use this fork and its own checksum signature; upstream fixes are retained below.
 
 **What's new**
+- A contact's S/MIME certificates and OpenPGP keys in a vCard (`KEY`) are kept when the card is imported and written back when contacts are exported ([#30](https://github.com/GITHUB_REPOSITORY/issues/30)).
+- An S/MIME Digitally signed message says what checking its signature found, in a bar above it: verified, signed but the signer not verified, changed after it was signed, or can't be checked (an algorithm that's no longer safe, for one), with Details of who signed and their certificate; its row in the list wears a seal of the same. Trust comes from the certification authorities your system trusts for mail (on Linux its mail bundle, on Windows the roots trusted for secure mail; none on FreeBSD, whose authorities are for web sites, and none yet on macOS). An opaque signed message shows what it holds, its attachments too; revocation isn't checked yet ([#30](https://github.com/GITHUB_REPOSITORY/issues/30)).
+- Switch a message between Light, Dark and the app theme directly in the reader. Preview the complete current unsent draft in an independent light or dark presentation, then return to editing without saving, sending or changing its HTML.
 - All inboxes combines the real inboxes across accounts without copying mail. Filtering, search and replies retain each message's account. Account and alias context menus offer persistent pastel or custom origin colours and reset; an alias can override its account's colour. Combined rows also name their origin so colour is not the only cue.
 - File received mail from every account through Outlook's real folder tree. Drops learn exact sender rules automatically; competing destinations open a focused review with reuse, sender-only reroute/history, and durable one-time choices. Account/alias origin colours and reply identities survive relocation. Provider placement and unavailable messages remain explicit until confirmed.
 - Saved search folders keep named local searches in the folder pane, with exact phrase, case-sensitive and alias filters and an explicit folder, mailbox or combined-inbox scope. Create one from the current or advanced search, preview it, edit it, or remove its definition with Undo. Definitions travel with the mailbox and are available through native commands. A missing folder binding is shown as unavailable for repair; saving or deleting a search never relocates messages or creates a provider folder. Search results retain index coverage reporting.
@@ -32,6 +35,12 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- Complete message exports preserve a retained signed or encrypted MIME body while streaming verified content, report its provenance, and refuse missing or damaged originals instead of silently reconstructing them.
+- Help › Report a Problem no longer offers Send by Email: reports go through GitHub, so they arrive in one place where they can be triaged. A way to send a report without a GitHub account is coming ([#956](https://github.com/GITHUB_REPOSITORY/issues/956)).
+- Text in Calibri, Cambria and other fonts that carry small bitmaps beside their outlines is drawn whole again: since 0.11.0 most of its letters were missing, drawn in white ([#889](https://github.com/GITHUB_REPOSITORY/issues/889)).
+- A digitally signed (S/MIME or OpenPGP) message moved or copied to another IMAP account, saved as an `.eml` file or forwarded as an attachment now carries its signed body exactly as it arrived, so its signature still checks there; signed and encrypted mail is kept as it came for checking in a later version ([#30](https://github.com/GITHUB_REPOSITORY/issues/30)).
+- Windows 32-bit builds retain the locked process dependency with its packed handle copied before borrowing; spawn ownership and consent behavior are preserved.
+- Windows x64 release inputs use an exact committed asset ID and checksum, fetched before compilation through GitHub's read-only asset API. Source-hash inputs keep identical LF bytes on Windows and Unix checkouts.
 - Preserve lazy headless mail checks and manual-only Microsoft To Do setup when integrating upstream improvements. Deferred rule content fetches respect queued mail and locally edited drafts.
 - Local checksum signing uses the existing Rust signer on Git for Windows, where native OpenSSL cannot read Bash process-substitution descriptors. Private keys stay in memory.
 - Preserve explicitly changed preferences, including offline mode, across normal headless restarts without replacing desktop layout or unrelated settings.

@@ -1,0 +1,320 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+//! Async `Command` builder — wraps the sync `crate::command::Command`, adding async run methods.
+//! The config methods hand-mirror the sync builder; parity is not compiler-enforced.
+
+use crate::command::Command as SyncCommand;
+use crate::error::Error;
+use crate::stdio::Stdio;
+
+use super::child::Child;
+
+/// An async (tokio) process to configure and spawn — mirrors [`cosca::Command`](crate::Command).
+///
+/// # Limitations
+///
+/// Mirror the sync API: arbitrary descriptors (fd ≥ 3) work on every platform — parent pipe ends
+/// via `Child::fd_read_end`/`Child::fd_write_end` (Unix wires them through `fd_map`; Windows
+/// through the raw `CreateProcessW` backend's MSVCRT fd-table). Merging into a *piped* target works
+/// on all platforms, in both directions; a merge whose target is itself a merge is rejected.
+#[derive(Debug, Default)]
+pub struct Command {
+    inner: SyncCommand,
+}
+
+impl Command {
+    /// The sync builder this one wraps, for the frozen spawn, which shares its core.
+    pub(super) fn as_sync_mut(&mut self) -> &mut SyncCommand {
+        &mut self.inner
+    }
+
+    /// The sync builder this one wraps, to read what a spawn did to it.
+    #[cfg(test)]
+    pub(crate) fn sync(&self) -> &SyncCommand {
+        &self.inner
+    }
+
+    pub fn new() -> Command {
+        Command {
+            inner: SyncCommand::new(),
+        }
+    }
+    pub fn arg<S: Into<std::ffi::OsString>>(&mut self, a: S) -> &mut Command {
+        self.inner.arg(a);
+        self
+    }
+    pub fn args<I, S>(&mut self, args: I) -> &mut Command
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<std::ffi::OsString>,
+    {
+        self.inner.args(args);
+        self
+    }
+    pub fn commandline<S: Into<std::ffi::OsString>>(&mut self, line: S) -> &mut Command {
+        self.inner.commandline(line);
+        self
+    }
+    pub fn executable<P: Into<std::path::PathBuf>>(&mut self, p: P) -> &mut Command {
+        self.inner.executable(p);
+        self
+    }
+    /// Mirrors [`cosca::Command::raw_executable`](crate::Command::raw_executable) — see there for
+    /// the contract.
+    pub fn raw_executable<P: Into<std::path::PathBuf>>(&mut self, p: P) -> &mut Command {
+        self.inner.raw_executable(p);
+        self
+    }
+    pub fn stdin(&mut self, t: Stdio) -> Result<&mut Command, Error> {
+        self.inner.stdin(t)?;
+        Ok(self)
+    }
+    pub fn stdout(&mut self, t: Stdio) -> Result<&mut Command, Error> {
+        self.inner.stdout(t)?;
+        Ok(self)
+    }
+    pub fn stderr(&mut self, t: Stdio) -> Result<&mut Command, Error> {
+        self.inner.stderr(t)?;
+        Ok(self)
+    }
+    pub fn fd(&mut self, slot: impl Into<crate::stdio::Fd>, t: Stdio) -> Result<&mut Command, Error> {
+        self.inner.fd(slot, t)?;
+        Ok(self)
+    }
+    pub fn env(&mut self, k: impl Into<std::ffi::OsString>, v: impl Into<std::ffi::OsString>) -> &mut Command {
+        self.inner.env(k, v);
+        self
+    }
+    pub fn envs<I, K, V>(&mut self, vars: I) -> &mut Command
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<std::ffi::OsString>,
+        V: Into<std::ffi::OsString>,
+    {
+        self.inner.envs(vars);
+        self
+    }
+    pub fn env_remove(&mut self, k: impl Into<std::ffi::OsString>) -> &mut Command {
+        self.inner.env_remove(k);
+        self
+    }
+    pub fn env_clear(&mut self) -> &mut Command {
+        self.inner.env_clear();
+        self
+    }
+    pub fn current_dir(&mut self, dir: impl Into<std::path::PathBuf>) -> &mut Command {
+        self.inner.current_dir(dir);
+        self
+    }
+    /// Async mirror of [`Command::kill_on_drop`](crate::Command::kill_on_drop) — see there for
+    /// what the teardown does. The per-child opt-out is
+    /// [`Child::detach`](crate::tokio::Child::detach).
+    pub fn kill_on_drop(&mut self, yes: bool) -> &mut Command {
+        self.inner.kill_on_drop(yes);
+        self
+    }
+    /// Contain the child's tree with the strongest available mechanism. See
+    /// [`Command::contain`](crate::Command::contain) for the Linux precondition.
+    ///
+    /// tokio itself can fail a spawn after forking the child, and then drops it neither killed nor
+    /// reaped, without reporting its pid. Only a child contained in a cgroup leaf
+    /// ([`Containment::CgroupV2`](crate::Containment::CgroupV2)) is still killed then; under any
+    /// other containment it keeps running.
+    pub fn contain(&mut self) -> &mut Command {
+        self.inner.contain();
+        self
+    }
+
+    /// Contain with a specific [`ContainMode`](crate::ContainMode).
+    pub fn contain_with(&mut self, mode: crate::ContainMode) -> &mut Command {
+        self.inner.contain_with(mode);
+        self
+    }
+
+    /// Set how this contained spawn marks its descendants (default
+    /// [`Nesting::Mark`](crate::containment::Nesting::Mark)).
+    pub fn nesting(&mut self, nesting: crate::containment::Nesting) -> &mut Command {
+        self.inner.nesting(nesting);
+        self
+    }
+
+    /// Do not put a console window on the user's screen — mirrors
+    /// [`no_window`](crate::Command::no_window), including the per-path lowering and the
+    /// one-directional console consequence documented there.
+    pub fn no_window(&mut self) -> &mut Command {
+        self.inner.no_window();
+        self
+    }
+
+    /// Spawn with `DETACHED_PROCESS` — mirrors [`detached`](crate::Command::detached).
+    #[cfg(windows)]
+    pub fn detached(&mut self) -> &mut Command {
+        self.inner.detached();
+        self
+    }
+
+    /// Spawn outside this process's job object — mirrors
+    /// [`breakaway_from_job`](crate::Command::breakaway_from_job), including everything it does
+    /// not promise.
+    #[cfg(windows)]
+    pub fn breakaway_from_job(&mut self) -> &mut Command {
+        self.inner.breakaway_from_job();
+        self
+    }
+
+    /// Add arbitrary `dwCreationFlags` bits — mirrors
+    /// [`creation_flags`](crate::Command::creation_flags), including its reserved-bit table and
+    /// its replace-not-accumulate semantics.
+    #[cfg(windows)]
+    pub fn creation_flags(&mut self, flags: u32) -> &mut Command {
+        self.inner.creation_flags(flags);
+        self
+    }
+
+    /// Run the child elevated — mirrors [`cosca::Command::elevate`](crate::Command::elevate).
+    pub fn elevate(&mut self) -> &mut Command {
+        self.inner.elevate();
+        self
+    }
+    /// Select the elevation backend — mirrors
+    /// [`elevation_backend`](crate::Command::elevation_backend).
+    pub fn elevation_backend(&mut self, backend: crate::elevation::Backend) -> &mut Command {
+        self.inner.elevation_backend(backend);
+        self
+    }
+    /// Select how the backend authenticates — mirrors
+    /// [`elevation_auth`](crate::Command::elevation_auth).
+    pub fn elevation_auth(&mut self, auth: crate::elevation::Auth) -> &mut Command {
+        self.inner.elevation_auth(auth);
+        self
+    }
+    /// Set the env sanitizer applied before forwarding to the backend — mirrors
+    /// [`sanitize_env`](crate::Command::sanitize_env).
+    pub fn sanitize_env(&mut self, sanitizer: crate::elevation::EnvSanitizer) -> &mut Command {
+        self.inner.sanitize_env(sanitizer);
+        self
+    }
+
+    /// Spawn the child. Spawn is synchronous; the returned `Child`'s waits are async.
+    ///
+    /// # Runtime
+    ///
+    /// Must be called from within an IO-enabled Tokio runtime (the default `#[tokio::main]` /
+    /// `#[tokio::test]`, or a builder with `enable_io()`/`enable_all()`), which the async waits need.
+    /// Called outside any runtime, `spawn` returns [`Error::Io`](crate::error::Error::Io). On a
+    /// runtime built *without* it, tokio's behavior applies and is platform-specific — on Unix `spawn`
+    /// panics (child reaping needs the runtime driver: IO on Linux, signal on macOS), on Windows it
+    /// currently succeeds — and tokio exposes no way to preflight it, so neither can be turned into a
+    /// typed error.
+    /// `status`/`output`/`read` and the [`run`](crate::tokio::run)/[`run_line`](crate::tokio::run_line)
+    /// free functions spawn eagerly, so the same applies to them.
+    ///
+    /// # Blocking under elevation
+    ///
+    /// An [`elevate`](Self::elevate)d spawn does its setup on the calling thread, blocking that
+    /// runtime worker (and, on a `current_thread` runtime, every task) until it finishes:
+    ///
+    /// - `Backend::Pkexec` with `Auth::Gui` runs `pkexec --version` first, a few milliseconds;
+    /// - Windows waits for the user to answer the UAC consent prompt;
+    /// - `Auth::Stdin` delivers the password to `sudo -S`, waiting until sudo reads it.
+    ///
+    /// # Blocking on a failed contained spawn
+    ///
+    /// A [`contain`](Self::contain)ed spawn that fails after its child entered a cgroup v2 leaf
+    /// tears the leaf down on the calling thread. While a member remains, that is `cgroup.kill`,
+    /// then a wait for the leaf to drain, then its removal. The wait is brief unless a member
+    /// outlives the kill (see [`Containment::CgroupV2`]), and blocks the thread as above until it
+    /// ends.
+    ///
+    /// [`Containment::CgroupV2`]: crate::Containment::CgroupV2
+    ///
+    /// # Errors
+    ///
+    /// Every error says whether the program could have started, as the sync
+    /// [`Command::spawn`](SyncCommand::spawn)'s does. Unlike it, a failed `exec` is
+    /// [`Error::MayHaveStarted`] here (see its list).
+    pub fn spawn(&mut self) -> Result<Child, Error> {
+        Ok(super::spawn::spawn(&mut self.inner)?)
+    }
+
+    /// The sync [`Command`](SyncCommand)'s `set_elevation_front`, for tests.
+    #[cfg(all(test, unix))]
+    pub(crate) fn set_elevation_front(&mut self, front: Option<crate::elevation::front::Front>) {
+        self.inner.set_elevation_front(front);
+    }
+
+    /// Run to completion with inherited stdio, returning the exit status.
+    /// Spawns as [`spawn`](Self::spawn) does, blocking under elevation as it does. Fails as `spawn`
+    /// does, and with [`Error::MayHaveStarted`] after it.
+    pub async fn status(&mut self) -> Result<std::process::ExitStatus, Error> {
+        self.inner.stdin(Stdio::inherit())?;
+        self.inner.stdout(Stdio::inherit())?;
+        self.inner.stderr(Stdio::inherit())?;
+        let mut child = self.spawn()?;
+        match child.wait().await {
+            Ok(status) => Ok(status),
+            Err(e) => Err(after_the_spawn(e, &mut child)),
+        }
+    }
+
+    /// Run to completion, capturing stdout and stderr (stdin is `/dev/null`).
+    /// Spawns as [`spawn`](Self::spawn) does, blocking under elevation as it does. Fails as `spawn`
+    /// does, and with [`Error::MayHaveStarted`] after it.
+    pub async fn output(&mut self) -> Result<crate::Output, Error> {
+        self.inner.stdin(Stdio::null())?;
+        self.inner.stdout(Stdio::pipe())?;
+        self.inner.stderr(Stdio::pipe())?;
+        let mut child = self.spawn()?;
+        match child.communicate(None).await {
+            Ok(output) => Ok(output),
+            Err(e) => Err(after_the_spawn(e, &mut child)),
+        }
+    }
+
+    /// Run to completion, capturing stdout as a UTF-8 string (stdin is `/dev/null`).
+    /// Spawns as [`spawn`](Self::spawn) does, blocking under elevation as it does. Fails as `spawn`
+    /// does, and with [`Error::MayHaveStarted`] after it.
+    pub async fn read(&mut self) -> Result<String, Error> {
+        self.inner.stdin(Stdio::null())?;
+        self.inner.stdout(Stdio::pipe())?;
+        let mut child = self.spawn()?;
+        let out = match child.communicate(None).await {
+            Ok(out) => out,
+            Err(e) => return Err(after_the_spawn(e, &mut child)),
+        };
+        // `communicate` collected the exit.
+        String::from_utf8(out.stdout).map_err(|e| {
+            crate::child::spawn::after_the_spawn(
+                Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)),
+                crate::error::ChildFate::Reaped,
+                child.behind_wrapper(),
+            )
+        })
+    }
+
+    /// Test-only spawn variant that installs a per-instance wait observer on the resulting raw
+    /// child, so a cancellation test observes exactly THIS child's blocking wait (see the raw
+    /// backend's `WaitObserver`) rather than racing a parallel test. Routes through the normal
+    /// spawn, so the config must reach the raw backend (executable, uncontained, no fd >= 3).
+    #[cfg(all(test, windows))]
+    pub(crate) fn spawn_with_wait_observer(
+        &mut self,
+        started: ::tokio::sync::oneshot::Sender<()>,
+        outcome: ::tokio::sync::oneshot::Sender<crate::child::spawn::windows_raw::WaitOutcome>,
+    ) -> Result<Child, Error> {
+        let mut child = self.spawn()?;
+        child.install_wait_observer(started, outcome);
+        Ok(child)
+    }
+}
+
+/// The error of a run-to-completion helper that failed after its spawn: the program may have
+/// started, and `child` is torn down now as its drop would, which says what became of it.
+fn after_the_spawn(error: Error, child: &mut Child) -> Error {
+    let fate = child.tear_down_now();
+    crate::child::spawn::after_the_spawn(error, fate, child.behind_wrapper())
+}
+
+#[cfg(test)]
+#[path = "command_tests.rs"]
+mod command_tests;

@@ -222,6 +222,9 @@ pub(crate) fn show_in(app: &mut MailApp, ui: &mut Ui, window: Option<u64>, keybo
     if window.is_none() {
         action_bar(app, ui, &c, window);
     }
+    if crate::reading::appearance::compose_preview(app, ui) {
+        return;
+    }
     // A message that just opened has the keyboard: To for a new one, the body for a reply. Not
     // while a dialog is over it: what is typed would go under the dialog, and the keyboard goes
     // back to what had it when the dialog closes (#406).

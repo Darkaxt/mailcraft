@@ -1,0 +1,1168 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+use super::*;
+use crate::command::EnvOp;
+use std::ffi::OsString;
+use std::path::Path;
+
+/// Resolve against the PATH `ops` give a child of this process, as a spawn does.
+fn resolve_with(exe: &Path, cmd_cwd: Option<&Path>, ops: &[EnvOp]) -> Result<PathBuf, Error> {
+    let snapshot = EnvSnapshot::read().unwrap();
+    let env = ChildEnv::capture(&snapshot, ops);
+    let base = effective_cwd(cmd_cwd, &DriveDirs::new(&snapshot), || {
+        std::env::current_dir().map_err(Error::Io)
+    })?;
+    resolve_executable(exe, Some(&base), env.path())
+}
+
+/// A snapshot holding `base` in order.
+fn snapshot(base: &[(OsString, OsString)]) -> EnvSnapshot {
+    let mut block = Vec::new();
+    for (key, val) in base {
+        block.extend(key.encode_wide());
+        block.push(u16::from(b'='));
+        block.extend(val.encode_wide());
+        block.push(0);
+    }
+    block.push(0);
+    EnvSnapshot::from_block(block)
+}
+
+fn build_env_block_from(base: &[(OsString, OsString)], ops: &[EnvOp]) -> Result<Vec<u16>, Error> {
+    ChildEnv::capture(&snapshot(base), ops).into_block()
+}
+
+/// The name was accepted and searched, and nothing matched — `NotFound`, never a shape refusal.
+/// A bare `is_err()` cannot tell the two apart, which is how the kind drifted unnoticed before;
+/// see `crate::resolve`'s module doc for the rule.
+fn assert_not_found(got: Result<PathBuf, Error>) {
+    match got {
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {}
+        other => panic!("a search miss must be Io(NotFound), got {other:?}"),
+    }
+}
+
+/// [`resolve_executable_in`]'s `system_dirs` for a test with no system directories to search —
+/// `PATH` only.
+fn no_system_dirs() -> Result<Vec<PathBuf>, Error> {
+    Ok(Vec::new())
+}
+
+/// There is no "absolute and exists -> return unchanged" shortcut: an absolute path goes through
+/// the ordinary located path — one directory, the exact name tried first — and lands on the same
+/// answer by a different route.
+///
+/// This cannot gate the located `.exe`-appending rule: `current_exe()` ends in `.exe` on Windows,
+/// so it takes the already-has-a-loadable-extension branch. The extensionless and
+/// unrelated-extension cases are gated in `crate::resolve`'s own tests, which force
+/// `windows: true` and so run on every host.
+#[skuld::test]
+fn resolve_an_absolute_path_to_an_existing_image_yields_that_path() {
+    let me = std::env::current_exe().unwrap();
+    assert_eq!(resolve_with(&me, None, &[]).unwrap(), me);
+}
+#[skuld::test]
+fn resolve_bare_name_is_not_taken_from_base_cwd() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_shadow.exe")).unwrap();
+    // A bare name searches system directories and then PATH, never the current directory.
+    // Resolving it from the current directory is the binary-planting hazard this resolver exists
+    // to avoid, so a matching file there with nothing in system_dirs or on PATH must NOT resolve.
+    // `system_dirs` is empty here — this test is about base_cwd, not system-directory precedence,
+    // which has its own tests in `crate::resolve_tests`.
+    // Explicit base dir — no process-global SetCurrentDirectory, so parallel tests can't race.
+    assert_not_found(resolve_executable_in(
+        std::path::Path::new("sp_shadow"),
+        Some(dir.path()),
+        &no_system_dirs,
+        None,
+        false,
+    ));
+}
+#[skuld::test]
+fn resolve_bare_extensionless_name_appends_exe() {
+    // Pins the `.exe`-append rule only, not which directory supplies the match: `cmd` lives in
+    // `System32`, so system-directory search (`crate::resolve::ResolveInput::system_dirs`) may
+    // satisfy it before the ambient `PATH` is ever consulted.
+    let p = resolve_with(std::path::Path::new("cmd"), None, &[]).unwrap();
+    assert!(
+        p.is_absolute() && p.exists() && p.extension().is_some_and(|e| e.eq_ignore_ascii_case("exe")),
+        "{p:?}"
+    );
+}
+// ── `resolve_executable` honors the CHILD's PATH, not the ambient one ──────────────────
+//
+// `path_var`'s own doc (`crate::resolve::ResolveInput::path_var`) promises "the PATH the CHILD
+// will see, after env()/env_clear()", so `resolve_executable` must apply `Command::env_ops()`
+// rather than reading `std::env::var_os("PATH")`. cosca's std backend already threads `env_ops`
+// onto the child correctly (`apply_env` in `child::spawn.rs`); the raw backend must match it, not
+// silently search the PARENT's PATH while the child would see a different one.
+#[skuld::test]
+fn resolve_executable_honors_an_env_set_path_override() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_env_path.exe")).unwrap();
+    let want = dir.path().join("sp_env_path.exe");
+    // Positive control: with no env ops, the fabricated name is not on the ambient PATH at all, so
+    // a pass below cannot be an accident of the ambient PATH already containing it.
+    assert_not_found(resolve_with(std::path::Path::new("sp_env_path"), None, &[]));
+
+    let ops = [EnvOp::Set(
+        OsString::from("PATH"),
+        dir.path().as_os_str().to_os_string(),
+    )];
+    let got = resolve_with(std::path::Path::new("sp_env_path"), None, &ops);
+    assert_eq!(got.unwrap().canonicalize().unwrap(), want.canonicalize().unwrap());
+}
+#[skuld::test]
+fn resolve_executable_path_key_match_is_case_insensitive() {
+    // Windows env var names are case-insensitive; `Command::env("Path", ...)` must override the
+    // same `PATH` the resolver consults, not silently coexist as a distinct key.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_env_path_ci.exe")).unwrap();
+    let want = dir.path().join("sp_env_path_ci.exe");
+    let ops = [EnvOp::Set(
+        OsString::from("Path"),
+        dir.path().as_os_str().to_os_string(),
+    )];
+    let got = resolve_with(std::path::Path::new("sp_env_path_ci"), None, &ops);
+    assert_eq!(got.unwrap().canonicalize().unwrap(), want.canonicalize().unwrap());
+}
+// A fabricated name, never "cmd" or another well-known system binary, is required by both tests
+// below, because `resolve_executable` searches Windows system directories ahead of PATH (see
+// `crate::resolve::ResolveInput::system_dirs`'s doc). `cmd` genuinely lives in `System32`, so it
+// keeps resolving there even with PATH fully cleared or removed, silently masking exactly the
+// PATH-defeat regression these two tests exist to catch — measured on real Windows CI, where a
+// `cmd`-based version of both tests returned `Ok("C:\\Windows\\system32\\cmd.exe")`. A name that
+// lives ONLY in a tempdir set as `PATH` removes that ambiguity.
+#[skuld::test]
+fn resolve_executable_env_clear_defeats_ambient_path() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_env_clear.exe")).unwrap();
+    let set = [EnvOp::Set(
+        OsString::from("PATH"),
+        dir.path().as_os_str().to_os_string(),
+    )];
+    // Positive control: with PATH pointed at the fabricated name's directory, it resolves — so a
+    // failure below is really about env_clear, not merely that this name can never resolve.
+    assert!(resolve_with(std::path::Path::new("sp_env_clear"), None, &set).is_ok());
+    // `Command::env_clear()` means the child sees NO environment at all, PATH included — the
+    // resolver must not silently fall back to searching the PARENT's PATH once the child's own is
+    // cleared.
+    //
+    // `[Set(PATH, dir), Clear]`, not bare `[Clear]`: if `Clear` stopped dropping the base, a bare
+    // `[Clear]` would leave the AMBIENT `PATH` in force, which never happens to contain this
+    // fabricated tempdir — so `is_err()` would hold for the wrong reason. Setting PATH to a
+    // directory that WOULD resolve, then clearing it, means Clear must actually discard a PATH that
+    // works, mirroring the sibling `..._env_remove_path_defeats_ambient_path` test's shape below.
+    let got = resolve_with(
+        std::path::Path::new("sp_env_clear"),
+        None,
+        &[
+            EnvOp::Set(OsString::from("PATH"), dir.path().as_os_str().to_os_string()),
+            EnvOp::Clear,
+        ],
+    );
+    assert_not_found(got);
+}
+#[skuld::test]
+fn resolve_executable_env_remove_path_defeats_ambient_path() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_env_remove.exe")).unwrap();
+    let set = [EnvOp::Set(
+        OsString::from("PATH"),
+        dir.path().as_os_str().to_os_string(),
+    )];
+    // Positive control, same reasoning as the env_clear test above.
+    assert!(resolve_with(std::path::Path::new("sp_env_remove"), None, &set).is_ok());
+    // `EnvOp::Remove` on the just-`Set` key (case-folded, per `Command::env_remove`'s contract)
+    // must take the child's PATH away again — the resolver must not keep searching a directory the
+    // env ops explicitly removed.
+    let got = resolve_with(
+        std::path::Path::new("sp_env_remove"),
+        None,
+        &[
+            EnvOp::Set(OsString::from("PATH"), dir.path().as_os_str().to_os_string()),
+            EnvOp::Remove(OsString::from("path")),
+        ],
+    );
+    assert_not_found(got);
+}
+// ── `resolve_executable`'s `cmd_cwd` parameter ────────────────────────────────────────
+//
+// The resolver reads the CHILD's cwd (`Command::cwd()` when set, else the parent's — see
+// `crate::resolve::ResolveInput::cwd`'s doc), so `base_cwd` must honour a `Command::cwd()`
+// override rather than being seeded from `std::env::current_dir()`. Otherwise the documented
+// escape hatch breaks: "write `./helper` to reach the current directory explicitly" would land on
+// the PARENT's ambient directory, the exact directory this crate exists to stop trusting.
+#[skuld::test]
+fn resolve_executable_uses_the_given_cwd_not_the_process_cwd() {
+    // `resolve_executable`'s `Some(dir)` arm never reads `std::env::current_dir()` (see its match
+    // on `cmd_cwd`), so an explicit `cmd_cwd` needs no particular process cwd to prove it is
+    // honoured. The decoy below proves the given cwd wins over the process's real one, which is
+    // wherever the test runner started this binary, almost certainly not `cmd_dir`.
+    let cmd_dir = tempfile::tempdir().unwrap();
+    let want = std::fs::copy(
+        std::env::current_exe().unwrap(),
+        cmd_dir.path().join("sp_b1_helper.exe"),
+    )
+    .map(|_| cmd_dir.path().join("sp_b1_helper.exe"))
+    .unwrap();
+
+    // Located name (contains a separator) — resolves against the given cwd with no PATH search.
+    let got = resolve_with(std::path::Path::new("./sp_b1_helper.exe"), Some(cmd_dir.path()), &[]);
+
+    assert_eq!(got.unwrap().canonicalize().unwrap(), want.canonicalize().unwrap());
+}
+#[skuld::test]
+fn resolve_executable_falls_back_to_the_process_cwd_when_no_cwd_is_given() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_b1_fallback.exe")).unwrap();
+
+    // `cmd_cwd: None` mirrors an unset `Command::cwd()` — the doc says that means "the parent's",
+    // i.e. the real process cwd, so the `None` fallback must still reach it rather than resolving
+    // nothing. See `crate::resolve::resolve_tests::empty_path_elements_are_skipped`'s doc for why
+    // exercising that needs a re-exec'd child.
+    crate::test_child::run_fixture_with_cwd(
+        crate::test_child::fixture_path!(fixture_resolve_executable_falls_back_to_process_cwd),
+        dir.path(),
+        FIXTURE_RESOLVE_FALLBACK_MARKER,
+    );
+}
+
+const FIXTURE_RESOLVE_FALLBACK_MARKER: &str = "COSCA_FIXTURE_RESOLVE_FALLBACK";
+
+/// The child half of [`resolve_executable_falls_back_to_the_process_cwd_when_no_cwd_is_given`].
+/// Reconstructs `want` from its own (already-`dir.path()`) cwd rather than receiving it from the
+/// parent, since the two are guaranteed equal by construction. Mirrors
+/// `crate::resolve::resolve_tests::fixture_empty_path_elements_are_skipped`'s shape.
+#[skuld::test]
+fn fixture_resolve_executable_falls_back_to_process_cwd() {
+    let Some(cwd) = crate::test_child::expected_cwd(FIXTURE_RESOLVE_FALLBACK_MARKER) else {
+        return; // picked up by an ordinary suite run — deliberately inert
+    };
+    let want = cwd.join("sp_b1_fallback.exe");
+    assert!(
+        want.is_file(),
+        "the parent must have planted `sp_b1_fallback.exe` here: {want:?}"
+    );
+    let got = resolve_with(std::path::Path::new("./sp_b1_fallback.exe"), None, &[]);
+
+    assert_eq!(got.unwrap().canonicalize().unwrap(), want.canonicalize().unwrap());
+}
+/// No ops still passes an explicit block, never NULL: the child must get exactly the snapshot its
+/// image was resolved against, not whatever this process's environment is at `CreateProcessW`.
+#[skuld::test]
+fn empty_ops_pass_the_snapshot_explicitly() {
+    let block = build_env_block_from(&[(OsString::from("A"), OsString::from("1"))], &[]).unwrap();
+    assert_eq!(String::from_utf16(&block).unwrap(), "A=1\0\0");
+}
+#[skuld::test]
+fn set_sorts_ci_and_double_nul() {
+    let b = build_env_block_from(
+        &[],
+        &[
+            EnvOp::Set("Zeta".into(), "1".into()),
+            EnvOp::Set("alpha".into(), "2".into()),
+        ],
+    )
+    .unwrap();
+    assert_eq!(&b[b.len() - 2..], &[0u16, 0u16]);
+    let s = String::from_utf16(&b).unwrap();
+    assert!(s.find("alpha=").unwrap() < s.find("Zeta=").unwrap(), "{s:?}");
+}
+#[skuld::test]
+fn remove_is_case_insensitive() {
+    let b = build_env_block_from(
+        &[(OsString::from("SP_R"), OsString::from("x"))],
+        &[EnvOp::Remove("sp_r".into())],
+    )
+    .unwrap();
+    assert!(!String::from_utf16(&b).unwrap().to_uppercase().contains("SP_R="));
+}
+#[skuld::test]
+fn clear_then_set_yields_only_the_set_var() {
+    let b = build_env_block_from(
+        &[(OsString::from("PATH"), OsString::from("x"))],
+        &[EnvOp::Clear, EnvOp::Set("ONLYME".into(), "1".into())],
+    )
+    .unwrap();
+    let s = String::from_utf16(&b).unwrap();
+    assert!(s.contains("ONLYME=1") && !s.to_uppercase().contains("PATH="));
+}
+#[skuld::test]
+fn embedded_nul_is_rejected() {
+    let e = build_env_block_from(&[], &[EnvOp::Set("K".into(), OsString::from("a\u{0}b"))]).unwrap_err();
+    assert!(matches!(e, crate::error::Error::Io(_)));
+}
+#[skuld::test]
+fn resolve_skips_directory_shadow_and_finds_path_exe() {
+    let base = tempfile::tempdir().unwrap();
+    let other = tempfile::tempdir().unwrap();
+    // A directory in base_cwd whose name matches the bare program must not
+    // shadow the real executable found later on PATH — a directory can never run.
+    // The shadow directory lives on PATH, AHEAD of the real executable: base_cwd is no longer
+    // searched, so planting it there would no longer exercise the `is_file` guard at all.
+    //
+    // Named `sp_dirtool.exe`, not extensionless `sp_dirtool`: the bare-name candidate rule (see
+    // `crate::resolve`'s `filename_candidates` doc) means the only filename ever tried for a bare
+    // `sp_dirtool` is `sp_dirtool.exe`. An extensionless shadow directory is never even looked at,
+    // which would make `is_file()` -> `exists()` a silently green one-line mutation here — the
+    // shadow has to be named exactly what the search will actually stat.
+    let shadow_dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(shadow_dir.path().join("sp_dirtool.exe")).unwrap();
+    let path_copy = other.path().join("sp_dirtool.exe");
+    std::fs::copy(std::env::current_exe().unwrap(), &path_copy).unwrap();
+    let joined = std::env::join_paths([shadow_dir.path(), other.path()]).unwrap();
+    let got = resolve_executable_in(
+        std::path::Path::new("sp_dirtool"),
+        Some(base.path()),
+        &no_system_dirs,
+        Some(joined.as_os_str()),
+        false,
+    )
+    .unwrap();
+    assert_eq!(got.canonicalize().unwrap(), path_copy.canonicalize().unwrap());
+}
+#[skuld::test]
+fn resolve_absolute_directory_is_not_returned() {
+    let dir = tempfile::tempdir().unwrap();
+    // An absolute path naming an existing *directory* is not a runnable program.
+    //
+    // The directory itself is named `...exe` so `filename_candidates` leaves the name unchanged
+    // (its final component already ends in `.exe`) and the joined candidate is exactly this
+    // existing directory. Passing `dir.path()` bare would instead produce a candidate of
+    // `<tempdir-name>.exe`, which exists under NEITHER `is_file()` NOR `exists()` — making
+    // `is_file()` -> `exists()` a silently green one-line mutation, since nothing was ever there to
+    // tell the two checks apart.
+    let sub = dir.path().join("sp_dir_shadow.exe");
+    std::fs::create_dir(&sub).unwrap();
+    // The base must be fully qualified; an absolute program never reads it.
+    assert_not_found(resolve_executable_in(
+        &sub,
+        Some(dir.path()),
+        &no_system_dirs,
+        None,
+        false,
+    ));
+}
+#[skuld::test]
+fn path_wins_over_base_cwd_when_both_have_exe() {
+    let base = tempfile::tempdir().unwrap();
+    let other = tempfile::tempdir().unwrap();
+    let me = std::env::current_exe().unwrap();
+    let base_copy = base.path().join("sp_pref.exe");
+    std::fs::copy(&me, &base_copy).unwrap();
+    std::fs::copy(&me, other.path().join("sp_pref.exe")).unwrap();
+    // base_cwd is not searched for a bare name, so the PATH copy wins even though an identically
+    // named file sits in the current directory. `system_dirs` is empty here — this test is about
+    // base_cwd vs PATH, not system-directory precedence.
+    let got = resolve_executable_in(
+        std::path::Path::new("sp_pref"),
+        Some(base.path()),
+        &no_system_dirs,
+        Some(other.path().as_os_str()),
+        false,
+    )
+    .unwrap();
+    let want = other.path().join("sp_pref.exe");
+    assert_eq!(got.canonicalize().unwrap(), want.canonicalize().unwrap());
+    assert_ne!(got.canonicalize().unwrap(), base_copy.canonicalize().unwrap());
+}
+#[skuld::test]
+fn clear_only_yields_empty_double_nul_block() {
+    // An empty environment is a bare double-NUL, never a lone terminator — pins the leading-NUL
+    // push.
+    let b = build_env_block_from(&[(OsString::from("A"), OsString::from("1"))], &[EnvOp::Clear]).unwrap();
+    assert_eq!(b, vec![0u16, 0u16]);
+}
+// ── real Windows system directories, end to end ─────────────────────────────────────
+//
+// The core ordering policy is pinned host-independently in `crate::resolve_tests` (it takes
+// `system_dirs` as fabricated `PathBuf`s, by design, so it can run without Windows at all). These
+// tests instead exercise the REAL `GetSystemDirectoryW`/`GetWindowsDirectoryW` wiring in
+// `windows_system_dirs` — the one part of this policy a cross-compile cannot validate, because
+// `cargo xwin check`/`clippy` only prove the code TYPE-CHECKS for Windows, never that it runs
+// correctly there. What a real runner catches here is a wrong Win32 return-value convention and
+// `System32` not being where this crate assumes it is — plus, below, that the app directory
+// really is excluded end to end, not merely absent from a doc comment.
+//
+// NOT `grow_wide_buffer`'s grow loop: `System32` and the Windows directory fit the initial
+// 260-element buffer on every install, so the loop never runs and no test on any host reaches it.
+// Its own `debug_assert!` and the `.max(buf.len() + 1)` that keeps it from spinning are what
+// stand in for coverage there.
+#[skuld::test]
+fn windows_system_dirs_are_real_existing_directories() {
+    let dirs = windows_system_dirs().unwrap();
+    for dir in &dirs {
+        assert!(dir.is_dir(), "{dir:?} is not a real, existing directory");
+    }
+
+    // Call each real Win32 accessor directly, not just the aggregate: the exact-list assertion
+    // below needs their individual return values to compare `dirs` against, and asserting each is
+    // `Ok` here — rather than folding that into the comparison — gives a query failure its own
+    // specific message instead of surfacing as a generic list mismatch.
+    let sys32 = get_system_directory_via(|buf| {
+        // SAFETY: see `windows_system_dirs`'s own closures — identical contract.
+        unsafe { GetSystemDirectoryW(buf) }
+    });
+    let win = get_windows_directory_via(|buf| {
+        // SAFETY: see `windows_system_dirs`'s own closures — identical contract.
+        unsafe { GetWindowsDirectoryW(buf) }
+    });
+    assert!(
+        sys32.is_ok(),
+        "GetSystemDirectoryW should succeed under the test runner, got {sys32:?}"
+    );
+    assert!(
+        win.is_ok(),
+        "GetWindowsDirectoryW should succeed under the test runner, got {win:?}"
+    );
+    let (sys32, win) = (sys32.unwrap(), win.unwrap());
+
+    // The list is EXACTLY [System32, Windows dir], in that order, and nothing else. A
+    // merely-`contains` assertion would pass even with a stray extra entry present; pinning
+    // the full, exact list is what catches that.
+    assert_eq!(
+        dirs,
+        vec![sys32, win],
+        "expected exactly [System32, Windows dir], got {dirs:?}"
+    );
+
+    // The exact-list pin above only compares `dirs` against a second, independent pair of real
+    // Win32 calls, so it cannot catch BOTH sides wrongly returning the app directory. Check
+    // independently, against `current_exe()` directly: never the app directory (this crate treats
+    // it as a planting vector and must not search it) — see also `the_app_directory_is_not_searched`
+    // below, which proves this end to end through `resolve_executable`.
+    let app_dir = std::env::current_exe().unwrap().parent().unwrap().to_path_buf();
+    assert!(
+        !dirs.contains(&app_dir),
+        "windows_system_dirs must never include the app directory {app_dir:?}, got {dirs:?}"
+    );
+}
+
+/// A `GetSystemDirectoryW`/`GetWindowsDirectoryW`-shaped call reporting failure (`0`, its only
+/// "give up" signal — see `grow_wide_buffer`'s doc) is not silently dropped: `query_wide_dir`
+/// propagates it as an `Err` naming which API failed. `windows_system_dirs` then fails the whole
+/// resolution on that `Err` rather than dropping the directory and letting `PATH` shadow it — see
+/// `windows_system_dirs`'s doc for why a silent drop would be a WIDENING this module treats as no
+/// more acceptable than a deliberate one. No real Win32 failure is needed to exercise this:
+/// `query_wide_dir` takes the Win32 call as a closure, so a fake one that always reports failure
+/// exercises the exact propagation path `get_system_directory_via`/`get_windows_directory_via` rely
+/// on, on any host that compiles this module.
+#[skuld::test]
+fn a_system_directory_query_failure_is_not_silently_dropped() {
+    let err = query_wide_dir("GetSystemDirectoryW", |_buf| 0).unwrap_err();
+    let msg = match err {
+        Error::Io(e) => e.to_string(),
+        other => panic!("expected Io, got {other:?}"),
+    };
+    assert!(
+        msg.contains("GetSystemDirectoryW"),
+        "the error should name which query failed: {msg:?}"
+    );
+}
+
+/// [`get_system_directory_via`] is the exact function [`windows_system_dirs`] calls, through
+/// [`windows_system_dirs_via`]'s `sys` parameter, for `System32` — `resolve_executable`'s real
+/// chain reaches it through no other path. Forcing failure HERE, rather than through a re-typed
+/// `query_wide_dir("...", ...)` call, is what would catch `get_system_directory_via`/
+/// `get_windows_directory_via` accidentally swapping which literal API name they hand to
+/// `query_wide_dir`: asserting the OTHER api string is absent, not just that the right one is
+/// present, is what makes a swap fail this test instead of silently passing it (both queries fail
+/// identically, so a wrong name would still "contain an API name").
+#[skuld::test]
+fn get_system_directory_via_names_its_own_api_on_failure() {
+    let err = get_system_directory_via(|_buf| 0).unwrap_err();
+    let msg = match err {
+        Error::Io(e) => e.to_string(),
+        other => panic!("expected Io, got {other:?}"),
+    };
+    assert!(msg.contains("GetSystemDirectoryW"), "{msg:?}");
+    assert!(!msg.contains("GetWindowsDirectoryW"), "{msg:?}");
+}
+
+/// The [`get_windows_directory_via`] mirror of
+/// [`get_system_directory_via_names_its_own_api_on_failure`] — see its doc.
+#[skuld::test]
+fn get_windows_directory_via_names_its_own_api_on_failure() {
+    let err = get_windows_directory_via(|_buf| 0).unwrap_err();
+    let msg = match err {
+        Error::Io(e) => e.to_string(),
+        other => panic!("expected Io, got {other:?}"),
+    };
+    assert!(msg.contains("GetWindowsDirectoryW"), "{msg:?}");
+    assert!(!msg.contains("GetSystemDirectoryW"), "{msg:?}");
+}
+
+/// [`resolve_executable_in`] — the function `resolve_executable` delegates to (with `&windows_system_dirs`
+/// and `loadable_only: false`) — never queries `system_dirs` for a `Located` name (one containing a
+/// separator) or an absolute path, proven by a closure that PANICS if called at all, rather than one
+/// that merely returns an error a search could recover from by falling through to the next step.
+/// This is the windows_raw mirror of `a_located_name_still_resolves_when_the_system_dirs_query_fails`
+/// in `crate::resolve::resolve_tests`, exercising the real Windows-specific plumbing
+/// (`GetFullPathNameW` via `normalise_candidate`) rather than a fabricated stand-in.
+///
+/// This does NOT prove that `resolve_executable`'s own one-line body passes `&windows_system_dirs`
+/// LAZILY, rather than calling `windows_system_dirs()` eagerly before delegating: that binding is
+/// covered by review, not by a test — see `windows_system_dirs`'s doc for why no portable test can
+/// tell the two apart. This test proves only that once inside `resolve_executable_in`, a
+/// `system_dirs` closure is never invoked for either of these two shapes.
+#[skuld::test]
+fn a_located_and_an_absolute_name_never_query_system_dirs_when_resolved_directly() {
+    let panics =
+        || -> Result<Vec<PathBuf>, Error> { panic!("system_dirs must not be queried for a Located or absolute name") };
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("sp_via_located.exe");
+    std::fs::write(&file, b"x").unwrap();
+
+    // Located: the name contains a separator.
+    let located = Path::new(".").join(file.file_name().unwrap());
+    let got = resolve_executable_in(&located, Some(dir.path()), &panics, None, false).unwrap();
+    assert_eq!(got.canonicalize().unwrap(), file.canonicalize().unwrap());
+
+    // Absolute.
+    let got = resolve_executable_in(&file, Some(dir.path()), &panics, None, false).unwrap();
+    assert_eq!(got.canonicalize().unwrap(), file.canonicalize().unwrap());
+}
+
+/// A bare name's resolution error names `GetSystemDirectoryW` when that is the query that fails,
+/// through the real chain: [`resolve_executable_in`] — the function `resolve_executable` delegates
+/// to — fed [`windows_system_dirs_via`] itself, the exact function `windows_system_dirs` calls, with
+/// only its `sys` closure replaced and `win` left real. Unlike
+/// `get_system_directory_via_names_its_own_api_on_failure`, which calls
+/// [`get_system_directory_via`] directly, this proves the naming survives `windows_system_dirs_via`'s
+/// own pairing of closure to api-string too, not just `query_wide_dir`'s. A matching file is planted
+/// on `PATH`, so a pass here could only come from swallowing the failure and falling through to it.
+#[skuld::test]
+fn a_bare_name_names_get_system_directory_w_when_the_system_query_fails() {
+    let pathdir = tempfile::tempdir().unwrap();
+    std::fs::write(pathdir.path().join("sp_sysfail.exe"), b"x").unwrap();
+    let cwd = tempfile::tempdir().unwrap();
+    let system_dirs_fn = || {
+        windows_system_dirs_via(
+            |_buf| 0,
+            |buf| {
+                // SAFETY: see `windows_system_dirs`'s own closures — identical contract.
+                unsafe { GetWindowsDirectoryW(buf) }
+            },
+        )
+    };
+    let err = resolve_executable_in(
+        Path::new("sp_sysfail"),
+        Some(cwd.path()),
+        &system_dirs_fn,
+        Some(pathdir.path().as_os_str()),
+        false,
+    )
+    .unwrap_err();
+    let msg = match err {
+        Error::Io(e) => e.to_string(),
+        other => panic!("expected Io, got {other:?}"),
+    };
+    assert!(msg.contains("GetSystemDirectoryW"), "{msg:?}");
+    assert!(!msg.contains("GetWindowsDirectoryW"), "{msg:?}");
+}
+
+/// The [`a_bare_name_names_get_system_directory_w_when_the_system_query_fails`] mirror, with `win`
+/// forced to fail and `sys` left real — see its doc.
+#[skuld::test]
+fn a_bare_name_names_get_windows_directory_w_when_the_windows_query_fails() {
+    let pathdir = tempfile::tempdir().unwrap();
+    std::fs::write(pathdir.path().join("sp_winfail.exe"), b"x").unwrap();
+    let cwd = tempfile::tempdir().unwrap();
+    let system_dirs_fn = || {
+        windows_system_dirs_via(
+            |buf| {
+                // SAFETY: see `windows_system_dirs`'s own closures — identical contract.
+                unsafe { GetSystemDirectoryW(buf) }
+            },
+            |_buf| 0,
+        )
+    };
+    let err = resolve_executable_in(
+        Path::new("sp_winfail"),
+        Some(cwd.path()),
+        &system_dirs_fn,
+        Some(pathdir.path().as_os_str()),
+        false,
+    )
+    .unwrap_err();
+    let msg = match err {
+        Error::Io(e) => e.to_string(),
+        other => panic!("expected Io, got {other:?}"),
+    };
+    assert!(msg.contains("GetWindowsDirectoryW"), "{msg:?}");
+    assert!(!msg.contains("GetSystemDirectoryW"), "{msg:?}");
+}
+
+/// A drive-relative name (`C:tool`) is refused as `InvalidInput` before any search — see
+/// [`resolve_executable_in`]'s doc — so `system_dirs` must never be consulted for it, even one that
+/// would panic if called, through [`resolve_executable_in`] directly.
+#[skuld::test]
+fn a_drive_relative_name_is_refused_without_querying_system_dirs() {
+    let panics =
+        || -> Result<Vec<PathBuf>, Error> { panic!("system_dirs must not be queried for a drive-relative name") };
+    let cwd = tempfile::tempdir().unwrap();
+    let err = resolve_executable_in(Path::new("C:tool"), Some(cwd.path()), &panics, None, false).unwrap_err();
+    match err {
+        Error::Io(e) => assert_eq!(e.kind(), std::io::ErrorKind::InvalidInput, "{e:?}"),
+        other => panic!("expected Io(InvalidInput), got {other:?}"),
+    }
+}
+
+/// [`query_wide_dir`] wraps the Win32 failure through [`crate::error::io_context`] rather than a
+/// hand-rolled message, specifically so the original `std::io::Error` — and its `raw_os_error()` —
+/// stays reachable one hop down via `.source()`, exactly as
+/// `crate::error_tests::io_context_keeps_the_os_error_as_its_source` pins for `io_context` itself.
+/// This test pins that the SAME guarantee survives all the way through `get_system_directory_via`,
+/// not just through `io_context` in isolation: a caller catching a specific OS error code (e.g. to
+/// distinguish "access denied" from "not found") must still be able to, after this wrap.
+#[skuld::test]
+fn get_system_directory_via_keeps_the_os_error_reachable() {
+    // ERROR_INVALID_PARAMETER
+    let code: u32 = 87;
+    // SAFETY: `SetLastError` only writes the calling thread's last-error slot.
+    unsafe { windows::Win32::Foundation::SetLastError(windows::Win32::Foundation::WIN32_ERROR(code)) };
+    let err = get_system_directory_via(|_buf| 0).unwrap_err();
+    let io_err = match err {
+        Error::Io(e) => e,
+        other => panic!("expected Io, got {other:?}"),
+    };
+    let source = std::error::Error::source(io_err.get_ref().expect("a custom error"))
+        .and_then(|s| s.downcast_ref::<std::io::Error>())
+        .expect("the OS error is the source");
+    assert_eq!(source.raw_os_error(), Some(code as i32), "{source:?}");
+}
+
+/// A copy of this test binary planted directly in the app directory
+/// (`std::env::current_exe()`'s parent), under a name unique per call. Built on
+/// [`tempfile::NamedTempFile`] rather than a hand-picked name: `tempfile_in` creates the file
+/// atomically (`O_EXCL`-equivalent) with a random name, so two of these racing in the same
+/// directory — two `cargo nextest run` test-binary processes sharing one `target/.../deps`
+/// build-output directory (default-feature and `--features tokio` builds, or overlapping CI jobs)
+/// — can never collide on a name or on each other's copy/delete, and a copy that fails partway or
+/// a test that panics mid-body still gets cleaned up by the same `Drop`.
+struct PlantedInAppDir(tempfile::NamedTempFile);
+
+impl PlantedInAppDir {
+    fn new(prefix: &str) -> Self {
+        let app_dir = std::env::current_exe().unwrap().parent().unwrap().to_path_buf();
+        let mut file = tempfile::Builder::new()
+            .prefix(prefix)
+            .suffix(".exe")
+            .tempfile_in(&app_dir)
+            .unwrap();
+        let mut src = std::fs::File::open(std::env::current_exe().unwrap()).unwrap();
+        std::io::copy(&mut src, file.as_file_mut()).unwrap();
+        PlantedInAppDir(file)
+    }
+
+    fn dir(&self) -> PathBuf {
+        self.0.path().parent().unwrap().to_path_buf()
+    }
+
+    fn file_stem(&self) -> String {
+        self.0.path().file_stem().unwrap().to_str().unwrap().to_owned()
+    }
+}
+
+/// The app directory — the directory THIS test binary's own image loaded from — is not searched
+/// for a bare name (see `crate::resolve::ResolveInput::system_dirs`'s doc for why), even though
+/// `CreateProcessW`'s own NULL-`lpApplicationName` search visits it first. A copy of this very
+/// test binary is planted directly in `current_exe()`'s parent under a name that exists nowhere
+/// else — not on the `PATH` passed below, not in System32 or the Windows directory — so any
+/// resolution of it could only have come from the app directory.
+///
+/// Control A and the final miss pass an explicit empty-tempdir `PATH` rather than `None`, so the
+/// `PATH` step still runs (an empty `PATH` step and a skipped one are the same outcome here, but
+/// exercising the real step is the more faithful test). It must be an EMPTY tempdir, not the real
+/// ambient `PATH` this process was launched with: cargo and nextest put the `target/.../deps`
+/// directory itself, where the planted file lives, on the ambient `PATH` on Windows (it is the
+/// dylib search path), which would let an accidentally-real `PATH` satisfy the search on its own
+/// and mask a regression in the app-directory step. (`resolve_executable`/`resolve_executable_in`
+/// never read the ambient `PATH` themselves — this is about not accidentally FEEDING it to them.)
+/// Control B deliberately puts the app directory ON that `PATH` instead, the one place in this
+/// test it is supposed to be found.
+#[skuld::test]
+fn the_app_directory_is_not_searched() {
+    let planted = PlantedInAppDir::new("sp_appdir_decoy");
+    let name = planted.file_stem();
+    let base = tempfile::tempdir().unwrap();
+    let empty_path = tempfile::tempdir().unwrap();
+
+    // Positive control A, via `resolve_executable_in` directly: the decoy DOES resolve when its
+    // own directory is listed in `system_dirs` — proving a miss below is really about the app
+    // directory being excluded, not an unrelated naming, extension or plumbing mistake that would
+    // make the decoy unresolvable everywhere.
+    let app_dir_fn = || -> Result<Vec<PathBuf>, Error> { Ok(vec![planted.dir()]) };
+    let with_app_dir_searched = resolve_executable_in(
+        Path::new(&name),
+        Some(base.path()),
+        &app_dir_fn,
+        Some(empty_path.path().as_os_str()),
+        false,
+    );
+    assert_eq!(
+        with_app_dir_searched.unwrap().canonicalize().unwrap(),
+        planted.0.path().canonicalize().unwrap()
+    );
+
+    // Positive control B, via the REAL entry point `resolve_executable`: the decoy DOES resolve
+    // when its directory is on `PATH` instead. Control A alone would still pass if
+    // `resolve_executable` itself were broken and returned `NotFound` unconditionally — this rules
+    // that out by proving `resolve_executable`'s own plumbing can find the decoy when nothing
+    // excludes it, before the miss below claims that a specific exclusion is why it fails.
+    let app_dir_as_path = planted.dir().into_os_string();
+    let with_app_dir_on_path =
+        resolve_executable(Path::new(&name), Some(base.path()), Some(app_dir_as_path.as_os_str()));
+    assert_eq!(
+        with_app_dir_on_path.unwrap().canonicalize().unwrap(),
+        planted.0.path().canonicalize().unwrap()
+    );
+
+    // The real entry point again, this time with the app directory excluded as it is in
+    // production: `resolve_executable` calls `windows_system_dirs`, which — this test's whole
+    // point — never includes the app directory, and the app directory is not on `PATH` either.
+    let got = resolve_executable(Path::new(&name), Some(base.path()), Some(empty_path.path().as_os_str()));
+    assert_not_found(got);
+}
+
+#[skuld::test]
+fn resolve_finds_a_real_system32_binary_through_system_dirs() {
+    // `notepad.exe` ships in `System32` on every supported Windows version and is not normally on
+    // a dev machine's `PATH`, so successfully resolving the BARE name "notepad" with an empty
+    // `PATH` can only have come from `system_dirs` — proving the real wiring end to end, not just
+    // that `windows_system_dirs()` returns plausible-looking paths.
+    let cwd = tempfile::tempdir().unwrap();
+    let got = resolve_executable_in(
+        std::path::Path::new("notepad"),
+        Some(cwd.path()),
+        &windows_system_dirs,
+        None,
+        false,
+    )
+    .unwrap();
+    assert!(got.to_string_lossy().to_lowercase().contains("system32"), "{got:?}");
+}
+
+#[skuld::test]
+fn embedded_nul_in_key_is_rejected_as_invalid_input() {
+    let e = build_env_block_from(&[], &[EnvOp::Set(OsString::from("a\u{0}b"), "1".into())]).unwrap_err();
+    assert!(
+        matches!(e, crate::error::Error::Io(ref io) if io.kind() == std::io::ErrorKind::InvalidInput),
+        "{e:?}"
+    );
+}
+
+/// The NUL refusal must name WHICH field carried it. One checker serves the environment block, the
+/// program token, the working directory and every argv token, so a message fixed to "environment
+/// key or value" reports a NUL in a PROGRAM PATH as a broken environment.
+#[skuld::test]
+fn a_nul_refusal_names_the_field_that_carried_it() {
+    let key = build_env_block_from(&[], &[EnvOp::Set(OsString::from("a\u{0}b"), "1".into())]).unwrap_err();
+    assert!(key.to_string().contains("environment key"), "{key}");
+
+    let val = build_env_block_from(&[], &[EnvOp::Set("K".into(), OsString::from("a\u{0}b"))]).unwrap_err();
+    assert!(val.to_string().contains("environment value"), "{val}");
+
+    // The `what` really is the caller's, not a constant the two legs above happen to share.
+    let other = ensure_no_nul_wide("program token", OsStr::new("a\u{0}b")).unwrap_err();
+    assert!(other.to_string().contains("program token"), "{other}");
+    assert!(
+        !other.to_string().contains("environment"),
+        "a program token is not the environment: {other}"
+    );
+}
+
+/// [`debug_assert_no_nul_wide`] promises to fail LOUDLY the moment resolution grows a return that
+/// is not `is_file`-gated. An assert nobody fires is indistinguishable from an assert whose
+/// condition was inverted or dropped, so the promise is worth a probe of its own.
+///
+/// `debug_assertions`-only: the assert is compiled out of a release build by design, so in CI's
+/// `--release --lib` leg the expected panic would never arrive and a working crate would go red.
+#[cfg(debug_assertions)]
+#[skuld::test]
+#[should_panic(expected = "program image contains an embedded NUL")]
+fn debug_assert_no_nul_wide_panics_on_an_embedded_nul() {
+    debug_assert_no_nul_wide("program image", OsStr::new("a\u{0}b"));
+}
+
+// Environment key identity =====
+
+fn wide(units: &[u16]) -> OsString {
+    OsString::from_wide(units)
+}
+
+/// Split a block into `(key, value)` entries. Splits at the LAST `=`, so a key that is itself `=`
+/// parses as long as values carry none.
+fn block_entries(block: &[u16]) -> Vec<(OsString, OsString)> {
+    block[..block.len() - 1]
+        .split(|&u| u == 0)
+        .filter(|entry| !entry.is_empty())
+        .map(|entry| {
+            let eq = entry.iter().rposition(|&u| u == u16::from(b'=')).unwrap();
+            (wide(&entry[..eq]), wide(&entry[eq + 1..]))
+        })
+        .collect()
+}
+
+/// Whether setting `b` over an inherited `a` replaces it (the same variable) or adds a second one.
+fn same_var(a: &OsStr, b: &OsStr) -> bool {
+    let block = build_env_block_from(&[(a.into(), "base".into())], &[EnvOp::Set(b.into(), "op".into())]).unwrap();
+    match block_entries(&block).len() {
+        1 => true,
+        2 => false,
+        n => panic!("{a:?} over {b:?} produced {n} entries"),
+    }
+}
+
+/// Windows folds one UTF-16 code unit to one, so a character whose full uppercase is longer, or
+/// lives in a surrogate pair, never names the same variable as that uppercase.
+#[skuld::test]
+fn full_case_mapping_does_not_merge_env_keys() {
+    for (a, b) in [("SS", "ß"), ("FI", "ﬁ"), ("I", "ı"), ("\u{10400}", "\u{10428}")] {
+        assert!(
+            !same_var(OsStr::new(a), OsStr::new(b)),
+            "{a:?} and {b:?} are distinct on Windows"
+        );
+    }
+}
+
+#[skuld::test]
+fn simple_case_pairs_are_the_same_env_key() {
+    for (a, b) in [("PATH", "path"), ("É", "é")] {
+        assert!(
+            same_var(OsStr::new(a), OsStr::new(b)),
+            "{a:?} and {b:?} are one variable"
+        );
+    }
+}
+
+/// An unpaired surrogate is its own code unit: it matches only itself, and does not stop the rest
+/// of the key from folding.
+#[skuld::test]
+fn unpaired_surrogates_in_env_keys_compare_by_code_unit() {
+    let hi = 0xD800;
+    let a = u16::from(b'a');
+    let upper_a = u16::from(b'A');
+    assert!(same_var(&wide(&[hi]), &wide(&[hi])));
+    assert!(!same_var(&wide(&[hi]), &wide(&[0xDC00])));
+    assert!(same_var(&wide(&[hi, a]), &wide(&[hi, upper_a])));
+}
+
+#[skuld::test]
+fn setting_eszett_keeps_an_inherited_ss() {
+    let block = build_env_block_from(
+        &[(OsString::from("SS"), OsString::from("inherited"))],
+        &[EnvOp::Set(OsString::from("ß"), OsString::from("set"))],
+    )
+    .unwrap();
+    let mut got = block_entries(&block);
+    got.sort();
+    assert_eq!(got, [("SS".into(), "inherited".into()), ("ß".into(), "set".into())]);
+}
+
+type Entries = Vec<(OsString, OsString)>;
+
+/// The raw block for `ops` over an empty base, next to what std's `Command` holds after the same
+/// ops. With nothing inherited, std's block is exactly `get_envs`' set entries, in std's own
+/// `EnvKey` order, which is the order std writes its block in. The raw side also takes its names
+/// from `get_envs`, so a comparison pins order, merges and values, not naming.
+fn block_vs_std(ops: &[EnvOp]) -> (Entries, Entries) {
+    let mut std_cmd = std::process::Command::new("unused");
+    crate::child::spawn::apply_env(&mut std_cmd, ops);
+    let ours = block_entries(&build_env_block_from(&[], ops).unwrap());
+    let std = std_cmd
+        .get_envs()
+        .filter_map(|(k, v)| Some((k.to_os_string(), v?.to_os_string())))
+        .collect();
+    (ours, std)
+}
+
+/// A cleared env followed by one `Set` per key, valued by its index.
+fn set_each(keys: &[OsString]) -> Vec<EnvOp> {
+    std::iter::once(EnvOp::Clear)
+        .chain(
+            keys.iter()
+                .enumerate()
+                .map(|(i, key)| EnvOp::Set(key.clone(), i.to_string().into())),
+        )
+        .collect()
+}
+
+/// `CreateProcessW` expects the block sorted case-insensitively by ordinal, locale-free; std sorts
+/// by `CompareStringOrdinal`, so the raw backend must produce the same order and the same merges.
+#[skuld::test]
+fn env_block_order_and_merges_match_std() {
+    let keys: Vec<OsString> = [
+        "T",
+        "ß",
+        "SS",
+        "sa",
+        "st",
+        "_x",
+        "a",
+        "Z",
+        "é",
+        "É",
+        "ﬁ",
+        "FI",
+        "ı",
+        "I",
+        "\u{10428}",
+        "\u{10400}",
+        "\u{FFFF}",
+    ]
+    .iter()
+    .map(OsString::from)
+    .chain([wide(&[0xD800]), wide(&[0xDC00, u16::from(b'a')])])
+    .collect();
+    let (ours, std) = block_vs_std(&set_each(&keys));
+    assert_eq!(ours, std);
+}
+
+/// Every non-NUL code unit as a one-unit key: the raw backend and std agree on every merge and on
+/// the whole order. The emitted names come from std's own `get_envs` on both sides here, so they
+/// are pinned end to end in `tests/windows_env_block.rs` instead.
+#[skuld::test]
+fn env_block_matches_std_over_every_code_unit() {
+    let keys: Vec<OsString> = (1..=u16::MAX).map(|u| wide(&[u])).collect();
+    let (ours, std) = block_vs_std(&set_each(&keys));
+    assert_eq!(ours.len(), std.len());
+    assert!(
+        ours == std,
+        "first divergence at {:?}",
+        ours.iter().zip(&std).position(|(a, b)| a != b)
+    );
+}
+
+/// Colliding keys emit the name `ChildEnv::capture`'s doc states, which is std's.
+#[skuld::test]
+fn colliding_keys_keep_std_casing() {
+    let set = |k: &str, v: &str| EnvOp::Set(k.into(), v.into());
+    let remove = |k: &str| EnvOp::Remove(k.into());
+    for (ops, name) in [
+        (vec![set("Path", "1"), set("PATH", "2")], "Path"),
+        (vec![remove("path"), set("PATH", "1")], "path"),
+        (vec![EnvOp::Clear, remove("path"), set("PATH", "1")], "PATH"),
+        (vec![set("a", "1"), EnvOp::Clear, set("A", "2")], "A"),
+        (vec![EnvOp::Clear, set("a", "1"), remove("A"), set("A", "2")], "A"),
+    ] {
+        let (ours, std) = block_vs_std(&ops);
+        assert_eq!(ours, std, "{ops:?}");
+        assert_eq!(ours.len(), 1, "{ops:?}");
+        assert_eq!(ours[0].0, name, "{ops:?}");
+    }
+}
+
+/// With no `Clear`, an inherited variable keeps its inherited name, even when removed and re-set.
+#[skuld::test]
+fn an_inherited_key_keeps_its_casing() {
+    let base = [(OsString::from("Path"), OsString::from("inherited"))];
+    for ops in [
+        vec![EnvOp::Set("PATH".into(), "x".into())],
+        vec![EnvOp::Remove("PATH".into()), EnvOp::Set("pAth".into(), "x".into())],
+    ] {
+        let block = build_env_block_from(&base, &ops).unwrap();
+        assert_eq!(block_entries(&block), [("Path".into(), "x".into())], "{ops:?}");
+    }
+}
+
+// One environment snapshot per spawn =====
+
+/// `CreateProcessW` keeps duplicate names as given, and `GetEnvironmentVariableW` returns the first.
+/// `path()`, which resolution searches, must be the `PATH` the child reads from its block.
+#[skuld::test]
+fn path_is_the_one_the_child_reads_from_its_block() {
+    let base = [
+        (OsString::from("PATH"), OsString::from("a")),
+        (OsString::from("Path"), OsString::from("b")),
+    ];
+    for (env, want) in [
+        (ChildEnv::inherit(&snapshot(&base)), "a"),
+        (ChildEnv::capture(&snapshot(&base), &[]), "b"),
+        (
+            ChildEnv::capture(&snapshot(&base), &[EnvOp::Set("K".into(), "1".into())]),
+            "b",
+        ),
+    ] {
+        let path = env.path().map(OsStr::to_os_string);
+        let block = EnvSnapshot::from_block(env.into_block().unwrap());
+        assert_eq!(path, block.var(OsStr::new("PATH")));
+        assert_eq!(path.as_deref(), Some(OsStr::new(want)));
+    }
+}
+
+/// Inheriting gives the child the snapshot byte for byte, as a std child inheriting a NULL block
+/// gets this process's: duplicates and entries with no `=` included.
+#[skuld::test]
+fn inherit_passes_the_snapshot_verbatim() {
+    let block: Vec<u16> = ["Path=a", "JUNK", "PATH=b", "=C:=C:\\x"]
+        .iter()
+        .flat_map(|e| e.encode_utf16().chain([0]))
+        .chain([0])
+        .collect();
+    let env = ChildEnv::inherit(&EnvSnapshot::from_block(block.clone()));
+    assert_eq!(env.into_block().unwrap(), block);
+}
+
+/// Capturing rebuilds even with no ops: a contained spawn's environment is always the snapshot
+/// as std's `capture` rebuilds it, since std cannot pass a block verbatim.
+#[skuld::test]
+fn capture_rebuilds_even_with_no_ops() {
+    let env = ChildEnv::capture(
+        &snapshot(&[("Path".into(), "a".into()), ("PATH".into(), "b".into())]),
+        &[],
+    );
+    assert_eq!(block_entries(&env.into_block().unwrap()), [("Path".into(), "b".into())]);
+}
+
+/// With ops the base is the snapshot parsed as `vars_os` parses it: `=`-less entries dropped,
+/// duplicates merged under their first name with their last value.
+#[skuld::test]
+fn ops_rebuild_from_the_snapshot_as_std_does() {
+    let block: Vec<u16> = ["Path=a", "JUNK", "PATH=b"]
+        .iter()
+        .flat_map(|e| e.encode_utf16().chain([0]))
+        .chain([0])
+        .collect();
+    let env = ChildEnv::capture(&EnvSnapshot::from_block(block), &[EnvOp::Set("K".into(), "1".into())]);
+    let got = block_entries(&env.into_block().unwrap());
+    assert_eq!(got, [("K".into(), "1".into()), ("Path".into(), "b".into())]);
+}
+
+/// Resolution searches the snapshot it is given, not a fresh read of this process's environment.
+#[skuld::test]
+fn resolution_searches_the_given_snapshot() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::copy(std::env::current_exe().unwrap(), dir.path().join("sp_snapshot.exe")).unwrap();
+    let base = [(OsString::from("PATH"), dir.path().as_os_str().to_os_string())];
+    let env = ChildEnv::capture(&snapshot(&base), &[]);
+    let got = resolve_executable(Path::new("sp_snapshot"), None, env.path()).unwrap();
+    assert_eq!(
+        got.canonicalize().unwrap(),
+        dir.path().join("sp_snapshot.exe").canonicalize().unwrap()
+    );
+}
+
+// `absolutise_exact_on`: the `raw_executable()` contract ──────
+//
+// The cwd is stated: `absolutise_exact_on` reads this process's cwd only through its reader, so
+// these need no real directory and run on any Windows runner.
+
+/// `absolutise_exact_on` with `cwd` as this process's cwd and no drive's own directory set.
+fn exact_on(program: &Path, cwd: &str) -> Result<PathBuf, Error> {
+    let cwd = PathBuf::from(cwd);
+    absolutise_exact_on(program, || Ok(cwd), |_| Ok(None)).map(|c| c.path)
+}
+
+/// `absolutise_exact_on` that fails the test if it reads any cwd.
+fn exact_reading_nothing(program: &Path) -> Result<PathBuf, Error> {
+    absolutise_exact_on(
+        program,
+        || panic!("must not read the process cwd"),
+        |_| panic!("must not read a drive's directory"),
+    )
+    .map(|c| c.path)
+}
+
+/// The core promise: ABSOLUTE, but completed rather than searched.
+///
+/// A bare name must come back as the calling process's current directory joined with that name —
+/// which is what `CreateProcessW` would do with the same partial `lpApplicationName`. Kills
+/// "replace the body with a passthrough".
+#[skuld::test]
+fn absolutise_exact_completes_a_bare_name_against_the_processes_cwd() {
+    let got = exact_on(Path::new("tool"), r"C:\base").unwrap();
+    assert_eq!(got, PathBuf::from(r"C:\base\tool"), "{got:?}");
+    assert!(got.is_absolute());
+}
+
+/// No extension is invented. `executable("tool")` would look for `tool.exe`; this must not.
+#[skuld::test]
+fn absolutise_exact_never_appends_an_extension() {
+    let got = exact_on(Path::new("tool"), r"C:\base").unwrap();
+    assert_eq!(got.file_name().unwrap(), std::ffi::OsStr::new("tool"), "{got:?}");
+}
+
+/// No existence check — the file need not exist, per `GetFullPathNameW`'s own contract. A
+/// `NotFound` here would mean the resolver was used instead.
+#[skuld::test]
+fn absolutise_exact_succeeds_for_a_file_that_does_not_exist() {
+    let dir = tempfile::tempdir().unwrap();
+    let got = exact_on(Path::new("no-such-file-983471.tmp"), dir.path().to_str().unwrap()).unwrap();
+    assert!(got.is_absolute(), "{got:?}");
+    assert!(!got.exists(), "the probe name must genuinely not exist: {got:?}");
+}
+
+/// An already-absolute path is returned as itself, not re-rooted, and reads no cwd.
+#[skuld::test]
+fn absolutise_exact_leaves_an_absolute_path_absolute() {
+    let me = std::env::current_exe().unwrap();
+    assert_eq!(exact_reading_nothing(&me).unwrap(), me);
+}
+
+/// Empty fails closed: an empty `lpApplicationName` is a pointer to a lone NUL rather than the
+/// NULL pointer, and whether `CreateProcessW` treats those alike is undocumented.
+#[skuld::test]
+fn absolutise_exact_refuses_an_empty_program() {
+    match exact_reading_nothing(Path::new("")) {
+        Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::InvalidInput => {}
+        other => panic!("an empty program must be Io(InvalidInput), got {other:?}"),
+    }
+}
+
+/// Kills dropping EITHER of the two shape checks (see `check_exact` and `complete_exact`):
+/// `C:\t\.` needs the pre-check, while `C:\t\...` and `C:\t\. ` (one trailing space) name no file
+/// only after normalisation and need the post-check.
+#[skuld::test]
+fn absolutise_exact_refuses_a_program_that_names_no_file() {
+    for n in [
+        r"C:\t\dir\",
+        r"C:\t\.",
+        r"C:\t\..",
+        ".",
+        "..",
+        r"C:\",
+        "C:",
+        r"C:\t\...",
+        r"C:\t\. ",
+    ] {
+        match exact_on(Path::new(n), r"C:\base") {
+            Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::InvalidInput => {}
+            other => panic!("{n:?} names no file and must be Io(InvalidInput), got {other:?}"),
+        }
+    }
+}
+
+/// An INTERIOR NUL fails closed. `PCWSTR` stops at the first NUL, so without this check
+/// `raw_executable("C:\\a\\b.exe\0junk")` would silently become `C:\a\b.exe` — a different file
+/// than the caller named.
+///
+/// Note the empty-path guard alone does NOT catch this: the `OsStr` is non-empty.
+#[skuld::test]
+fn absolutise_exact_refuses_an_interior_nul() {
+    use std::os::windows::ffi::OsStringExt;
+    for units in [vec![0u16], "a.exe\0b".encode_utf16().collect::<Vec<u16>>()] {
+        let p = std::ffi::OsString::from_wide(&units);
+        match exact_reading_nothing(Path::new(&p)) {
+            Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::InvalidInput => {}
+            other => panic!("an interior NUL must be Io(InvalidInput), not truncated: {p:?}, got {other:?}"),
+        }
+    }
+}
+
+/// Kills moving `check_exact`'s NUL check below its shape check (see its comment): `x` + NUL + `\`
+/// must be blamed on the NUL.
+#[skuld::test]
+fn absolutise_exact_reports_an_interior_nul_ahead_of_the_shape() {
+    use std::os::windows::ffi::OsStringExt;
+    let p = std::ffi::OsString::from_wide(&"x\0\\".encode_utf16().collect::<Vec<u16>>());
+    match exact_reading_nothing(Path::new(&p)) {
+        Err(Error::Io(e)) => {
+            assert_eq!(e.kind(), std::io::ErrorKind::InvalidInput, "{e:?}");
+            assert!(e.to_string().contains("embedded NUL"), "the NUL must be named: {e}");
+        }
+        other => panic!("expected Io(InvalidInput), got {other:?}"),
+    }
+}

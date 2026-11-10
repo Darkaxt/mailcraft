@@ -3,6 +3,15 @@ Copyright (c) 2026 the MailCraft contributors.
 Licensed under the MIT License or the Apache License, Version 2.0, at your option
 (LICENSE-MIT, LICENSE-APACHE).
 
+cosca0.6.0
+Copyright Anna Zhukova. Licensed under Apache-2.0 (LICENSE-APACHE;
+the retained source licence is vendor/cosca/LICENSE).
+The exact published crate and each original file hash are recorded in
+vendor/cosca/sources.json. Local changes add its actual SPDX attribution and
+copy the packed Windows ShellExecuteEx HANDLE to an aligned local before
+borrowing it. This corrects i686 compilation while preserving process ownership
+and consent behavior. https://github.com/bindreams/cosca
+
 MailCraft is a clean-room mail, calendar, contacts and tasks program. It is not affiliated with,
 endorsed by or derived from Microsoft Outlook or any other mail product. Product names mentioned
 in the documentation (to say what a feature corresponds to) are trademarks of their owners.

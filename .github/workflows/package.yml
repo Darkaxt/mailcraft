@@ -130,18 +130,18 @@ jobs:
         with:
           toolchain: 1.98.1
           targets: ${{ matrix.target }}
-      - name: Build
-        shell: pwsh
-        env:
-          MAILCRAFT_GOOGLE_CLIENT_ID: ${{ secrets.MAILCRAFT_GOOGLE_CLIENT_ID }}
-          MAILCRAFT_GOOGLE_CLIENT_SECRET: ${{ secrets.MAILCRAFT_GOOGLE_CLIENT_SECRET }}
-        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -BuildOnly
       - name: Bind the qualified seven-core and OCR release input
         if: matrix.arch == 'x64'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: python -B packaging/windows/prepare-runtime-input.py --handoff handoff --download-root "$env:RUNNER_TEMP/mailcraft-content-release-input"
+      - name: Build
+        shell: pwsh
+        env:
+          MAILCRAFT_GOOGLE_CLIENT_ID: ${{ secrets.MAILCRAFT_GOOGLE_CLIENT_ID }}
+          MAILCRAFT_GOOGLE_CLIENT_SECRET: ${{ secrets.MAILCRAFT_GOOGLE_CLIENT_SECRET }}
+        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -BuildOnly
       - name: Hand the programs on by digest
         id: seal
         shell: bash

@@ -1105,6 +1105,20 @@ fn low_importance(s: &mut Session, _: &Value) -> CmdResult {
     toggle_importance(s, Importance::Low)
 }
 
+/// Render the current unsaved draft through the same builder as Save/Send, without
+/// writing, allocating mailbox IDs, resolving recipients or changing compose state.
+pub fn preview(s: &Session) -> Result<Message, CmdError> {
+    let compose = s.compose.as_ref().ok_or_else(|| fail("no message is being written"))?;
+    let fallback = format!("mailcraft-preview-{}@mailcraft.invalid", compose.id);
+    let message_id = compose
+        .draft
+        .and_then(|id| s.mailbox.messages.get(&id))
+        .map(|message| message.message_id.as_str())
+        .filter(|id| !id.is_empty())
+        .unwrap_or(&fallback);
+    build_as(s, compose, false, Some(message_id))
+}
+
 /// The message as written so far. `strict`: every recipient must be a deliverable address. Under
 /// the Message-ID `message_id` when it is given (a draft saved again keeps its own, and so do the
 /// Content-IDs of its pictures).

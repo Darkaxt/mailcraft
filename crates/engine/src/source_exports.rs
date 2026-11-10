@@ -87,29 +87,31 @@ impl Session {
             return Err(crate::cmd::fail("the export did not copy the complete prepared message"));
         }
         Ok(serde_json::json!({"id":id,"path":path.to_string_lossy(),"bytes":bytes,"sha256":snapshot.sha256,
-            "provenance":"reconstructed","originalMimeAvailable":false}))
+            "provenance":if snapshot.preserved_mime {"preservedMimeBody"} else {"reconstructed"},
+            "originalMimeAvailable":snapshot.preserved_mime,"headersReconstructed":true}))
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn export_eml_data(&mut self, id: u64, token: Option<u64>) -> CmdResult {
         use std::io::Read;
         self.poll_source_exports();
-        let (name, bytes) = if let Some(token) = token {
+        let (name, bytes, preserved_mime) = if let Some(token) = token {
             if self.source_exports.eml_size(id, token)? > native::DATA_MAX as u64 {
                 return Err(crate::cmd::fail("this message needs chunked export; read its existing token with mail.exportEml"));
             }
             let mut snapshot = self.source_exports.take_eml(id, token)?;
             let mut bytes = Vec::new();
             snapshot.file.read_to_end(&mut bytes).map_err(|why| crate::cmd::fail(why.to_string()))?;
-            (snapshot.name, bytes)
+            (snapshot.name, bytes, snapshot.preserved_mime)
         } else {
             let input = native::Input::new(self, id, Kind::Eml)?;
             let mut output = native::Data::default();
             input.write_eml_to(&mut output).map_err(|why| crate::cmd::fail(why.to_string()))?;
-            (crate::cmd::file::eml_name(&input.message), output.0)
+            (crate::cmd::file::eml_name(&input.message), output.0, !input.message.draft && input.message.original.is_some())
         };
         Ok(serde_json::json!({"name":name,"bytes":bytes.len(),"data":crate::cmd::base64_encode(&bytes),
-            "provenance":"reconstructed","originalMimeAvailable":false}))
+            "provenance":if preserved_mime {"preservedMimeBody"} else {"reconstructed"},
+            "originalMimeAvailable":preserved_mime,"headersReconstructed":true}))
     }
 }
 
@@ -169,7 +171,10 @@ mod native {
     impl Input {
         pub(super) fn new(session: &Session, id: u64, kind: Kind) -> Result<Self, CmdError> {
             let message = session.mailbox.messages.get(&id).cloned().ok_or_else(|| fail("the message is no longer in this mailbox"))?;
-            if message.unfetched || message.incomplete || message.not_downloaded != 0 || message.kept.as_ref().is_some_and(|part| part.failed) {
+            let preserved_mime = kind == Kind::Eml && !message.draft && message.original.is_some();
+            if !preserved_mime
+                && (message.unfetched || message.incomplete || message.not_downloaded != 0 || message.kept.as_ref().is_some_and(|part| part.failed))
+            {
                 return Err(fail("the complete message is not available locally; download it before opening its source or exporting it"));
             }
             let offset_minutes = session.offset_at(message.date);
@@ -188,6 +193,10 @@ mod native {
                 ContentPart::Attachment(index) => {
                     let part = message.attachments.get(index).ok_or_else(|| io::Error::other("the attachment no longer exists"))?;
                     (part.kept.filter(|_| part.data.is_empty()), part.data.as_slice())
+                }
+                ContentPart::Original => {
+                    let original = message.original.as_ref().ok_or_else(|| io::Error::other("the retained original is unavailable"))?;
+                    (original.kept.filter(|_| original.data.is_empty()), original.data.as_slice())
                 }
             };
             if let Some(reference) = reference {
@@ -250,7 +259,14 @@ mod native {
             }
             let sha256 = hash.finish().as_ref().iter().map(|byte| format!("{byte:02x}")).collect();
             file.seek(SeekFrom::Start(0))?;
-            Ok(Snapshot { file, len, sha256, format, name: crate::cmd::file::eml_name(&self.message) })
+            Ok(Snapshot {
+                file,
+                len,
+                sha256,
+                format,
+                name: crate::cmd::file::eml_name(&self.message),
+                preserved_mime: !self.message.draft && self.message.original.is_some(),
+            })
         }
     }
 
@@ -276,6 +292,7 @@ mod native {
         pub(super) sha256: String,
         format: &'static str,
         pub(super) name: String,
+        pub(super) preserved_mime: bool,
     }
     enum State {
         Pending { result: mpsc::Receiver<io::Result<Snapshot>>, worker: Option<JoinHandle<()>>, cancelled: Arc<AtomicBool> },
@@ -461,13 +478,18 @@ mod native {
                     let end = offset.saturating_add(bytes.len() as u64);
                     let mut value = json!({"id":id,"token":token,"state":"ready","offset":offset,
                         "nextOffset":if end < snapshot.len {Some(end)} else {None},"bytes":snapshot.len,"sha256":snapshot.sha256,
-                        "format":snapshot.format,"provenance":if kind == Kind::Eml {"reconstructed"} else {"decodedBody"},"eof":end == snapshot.len});
+                        "format":snapshot.format,"provenance":if kind == Kind::Eml {if snapshot.preserved_mime {"preservedMimeBody"} else {"reconstructed"}} else {"decodedBody"},"eof":end == snapshot.len});
                     if kind == Kind::Eml {
                         value["name"] = Value::String(snapshot.name.clone());
                         value["data"] = Value::String(base64_encode(&bytes));
-                        value["originalMimeAvailable"] = Value::Bool(false);
-                        value["originalMimeUnavailableReason"] =
-                            Value::String("The retained message contains decoded bodies and attachments, not original MIME bytes.".into());
+                        value["originalMimeAvailable"] = Value::Bool(snapshot.preserved_mime);
+                        value["headersReconstructed"] = Value::Bool(true);
+                        if !snapshot.preserved_mime {
+                            value["originalMimeUnavailableReason"] = Value::String(
+                                "The retained message contains decoded bodies and attachments, not an original MIME body available for export."
+                                    .into(),
+                            );
+                        }
                     } else {
                         let text = std::str::from_utf8(&bytes)
                             .map_err(|_| fail("the source page is not on a UTF-8 boundary; use its returned continuation offset"))?;

@@ -292,6 +292,11 @@ pub trait ContentSource: Send + Sync {
         }
         Ok(Box::new(std::io::Cursor::new(Bytes(self.fetch(mailbox, r)?))))
     }
+    /// [`ContentSource::fetch`], read from where it is kept now and from no copy kept of it in
+    /// memory: for a decision that must not stand on bytes the disk no longer holds (#30).
+    fn fetch_fresh(&self, mailbox: &std::path::Path, r: &ContentRef) -> Result<std::sync::Arc<Vec<u8>>, String> {
+        self.fetch(mailbox, r)
+    }
 }
 
 pub use mailcraft_model::ContentRef;
@@ -391,7 +396,7 @@ pub fn import_opened(s: &mut Session, name: &str, bytes: &[u8]) -> Result<Value,
         return Err(failed!("{name}: not a message file", name));
     }
     let folder = s.mailbox.imported_folder(false)?;
-    let mut m = mailcraft_mime::parse(bytes);
+    let mut m = mailcraft_mime::parse_fetched(bytes);
     m.headers.retain(|(key, _)| !key.eq_ignore_ascii_case(OPENED_FROM));
     let hash = file_sha256(bytes);
     // The same Message-ID (none for both, too), and, when the copy there keeps the SHA-256 of the
@@ -431,7 +436,7 @@ pub fn parse_unfiled(name: &str, bytes: &[u8]) -> Result<mailcraft_model::Messag
     if Format::detect(name, bytes) != Some(Format::Eml) {
         return Err(failed!("{name}: not a message file", name));
     }
-    let mut m = mailcraft_mime::parse(bytes);
+    let mut m = mailcraft_mime::parse_fetched(bytes);
     m.headers.retain(|(key, _)| !key.eq_ignore_ascii_case(OPENED_FROM));
     (m.id, m.uid, m.folder, m.draft, m.read) = (0, 0, 0, false, true);
     (m.server, m.synced) = (None, None);
@@ -481,7 +486,7 @@ pub fn import(s: &mut Session, name: &str, bytes: &[u8], folder: Option<Id>) -> 
             // At most MAX_IMPORT_MESSAGES are taken from a file; the one after them tells whether
             // the file went on ("stopped after N").
             let mut messages: Vec<_> = if format == Format::Eml {
-                vec![mailcraft_mime::parse(bytes)]
+                vec![mailcraft_mime::parse_fetched(bytes)]
             } else {
                 mailcraft_mime::mbox_messages(bytes).take(MAX_IMPORT_MESSAGES + 1).collect()
             };

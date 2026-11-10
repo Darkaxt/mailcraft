@@ -51,6 +51,9 @@ mod forward_attachment_tests;
 mod forward_several_tests;
 #[cfg(test)]
 mod full_count_tests;
+pub mod gmail_move;
+#[cfg(test)]
+mod gmail_move_tests;
 pub mod graph_down;
 pub mod graph_drafts;
 pub mod graph_mail;
@@ -92,6 +95,8 @@ pub mod people_merge;
 pub mod picture;
 #[cfg(test)]
 mod picture_tests;
+#[cfg(test)]
+mod protected_moves_tests;
 #[cfg(test)]
 mod quote_tests;
 #[cfg(test)]
@@ -167,6 +172,7 @@ pub fn registry() -> Registry {
     v.extend(edit::specs());
     v.extend(mail::specs());
     v.extend(aliases::specs());
+    v.extend(gmail_move::specs());
     v.extend(compose::specs());
     v.extend(format::specs());
     v.extend(picture::specs());

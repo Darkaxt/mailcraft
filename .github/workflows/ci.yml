@@ -66,7 +66,7 @@ jobs:
         with:
           toolchain: 1.98.1
           components: rustfmt, clippy
-          targets: wasm32-unknown-unknown
+          targets: ${{ runner.os == 'Windows' && 'wasm32-unknown-unknown,i686-pc-windows-msvc' || 'wasm32-unknown-unknown' }}
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         # Pull requests read main's cache but don't write their own: a cache per PR fills the
         # repository's 10 GB and pushes out the caches that matter (FreeBSD's above all).
@@ -89,6 +89,16 @@ jobs:
       - run: cargo run --locked --package xtask -- ci
         env:
           XTASK_CI_SKIP: ${{ runner.os != 'Linux' && 'clippy,wasm,deny' || 'deny' }}
+      # Packed Win32 structs have different alignment on i686; x64 CI alone
+      # cannot compile this regression's affected path.
+      - name: Windows 32-bit process dependency regression
+        if: runner.os == 'Windows'
+        run: cargo check --locked --target i686-pc-windows-msvc --package cosca --lib
+        env:
+          CARGO_BUILD_JOBS: 1
+      - name: Runtime release-input identity regression
+        if: runner.os == 'Windows'
+        run: python -B -m unittest discover -s packaging/windows -p test_runtime_input.py
 
   # cargo-deny (deny.toml): RustSec advisories, licences, duplicate crates, sources. Its own job,
   # since it needs no build; `ci` skips the step it would otherwise run.

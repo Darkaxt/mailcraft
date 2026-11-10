@@ -1,0 +1,541 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+//! Identity-aware process-tree teardown — the cross-platform mechanism, used
+//! both when requested directly (`ContainMode::TreeWalk`) and as the terminal
+//! fallback of `ContainMode::Strongest` (e.g. a Windows job-assign failure, or a
+//! host with no kernel container).
+//!
+//! Unlike a kernel container, this mechanism has no enforced membership: at
+//! teardown it takes a `(pid, ppid)` snapshot of the host, walks the ppid chain
+//! down from the root, and kills each *genuine* descendant by identity. It is
+//! best-effort and reports as [`crate::containment::Containment::TreeWalk`]: it
+//! misses reparented orphans (a child whose parent already exited, so its ppid no
+//! longer chains to the root) and broker-spawned escapes.
+//!
+//! # The PID-reuse / stale-ppid defense (the token-order rule)
+//!
+//! A `(pid, ppid)` snapshot is racy: a candidate's `pid` may have been recycled,
+//! or its `ppid` may name a *recycled* root pid. So a chained ppid alone does not
+//! prove descent. The candidate's high-res start token (Linux jiffies / Windows
+//! 100 ns FILETIME / macOS µs) must additionally order correctly against the
+//! root's: a genuine descendant was created at-or-after the root acquired its
+//! pid. The keep predicate is
+//!
+//! ```text
+//! token > root.token || (allow_equal && token == root.token)
+//! ```
+//!
+//! `allow_equal` is a per-OS `cfg` const ([`ALLOW_EQUAL_TOKEN`]): `true` on
+//! Linux/macOS, `false` on Windows. Why per-OS:
+//!
+//! - An impostor — a *stale ppid* pointing at a *recycled* root pid — is always a
+//!   process created *before* the root (token **<** root.token), so it is
+//!   excluded by both rules. This is the case the token guard exists to defend.
+//! - The rule cannot defend a root whose own pid was recycled: the new owner's children
+//!   are created after the root, so they pass it. So the walk takes its snapshot first, then
+//!   requires the root to still hold its pid ([`anchor_present`]); a root that does not
+//!   walks nothing.
+//! - A `token == root.token` candidate whose current ppid == root.pid can only be
+//!   a *genuine* same-tick child: an unrelated same-tick collision that also
+//!   happens to carry a recycled ppid equal to root.pid is impossible.
+//! - **Linux/macOS** reparent orphans to pid 1 / launchd, so a process whose ppid
+//!   still equals root.pid genuinely descends from it — ppid is *authoritative*.
+//!   `>=` is therefore safe AND catches same-jiffy immediate children that strict
+//!   `>` would silently miss under Linux's coarse 10 ms jiffy clock (this also
+//!   makes the live integration test deterministic).
+//! - **Windows** does not reparent and recycles pids freely, so the rule stays
+//!   strict `>`. Its 100 ns FILETIME clock makes a same-tick *genuine* child
+//!   indistinguishable from impossible, so strict `>` loses nothing there.
+
+use crate::error::Error;
+use crate::identity::{Existence, ProcessId, RawPid, Resolved, UnknownCause};
+
+/// What one identity-verified kill attempt achieved. `AlreadyGone` and `NotAttempted` are
+/// both "no signal was delivered", but only the first means there was nothing to deliver one
+/// to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum KillOutcome {
+    /// The signal reached the verified identity.
+    Terminated,
+    /// The pid holds no process, or holds a different one - nothing to kill.
+    AlreadyGone,
+    /// A live-or-unassessable process we did not signal. The only outcome that can leave a
+    /// process running.
+    NotAttempted,
+}
+
+/// The tree-walk resolver. A pid we may not query is dropped from the walk exactly like a
+/// pid that is gone - the walk cannot kill what it cannot verify - but the two are logged
+/// apart, because "denied" is an operational signal (run elevated) and "gone" is not.
+pub(crate) fn resolve_or_drop(pid: RawPid) -> Option<ProcessId> {
+    match ProcessId::of(pid) {
+        Resolved::Found(id) => Some(id),
+        Resolved::Gone => None,
+        Resolved::Unknown => {
+            // The pid is IN the message on purpose: `log_capture` is one process-global
+            // buffer shared by every parallel test, so a test asserting on this line must be
+            // able to pin it to its own fixture rather than to any concurrent teardown.
+            log::warn!("treewalk: pid {pid} could not be queried (access denied?) - dropped from the walk");
+            None
+        }
+    }
+}
+
+#[cfg(unix)]
+use nix::sys::signal::Signal;
+
+/// Per-OS token-order rule. See the module docs for the full
+/// rationale. Linux/macOS reparent orphans → ppid is authoritative → keep
+/// same-tick children (`>=`). Windows recycles pids and never reparents → keep
+/// strict `>`.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) const ALLOW_EQUAL_TOKEN: bool = true;
+#[cfg(windows)]
+pub(crate) const ALLOW_EQUAL_TOKEN: bool = false;
+// Other Unix (e.g. BSD without a tested rule): default to the conservative
+// strict-`>` rule. enumerate's compile_error gates real support per OS.
+#[cfg(all(unix, not(any(target_os = "linux", target_os = "macos"))))]
+pub(crate) const ALLOW_EQUAL_TOKEN: bool = false;
+
+/// The PID-reuse keep-predicate (the crate's core safety invariant — see the module
+/// docs): a candidate genuinely descends from an anchor only if its start token orders
+/// at-or-after the anchor's. The single source of this rule, shared by `descendants_with`
+/// and `children_of_with`.
+pub(crate) fn keeps_token(token: u64, anchor: u64, allow_equal: bool) -> bool {
+    token > anchor || (allow_equal && token == anchor)
+}
+
+/// Pure descendant filter (host-testable on every OS). Walks `parents` down from
+/// `root`, and for each pid whose ppid chains to `root.pid()` resolves its
+/// identity via `resolve` and keeps it ONLY if its start token orders correctly
+/// against the root's per `allow_equal` (see module docs). `resolve` is injected
+/// so the filter is pure: live code passes `ProcessId::of`, tests pass a stub.
+///
+/// The root itself is never included (callers kill the root explicitly first).
+pub(crate) fn descendants_with(
+    root: ProcessId,
+    parents: &[(RawPid, RawPid)],
+    allow_equal: bool,
+    resolve: impl Fn(RawPid) -> Option<ProcessId>,
+) -> Vec<ProcessId> {
+    let root_token = root.start_token_raw();
+    let keep = |token: u64| keeps_token(token, root_token, allow_equal);
+
+    // BFS over the ppid forest. `frontier` holds pids whose children we still
+    // need to visit; it starts as just the root pid. A pid joins the result (and
+    // the next frontier) only if its ppid is in the current accepted set AND its
+    // identity passes the token guard. No fixed iteration cap: the loop drains a
+    // strictly shrinking set of not-yet-visited edges.
+    let mut result: Vec<ProcessId> = Vec::new();
+    let mut frontier: Vec<RawPid> = vec![root.pid()];
+    // Remaining (pid, ppid) edges not yet attached to the tree.
+    let mut pending: Vec<(RawPid, RawPid)> = parents.to_vec();
+    // Pids already accepted, so a duplicate edge (e.g. a snapshot that lists a
+    // pid twice) never enumerates/kills the same process twice.
+    let mut accepted: std::collections::HashSet<RawPid> = std::collections::HashSet::new();
+    // Memoize identity resolution per pid so `resolve(pid)` runs at most once per
+    // pid even when an edge is re-examined across frontier iterations or a pid
+    // appears in multiple edges; identity is stable for the duration of the walk.
+    let mut resolved: std::collections::HashMap<RawPid, Option<ProcessId>> = std::collections::HashMap::new();
+
+    while !frontier.is_empty() {
+        let mut next: Vec<RawPid> = Vec::new();
+        // Partition: edges whose ppid is in the current frontier are candidates.
+        let mut still_pending: Vec<(RawPid, RawPid)> = Vec::with_capacity(pending.len());
+        for (pid, ppid) in pending.drain(..) {
+            if !frontier.contains(&ppid) {
+                still_pending.push((pid, ppid));
+                continue;
+            }
+            // A process is never its own parent; guard against a degenerate
+            // pid == ppid self-loop that would otherwise spin the BFS.
+            if pid == ppid {
+                continue;
+            }
+            let id = *resolved.entry(pid).or_insert_with(|| resolve(pid));
+            let Some(id) = id else {
+                log::debug!("treewalk: pid {pid} unresolvable — dropping its subtree");
+                continue;
+            };
+            if !keep(id.start_token_raw()) {
+                log::debug!("treewalk: dropping subtree under impostor pid {pid} (recycled pid / stale ppid)");
+                continue;
+            }
+            // `accepted.insert` dedups so a duplicate edge never enumerates/kills the
+            // same process twice.
+            if accepted.insert(pid) {
+                result.push(id);
+                next.push(pid);
+            }
+        }
+        pending = still_pending;
+        frontier = next;
+    }
+
+    result
+}
+
+/// Live descendants of `root`: the pure filter wired to the host's
+/// `ProcessId::of` resolver and per-OS `ALLOW_EQUAL_TOKEN` rule.
+pub(crate) fn descendants(root: ProcessId, parents: &[(RawPid, RawPid)]) -> Vec<ProcessId> {
+    descendants_with(root, parents, ALLOW_EQUAL_TOKEN, resolve_or_drop)
+}
+
+/// Pure one-level child filter (host-testable): keep each pid whose ppid == the parent's
+/// pid and whose start token passes `keeps_token` against the parent's. `resolve` is
+/// injected for purity. The parent itself is never included.
+pub(crate) fn children_of_with(
+    parent: ProcessId,
+    parents: &[(RawPid, RawPid)],
+    allow_equal: bool,
+    resolve: impl Fn(RawPid) -> Option<ProcessId>,
+) -> Vec<ProcessId> {
+    let ptoken = parent.start_token_raw();
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for &(pid, ppid) in parents {
+        if ppid != parent.pid() || pid == ppid {
+            continue;
+        }
+        let Some(id) = resolve(pid) else {
+            log::debug!("treewalk: pid {pid} unresolvable — dropped from children");
+            continue;
+        };
+        if !keeps_token(id.start_token_raw(), ptoken, allow_equal) {
+            log::debug!("treewalk: dropping impostor pid {pid} (recycled pid / stale ppid)");
+            continue;
+        }
+        if seen.insert(pid) {
+            out.push(id);
+        }
+    }
+    out
+}
+
+/// Live one-level children of `parent`: the pure filter wired to `ProcessId::of` and the
+/// per-OS `ALLOW_EQUAL_TOKEN` rule.
+pub(crate) fn children_of(parent: ProcessId, parents: &[(RawPid, RawPid)]) -> Vec<ProcessId> {
+    children_of_with(parent, parents, ALLOW_EQUAL_TOKEN, resolve_or_drop)
+}
+
+/// Kill `id` only if the pid STILL resolves to that exact identity — never a
+/// recycled pid. Already-gone (`None`, or `ESRCH`) is success. Best-effort.
+#[cfg(unix)]
+pub(crate) fn kill_by_identity(id: ProcessId, signal: Signal) -> KillOutcome {
+    use nix::sys::signal::kill;
+    use nix::unistd::Pid;
+    // Re-verify identity at the instant of the kill. Three outcomes, not two: a denied
+    // re-verify is NOT a confirmed change, and must not be logged as one.
+    match ProcessId::of(id.pid()) {
+        Resolved::Found(live) if live == id => {}
+        Resolved::Found(_) | Resolved::Gone => {
+            log::debug!(
+                "treewalk: skipping pid {pid} - identity changed since the snapshot",
+                pid = id.pid()
+            );
+            return KillOutcome::AlreadyGone;
+        }
+        Resolved::Unknown => {
+            log::warn!(
+                "treewalk: pid {pid} could not be queried (access denied?) - not signaled, left running",
+                pid = id.pid()
+            );
+            return KillOutcome::NotAttempted;
+        }
+    }
+    // `nix::unistd::Pid::from_raw` is infallible and accepts 0, and `kill(0, sig)` signals
+    // the CALLER-S ENTIRE PROCESS GROUP. Use the same total guard the `sig 0` probe uses.
+    let Some(target) = crate::identity::probe::signal_target(id.pid()) else {
+        log::warn!(
+            "treewalk: pid {} is not a single-process signal target - not signaled",
+            id.pid()
+        );
+        return KillOutcome::NotAttempted;
+    };
+    #[cfg(test)]
+    crate::send_log::record_by_identity(id.pid(), signal as i32);
+    match kill(Pid::from_raw(target), signal) {
+        Ok(()) => KillOutcome::Terminated,
+        // Exited between the re-verify and the signal - nothing was left to kill.
+        Err(nix::errno::Errno::ESRCH) => KillOutcome::AlreadyGone,
+        Err(e) => {
+            log::warn!("treewalk: kill(pid {}, {signal:?}) failed: {e}", id.pid());
+            KillOutcome::NotAttempted
+        }
+    }
+}
+
+/// Windows: terminate `id` only if the pid STILL resolves to that exact identity.
+/// Opens the process for terminate rights and calls `TerminateProcess`. Already
+/// gone (unresolvable / unopenable) is success. Best-effort.
+#[cfg(windows)]
+pub(crate) fn kill_by_identity(id: ProcessId) -> KillOutcome {
+    use windows::Win32::System::Threading::{TerminateProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE};
+
+    use crate::identity::{windows_close, windows_open_classified, HandleIdentity, Opened};
+
+    // Open for terminate AND query, so the SAME held handle both pins the kernel object
+    // (pid-reuse-safe) and lets us re-verify identity before terminating, race-free.
+    let handle = match windows_open_classified(id.pid(), PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION) {
+        Opened::Found(h) => h,
+        Opened::Gone => return KillOutcome::AlreadyGone,
+        Opened::Denied(e) => {
+            log::warn!(
+                "treewalk: pid {} could not be queried (access denied?) - not opened to terminate ({e}), left running",
+                id.pid()
+            );
+            return KillOutcome::NotAttempted;
+        }
+    };
+    let outcome = match crate::identity::windows_handle_identity(handle, id) {
+        HandleIdentity::Same => {
+            // SAFETY: `handle` is live and pins the verified process.
+            match unsafe { TerminateProcess(handle, 1) } {
+                Ok(()) => KillOutcome::Terminated,
+                Err(e) => {
+                    log::warn!("treewalk: TerminateProcess(pid {}) failed: {e}", id.pid());
+                    KillOutcome::NotAttempted
+                }
+            }
+        }
+        HandleIdentity::Different => {
+            log::debug!(
+                "treewalk: skipping pid {} - identity changed since the snapshot",
+                id.pid()
+            );
+            KillOutcome::AlreadyGone
+        }
+        HandleIdentity::Unreadable(e) => {
+            log::warn!(
+                "treewalk: pid {} opened but its identity could not be read ({e}) - not terminated",
+                id.pid()
+            );
+            KillOutcome::NotAttempted
+        }
+    };
+    windows_close(handle);
+    outcome
+}
+
+/// Whether `root` still holds its pid, asked AFTER the snapshot was taken: a root that held its
+/// pid throughout the snapshot owns the edges naming it; one that lost it to a new process would
+/// have that process's children mistaken for its own descendants. `Ok(false)`: gone or recycled,
+/// so there is nothing to walk. [`Error::Unassessable`] (or `Unsupported`) when it cannot be
+/// told, naming the read's cause.
+pub(crate) fn anchor_present(root: ProcessId) -> Result<bool, Error> {
+    match root.exists_explained() {
+        (Existence::Present, _) => Ok(true),
+        (Existence::Gone, _) => Ok(false),
+        (Existence::Unknown, cause) => Err(unqueryable(&format!("pid {}", root.pid()), cause)),
+    }
+}
+
+/// The error for a `subject` (`pid N` / `ppid N`) that exists but read `Unknown`: the `/proc`
+/// view when that is why, else access.
+pub(crate) fn unqueryable(subject: &str, cause: UnknownCause) -> Error {
+    cause.into_error(subject).unwrap_or_else(|| Error::Unassessable {
+        detail: format!("{subject} exists but could not be queried (access denied?)"),
+        source: None,
+    })
+}
+
+/// Hard-kill the tree rooted at `root` by identity: snapshot once, compute
+/// genuine descendants, kill the root FIRST then each descendant. SIGKILL on
+/// Unix; `TerminateProcess` on Windows. Best-effort; already-gone is success.
+///
+/// # Errors
+///
+/// [`Error::Unassessable`] when the process snapshot cannot be taken, or `root`'s
+/// identity cannot be read after it. Nothing is killed, the root included: killing the root
+/// first would reparent its descendants out of the ppid walk, so a retry could no longer find
+/// them. A root that no longer holds its pid is `Ok`, with nothing killed.
+///
+/// `Ok(false)`: the walk ran but was not complete, because an identity it resolved refused the
+/// kill, so members may be left running.
+pub(crate) fn hard_kill(root: ProcessId) -> Result<bool, Error> {
+    #[cfg(test)]
+    fault::note_walk(root.pid());
+    // Test-only fault seam: skip the root's identity kill (take semantics — see `fault`).
+    #[cfg(test)]
+    let skip_root = fault::take_force_root_kill_noop();
+    #[cfg(not(test))]
+    let skip_root = false;
+    let parents = crate::containment::enumerate::process_parents()?;
+    if !anchor_present(root)? {
+        return Ok(true);
+    }
+    let mut complete = true;
+    #[cfg(test)]
+    if fault::take_force_incomplete() {
+        complete = false;
+    }
+    let descendants = descendants(root, &parents);
+    #[cfg(unix)]
+    {
+        if !skip_root {
+            complete &= kill_by_identity(root, Signal::SIGKILL) != KillOutcome::NotAttempted;
+        }
+        for id in descendants {
+            complete &= kill_by_identity(id, Signal::SIGKILL) != KillOutcome::NotAttempted;
+        }
+    }
+    #[cfg(windows)]
+    {
+        if !skip_root {
+            complete &= kill_by_identity(root) != KillOutcome::NotAttempted;
+        }
+        for id in descendants {
+            complete &= kill_by_identity(id) != KillOutcome::NotAttempted;
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    let _ = (root, descendants, skip_root);
+    Ok(complete)
+}
+
+/// Test-only: force the NEXT `hard_kill` on THIS thread to skip the root's identity kill
+/// (makes the `kill_tree` handle backstop forcible). Take semantics: `hard_kill` consumes the
+/// flag — arm and call on one thread; assert consumption via [`armed`].
+#[cfg(test)]
+pub(crate) mod fault {
+    use std::cell::{Cell, RefCell};
+    thread_local! {
+        static FORCE_ROOT_KILL_NOOP: Cell<bool> = const { Cell::new(false) };
+        static WALKS: RefCell<Option<Vec<u32>>> = const { RefCell::new(None) };
+        static FORCE_INCOMPLETE: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Make the NEXT `hard_kill` on THIS thread report an incomplete walk, as an unreadable
+    /// process table or a refused kill would. Take semantics.
+    #[cfg(all(unix, not(target_os = "macos")))]
+    pub(crate) fn force_incomplete_once() {
+        FORCE_INCOMPLETE.with(|f| f.set(true));
+    }
+
+    pub(super) fn take_force_incomplete() -> bool {
+        FORCE_INCOMPLETE.with(|f| f.replace(false))
+    }
+
+    /// From now on every ppid walk from a root's pid on THIS thread (`treewalk::hard_kill`, a
+    /// macOS fd marker's channel 1+2) records that pid, so a test can tell a walk ran without a
+    /// process having to die. The walk itself still runs.
+    #[cfg(unix)]
+    pub(crate) fn record_walks() -> WalkRecorder {
+        WALKS.with(|w| *w.borrow_mut() = Some(Vec::new()));
+        WalkRecorder(())
+    }
+
+    #[cfg(unix)]
+    #[must_use = "recording stops as soon as the recorder is dropped"]
+    pub(crate) struct WalkRecorder(());
+
+    #[cfg(unix)]
+    impl WalkRecorder {
+        /// The root pids walked since the recorder was made.
+        pub(crate) fn walked(&self) -> Vec<u32> {
+            WALKS.with(|w| w.borrow().clone().expect("the recorder is live"))
+        }
+    }
+
+    #[cfg(unix)]
+    impl Drop for WalkRecorder {
+        fn drop(&mut self) {
+            WALKS.with(|w| *w.borrow_mut() = None);
+        }
+    }
+
+    pub(crate) fn note_walk(root_pid: u32) {
+        WALKS.with(|w| {
+            if let Some(walked) = w.borrow_mut().as_mut() {
+                walked.push(root_pid);
+            }
+        });
+    }
+    // On macOS, `Attached::TreeWalk` (and so `hard_kill`) is only reached when the fd marker
+    // failed to install or is suppressed (decision 2: the marker otherwise takes priority) —
+    // dispatch_tests.rs's backstop tests exercise the always-installed `fdmarker::fault` seam
+    // there instead, leaving these two callers-only-on-other-platforms.
+    #[cfg_attr(
+        target_os = "macos",
+        allow(
+            dead_code,
+            reason = "dispatch_tests.rs uses the fdmarker::fault seam on macOS instead"
+        )
+    )]
+    pub(crate) fn set_force_root_kill_noop(on: bool) {
+        FORCE_ROOT_KILL_NOOP.with(|f| f.set(on));
+    }
+    pub(crate) fn take_force_root_kill_noop() -> bool {
+        FORCE_ROOT_KILL_NOOP.with(|f| f.replace(false))
+    }
+    #[cfg_attr(
+        target_os = "macos",
+        allow(
+            dead_code,
+            reason = "dispatch_tests.rs uses the fdmarker::fault seam on macOS instead"
+        )
+    )]
+    pub(crate) fn armed() -> bool {
+        FORCE_ROOT_KILL_NOOP.with(|f| f.get())
+    }
+}
+
+/// Graceful termination of the tree rooted at `root`.
+///
+/// Unix: the same snapshot + identity walk with SIGTERM (root then descendants) —
+/// cooperative shutdown that still re-verifies identity before each signal, so it
+/// reaches the whole genuine tree just like `hard_kill`, and errors as it does (`# Errors`).
+///
+/// Windows: send `CTRL_BREAK_EVENT` to the root's process group (the root was
+/// spawned with `CREATE_NEW_PROCESS_GROUP`). This is cooperative only and reaches
+/// only processes that share the root's console group; a nested *contained*
+/// descendant is spawned into its OWN process group (`CREATE_NEW_PROCESS_GROUP`)
+/// and therefore does NOT receive this CTRL_BREAK. THIS WALK cannot reach those
+/// nested groups — but their own holder can, through the nested child's own handle
+/// (see [`Child::terminate`](crate::Child::terminate)). From a single handle, the
+/// identity `hard_kill` (`kill_tree`) remains the only op that reaches every member.
+/// Best-effort by design.
+///
+/// # Errors
+///
+/// As [`hard_kill`] on Unix. Windows: those of `containment::windows::terminate`.
+pub(crate) fn terminate(root: ProcessId) -> Result<(), Error> {
+    #[cfg(unix)]
+    {
+        let parents = crate::containment::enumerate::process_parents()?;
+        if !anchor_present(root)? {
+            return Ok(());
+        }
+        let descendants = descendants(root, &parents);
+        let _ = kill_by_identity(root, Signal::SIGTERM);
+        for id in descendants {
+            let _ = kill_by_identity(id, Signal::SIGTERM);
+        }
+        Ok(())
+    }
+    #[cfg(windows)]
+    {
+        crate::containment::windows::terminate(root.pid())
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = root;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+#[path = "treewalk_tests.rs"]
+mod treewalk_tests;
+
+#[cfg(all(test, target_os = "linux"))]
+#[path = "treewalk_view_tests.rs"]
+mod treewalk_view_tests;
+
+#[cfg(all(test, target_os = "macos"))]
+#[path = "treewalk_blind_tests.rs"]
+mod treewalk_blind_tests;
+
+#[cfg(all(test, windows))]
+#[path = "treewalk_toolhelp_tests.rs"]
+mod treewalk_toolhelp_tests;

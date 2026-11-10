@@ -1,0 +1,286 @@
+// SPDX-FileCopyrightText: Anna Zhukova
+// SPDX-License-Identifier: Apache-2.0
+//! The signal helpers: what each answers for a live, gone and unverifiable child, and that a
+//! send is recorded only when the OS was asked.
+
+use std::process::{Child, ChildStdin};
+
+use crate::send_log::{Capture, Via};
+use crate::signal::{Sent, Sig};
+
+fn spawn() -> (Child, ChildStdin) {
+    let mut child = crate::test_spawn::spawn(&mut crate::test_child::held_std_blocker(std::process::Stdio::null()))
+        .expect("spawn the blocker");
+    let stdin = child.stdin.take().expect("piped stdin");
+    (child, stdin)
+}
+
+// Linux =====
+
+#[cfg(target_os = "linux")]
+mod linux {
+    use std::os::fd::{AsFd, OwnedFd};
+
+    use super::*;
+    use crate::signal::via_pidfd;
+
+    fn pidfd_of(child: &Child) -> OwnedFd {
+        let pid = rustix::process::Pid::from_raw(child.id() as i32).expect("a child's pid");
+        rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty()).expect("pidfd_open")
+    }
+
+    /// Mutant: a missing pidfd is an error, or a signal sent by pid.
+    #[skuld::test]
+    fn no_pidfd_is_gone_and_sends_nothing() {
+        let log = Capture::start();
+        assert_eq!(via_pidfd(None, 4242, Sig::Kill).expect("gone is Ok"), Sent::Gone);
+        assert_eq!(log.entries(), []);
+    }
+
+    /// Mutant: the send is not recorded, or recorded under another address.
+    #[skuld::test]
+    fn a_live_child_is_signalled_through_its_pidfd_and_recorded() {
+        let (mut child, _stdin) = spawn();
+        let pidfd = pidfd_of(&child);
+        let log = Capture::start();
+        assert_eq!(
+            via_pidfd(Some(pidfd.as_fd()), child.id(), Sig::Kill).expect("send"),
+            Sent::Delivered
+        );
+        assert_eq!(log.entries(), [(child.id(), Sig::Kill, Via::Pidfd)]);
+        let status = child.wait().expect("reap");
+        assert_eq!(
+            std::os::unix::process::ExitStatusExt::signal(&status),
+            Some(libc::SIGKILL)
+        );
+    }
+
+    /// Mutant: `ESRCH` returned as an error.
+    #[skuld::test]
+    fn a_reaped_child_is_gone_but_the_attempt_is_recorded() {
+        let (mut child, stdin) = spawn();
+        let pidfd = pidfd_of(&child);
+        drop(stdin);
+        child.wait().expect("reap");
+        let log = Capture::start();
+        assert_eq!(
+            via_pidfd(Some(pidfd.as_fd()), child.id(), Sig::Kill).expect("gone is Ok"),
+            Sent::Gone
+        );
+        assert_eq!(log.entries(), [(child.id(), Sig::Kill, Via::Pidfd)]);
+    }
+}
+
+// macOS =====
+
+#[cfg(target_os = "macos")]
+mod macos {
+    use std::io;
+
+    use super::*;
+    use crate::identity::{uniq_fault, uniq_info, ReadPurpose, UniqInfo, UniqRead};
+    use crate::signal::{read_identity, via_verified_pid};
+
+    /// `PID_MAX` is 99999, so this pid names nothing, ever.
+    const NEVER_A_PID: u32 = 4_000_000;
+
+    fn unique_id_of(pid: u32) -> u64 {
+        match uniq_info(pid, ReadPurpose::Adopt) {
+            UniqRead::Found(info) => info.unique_id,
+            other => panic!("the unique id of {pid}: {other:?}"),
+        }
+    }
+
+    // `uniq_info` -----
+
+    /// Mutant: `PROC_PIDTBSDINFO`, whose start read is refused for another user's process.
+    #[skuld::test]
+    fn uniq_info_reads_another_users_process() {
+        // launchd runs as root. On a runner that is not root this is another user's process.
+        let a = unique_id_of(1);
+        assert_eq!(a, unique_id_of(1), "the id is stable");
+    }
+
+    /// Mutant: `arg = 0`, which does not look for zombies.
+    #[skuld::test]
+    fn uniq_info_reads_a_zombie() {
+        let (mut child, stdin) = spawn();
+        let live = unique_id_of(child.id());
+        drop(stdin);
+        // The exit, seen without consuming it: the child is a zombie.
+        let mut info: libc::siginfo_t = unsafe { std::mem::zeroed() };
+        let r = unsafe {
+            libc::waitid(
+                libc::P_PID,
+                child.id() as libc::id_t,
+                &mut info,
+                libc::WEXITED | libc::WNOWAIT,
+            )
+        };
+        assert_eq!(r, 0, "waitid(WNOWAIT): {}", io::Error::last_os_error());
+        assert_eq!(unique_id_of(child.id()), live);
+        child.wait().expect("reap");
+    }
+
+    /// Mutant: `ESRCH` classified as refused.
+    #[skuld::test]
+    fn uniq_info_says_gone_for_a_pid_that_names_nothing() {
+        assert_eq!(uniq_info(NEVER_A_PID, ReadPurpose::Adopt), UniqRead::Gone);
+    }
+
+    // `identity_unreadable` -----
+
+    /// The adoption error names the pid and keeps the errno's kind.
+    ///
+    /// Mutant: the errno is dropped from the source, or the error is not `Unassessable`.
+    #[skuld::test]
+    fn identity_unreadable_names_the_pid_and_keeps_the_errno() {
+        let err = crate::signal::identity_unreadable(77, libc::EPERM);
+        match err {
+            crate::error::Error::Unassessable { detail, source } => {
+                assert!(
+                    detail.contains("pid 77") && detail.contains("EPERM") || detail.contains("errno 1"),
+                    "{detail}"
+                );
+                assert_eq!(source.map(|e| e.raw_os_error()), Some(Some(libc::EPERM)));
+            }
+            other => panic!("expected Unassessable, got {other:?}"),
+        }
+    }
+
+    // `via_verified_pid` -----
+
+    /// Mutant: the id is not compared, so a reused pid is signalled.
+    #[skuld::test]
+    fn a_pid_with_another_unique_id_is_gone_and_sends_nothing() {
+        let (mut child, stdin) = spawn();
+        let other = Some(unique_id_of(child.id()) ^ 1);
+        let log = Capture::start();
+        assert_eq!(
+            via_verified_pid(child.id(), other, Sig::Kill).expect("gone is Ok"),
+            Sent::Gone
+        );
+        assert_eq!(log.entries(), []);
+        assert!(child.try_wait().expect("try_wait").is_none(), "the child was signalled");
+        drop(stdin);
+        child.wait().expect("reap");
+    }
+
+    /// A child that holds no unique id has nothing to verify its pid against: nothing is sent, and it is
+    /// `Unverified`, not `Gone`, since it may be running.
+    ///
+    /// Mutants: a process with no id is signalled anyway; it is read as gone.
+    #[skuld::test]
+    fn a_child_with_no_unique_id_is_unverified_and_sends_nothing() {
+        let log = Capture::start();
+        assert_eq!(
+            via_verified_pid(NEVER_A_PID, None, Sig::Kill).expect("unverified is Ok"),
+            Sent::Unverified
+        );
+        assert_eq!(log.entries(), []);
+    }
+
+    /// A re-read that is refused is an error that keeps its errno's kind, so `EPERM` reaches
+    /// `Unkillable`; nothing is sent.
+    ///
+    /// Mutant: `Refused` taken for a match, or turned into `ErrorKind::Other`.
+    #[skuld::test]
+    fn a_refused_identity_reread_keeps_its_errno_and_sends_nothing() {
+        let (mut child, stdin) = spawn();
+        let known = Some(unique_id_of(child.id()));
+        let log = Capture::start();
+        let _forced = uniq_fault::force_uniq_read_once(ReadPurpose::Kill, UniqRead::Refused(libc::EPERM));
+        let err = via_verified_pid(child.id(), known, Sig::Kill).expect_err("unverifiable");
+        assert_eq!(err.kind(), io::ErrorKind::PermissionDenied, "{err}");
+        assert_eq!(err.raw_os_error(), None);
+        assert!(err.to_string().contains("identity could not be read"), "{err}");
+        assert_eq!(log.entries(), []);
+        drop(stdin);
+        child.wait().expect("reap");
+    }
+
+    /// Mutant: `ESRCH` returned as an error.
+    #[skuld::test]
+    fn a_pid_that_vanishes_after_the_check_is_gone_and_the_attempt_is_recorded() {
+        let log = Capture::start();
+        let _forced = uniq_fault::force_uniq_read_once(ReadPurpose::Kill, UniqRead::Found(UniqInfo { unique_id: 7 }));
+        assert_eq!(
+            via_verified_pid(NEVER_A_PID, Some(7), Sig::Kill).expect("gone is Ok"),
+            Sent::Gone
+        );
+        assert_eq!(log.entries(), [(NEVER_A_PID, Sig::Kill, Via::Pid)]);
+    }
+
+    /// Mutant: the send is not recorded, or nothing is sent.
+    #[skuld::test]
+    fn a_verified_live_child_is_signalled_and_recorded() {
+        let (mut child, _stdin) = spawn();
+        let identity = read_identity(child.id()).expect("readable");
+        let log = Capture::start();
+        assert_eq!(
+            via_verified_pid(child.id(), identity, Sig::Kill).expect("send"),
+            Sent::Delivered
+        );
+        assert_eq!(log.entries(), [(child.id(), Sig::Kill, Via::Pid)]);
+        let status = child.wait().expect("reap");
+        assert_eq!(
+            std::os::unix::process::ExitStatusExt::signal(&status),
+            Some(libc::SIGKILL)
+        );
+    }
+}
+
+// The root's state from a peek =====
+
+mod root_state {
+    use crate::signal::RootState;
+    use crate::wait::exit_only::{Foreign, Peek};
+
+    /// Mutant: a reap by someone else is `Unknown`.
+    #[skuld::test]
+    fn a_foreign_reap_is_reaped() {
+        let state = RootState::of_peek(Ok(Peek::Foreign(Foreign::Gone)));
+        assert!(matches!(state, RootState::Reaped), "{state:?}");
+    }
+
+    /// A running child is ours to act on.
+    ///
+    /// Mutant: `Running` is `Unknown`, or `Reaped`.
+    #[skuld::test]
+    fn a_running_peek_is_unreaped() {
+        let state = RootState::of_peek(Ok(Peek::Running));
+        assert!(matches!(state, RootState::Unreaped), "{state:?}");
+    }
+
+    /// An exit record that was peeked, not consumed, is still an unreaped zombie of ours.
+    ///
+    /// Mutant: `Exit` is `Reaped`.
+    #[skuld::test]
+    fn an_exit_record_peek_is_unreaped() {
+        let exit = crate::wait::exit_only::Reaped::Status(std::os::unix::process::ExitStatusExt::from_raw(0));
+        let state = RootState::of_peek(Ok(Peek::Exit(exit)));
+        assert!(matches!(state, RootState::Unreaped), "{state:?}");
+    }
+
+    /// A failed peek is `Unknown`, and carries the error.
+    ///
+    /// Mutant: `Err` is `Reaped` or `Unreaped`, or drops the error.
+    #[skuld::test]
+    fn a_failed_peek_is_unknown_carrying_the_error() {
+        let state = RootState::of_peek(Err(std::io::Error::other("peek failure 5d1")));
+        assert!(
+            matches!(&state, RootState::Unknown(e) if e.to_string().contains("peek failure 5d1")),
+            "{state:?}"
+        );
+    }
+
+    /// An orphaned zombie (held by launchd) is `Unpinned`.
+    ///
+    /// Mutants: `Orphaned` is `Reaped`; `Orphaned` is `Unknown` (a root we still pin).
+    #[cfg(target_os = "macos")]
+    #[skuld::test]
+    fn an_orphaned_zombie_is_unpinned() {
+        let state = RootState::of_peek(Ok(Peek::Foreign(Foreign::Orphaned)));
+        assert!(matches!(&state, RootState::Unpinned), "{state:?}");
+    }
+}
