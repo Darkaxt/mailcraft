@@ -1,9 +1,11 @@
 name: Package
 
-# Builds every release file with the scripts in packaging/ and uploads them as workflow artifacts
+# Builds the scoped Windows release files with the scripts in packaging/ and uploads them as workflow artifacts
 # named release-* (release.yml gathers them into one GitHub release). Called by release.yml; it
 # doesn't run on its own. Everything here runs on GitHub's standard runners, so it works in any
 # public repository, a fork included.
+# Non-Windows application jobs are suspended by the owner's2026-11-10 instruction.
+# Their source recipes remain intact until the owner requests another platform.
 #
 # File names follow the Craft apps' releases, which is what lets ArtCraft Launcher find them:
 #   mailcraft-<ver>-windows-{x64,x86,arm64}.msi, mailcraft-<ver>-windows-{x64,x86,arm64}-portable.zip
@@ -322,6 +324,7 @@ jobs:
 
   # Compiles the two macOS programs for both architectures. No signing secret, no environment.
   macos-build:
+    if: false # Windows-only owner scope; dependent signing/smoke jobs stay skipped.
     name: macOS universal (build)
     runs-on: macos-latest
     outputs:
@@ -458,6 +461,7 @@ jobs:
           "$cli" --version
 
   linux:
+    if: false # Windows-only owner scope; the dependent Flatpak job stays skipped.
     name: Linux ${{ matrix.arch }}
     # The oldest supported Ubuntu image: binaries built against its glibc (2.35) run on newer ones.
     runs-on: ${{ matrix.runner }}
@@ -575,7 +579,7 @@ jobs:
 
   freebsd:
     name: FreeBSD x86_64
-    if: inputs.freebsd
+    if: false # Windows-only owner scope, including manual package runs.
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     outputs:
@@ -627,6 +631,7 @@ jobs:
           retention-days: 30
 
   web:
+    if: false # Windows-only owner scope.
     name: Web (wasm)
     runs-on: ubuntu-24.04
     outputs:

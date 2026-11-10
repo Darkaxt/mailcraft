@@ -7,9 +7,11 @@
 - One Windows header row and native dark email colours.
 - Windowless MCP mail checks and bounded resident content; Microsoft To Do stays manual.
 - Windows x64 portable/MSI packages include the selected document and OCR workers.
+- This fork currently delivers Windows only; other application platforms are paused until the owner requests them.
 - Updates use this fork and its own checksum signature; upstream fixes are retained below.
 
 **What's new**
+- The fork's current release and application checks target Windows only; macOS, Linux, FreeBSD and web delivery are paused with their source recipes preserved.
 - A contact's S/MIME certificates and OpenPGP keys in a vCard (`KEY`) are kept when the card is imported and written back when contacts are exported ([#30](https://github.com/GITHUB_REPOSITORY/issues/30)).
 - An S/MIME Digitally signed message says what checking its signature found, in a bar above it: verified, signed but the signer not verified, changed after it was signed, or can't be checked (an algorithm that's no longer safe, for one), with Details of who signed and their certificate; its row in the list wears a seal of the same. Trust comes from the certification authorities your system trusts for mail (on Linux its mail bundle, on Windows the roots trusted for secure mail; none on FreeBSD, whose authorities are for web sites, and none yet on macOS). An opaque signed message shows what it holds, its attachments too; revocation isn't checked yet ([#30](https://github.com/GITHUB_REPOSITORY/issues/30)).
 - Switch a message between Light, Dark and the app theme directly in the reader. Preview the complete current unsent draft in an independent light or dark presentation, then return to editing without saving, sending or changing its HTML.

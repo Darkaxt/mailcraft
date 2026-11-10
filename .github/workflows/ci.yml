@@ -1,6 +1,7 @@
 # The gates every change must pass: formatting, clippy with warnings as errors, the tests, asset
-# attribution, crate layering, the wasm build and cargo-deny (`cargo xtask ci`), on the three desktop systems
-# (clippy and wasm on Linux only). Changes to documentation alone don't run it, nor changes under
+# attribution, crate layering and cargo-deny (`cargo xtask ci`). The fork targets Windows only
+# until the owner's2026-11-10 scope restriction changes; wasm and other desktop runs are paused.
+# Changes to documentation alone don't run it, nor changes under
 # .github/ alone (templates, the CodeQL set-up), save to the workflows, which `cargo xtask
 # workflows` reads; `ci-ok` reports on every pull request either way, and is the check that
 # protection of main requires.
@@ -56,7 +57,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,7 +67,7 @@ jobs:
         with:
           toolchain: 1.98.1
           components: rustfmt, clippy
-          targets: ${{ runner.os == 'Windows' && 'wasm32-unknown-unknown,i686-pc-windows-msvc' || 'wasm32-unknown-unknown' }}
+          targets: i686-pc-windows-msvc
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         # Pull requests read main's cache but don't write their own: a cache per PR fills the
         # repository's 10 GB and pushes out the caches that matter (FreeBSD's above all).
@@ -80,15 +81,11 @@ jobs:
       - uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
         with:
           tool: cargo-nextest@0.9.150
-      # Windowing and file-dialog headers the desktop app links against.
-      - name: Linux build dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libgtk-3-dev
-      # Clippy and the wasm check run on Linux only: wasm is the same from any host, and the
-      # tests still build every platform's code.
+      # Keep native lint/tests on Windows. Web delivery is outside the current scope;
+      # cargo-deny remains in its separate source-only utility job.
       - run: cargo run --locked --package xtask -- ci
         env:
-          XTASK_CI_SKIP: ${{ runner.os != 'Linux' && 'clippy,wasm,deny' || 'deny' }}
+          XTASK_CI_SKIP: wasm,deny
       # Packed Win32 structs have different alignment on i686; x64 CI alone
       # cannot compile this regression's affected path.
       - name: Windows 32-bit process dependency regression

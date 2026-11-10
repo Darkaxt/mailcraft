@@ -24,6 +24,7 @@ concurrency:
 
 jobs:
   coverage:
+    if: false # Linux native coverage paused during Windows-only owner scope.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

@@ -2,6 +2,15 @@
 
 ## Fork Windows native-content input
 
+The owner restricted this fork to Windows on2026-11-10 until further notice.
+Application CI targets Windows and retains native Clippy, tests and the i686
+dependency regression. Wasm and other desktop application jobs are paused.
+The normal release includes Windows x64, x86 and ARM64 portable/MSI outputs,
+the x64 content-runtime input, signed checksums and build provenance. The other
+platform recipes and historical table below remain preserved; they do not
+describe this fork's current delivery scope. Source/security/checksum utility
+jobs can still use Linux runners without building a Linux application.
+
 This fork checks releases at `Darkaxt/mailcraft` and carries its own release
 checksum public keys. Preserve the owner's update opt-in; changing the source
 does not enable updates. Private signing keys belong in protected local settings
@@ -430,6 +439,7 @@ and in the Flatpak (which is granted `org.freedesktop.secrets` for it).
 
 | Date | Change |
 |---|---|
+| 2026-11-10 | Restrict fork application CI and release artifacts to Windows by explicit owner instruction; preserve other platform recipes in a paused state. |
 | 2026-11-10 | Preserve the prepared numeric release and runtime input identities while refreshing generated draft outputs. |
 | 2026-11-09 | patch: pin the unpublished native input's numeric asset identity before the final source commit; bind final draft source/notes before tagging, fetch before compiling with read-only repository permissions, and retain canonical source-hash bytes |
 | 2026-11-09 | minor: fork checksum trust, selected Windows x64 native runtime handoff, and final portable/MSI release preparation |
