@@ -10,6 +10,10 @@ the x64 content-runtime input, signed checksums and build provenance. The other
 platform recipes and historical table below remain preserved; they do not
 describe this fork's current delivery scope. Source/security/checksum utility
 jobs can still use Linux runners without building a Linux application.
+Non-Windows jobs require `MAILCRAFT_NON_WINDOWS_ENABLED` to be exactly `true`;
+the repository variable is unset, which keeps them paused. Leave it unset unless
+the owner explicitly extends platform scope and the corresponding CI/release
+handoffs and acceptance inventory are updated. Windows delivery does not set it.
 
 This fork checks releases at `Darkaxt/mailcraft` and carries its own release
 checksum public keys. Preserve the owner's update opt-in; changing the source
@@ -439,6 +443,7 @@ and in the Flatpak (which is granted `org.freedesktop.secrets` for it).
 
 | Date | Change |
 |---|---|
+| 2026-11-10 | Keep paused non-Windows jobs behind an unset, exact-true repository opt-in compatible with workflow lint; changing scope still requires the owner's instruction. |
 | 2026-11-10 | Restrict fork application CI and release artifacts to Windows by explicit owner instruction; preserve other platform recipes in a paused state. |
 | 2026-11-10 | Preserve the prepared numeric release and runtime input identities while refreshing generated draft outputs. |
 | 2026-11-09 | patch: pin the unpublished native input's numeric asset identity before the final source commit; bind final draft source/notes before tagging, fetch before compiling with read-only repository permissions, and retain canonical source-hash bytes |

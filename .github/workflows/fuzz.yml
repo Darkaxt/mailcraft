@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   fuzz:
-    if: false # Linux-target native fuzzing paused during Windows-only owner scope.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset during Windows-only owner scope.
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false

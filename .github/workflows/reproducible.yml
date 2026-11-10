@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   twice:
-    if: false # Linux application builds paused during Windows-only owner scope.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset during Windows-only owner scope.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

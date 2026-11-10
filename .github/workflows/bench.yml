@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   open:
-    if: false # Linux native benchmark paused during Windows-only owner scope.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset during Windows-only owner scope.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:

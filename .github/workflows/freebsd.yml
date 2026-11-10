@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   freebsd:
-    if: false # FreeBSD application testing paused during Windows-only owner scope.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset during Windows-only owner scope.
     # Pinned to a full commit SHA of the shared workflow's main branch; moved by hand, after reading the change.
     uses: storytold/craft-common-actions/.github/workflows/freebsd.yml@fa5ef18780cf5e7d5d3b8de068de56cffc83cac5 # main # zizmor: ignore[ref-version-mismatch]
     with:

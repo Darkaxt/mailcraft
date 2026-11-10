@@ -324,7 +324,7 @@ jobs:
 
   # Compiles the two macOS programs for both architectures. No signing secret, no environment.
   macos-build:
-    if: false # Windows-only owner scope; dependent signing/smoke jobs stay skipped.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset; dependent jobs stay skipped.
     name: macOS universal (build)
     runs-on: macos-latest
     outputs:
@@ -461,7 +461,7 @@ jobs:
           "$cli" --version
 
   linux:
-    if: false # Windows-only owner scope; the dependent Flatpak job stays skipped.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset; Flatpak stays skipped.
     name: Linux ${{ matrix.arch }}
     # The oldest supported Ubuntu image: binaries built against its glibc (2.35) run on newer ones.
     runs-on: ${{ matrix.runner }}
@@ -579,7 +579,7 @@ jobs:
 
   freebsd:
     name: FreeBSD x86_64
-    if: false # Windows-only owner scope, including manual package runs.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' && inputs.freebsd
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     outputs:
@@ -631,7 +631,7 @@ jobs:
           retention-days: 30
 
   web:
-    if: false # Windows-only owner scope.
+    if: vars.MAILCRAFT_NON_WINDOWS_ENABLED == 'true' # Unset during Windows-only owner scope.
     name: Web (wasm)
     runs-on: ubuntu-24.04
     outputs:
