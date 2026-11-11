@@ -13,6 +13,7 @@ use std::sync::{
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+use mailcraft_model::search::text::fold_words;
 use mailcraft_model::{Id, search::Query};
 use serde_json::Value;
 
@@ -107,7 +108,8 @@ fn expression(
                 }
                 // (The tokenizer drops the accents of Latin letters only: a token in another
                 // script, `καλημέρα`, is folded as the pieces are before it is compared.)
-                if if token.is_ascii() { token.contains(piece.as_str()) } else { fold_words(token).contains(piece.as_str()) } {
+                let holds = if token.is_ascii() { token.contains(piece.as_str()) } else { fold_words(token).contains(piece.as_str()) };
+                if holds {
                     found.push((token, *documents));
                 }
             }

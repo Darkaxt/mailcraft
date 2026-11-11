@@ -1,14 +1,12 @@
-**MailCraft 0.11.3 in short** — the fork's integrated mail workflow
-- One inbox for all accounts, with editable account and alias colours.
-- Local regex rules, folder-focused editing and filing conflict review.
-- Offline full-text search, attachment text and OCR with explicit coverage.
-- Saved search folders with exact phrases, case matching and scoped queries.
-- SimpleLogin alias views, readable original-sender claims and message source/EML export.
-- One Windows header row and native dark email colours.
-- Windowless MCP mail checks and bounded resident content; Microsoft To Do stays manual.
-- Windows x64 portable/MSI packages include the selected document and OCR workers.
-- This fork currently delivers Windows only; other application platforms are paused until the owner requests them.
-- Updates use this fork and its own checksum signature; upstream fixes are retained below.
+**MailCraft 0.11.4 in short** — one unified mailbox, faster search, a calmer reader
+- A Unified mailbox root: every Inbox, the filing tree and saved search folders in one place, with + for a new search folder.
+- Strong account colours as a slim stripe or a full row, switched beside the sort menu.
+- Search inside words (`voice` finds `invoice`) with Match case, Whole word, Regex and Search in toggles.
+- A 0–100 relevance score per message and a By Relevance sort.
+- A smaller, faster content index that never holds the window open on close.
+- Pictures download by default outside Junk; tracking pictures are blocked behind a shield.
+- Floating reader controls and a continuous, coloured message source view.
+- Upstream fixes through November 10 are included; this fork delivers Windows only.
 
 **What's new**
 - Typing `* ` or `- ` at the start of a line in a message now starts a bulleted list, and `1. ` or `1) ` a numbered one. Undo straight afterwards puts back what you typed, and File › Options › Mail › Automatic bulleted and numbered lists turns it off ([#973](https://github.com/GITHUB_REPOSITORY/issues/973)).
