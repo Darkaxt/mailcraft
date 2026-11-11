@@ -15,7 +15,7 @@ use mailcraft_model::sync::{
 };
 use mailcraft_model::{
     Account, AccountKind, Directory, EwsServer, FlagStatus, Folder, FolderKind, Id, JmapServer, MailIdentity, Mailbox, Message, OAuth, OAuthProvider,
-    Pending, Queued, Security, Server, clean_name,
+    Pending, Queued, Rgb, Security, Server, clean_name,
 };
 use serde_json::{Value, json};
 
@@ -26,7 +26,7 @@ use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("account.add", "Add Account", "File › Info", add).params(ACCOUNT),
-        CommandSpec::new("account.edit", "Account Settings", "File › Info", edit).params(r#"{"id": number, …the fields of account.add, "downloadInFull"?: "upTo10Mb"|"upTo25Mb"|"upTo50Mb"|"everything" (a Microsoft account: which messages are fetched whole in the background), "keepOffline"?: "3d"|"1w"|"2w"|"1m"|"3m"|"6m"|"12m"|"2y"|"5y"|"10y"|"all" (a Microsoft account's mail to keep offline: how far back, by received date, mail is kept in full on this computer; older mail keeps its headers and preview. A shared mailbox follows its owner's. Shortening it removes nothing by itself: account.thinOffline does), "askBeforeDeletingConversation"?: bool (Delete on a conversation's row that takes more than one message, in its folder or found by a search, asks first in the window; on unless turned off. A shared mailbox follows its owner's), "showGmailCategories"?: bool (a Gmail account: the folder pane shows Gmail's categories, Primary, Social, Promotions, Updates and Forums, under its Inbox; on unless turned off), "alertPrimaryOnly"?: bool (a Gmail account: a desktop alert only for new mail in Gmail's Primary category; off unless turned on)}"#),
+        CommandSpec::new("account.edit", "Account Settings", "File › Info", edit).params(r#"{"id": number, …the fields of account.add, "downloadInFull"?: "upTo10Mb"|"upTo25Mb"|"upTo50Mb"|"everything" (a Microsoft or Exchange server account: which messages are fetched whole in the background), "keepOffline"?: "3d"|"1w"|"2w"|"1m"|"3m"|"6m"|"12m"|"2y"|"5y"|"10y"|"all" (a Microsoft or Exchange server account's mail to keep offline: how far back, by received date, mail is kept in full on this computer; older mail keeps its headers and preview. A shared mailbox follows its owner's. Shortening it removes nothing by itself: account.thinOffline does), "askBeforeDeletingConversation"?: bool (Delete on a conversation's row that takes more than one message, in its folder or found by a search, asks first in the window; on unless turned off. A shared mailbox follows its owner's), "showGmailCategories"?: bool (a Gmail account: the folder pane shows Gmail's categories, Primary, Social, Promotions, Updates and Forums, under its Inbox; on unless turned off), "alertPrimaryOnly"?: bool (a Gmail account: a desktop alert only for new mail in Gmail's Primary category; off unless turned on)}"#),
         CommandSpec::new("account.forgetEwsCertificate", "Forget Trusted Certificate", "File › Info", forget_ews_certificate)
             .params(r#"{"id": number} — an Exchange server account stops trusting the one certificate it was told to trust although the system doesn't: its fingerprint is forgotten, so the server's certificate is judged by the system alone and the owner is asked again if it isn't trusted. Answers {"id": id, "forgotten": bool}"#),
         CommandSpec::new("account.remove", "Remove Account", "File › Info", remove).params(r#"{"id": number} — removes the account, its mail and what is kept for it on this computer (bodies and attachments leave the content folder once a state without it is saved; no Undo step is kept), and what came from its server: its events, contacts, to-dos and calendars (what was made here and not sent yet stays, as this computer's own), Outlook's list of categories, its rules (those its server keeps stay there; those for every account stay here), and, where the window's settings are kept (the window, not mailcraft-cli), its mailbox's working hours; nothing on the server is touched. Mail moved into it from elsewhere that its server wasn't given yet goes back to where it came from, and so does mail moved into it whose original another server keeps until the copy is safe; once the copy is safe on its server, that original goes as it would have (mail moved onto this computer goes back to its original, as its copy goes with the account). The only account leaves an empty mailbox, as at a first start. Answers {"deleted": id, "leftToSweep": n (content files the sweep removes later)}"#),
@@ -46,7 +46,7 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-const ACCOUNT: &str = r#"{"email": string, "displayName"?: string, "name"?: string, "username"?: string, "incoming"?: {"host": string, "port"?: number, "security"?: "tls"|"starttls"|"none"} | null, "outgoing"?: same | null, "auth"?: "password"|"oauth2" (oauth2: sign in on the provider's page), "provider"?: "microsoft"|"google", "clientId"?: string, "tenant"?: string, "directory"?: "organisation"|"personal" (which kind of Microsoft account signs in, when the sign-in said), "kind"?: "imap"|"local"|"microsoft"|"jmap"|"exchange" (microsoft: kept in step through Microsoft Graph, no mail servers; jmap: kept in step over JMAP, no mail servers; exchange: an Exchange server account, kept in step through Exchange Web Services, no mail servers), "ews"?: {"url": string (the https:// address of the server's Exchange Web Services, `…/EWS/Exchange.asmx`), "username"?: string (DOMAIN\user or a UPN; default the e-mail address), "trusted"?: string (the SHA-256 fingerprint of the one certificate trusted for this account besides the system's)} (an Exchange server account's server; the password is never a setting), "jmap"?: {"session": string (the https:// address of the server's JMAP session resource), "bearer"?: bool (the secret is a bearer token, not the account's password)} (a JMAP account's server; the secret is never a setting)}"#;
+const ACCOUNT: &str = r##"{"email": string, "displayName"?: string, "name"?: string, "username"?: string, "incoming"?: {"host": string, "port"?: number, "security"?: "tls"|"starttls"|"none"} | null, "outgoing"?: same | null, "auth"?: "password"|"oauth2" (oauth2: sign in on the provider's page), "provider"?: "microsoft"|"google", "clientId"?: string, "tenant"?: string, "directory"?: "organisation"|"personal" (which kind of Microsoft account signs in, when the sign-in said), "kind"?: "imap"|"local"|"microsoft"|"jmap"|"exchange" (microsoft: kept in step through Microsoft Graph, no mail servers; jmap: kept in step over JMAP, no mail servers; exchange: an Exchange server account, kept in step through Exchange Web Services, no mail servers), "ews"?: {"url": string (the https:// address of the server's Exchange Web Services, `…/EWS/Exchange.asmx`), "username"?: string (DOMAIN\user or a UPN; default the e-mail address), "trusted"?: string (the SHA-256 fingerprint of the one certificate trusted for this account besides the system's)} (an Exchange server account's server; the password is never a setting), "jmap"?: {"session": string (the https:// address of the server's JMAP session resource), "bearer"?: bool (the secret is a bearer token, not the account's password)} (a JMAP account's server; the secret is never a setting), "color"?: "#RRGGBB" | null (the account's colour: a dot by its name in the folder pane and a stripe on its mail in a list of more than one account's; a new account is given one of the palette's that no other has unless this says, null for none)}"##;
 
 fn has_server(s: &Session) -> Option<&'static str> {
     if s.mailbox.accounts.iter().any(|a| a.kind.has_server()) {
@@ -222,6 +222,13 @@ fn apply_fields(a: &mut Account, v: &Value) -> Result<(), CmdError> {
         Some(Value::Bool(ask)) => a.skip_conversation_question = !ask,
         Some(_) => return Err(bad("`askBeforeDeletingConversation` is true or false")),
     }
+    // The account's colour (#893), or none.
+    match v.get("color") {
+        None => {}
+        Some(Value::Null) => a.color = None,
+        Some(Value::String(hex)) => a.color = Some(Rgb::parse(hex).ok_or_else(|| bad("`color` looks like #2E8B57, or is null for none"))?),
+        Some(_) => return Err(bad("`color` looks like #2E8B57, or is null for none")),
+    }
     // Gmail's categories under the Inbox, and alerts for Primary alone (#911).
     match v.get("showGmailCategories") {
         None => {}
@@ -349,7 +356,8 @@ fn ews_server(v: &Value, before: Option<&EwsServer>) -> Result<EwsServer, CmdErr
 
 /// An account's address must be one, but for the account on this computer that has none and keeps
 /// it so (`before`: what an edited account was), which holds imported mail, when nothing else of it
-/// changes but its question before deleting a conversation (#503): it is no account to sign in with.
+/// changes but its question before deleting a conversation (#503) or its colour (#893): it is no
+/// account to sign in with.
 fn check_address(a: &Account, before: Option<&Account>) -> Result<(), CmdError> {
     let none_kept = before.is_some_and(|b| {
         b.kind == AccountKind::Local
@@ -358,6 +366,7 @@ fn check_address(a: &Account, before: Option<&Account>) -> Result<(), CmdError> 
                     skip_conversation_question: a.skip_conversation_question,
                     hide_gmail_categories: a.hide_gmail_categories,
                     alert_primary_only: a.alert_primary_only,
+                    color: a.color,
                     ..b.clone()
                 }
     });
@@ -460,6 +469,10 @@ fn add(s: &mut Session, v: &Value) -> CmdResult {
     // The placeholder account of an empty mailbox makes way for the first real one.
     if let Some(placeholder) = s.mailbox.placeholder() {
         s.mailbox.remove_account(placeholder)?;
+    }
+    // A colour of its own, unless one was asked for (#893).
+    if v.get("color").is_none() {
+        a.color = Some(s.mailbox.unused_account_color());
     }
     let id = s.mailbox.add_account(a);
     if s.mailbox.folder(s.view.folder).is_none() {
@@ -712,7 +725,7 @@ fn list(s: &mut Session, _: &Value) -> CmdResult {
         .accounts_in_order()
         .into_iter()
         .map(|a| {
-            json!({"id": a.id, "name": a.name, "email": a.email, "displayName": a.display_name, "kind": a.kind, "username": a.username, "incoming": a.incoming, "outgoing": a.outgoing, "signature": a.signature, "replySignature": a.reply_signature(), "auth": if a.oauth.is_some() { "oauth2" } else { "password" }, "oauth": a.oauth, "downloadInFull": a.download_in_full, "keepOffline": s.mailbox.keep_offline_of(a.id), "askBeforeDeletingConversation": s.mailbox.asks_before_deleting_conversation(a.id), "gmail": a.is_gmail(), "showGmailCategories": a.shows_gmail_categories(), "alertPrimaryOnly": a.is_gmail() && a.alert_primary_only, "sharedOf": a.shared_of, "jmap": jmap_shown(a), "ews": ews_shown(a)})
+            json!({"id": a.id, "name": a.name, "email": a.email, "displayName": a.display_name, "kind": a.kind, "username": a.username, "incoming": a.incoming, "outgoing": a.outgoing, "signature": a.signature, "replySignature": a.reply_signature(), "auth": if a.oauth.is_some() { "oauth2" } else { "password" }, "oauth": a.oauth, "downloadInFull": a.download_in_full, "keepOffline": s.mailbox.keep_offline_of(a.id), "askBeforeDeletingConversation": s.mailbox.asks_before_deleting_conversation(a.id), "gmail": a.is_gmail(), "showGmailCategories": a.shows_gmail_categories(), "alertPrimaryOnly": a.is_gmail() && a.alert_primary_only, "color": a.color.map(Rgb::hex), "sharedOf": a.shared_of, "jmap": jmap_shown(a), "ews": ews_shown(a)})
         })
         .collect();
     let colors: Vec<Value> = s
@@ -762,11 +775,16 @@ pub fn sync_request(s: &Session, account: Id) -> Result<SyncRequest, CmdError> {
         }
     }
     // What waits to be moved or deleted on the server is there still: known, so that it doesn't
-    // come down again.
+    // come down again. The account's folders by the mailbox they follow, the first of each,
+    // looked up once for each change rather than searched (#991).
+    let mut by_remote: HashMap<&str, Id> = HashMap::new();
+    for f in s.mailbox.folders.iter().filter(|f| f.account == account) {
+        by_remote.entry(f.remote.as_str()).or_insert(f.id);
+    }
     for p in s.mailbox.pending.iter().filter(|p| p.account() == account) {
         let (from, uid) = p.source();
-        if let Some(f) = s.mailbox.folders.iter().find(|f| uid != 0 && f.account == account && f.remote == from) {
-            known.entry(f.id).or_default().push(uid);
+        if let Some(id) = by_remote.get(from).copied().filter(|_| uid != 0) {
+            known.entry(id).or_default().push(uid);
         }
     }
     let mut again = super::imap_again::wanted(&s.mailbox, account, s.now());
@@ -1186,6 +1204,22 @@ impl SyncTotals {
     }
 }
 
+/// [`apply_sync_part`] for several pieces waiting, in the order they came: taken in as one,
+/// which is the same as taking them in one after the other ([`SyncResult::absorb`]), with the
+/// whole account read once rather than once for each. A host hands over at most
+/// [`MAX_PIECES_TOGETHER`] at a time, so that the window waits for no more than that.
+pub fn apply_sync_parts(s: &mut Session, run: &mut SyncTotals, pieces: Vec<SyncResult>) -> CmdResult {
+    let mut pieces = pieces.into_iter();
+    let Some(mut whole) = pieces.next() else { return Err(failed!("there is nothing to take in")) };
+    for piece in pieces {
+        whole.absorb(piece);
+    }
+    apply_sync_part(s, run, whole)
+}
+
+/// Most pieces a host hands [`apply_sync_parts`] at a time.
+pub const MAX_PIECES_TOGETHER: usize = 256;
+
 /// [`apply_sync`] for an answer that comes in pieces, as `mailcraft_net::sync_with` hands it
 /// over: call it with each piece, in the order they come, and the same `run`, which adds up what
 /// they changed.
@@ -1199,6 +1233,10 @@ impl SyncTotals {
 /// program is closed), what was taken in is as good as a run that ended there.
 ///
 /// Answers what this piece changed, with the run's line (`summary`) and its sums so far (`total`).
+///
+/// Taking in a piece that brings anything reads the whole account once, however little the
+/// piece brings; a run that reads thousands of folders hands over a piece or more for each, so
+/// a host with several pieces waiting takes them in together ([`apply_sync_parts`], #991).
 pub fn apply_sync_part(s: &mut Session, run: &mut SyncTotals, mut result: SyncResult) -> CmdResult {
     let account = result.account;
     let Some(a) = s.mailbox.account(account) else { return Err(failed!("no account with id {id}", id = account)) };
@@ -1915,48 +1953,80 @@ fn folder_for(mb: &mut Mailbox, account: Id, remote: &str, kind: FolderKind) -> 
 /// except one at the top whose place in the tree is now known (folders moved here are not moved
 /// on the server yet, so the server's tree is the one that holds).
 fn adopt_listed(mb: &mut Mailbox, account: Id, on_server: &mut OnServer, listed: &[mailcraft_model::sync::ListedFolder]) {
+    let listed = listed.get(..listed.len().min(mailcraft_model::sync::MAX_LISTED_FOLDERS)).unwrap_or_default();
+    // Each folder's parent by the folder's path, the first listed of a path being the one: one
+    // pass, not a search of the whole list at every step up (#991).
+    let mut parents: HashMap<&str, &str> = HashMap::with_capacity(listed.len());
+    for f in listed {
+        parents.entry(f.remote.as_str()).or_insert(f.parent.as_str());
+    }
     // Parents before their children, however the server ordered them.
     let depth = |f: &mailcraft_model::sync::ListedFolder| {
         let (mut above, mut n) = (f.parent.as_str(), 0);
         while !above.is_empty() && n < 32 {
-            above = listed.iter().find(|p| p.remote == above).map_or("", |p| p.parent.as_str());
+            above = parents.get(above).copied().unwrap_or_default();
             n += 1;
         }
         n
     };
-    let mut order: Vec<&mailcraft_model::sync::ListedFolder> = listed.iter().take(2000).filter(|f| !f.remote.is_empty()).collect();
+    let mut order: Vec<&mailcraft_model::sync::ListedFolder> = listed.iter().filter(|f| !f.remote.is_empty()).collect();
     order.sort_by_cached_key(|f| depth(f));
+    // Indexes made in one pass and kept up to date, so that thousands of folders are not each
+    // looked for, or checked against their siblings' names, by reading every folder (#991):
+    // where each folder is, and the names (lowered) under each folder of the account. A name
+    // a folder had before it was renamed or moved stays taken: at worst a new folder beside it
+    // gets a number it didn't need, never a name that is there already.
+    let mut at: HashMap<Id, usize> = mb.folders.iter().enumerate().map(|(i, f)| (f.id, i)).collect();
+    let mut names: HashMap<Option<Id>, HashSet<String>> = HashMap::new();
+    for f in mb.folders.iter().filter(|f| f.account == account) {
+        names.entry(f.parent).or_default().insert(f.name.to_lowercase());
+    }
+    let find = |mb: &Mailbox, at: &HashMap<Id, usize>, id: Id| -> Option<usize> {
+        at.get(&id).copied().filter(|i| mb.folders.get(*i).is_some_and(|f| f.id == id)).or_else(|| mb.folders.iter().position(|f| f.id == id))
+    };
     for f in order {
         let parent = on_server.by_remote.get(&f.parent).copied().filter(|_| !f.parent.is_empty());
         match on_server.by_remote.get(&f.remote).copied() {
             Some(id) => {
+                let here = find(mb, &at, id).and_then(|i| mb.folders.get(i)).cloned();
                 // A name an earlier version cut short at a dot is put right.
                 let listed_as = clean_name(&f.name).filter(|name| !name.contains('/'));
-                if let (Some(name), Some(here)) = (listed_as, mb.folder(id))
+                if let (Some(name), Some(here)) = (listed_as, &here)
                     && here.kind == FolderKind::Custom
                     && here.name != name
                     && here.name == cut_name(&f.remote)
+                    && mb.rename_folder(id, &name).is_ok()
                 {
-                    let _ = mb.rename_folder(id, &name);
+                    names.entry(here.parent).or_default().insert(name.to_lowercase());
                 }
-                let at_top = mb.folder(id).is_some_and(|here| here.parent.is_none() && here.kind == FolderKind::Custom);
+                let at_top = here.as_ref().is_some_and(|here| here.parent.is_none() && here.kind == FolderKind::Custom);
                 if let Some(p) = parent
                     && at_top
                     && !mb.subtree(id).contains(&p)
+                    && mb.move_folder(id, Some(p)).is_ok()
+                    && let Some(moved) = find(mb, &at, id).and_then(|i| mb.folders.get(i))
                 {
-                    let _ = mb.move_folder(id, Some(p));
+                    names.entry(Some(p)).or_default().insert(moved.name.to_lowercase());
                 }
             }
             None => {
                 let standard = if f.kind == FolderKind::Custom { None } else { mb.folder_of_kind(account, f.kind) };
-                let standard = standard.filter(|id| mb.folder(*id).is_some_and(|here| here.remote.is_empty()));
+                let standard = standard.filter(|id| find(mb, &at, *id).and_then(|i| mb.folders.get(i)).is_some_and(|here| here.remote.is_empty()));
                 let base = clean_name(&f.name).unwrap_or_else(|| leaf_name(&f.remote));
                 // A name already taken beside it gets a number.
                 let made = standard.or_else(|| {
-                    (1..=50).find_map(|n| mb.add_folder(account, parent, &if n == 1 { base.clone() } else { format!("{base} ({n})") }).ok())
+                    let taken = names.entry(parent).or_default();
+                    let free = (1..=50).find_map(|n| {
+                        let name = clean_name(&if n == 1 { base.clone() } else { format!("{base} ({n})") })?;
+                        (!taken.contains(&name.to_lowercase())).then_some(name)
+                    })?;
+                    let id = mb.add_folder_free(account, parent, &free).ok()?;
+                    taken.insert(free.to_lowercase());
+                    at.insert(id, mb.folders.len().saturating_sub(1));
+                    Some(id)
                 });
                 if let Some(id) = made {
-                    if let Ok(here) = mb.folder_mut(id) {
+                    if let Some(here) = find(mb, &at, id).and_then(|i| mb.folders.get_mut(i)) {
                         here.remote = f.remote.clone();
                     }
                     on_server.by_remote.insert(f.remote.clone(), id);

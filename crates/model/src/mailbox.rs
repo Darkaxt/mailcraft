@@ -305,6 +305,13 @@ impl AccountKind {
         matches!(self, AccountKind::Imap | AccountKind::Microsoft | AccountKind::Jmap | AccountKind::Exchange)
     }
 
+    /// Whether the account keeps its mail in full only within its mail to keep offline (#143),
+    /// and older mail as headers and a preview: a Microsoft account and an Exchange server account
+    /// (#966), which both bring every message's headers and fetch the whole messages afterwards.
+    pub fn has_offline_window(self) -> bool {
+        matches!(self, AccountKind::Microsoft | AccountKind::Exchange)
+    }
+
     /// Whether a Send/Receive sends the mail that waits in the account's Outbox (through SMTP,
     /// through Microsoft Graph, or through Exchange Web Services). Not yet for a JMAP account: its
     /// sending comes after its reading, and until then no mail is put in its Outbox, where it
@@ -412,6 +419,13 @@ pub struct Account {
     /// shared mailbox follows its owner's ([`Mailbox::asks_before_deleting_conversation`]).
     #[serde(skip_serializing_if = "is_false", deserialize_with = "crate::sync::lenient_or_default")]
     pub skip_conversation_question: bool,
+    /// The account's colour (#893): a dot beside its name in the folder pane, and a stripe on
+    /// its mail where the list holds mail of more than one account, so that whose mail is whose
+    /// is seen at a glance. A new account is given one ([`Mailbox::unused_account_color`]);
+    /// `None` for none, as in a file from before there were any, and for one the file has in a
+    /// form this version can't read.
+    #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "crate::sync::lenient")]
+    pub color: Option<Rgb>,
     /// For a Gmail account: its owner turned off Gmail's categories (#911), which the folder pane
     /// then doesn't show under its Inbox. Off for a new account and in a file from before there
     /// was one: they are shown. Every other account has none to show, whatever this says.
@@ -430,9 +444,13 @@ pub struct Account {
 }
 
 impl Account {
-    /// The theme-neutral pastel assigned to this account; reordering accounts never changes it.
+    /// The theme-neutral pastel behind this account's message rows. An explicit row colour wins;
+    /// otherwise the account's own colour (#893), lightened to a pastel, so its dot, stripe and
+    /// rows agree; otherwise a pastel chosen by its stable id (reordering never changes it).
     pub fn effective_row_color(&self) -> Rgb {
-        self.row_color.unwrap_or_else(|| ACCOUNT_ROW_COLORS.get((self.id % 8) as usize).copied().unwrap_or_default())
+        self.row_color
+            .or_else(|| self.color.map(pastel))
+            .unwrap_or_else(|| ACCOUNT_ROW_COLORS.get((self.id % 8) as usize).copied().unwrap_or_default())
     }
 
     pub fn origin_row_color(&self, alias: Option<&str>) -> Rgb {
@@ -996,8 +1014,31 @@ pub struct Category {
     pub color: Rgb,
 }
 
+/// The twelve colours a category or an account can be given in the window: ours, each strong
+/// enough to be seen as a mark on a light and on a dark background.
+pub const PALETTE: [Rgb; 12] = [
+    Rgb(0xD1, 0x3B, 0x3B),
+    Rgb(0xE0, 0x7B, 0x1F),
+    Rgb(0xD9, 0xA4, 0x0C),
+    Rgb(0x2E, 0x8B, 0x57),
+    Rgb(0x1A, 0x9B, 0xA6),
+    Rgb(0x2F, 0x6F, 0xD0),
+    Rgb(0x7E, 0x57, 0xC2),
+    Rgb(0xC2, 0x4E, 0x9A),
+    Rgb(0x8A, 0x5A, 0x44),
+    Rgb(0x6B, 0x7A, 0x1F),
+    Rgb(0x4F, 0x6D, 0x8F),
+    Rgb(0x7A, 0x7A, 0x7A),
+];
+
 /// The colour of a category with none: one a list doesn't have, or one new to the list.
 pub const GREY_CATEGORY: Rgb = Rgb(0x8A, 0x8A, 0x8A);
+
+/// An account colour lightened to the strength of [`ACCOUNT_ROW_COLORS`]: 82% white, keeping its hue.
+pub fn pastel(c: Rgb) -> Rgb {
+    let mix = |v: u8| ((u16::from(v) * 18 + 255 * 82 + 50) / 100) as u8;
+    Rgb(mix(c.0), mix(c.1), mix(c.2))
+}
 
 /// Theme-neutral account pastels. The renderer adapts their strength to the surface.
 pub const ACCOUNT_ROW_COLORS: [Rgb; 8] = [
@@ -1461,6 +1502,13 @@ impl Mailbox {
         self.owner_of(account).or(self.account(account)).map(|a| a.keep_offline).unwrap_or_default()
     }
 
+    /// The colour a new account is given (#893): the first of [`PALETTE`] no account has yet, and
+    /// once every one is taken, the one the fewest have (the first of those).
+    pub fn unused_account_color(&self) -> Rgb {
+        let used = |c: &Rgb| self.accounts.iter().filter(|a| a.color == Some(*c)).count();
+        PALETTE.iter().min_by_key(|c| used(c)).copied().unwrap_or_default()
+    }
+
     /// Whether Delete on a whole conversation of `account`'s asks first (#503): its own switch,
     /// and for a shared mailbox its owner's.
     pub fn asks_before_deleting_conversation(&self, account: Id) -> bool {
@@ -1564,6 +1612,8 @@ impl Mailbox {
             kind: AccountKind::Microsoft,
             download_in_full,
             shared_of: Some(owner),
+            // A colour of its own, as `account.add` gives a new account (#893).
+            color: Some(self.unused_account_color()),
             ..Default::default()
         };
         let id = self.add_account(shared);
@@ -1791,9 +1841,13 @@ impl Mailbox {
     }
 
     fn name_taken(&self, account: Id, parent: Option<Id>, name: &str, except: Option<Id>) -> bool {
-        self.folders
-            .iter()
-            .any(|f| f.account == account && f.parent == parent && Some(f.id) != except && f.name.to_lowercase() == name.to_lowercase())
+        // Lowered once, and not at all for two names in ASCII: a server's thousands of folders
+        // are each checked against all the others beside them (#991).
+        let lowered = name.to_lowercase();
+        let same = |other: &str| {
+            if other.is_ascii() && name.is_ascii() { other.eq_ignore_ascii_case(name) } else { other.to_lowercase() == lowered }
+        };
+        self.folders.iter().any(|f| f.account == account && f.parent == parent && Some(f.id) != except && same(&f.name))
     }
 
     /// Create a folder under `parent` (or at the account's top level).

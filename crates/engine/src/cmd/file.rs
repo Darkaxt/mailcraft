@@ -37,7 +37,7 @@ pub fn specs() -> Vec<CommandSpec> {
             r#"{"memory"?: bool} — optional read-only resident payload/capacity accounting; does not load content, build the index or report a total process heap"#,
         ),
         CommandSpec::new("file.options", "Options", "File", options).pure().params(
-            r#"{"twelveHour"?: bool, "weekStart"?: "sun"|"mon"|…, "workDays"?: ["mon",…], "workStart"?: 0-23, "workEnd"?: 1-24, "markReadOnOpen"?: bool, "defaultReminder"?: minutes | null, "quoteOnReply"?: bool, "previewLines"?: 0-3, "syncLimit"?: number, "syncMinutes"?: 0-1440 (0: only when asked)}"#,
+            r#"{"twelveHour"?: bool, "weekStart"?: "sun"|"mon"|…, "workDays"?: ["mon",…], "workStart"?: 0-23, "workEnd"?: 1-24, "markReadOnOpen"?: bool, "defaultReminder"?: minutes | null, "quoteOnReply"?: bool, "autoLists"?: bool, "previewLines"?: 0-3, "syncLimit"?: number, "syncMinutes"?: 0-1440 (0: only when asked)}"#,
         ),
     ]
 }
@@ -545,6 +545,9 @@ fn options(s: &mut Session, v: &Value) -> CmdResult {
     }
     if let Some(b) = p::bool(v, "quoteOnReply") {
         prefs.quote_on_reply = b;
+    }
+    if let Some(b) = p::bool(v, "autoLists") {
+        prefs.auto_lists = b;
     }
     if let Some(n) = p::u64(v, "previewLines") {
         prefs.preview_lines = n.min(3) as u8;
