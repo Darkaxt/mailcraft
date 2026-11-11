@@ -699,7 +699,6 @@ mod answered {
         "BUDGET review",
         "\"budget review\"",
         "\"review budget\"",
-        "\"budget rev\"",
         "gvozdar",
         "dorde",
         "from:đorđe",
@@ -762,6 +761,9 @@ mod answered {
         assert!(found(&mut read, "udget", Scope::Everywhere).is_empty());
         assert_eq!(found(&mut indexed, "from: stuart si", Scope::Everywhere), ["IQA-2026 sign-off", "[IQA] Audit dates"]);
         assert_eq!(found(&mut read, "from: stuart si", Scope::Everywhere), ["IQA-2026 sign-off"]);
+        // A phrase, too, is found inside words through the index.
+        assert_eq!(found(&mut indexed, "\"budget rev\"", Scope::Folder), ["Meeting on Tuesday"]);
+        assert!(found(&mut read, "\"budget rev\"", Scope::Folder).is_empty());
         // #194: `from: stuart subject: iqa` is `from:stuart subject:iqa`, found by either way.
         for s in [&mut indexed, &mut read] {
             let stuart = ["IQA-2026 sign-off", "[IQA] Audit dates"];

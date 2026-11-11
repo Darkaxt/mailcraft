@@ -394,8 +394,17 @@ fn junk_and_deleted_items_are_not_indexed_but_still_searched() {
     search(&mut session, "plain");
     let stored = super::db::Database::reader(&crate::store::content_index_file(&path)).unwrap().document_ids().unwrap();
     assert!(!stored.contains(&junk) && !stored.contains(&deleted), "junk and deleted mail stay out of the sidecar");
-    assert_eq!(search(&mut session, "JunkOnlyMarker"), [junk], "read from the message itself");
-    assert_eq!(search(&mut session, "DeletedOnlyMarker"), [deleted]);
+    // (All Mailboxes leaves those folders out: each is searched in the folder itself.)
+    let in_folder = |session: &mut Session, id: u64, query: &str| {
+        let folder = session.mailbox.message(id).unwrap().folder;
+        session.run("folder.select", &serde_json::json!({"id": folder})).unwrap();
+        session.view.scope = Scope::Folder;
+        session.view.search = query.into();
+        session.wait_for_word_index();
+        session.rows().iter().map(|row| row.id).collect::<Vec<_>>()
+    };
+    assert_eq!(in_folder(&mut session, junk, "JunkOnlyMarker"), [junk], "read from the message itself");
+    assert_eq!(in_folder(&mut session, deleted, "DeletedOnlyMarker"), [deleted]);
 }
 
 #[test]

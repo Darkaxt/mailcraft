@@ -1726,7 +1726,7 @@ fn only_what_is_shown_as_a_picture_is_asked_for() {
     select(&mut harness, id_of(&ids, "newsletter"));
     harness.run_steps(10);
     let asked = host.asked();
-    assert_eq!(asked.get(7..), Some(&NEWSLETTER_PICTURES.map(String::from)[..]));
+    assert_eq!(asked.get(6..), Some(&NEWSLETTER_PICTURES.map(String::from)[..]));
     assert!(!asked.iter().any(|url| url.contains("/o/v1/") || url.contains("pixel.") || url.contains("fonts.") || url.contains("bg/leaves")));
     // Every other message of the corpus: nothing but `http` and `https` is ever handed to the host.
     for (_, id) in &ids {

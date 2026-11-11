@@ -61,11 +61,12 @@ fn window_of(app: MailApp, size: egui::Vec2) -> Harness<'static, MailApp> {
     harness
 }
 
-/// A folder's link in Folder Size (a button), not its row in the pane (a tree item), which the
-/// Unified mailbox may show as well.
+/// A folder's link in Folder Size, not its rows in the pane (its account's tree and the Unified
+/// mailbox's): the dialog is drawn over the pane, so its link comes last.
 fn size_row<'a>(h: &'a Harness<'static, MailApp>, name: &str) -> egui_kittest::Node<'a> {
     h.get_all_by_role(egui::accesskit::Role::Button)
-        .find(|node| node.accesskit_node().label().is_some_and(|label| label.contains(name)))
+        .filter(|node| node.accesskit_node().label().is_some_and(|label| label.contains(name)))
+        .last()
         .unwrap_or_else(|| panic!("no {name:?} in Folder Size"))
 }
 
