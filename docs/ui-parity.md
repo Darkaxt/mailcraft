@@ -1,6 +1,6 @@
 # Interface parity
 
-> **Last reviewed:** 2026-10-21 · **Last updated:** 2026-11-08 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365, classic desktop)
+> **Last reviewed:** 2026-10-21 · **Last updated:** 2026-11-11 · **Change:** minor · **Target:** Microsoft Outlook (Microsoft 365, classic desktop)
 
 How the window compares with the target's. The look is the Craft apps' own (MailCraft's own colours,
 a cool grey window and a blue accent, one set of tokens for every pane); the *arrangement* is the one
@@ -97,6 +97,9 @@ be shown when they can't.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-11 | minor | #956 part 3: Report a Problem › Send report (to the MailCraft team privately, the reference or why not said, Try again), with an optional GitHub username; Open on GitHub stays |
+| 2026-11-11 | minor | #30 part 4b: File › Options › Security; Verify… on the reading pane's bar; Certificates on a contact's card |
+| 2026-11-10 | patch | #956: Report a Problem opens a GitHub issue only; Send by Email is gone |
 | 2026-11-10 | minor | #973: Composer: lists as you type (`* `, `- `, `1. `, `1) `), with a switch in File › Options › Mail |
 | 2026-11-10 | patch | #956: Report a Problem opens a GitHub issue only; Send by Email is gone |
 | 2026-11-08 | minor | #893: each account can have a colour (Account Settings › Colour; a new account gets one of the palette's that no other has): a dot after its name in the folder pane, and a stripe down the left edge of its mail's rows in a search of All Mailboxes |

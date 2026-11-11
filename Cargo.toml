@@ -5,7 +5,7 @@ default-members = ["crates/*", "apps/mailcraft", "apps/mailcraft-cli", "xtask"]
 exclude = ["vendor/winit", "vendor/winit/dpi", "vendor/cosca"]
 
 [workspace.package]
-version = "0.11.3"
+version = "0.11.4"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
