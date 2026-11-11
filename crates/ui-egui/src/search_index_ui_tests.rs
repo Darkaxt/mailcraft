@@ -185,3 +185,19 @@ fn shots_of_search_coverage_in_both_themes_and_compact_enlarged_windows() {
         }
     }
 }
+
+#[test]
+fn a_ready_inspection_is_polled_again_only_when_its_inputs_change() {
+    let mut app = app();
+    let now = crate::search_index_ui::observed(&app);
+    // An unknown command fails when dispatched, so the page state shows whether tick polled.
+    app.search_index_pane = crate::search_index_ui::Pane::ready_for_test("test.notACommand", app.session.openings(), now);
+    for _ in 0..3 {
+        crate::search_index_ui::tick(&mut app);
+        assert_eq!(app.search_index_pane.page_state(), Some("ready"), "an unchanged ready page is not dispatched every frame");
+    }
+    let changed = (now.0.wrapping_add(1), now.1, now.2);
+    app.search_index_pane = crate::search_index_ui::Pane::ready_for_test("test.notACommand", app.session.openings(), changed);
+    crate::search_index_ui::tick(&mut app);
+    assert_eq!(app.search_index_pane.page_state(), Some("failed"), "a changed revision re-polls the ready page");
+}

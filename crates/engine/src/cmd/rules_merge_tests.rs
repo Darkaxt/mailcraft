@@ -209,3 +209,22 @@ fn automatic_rules_merge_does_not_combine_different_destinations_or_extra_action
     s.run("rules.add", &extra).unwrap();
     assert_eq!(s.mailbox.rules.len(), 3);
 }
+
+#[test]
+fn editing_the_sender_set_drops_stale_merge_provenance() {
+    let (mut s, account, _, target) = fixture();
+    let first = s.run("rules.add", &draft(account, target, "billing@example.org")).unwrap()["id"].as_u64().unwrap();
+    s.run("rules.add", &draft(account, target, "news@example.org")).unwrap();
+    assert_eq!(s.mailbox.rules[0].merged_from.len(), 2);
+    // Renaming alone keeps the original definitions.
+    let mut renamed = draft(account, target, "billing@example.org");
+    renamed["id"] = json!(first);
+    renamed["name"] = json!("Company mail");
+    renamed["conditions"] = json!([{"type":"fromAny","value":["billing@example.org","news@example.org"]}]);
+    s.run("rules.edit", &renamed).unwrap();
+    assert_eq!(s.mailbox.rules[0].merged_from.len(), 2);
+    let mut narrowed = draft(account, target, "billing@example.org");
+    narrowed["id"] = json!(first);
+    s.run("rules.edit", &narrowed).unwrap();
+    assert!(s.mailbox.rules[0].merged_from.is_empty());
+}

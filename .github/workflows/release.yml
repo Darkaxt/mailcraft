@@ -20,8 +20,9 @@ name: Release
 # the checksums are signed with the runner's OpenSSL (packaging/sign-sums.sh), not a program built
 # here.
 #
-# Run by hand (workflow_dispatch) it builds Windows unsigned and keeps the files as workflow
-# artifacts: a dry run, on any branch, that is given no secrets and publishes nothing.
+# Run by hand on an approved version tag it builds Windows unsigned and keeps the files as
+# workflow artifacts. The private native input uses the same tag-only protected staging role;
+# compiler jobs receive no signing secret and publish nothing.
 #
 # This workflow is self-contained on purpose. The Craft apps inside the storytold organisation
 # call a shared one (storytold/craft-common-actions) that needs that organisation's runners and
@@ -102,11 +103,49 @@ jobs:
           fi
           case "$VERSION" in *-*) pre=true ;; *) pre=false ;; esac
           { echo "version=$VERSION"; echo "prerelease=$pre"; } >>"$GITHUB_OUTPUT"
+      - name: Private native input uses an approved version tag
+        if: github.event_name == 'workflow_dispatch' && github.ref_type != 'tag'
+        run: |
+          echo "::error::Windows native-input preparation uses the protected version-tag environment; dispatch the dry run on an approved version tag"
+          exit 1
+
+  native-input:
+    name: Verify the private native input
+    needs: [version]
+    runs-on: windows-latest
+    environment: release
+    # GitHub refuses private draft assets to the compiler's read-only token.
+    # This separate role builds/runs no native program and receives no signing key.
+    permissions:
+      contents: write
+    outputs:
+      digest: ${{ steps.seal.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify the exact source-bound archive and every runtime member
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B packaging/windows/prepare-runtime-input.py --handoff native-input --download-root "$env:RUNNER_TEMP/mailcraft-content-release-input"
+      - name: Seal the qualified input
+        id: seal
+        shell: bash
+        run: |
+          digest=$(bash packaging/ci/handoff.sh seal native-input native-content-input)
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-content-input
+          path: native-input/
+          if-no-files-found: error
+          retention-days: 7
 
   # A run by hand: unsigned, no secrets, nothing published.
   dry-run:
     name: Package (dry run, unsigned)
-    needs: [version]
+    needs: [version, native-input]
     if: github.event_name == 'workflow_dispatch'
     # zizmor's self-repository audit wants GitHub's new `$/` form; kept as `./` until a release has
     # been cut with it, since this path runs on a tag alone.
@@ -118,6 +157,7 @@ jobs:
     with:
       freebsd: false
       sign: false
+      native-input-digest: ${{ needs.native-input.outputs.digest }}
 
   # The dry run's checksums, made and "signed" as a release's are: no secret is given, so the
   # signing step says "unsigned" and the run goes on. Kept as a workflow artifact.
@@ -183,7 +223,7 @@ jobs:
   # A pushed version tag: signed, in the `release` environment (package.yml's signing jobs).
   package:
     name: Package
-    needs: [version]
+    needs: [version, native-input]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/package.yml # zizmor: ignore[self-repository]
     permissions:
@@ -192,6 +232,7 @@ jobs:
     with:
       freebsd: false
       sign: true
+      native-input-digest: ${{ needs.native-input.outputs.digest }}
     # Only the secrets package.yml declares, by name. The signing ones live in the `release`
     # environment; package.yml's jobs that sign name that environment, and only there do they have
     # values. Those jobs build nothing: they sign what a build job without secrets handed on.

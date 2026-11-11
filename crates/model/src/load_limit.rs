@@ -351,6 +351,26 @@ pub(crate) fn capped_lists<'de, D: Deserializer<'de>, T: DeserializeOwned>(deser
     Ok(out)
 }
 
+/// Most receiving-alias entries an account keeps (the same bound `aliases.rowColor` sets).
+pub const MAX_ALIAS_ENTRIES: usize = 10_000;
+
+/// `deserialize_with` for maps keyed by receiving alias: keys are lower-cased as lookups are,
+/// entries whose value isn't one are left out and at most [`MAX_ALIAS_ENTRIES`] are kept, so one
+/// bad entry never costs the owner the account or the file.
+pub(crate) fn capped_alias_map<'de, D: Deserializer<'de>, T: DeserializeOwned>(deserializer: D) -> Result<BTreeMap<String, T>, D::Error> {
+    let mut out = BTreeMap::new();
+    let Value::Object(entries) = Value::deserialize(deserializer)? else { return Ok(out) };
+    for (alias, item) in entries {
+        charge()?;
+        if out.len() >= MAX_ALIAS_ENTRIES {
+            continue;
+        }
+        let Ok(item) = from_value::<T>(&item) else { continue };
+        out.insert(alias.to_ascii_lowercase(), item);
+    }
+    Ok(out)
+}
+
 /// `deserialize_with` for bounded maps, including stable ids and exact alias names.
 pub(crate) fn capped_map<'de, D: Deserializer<'de>, K: Deserialize<'de> + Ord, T: Deserialize<'de>>(
     deserializer: D,

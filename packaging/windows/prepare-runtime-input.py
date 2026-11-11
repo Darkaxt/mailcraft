@@ -41,8 +41,9 @@ def download_runtime(selection, version, download_root):
     download_root.mkdir(parents=True)
     archive = download_root / name
     with archive.open("xb") as output:
-        # Numeric asset reads require Contents:read; no compiler write permission,
-        # PAT, signing secret, expiring URL or early publication is introduced.
+        # This read runs only in the separate protected input job: GitHub denies
+        # draft assets to the compiler's read-only token. No compiler receives
+        # its repository-write capability, a PAT, signing key or expiring URL.
         # Binary response bytes go only to this exclusive file, never a terminal.
         subprocess.run([*api, "--allow-escape-sequences", "--header", "Accept: application/octet-stream"],
                        stdout=output, check=True)

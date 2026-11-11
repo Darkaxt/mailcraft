@@ -35,6 +35,13 @@ struct Coverage {
     text_bytes: u64,
 }
 
+/// Deterministic allowance/deadline failures are resourceLimit gaps: they are
+/// reported coverage, not retried as transient failures at every launch.
+#[cfg(windows)]
+pub(super) fn failure(why: &str) -> &'static str {
+    if why.contains("resourceLimit:") { "resourceLimit" } else { "failed" }
+}
+
 impl Coverage {
     fn gap(&mut self, location: &Value, code: &str, detail: impl Into<String>) {
         self.gaps.push(json!({"location":location,"code":code,"detail":detail.into()}));
@@ -228,15 +235,14 @@ impl Extractor {
         let mut worker = match runtime.start(core, scratch, &self.cancellation) {
             Ok(worker) => worker,
             Err(why) => {
-                coverage.gap(&location, "failed", why);
+                coverage.gap(&location, failure(&why), why);
                 return Ok(());
             }
         };
         let info = match worker.open(input, sha256, extension, scratch) {
             Ok(info) => info,
             Err(why) => {
-                let code = if why.contains("resourceLimit:") { "resourceLimit" } else { "failed" };
-                coverage.gap(&location, code, why);
+                coverage.gap(&location, failure(&why), why);
                 return Ok(());
             }
         };
@@ -257,7 +263,7 @@ impl Extractor {
             let batch = match worker.extract(cursor.clone()) {
                 Ok(batch) => batch,
                 Err(why) => {
-                    coverage.gap(&location, "failed", why);
+                    coverage.gap(&location, failure(&why), why);
                     return Ok(());
                 }
             };
@@ -324,7 +330,7 @@ impl Extractor {
                     match worker.render(u32::try_from(part).map_err(|why| why.to_string())?, u32::try_from(page).map_err(|why| why.to_string())?) {
                         Ok(rendered) => rendered,
                         Err(why) => {
-                            coverage.gap(&json!({"source":location,"part":part,"page":page}), "failed", why);
+                            coverage.gap(&json!({"source":location,"part":part,"page":page}), failure(&why), why);
                             return Ok(());
                         }
                     };
@@ -371,8 +377,11 @@ impl Extractor {
                 }
             }
         }
-        if let Err(why) = worker.finish() {
-            coverage.gap(&location, "failed", why)
+        match worker.finish() {
+            // Native stderr after a successful close is a reported note only.
+            Ok(warnings) if !warnings.is_empty() => coverage.sources.push(json!({"location":location,"nativeWarnings":warnings})),
+            Ok(_) => {}
+            Err(why) => coverage.gap(&location, failure(&why), why),
         }
         Ok(())
     }
@@ -493,7 +502,7 @@ impl Extractor {
         spool.append(&mut page)?;
         match report {
             Ok(report) => coverage.sources.push(json!({"location":source,"ocr":report})),
-            Err(why) => coverage.gap(&source, "failed", why),
+            Err(why) => coverage.gap(&source, failure(&why), why),
         }
         Ok(())
     }
@@ -525,7 +534,7 @@ fn extension(name: &str, mime: &str, bytes: &[u8]) -> String {
 fn located(spool: &mut Spool, record: Record, coverage: &mut Coverage) -> Result<()> {
     let count = coverage.text_bytes.checked_add(record.text.len() as u64).ok_or("extracted text byte count overflow")?;
     if count > EXTRACTED_TEXT {
-        return Err("extracted native/OCR text exceeds the 256 MiB containing-attachment allowance".into());
+        return Err("resourceLimit: extracted native/OCR text exceeds the 256 MiB containing-attachment allowance".into());
     }
     spool.record(record)?;
     coverage.text_bytes = count;

@@ -4,7 +4,7 @@
 
 use mailcraft_model::{
     Mailbox, Rule,
-    rule_conflicts::{competing_moves, move_destinations, proven_overlap},
+    rule_conflicts::{competing_moves, filing_destinations, move_destinations, proven_overlap},
 };
 use serde_json::{Value, json};
 
@@ -24,7 +24,7 @@ fn candidates<'a>(mailbox: &'a Mailbox, rule: &'a Rule) -> impl Iterator<Item = 
                 && (other.enabled || other.server.as_ref().is_some_and(|server| !server.id.is_empty() && server.synced_enabled))
                 && other.known()
                 && shares_account(rule, other)
-                && competing_moves(rule, other)
+                && competing_moves(mailbox, rule, other)
         })
         .cloned()
         .map(|mut other| {
@@ -42,10 +42,11 @@ pub(super) fn ensure_unambiguous(s: &Session, rule: &Rule) -> Result<(), CmdErro
     }
     if let Some(other) = candidates(&s.mailbox, rule).find(|other| proven_overlap(&s.mailbox, rule, other)) {
         return Err(fail(format!(
-            "filing conflict with \"{}\" (#{}), destinations {:?}; narrow the conditions or disable one rule before enabling both",
+            "filing conflict with \"{}\" (#{}), destinations {:?}{}; narrow the conditions or disable one rule before enabling both",
             other.name,
             other.id,
-            move_destinations(&other)
+            move_destinations(&other),
+            if filing_destinations(&s.mailbox, &other).contains(&mailcraft_model::rule_conflicts::DELETED_DESTINATION) { " (deletes)" } else { "" }
         )));
     }
     Ok(())

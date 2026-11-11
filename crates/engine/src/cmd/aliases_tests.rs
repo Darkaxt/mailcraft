@@ -22,6 +22,7 @@ fn message(folder: Id, alias: &str, reply_to: bool) -> Message {
             ("X-SimpleLogin-Type".into(), "Forward".into()),
             ("X-SimpleLogin-Envelope-To".into(), alias.into()),
             ("X-SimpleLogin-Original-From".into(), "Sender <sender@shop.example>".into()),
+            ("Received".into(), "from mail-200.simplelogin.co (mail-200.simplelogin.co [192.0.2.10]) by mx.example.org".into()),
         ],
         body: mailcraft_model::Body { text: "A retained offline message".into(), html: None },
         ..Default::default()
@@ -158,5 +159,35 @@ fn simple_login_literal_predicates_cannot_activate_competing_destinations() {
         let before = serde_json::to_value(&session.mailbox).unwrap();
         assert!(session.run("rules.enable", &json!({"id":second,"value":true})).is_err());
         assert_eq!(serde_json::to_value(&session.mailbox).unwrap(), before);
+    }
+}
+
+#[test]
+fn spoofed_simple_login_headers_give_no_alias_folder_colour_or_original_sender() {
+    let (mut session, account, _, inbox, _) = fixture();
+    let mut spoofed = message(inbox, "shop@aliases.example", false);
+    spoofed.headers.retain(|(name, _)| name != "Received");
+    spoofed.headers.push(("Received".into(), "from mx.spam.example (mx.spam.example [192.0.2.66]) by mx.example.org".into()));
+    let spoofed = session.mailbox.add_message(spoofed).unwrap();
+    let mut misaddressed = message(inbox, "shop@aliases.example", false);
+    misaddressed.to = vec![Address::new("", "first@example.org")];
+    let misaddressed = session.mailbox.add_message(misaddressed).unwrap();
+    session.mailbox_changed();
+    session.run("aliases.rowColor", &json!({"account": account, "alias": "shop@aliases.example", "color": "#D5EEDC"})).unwrap();
+    let inventory = session.run("aliases.list", &json!({"account": account})).unwrap();
+    assert_eq!(inventory["aliases"][0]["address"], "news@aliases.example");
+    assert_eq!(inventory["aliases"][1]["total"], 2);
+    assert_eq!(inventory["unresolvedAlias"], 2);
+    let view = session.run("view.alias", &json!({"account": account, "alias": "shop@aliases.example"})).unwrap();
+    assert_eq!(view["found"], 2);
+    for id in [spoofed, misaddressed] {
+        let identity = session.run("mail.identity", &json!({"id": id})).unwrap();
+        assert_eq!(identity["simpleLogin"]["corroborated"], false);
+        assert!(identity["simpleLogin"]["receivingAlias"].is_null());
+        assert!(identity["simpleLogin"]["originalFrom"].is_null());
+        let message = session.mailbox.message(id).unwrap();
+        assert!(message.origin_alias().is_none());
+        let origin = session.mailbox.account(message.origin_account()).unwrap();
+        assert_eq!(origin.origin_row_color(message.origin_alias().as_deref()), origin.effective_row_color());
     }
 }

@@ -14,6 +14,7 @@ fn basic_senders(rule: &Rule) -> Vec<&str> {
 }
 
 /// Only competing moves conflict. Multiple explicit copies are intentional.
+/// These are the literal folder targets, for display; conflicts use [`filing_destinations`].
 pub fn move_destinations(rule: &Rule) -> Vec<Id> {
     let mut destinations = Vec::new();
     for action in &rule.actions {
@@ -26,9 +27,30 @@ pub fn move_destinations(rule: &Rule) -> Vec<Id> {
     destinations
 }
 
-pub fn competing_moves(left: &Rule, right: &Rule) -> bool {
-    let a = move_destinations(left);
-    let b = move_destinations(right);
+/// The one destination standing for removal: Delete and any move into a Deleted Items
+/// subtree. Never an allocated folder id.
+pub const DELETED_DESTINATION: Id = 0;
+
+/// Where a rule's moves leave the message, with deletion as one competing destination.
+pub fn filing_destinations(mailbox: &Mailbox, rule: &Rule) -> Vec<Id> {
+    let mut destinations = Vec::new();
+    for action in &rule.actions {
+        let destination = match action {
+            Action::MoveTo(folder) if mailbox.in_deleted_subtree(*folder) => DELETED_DESTINATION,
+            Action::MoveTo(folder) => *folder,
+            Action::Delete => DELETED_DESTINATION,
+            _ => continue,
+        };
+        if !destinations.contains(&destination) {
+            destinations.push(destination);
+        }
+    }
+    destinations
+}
+
+pub fn competing_moves(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
+    let a = filing_destinations(mailbox, left);
+    let b = filing_destinations(mailbox, right);
     a.iter().any(|a| b.iter().any(|b| a != b))
 }
 
@@ -86,6 +108,9 @@ pub fn proven_overlap(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
                 ("X-SimpleLogin-Type".into(), "Forward".into()),
                 ("X-SimpleLogin-Envelope-To".into(), alias.clone()),
                 ("X-SimpleLogin-Original-From".into(), original.full()),
+                // The witness is relayed to the alias, as real SimpleLogin mail is (see simple_login).
+                ("Delivered-To".into(), alias.clone()),
+                ("Received".into(), "from relay.simplelogin.co by witness.example.org".into()),
             ];
             for sender in &senders {
                 if examined >= 64 {
@@ -110,6 +135,19 @@ fn append(value: &mut String, text: &str) {
 }
 
 impl Mailbox {
+    /// Deleted Items itself or any folder below it, by parent identity within its account.
+    pub fn in_deleted_subtree(&self, folder: Id) -> bool {
+        let mut next = self.folder(folder);
+        for _ in 0..self.folders.len() {
+            let Some(current) = next else { return false };
+            if current.kind == crate::FolderKind::Deleted {
+                return true;
+            }
+            next = current.parent.and_then(|parent| self.folder(parent)).filter(|parent| parent.account == current.account);
+        }
+        false
+    }
+
     /// A per-message filing exception never broadens a sender's standing rule.
     pub fn filing_rule_overridden(&self, message: &Message, rule: &Rule) -> bool {
         message
@@ -143,7 +181,7 @@ impl Mailbox {
             let effective = normalized.as_ref().unwrap_or(rule);
             let addresses = self.rule_reads_addresses(rule);
             let in_sequence = effective.matches_at_importance(message, addresses, importance);
-            if !move_destinations(rule).is_empty() && (in_sequence || effective.matches_as(message, addresses)) {
+            if !filing_destinations(self, rule).is_empty() && (in_sequence || effective.matches_as(message, addresses)) {
                 matching.push(rule);
             }
             if in_sequence && (now || !rule.on_server()) {
@@ -154,14 +192,10 @@ impl Mailbox {
                 }
             }
         }
-        let mut destinations = Vec::new();
-        for rule in &matching {
-            for folder in move_destinations(rule) {
-                if !destinations.contains(&folder) {
-                    destinations.push(folder);
-                }
-            }
-        }
-        if destinations.len() > 1 { matching } else { Vec::new() }
+        // Two folder moves inside one rule compete; one rule's own move-then-delete is a
+        // sequence, but deletion competes with any other rule's filing destination.
+        let competing = matching.iter().any(|rule| move_destinations(rule).len() > 1)
+            || matching.iter().enumerate().any(|(index, left)| matching.iter().skip(index + 1).any(|right| competing_moves(self, left, right)));
+        if competing { matching } else { Vec::new() }
     }
 }

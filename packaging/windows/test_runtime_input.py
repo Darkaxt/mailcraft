@@ -1,4 +1,4 @@
-"""Regression for the unpublished runtime input's numeric read-only API route."""
+"""Regression for the trusted runtime-input producer's exact numeric API route."""
 import hashlib
 import importlib.util
 import json

@@ -53,7 +53,11 @@ fn stored(
         complete
     } else {
         let mut spool = Spool::new(scratch)?;
-        let (complete, coverage) = match produce(&mut spool) {
+        // A native decoder/parser panic is that source's failure, not the
+        // writer's: it becomes a failed gap and ingestion continues.
+        let produced = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| produce(&mut spool)))
+            .unwrap_or_else(|panic| Err(format!("content extraction panicked: {}", panic_text(&*panic))));
+        let (complete, coverage) = match produced {
             Ok(value) => value,
             Err(why) => {
                 // EOF/hash/UTF-8 failures must not publish an earlier segment
@@ -89,6 +93,23 @@ fn stored(
     };
     database.link(&[Link { document: input.message.id, key: key.into(), fields, source, available: true }])?;
     Ok(complete)
+}
+
+pub fn panic_text(panic: &(dyn std::any::Any + Send)) -> String {
+    panic
+        .downcast_ref::<&str>()
+        .map(|text| (*text).to_owned())
+        .or_else(|| panic.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "unknown panic".into())
+}
+
+/// Record a document whose extraction failed outside one part's own gap. The
+/// state is terminal for this content version: it is not re-queued at launch,
+/// so a deterministic failure cannot crash or stall every later session.
+pub fn failed(database: &mut Database, id: u64, fingerprint: String, why: &str) -> Result<Completion> {
+    let snippet = database.row(id)?.and_then(|row| row.get("snippet").and_then(Value::as_str).map(ToOwned::to_owned)).unwrap_or_default();
+    let _ = database.finish(id, &fingerprint, 0, &snippet, "failed", Some(&format!("content extraction failed: {why}")))?;
+    Ok(Completion { id, fingerprint, needs_attachments: false })
 }
 
 fn headers(database: &mut Database, input: &Input, scratch: &Path, cancelled: &AtomicBool) -> Result<u8> {
@@ -251,11 +272,12 @@ pub fn index(
     for (index, file) in input.message.attachments.iter().enumerate().filter(|_| !needs_attachments) {
         let content = reference(&input.message, Part::Attachment(index))?;
         let key = format!(
-            "{}:attachment:{}:{}:{}",
+            "{}:attachment:{}:{}:{}:{}",
             super::input::EXTRACTOR_VERSION,
             extractor.revision(),
             hex(&content.sha256),
-            cache_key("type", format!("{}\n{}", file.mime, file.name.rsplit('.').next().unwrap_or_default()).as_bytes())
+            cache_key("type", format!("{}\n{}", file.mime, file.name.rsplit('.').next().unwrap_or_default()).as_bytes()),
+            input.metadata.downloaded
         );
         attachments_complete &= stored(
             database,

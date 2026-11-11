@@ -29,6 +29,10 @@ name: Package
 on:
   workflow_call:
     inputs:
+      native-input-digest:
+        description: "Digest of the exact runtime handoff from the protected non-compiling input job"
+        type: string
+        required: true
       freebsd:
         description: "Also build the FreeBSD tarball (in a VM; slow)"
         type: boolean
@@ -132,12 +136,6 @@ jobs:
         with:
           toolchain: 1.98.1
           targets: ${{ matrix.target }}
-      - name: Bind the qualified seven-core and OCR release input
-        if: matrix.arch == 'x64'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python -B packaging/windows/prepare-runtime-input.py --handoff handoff --download-root "$env:RUNNER_TEMP/mailcraft-content-release-input"
       - name: Build
         shell: pwsh
         env:
@@ -205,6 +203,21 @@ jobs:
           ARCH: ${{ matrix.arch }}
           DIGEST: ${{ needs.windows-build.outputs[matrix.arch] }}
         run: bash packaging/ci/handoff.sh check prebuilt "build-windows-$ARCH=$DIGEST"
+      # The native runtime never passes through the compiler's job (whose build scripts could
+      # rewrite it before sealing): it comes straight from the protected input job's artifact,
+      # checked here against that job's own digest.
+      - name: Receive the qualified seven-core and OCR input
+        if: matrix.arch == 'x64'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: native-content-input
+          path: native-input
+      - name: Verify the protected input producer's digest
+        if: matrix.arch == 'x64'
+        shell: bash
+        env:
+          INPUT_DIGEST: ${{ inputs.native-input-digest }}
+        run: bash packaging/ci/handoff.sh check native-input "native-content-input=$INPUT_DIGEST"
       # WiX 5.0.2 and its two extensions are NuGet packages. Each is downloaded by exact version
       # and checked against the SHA-256 pinned here before anything is installed; the tool is
       # installed from the checked file. (None of the three has dependencies.)
@@ -252,7 +265,7 @@ jobs:
         shell: pwsh
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/prebuilt
-          MAILCRAFT_CONTENT_RUNTIME: ${{ matrix.arch == 'x64' && format('{0}/prebuilt/content-runtime', github.workspace) || '' }}
+          MAILCRAFT_CONTENT_RUNTIME: ${{ matrix.arch == 'x64' && format('{0}/native-input/content-runtime', github.workspace) || '' }}
           WINDOWS_CERTIFICATE: ${{ inputs.sign && secrets.WINDOWS_CERTIFICATE || '' }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ inputs.sign && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
           AZURE_SIGNING_ENDPOINT: ${{ inputs.sign && secrets.AZURE_SIGNING_ENDPOINT || '' }}
@@ -262,7 +275,7 @@ jobs:
       - name: Retain the verified native runtime input in the release
         if: matrix.arch == 'x64'
         shell: pwsh
-        run: Get-ChildItem -LiteralPath prebuilt -Filter '*-windows-x64-content-runtime.zip' | Copy-Item -Destination dist/release
+        run: Get-ChildItem -LiteralPath native-input -Filter '*-windows-x64-content-runtime.zip' | Copy-Item -Destination dist/release
       - name: Hand the release files on by digest
         id: seal
         shell: bash

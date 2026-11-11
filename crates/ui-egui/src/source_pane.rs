@@ -3,7 +3,7 @@
 //! In-place, selectable source. Only bounded pages live in the UI; the engine
 //! owns preparation, integrity checking and the lifetime of native snapshots.
 
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 use egui::{Ui, vec2};
 use mailcraft_model::Message;
@@ -22,7 +22,8 @@ pub(crate) struct Pane {
 struct Active {
     id: u64,
     opening: u64,
-    message: Weak<Message>,
+    /// The version the source was read from; replaced by flag or sync updates.
+    message: Arc<Message>,
     body: Reader,
     export: Option<Reader>,
 }
@@ -157,7 +158,7 @@ pub(crate) fn command(app: &mut MailApp, params: &Value) -> Result<Value, String
             app.source_pane.active = Some(Active {
                 id,
                 opening: app.session.openings(),
-                message: Arc::downgrade(message),
+                message: message.clone(),
                 body: Reader::new("mail.sourcePage"),
                 export: None,
             });
@@ -191,6 +192,11 @@ pub(crate) fn command(app: &mut MailApp, params: &Value) -> Result<Value, String
     }
 }
 
+/// Whether two versions of a message read as the same source: body, attachments and headers.
+fn same_source(a: &Message, b: &Message) -> bool {
+    a.id == b.id && a.unfetched == b.unfetched && a.headers == b.headers && a.original == b.original && crate::reading::same_body(a, b)
+}
+
 /// Poll actual producer/download results, including cancellation through exit.
 pub(crate) fn tick(app: &mut MailApp) {
     let mut pane = std::mem::take(&mut app.source_pane);
@@ -200,13 +206,15 @@ pub(crate) fn tick(app: &mut MailApp) {
             pane.retire(active);
         } else {
             if let Some(message) = message {
-                if !active.message.ptr_eq(&Arc::downgrade(&message)) && !active.body.downloading {
+                // Flags, read state or sync bookkeeping replace the message but not its
+                // source: the reader keeps its token and page.
+                if !Arc::ptr_eq(&active.message, &message) && !same_source(&active.message, &message) && !active.body.downloading {
                     if let Some(token) = active.body.token {
                         pane.retiring.push((active.id, active.body.command, token));
                     }
                     active.body = Reader::new("mail.sourcePage");
                 }
-                active.message = Arc::downgrade(&message);
+                active.message = message;
             }
             active.body.step(app, active.id);
             if let Some(export) = &mut active.export {

@@ -19,6 +19,11 @@ use crate::{
 
 type Result<T> = std::result::Result<T, String>;
 
+/// Generous wall clock for one native core response (open, text batch, page
+/// render or close). A hung core is ended and reported as a resourceLimit gap
+/// instead of blocking the single content writer.
+pub const RESPONSE_DEADLINE: std::time::Duration = std::time::Duration::from_secs(120);
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Payload {
@@ -263,10 +268,19 @@ impl Client {
         }
         self.next = self.next.checked_add(1).ok_or("Craft request identity overflow")?;
         let request = Request { version: VERSION, id: self.next, operation };
+        self.process.deadline(Some(RESPONSE_DEADLINE));
         let result = protocol::write(self.stdin.as_mut().ok_or("the Craft worker input is closed")?, &request, protocol::MAX_REQUEST)
             .and_then(|_| protocol::read::<Reply>(&mut self.stdout, protocol::MAX_REPLY))
             .and_then(|reply| reply.ok_or_else(|| "the Craft worker exited without its original response".into()))
             .and_then(|reply| reply.check(request.id));
+        self.process.deadline(None);
+        let result = match result {
+            Err(why) if self.process.expired() => Err(format!(
+                "resourceLimit: the native core did not answer within its {}-second response deadline and was ended; {why}",
+                RESPONSE_DEADLINE.as_secs()
+            )),
+            result => result,
+        };
         if result.is_err() {
             self.failed = true;
             self.process.abort();
@@ -304,21 +318,26 @@ impl Client {
         }
     }
 
-    pub fn finish(mut self) -> Result<()> {
+    /// Close the document and confirm the tree's exit. Native stderr warnings
+    /// after a successful close are returned as a note, not a failure.
+    pub fn finish(mut self) -> Result<String> {
         if !matches!(self.call(Operation::Close)?, ResultValue::Closed) {
             return Err("the Craft worker did not acknowledge document close".into());
         }
         self.closed = true;
         self.stdin.take();
+        self.process.deadline(Some(RESPONSE_DEADLINE));
         let status = self.process.wait()?;
         if !status.success() {
+            if self.process.expired() {
+                return Err(format!(
+                    "resourceLimit: the Craft worker did not exit within its {}-second deadline after close",
+                    RESPONSE_DEADLINE.as_secs()
+                ));
+            }
             return Err("the Craft worker failed while closing its original process tree".into());
         }
-        let warnings = self.diagnostics()?;
-        if !warnings.trim().is_empty() {
-            return Err(format!("the Craft core emitted native warnings: {}", warnings.trim()));
-        }
-        Ok(())
+        Ok(self.diagnostics()?.trim().to_owned())
     }
 
     fn diagnostics(&mut self) -> Result<String> {

@@ -214,3 +214,29 @@ fn an_unconditional_server_original_remains_owned_by_the_server() {
     assert_eq!(s.run("rules.run", &json!({"folder": inbox, "id": id})).unwrap()["failed"], 0);
     assert_eq!(*s.mailbox.rules.iter().find(|r| r.id == id).unwrap(), original);
 }
+
+#[test]
+fn manual_runs_and_previews_classify_received_mail_only() {
+    let (mut s, account, inbox, target, message) = fixture();
+    let draft_message = s.mailbox.add_message(Message { folder: inbox, draft: true, subject: "Invoice 456".into(), ..Default::default() }).unwrap();
+    let id = s.run("rules.add", &draft(account, target)).unwrap()["id"].as_u64().unwrap();
+    let preview = s.run("rules.preview", &json!({"folder": inbox, "id": id})).unwrap();
+    assert_eq!((preview["examined"].clone(), preview["skipped"].clone(), preview["matched"].clone()), (json!(1), json!(1), json!(1)));
+    let executed = s.run("rules.run", &json!({"folder": inbox, "id": id})).unwrap();
+    assert_eq!((executed["examined"].clone(), executed["skipped"].clone()), (json!(1), json!(1)));
+    assert_eq!(s.mailbox.message(message).unwrap().folder, target);
+    assert_eq!(s.mailbox.message(draft_message).unwrap().folder, inbox);
+    // Wholly non-receiving folders are refused with a clear error, before any change.
+    for kind in [FolderKind::Sent, FolderKind::Drafts, FolderKind::Deleted, FolderKind::Junk] {
+        let folder = s.mailbox.folder_of_kind(account, kind).unwrap();
+        s.mailbox.add_message(Message { folder, subject: "Invoice 789".into(), ..Default::default() }).unwrap();
+        let before = serde_json::to_value(&s.mailbox).unwrap();
+        for command in ["rules.run", "rules.preview"] {
+            assert!(s.run(command, &json!({"folder": folder, "id": id})).unwrap_err().to_string().contains("received mail only"), "{kind:?}");
+        }
+        let mut params = draft(account, target);
+        params["runIn"] = json!(folder);
+        assert!(s.run("rules.add", &params).unwrap_err().to_string().contains("received mail only"));
+        assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), before);
+    }
+}

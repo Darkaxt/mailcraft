@@ -10,6 +10,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use cosca::{Job as CompletionJob, containment::TreeDrain};
 use process_wrap::std::{ChildWrapper, CommandWrap, CommandWrapper, CreationFlags, JobObject};
@@ -24,8 +25,9 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 #[derive(Default)]
 struct Signal {
-    state: Mutex<(bool, bool)>, // cancelled, completion observed
+    state: Mutex<(bool, bool, Option<Instant>)>, // cancelled, completion observed, armed deadline
     changed: Condvar,
+    expired: AtomicBool,
 }
 
 #[derive(Default)]
@@ -137,12 +139,27 @@ impl ManagedProcess {
         let watched_signal = signal.clone();
         let watched_job = cancellation_job.clone();
         let watcher = std::thread::Builder::new().name("craft-content-cancellation".into()).spawn(move || {
-            let state = lock(&watched_signal.state);
-            let state = watched_signal
-                .changed
-                .wait_while(state, |(cancelled, complete)| !*cancelled && !*complete)
-                .unwrap_or_else(std::sync::PoisonError::into_inner);
-            if state.0 && !state.1 {
+            let mut state = lock(&watched_signal.state);
+            while !state.0 && !state.1 {
+                match state.2 {
+                    None => state = watched_signal.changed.wait(state).unwrap_or_else(std::sync::PoisonError::into_inner),
+                    Some(deadline) => {
+                        let now = Instant::now();
+                        if now >= deadline {
+                            // A hung worker cannot hold its owner forever: the
+                            // expired deadline ends exactly this owned tree.
+                            watched_signal.expired.store(true, Ordering::Release);
+                            break;
+                        }
+                        state = watched_signal
+                            .changed
+                            .wait_timeout(state, deadline - now)
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
+                            .0;
+                    }
+                }
+            }
+            if !state.1 && (state.0 || watched_signal.expired.load(Ordering::Acquire)) {
                 // Closing exactly this job terminates only its owned process
                 // tree. The owner still waits for actual exit before completion.
                 lock(&watched_job).take();
@@ -172,6 +189,17 @@ impl ManagedProcess {
 
     pub fn abort(&mut self) {
         lock(&self.cancellation_job).take();
+    }
+
+    /// Arm (or with None, disarm) a wall-clock deadline measured from now.
+    /// On expiry the owned tree is terminated and `expired` reports it.
+    pub fn deadline(&self, after: Option<Duration>) {
+        lock(&self.signal.state).2 = after.and_then(|after| Instant::now().checked_add(after));
+        self.signal.changed.notify_all();
+    }
+
+    pub fn expired(&self) -> bool {
+        self.signal.expired.load(Ordering::Acquire)
     }
 
     pub fn wait(&mut self) -> Result<ExitStatus> {

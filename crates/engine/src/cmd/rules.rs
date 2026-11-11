@@ -338,10 +338,11 @@ fn add(s: &mut Session, v: &Value) -> CmdResult {
     let mut rule = rule_from_params(s, v)?;
     super::rules_conflicts::ensure_unambiguous(s, &rule)?;
     let run_in = p::id_strict(v, "runIn")?;
-    if let Some(folder) = run_in
-        && s.mailbox.folder(folder).is_none()
-    {
-        return Err(failed!("no folder with id {id}", id = folder));
+    if let Some(folder) = run_in {
+        if s.mailbox.folder(folder).is_none() {
+            return Err(failed!("no folder with id {id}", id = folder));
+        }
+        receiving(s, folder)?;
     }
     if s.mailbox.rules.len() >= MAX_RULES {
         return Err(fail("there are too many rules"));
@@ -376,14 +377,18 @@ fn edit(s: &mut Session, v: &Value) -> CmdResult {
         return Err(fail("preserve the server-owned or unresolved original; make a separate disabled local migration instead"));
     }
     let enabled = previous.enabled;
-    let provenance = previous.merged_from.clone();
+    let (provenance, conditions, actions) = (previous.merged_from.clone(), previous.conditions.clone(), previous.actions.clone());
     let mut rule = rule_from_params(s, v)?;
     if rule.keep != Keep::Here {
         return Err(bad("editing a local rule keeps it here; specify server=false"));
     }
     rule.id = id;
     rule.enabled = enabled;
-    rule.merged_from = provenance;
+    // Merge provenance records the original senders and destinations; a changed sender set or
+    // destination no longer describes what the edited rule combines.
+    if rule.conditions == conditions && rule.actions == actions {
+        rule.merged_from = provenance;
+    }
     super::rules_conflicts::ensure_unambiguous(s, &rule)?;
     let slot = s.mailbox.rules.get_mut(index).ok_or_else(|| failed!("no rule with id {id}", id))?;
     *slot = rule;
@@ -503,10 +508,38 @@ fn reads_content(mailbox: &Mailbox, account: Id) -> bool {
     })
 }
 
-/// Run every enabled rule for the folder's account on the messages of `folder`, those its server
-/// has among them, or the rule `only` alone; answers how many messages a rule acted on.
+/// Rules classify received mail only, as ingest does ([`Mailbox::can_classify_received`]): a
+/// folder that is wholly outside receiving (Drafts, Sent, Deleted Items, Junk, Outbox and their
+/// children, or a shared mailbox) is refused rather than silently examined.
+fn receiving(s: &Session, folder: Id) -> Result<(), CmdError> {
+    let shared = s.mailbox.folder(folder).and_then(|f| s.mailbox.account(f.account)).is_none_or(|a| a.is_shared());
+    if shared || !super::filing::receiving_folder(s, folder) {
+        return Err(bad("rules run on received mail only, outside Drafts, Sent, Deleted Items, Junk, Outbox and shared mailboxes"));
+    }
+    Ok(())
+}
+
+/// The messages of `folder` rules may classify, and how many others were skipped.
+fn classifiable(s: &Session, folder: Id) -> (Vec<Id>, usize) {
+    let mut skipped = 0usize;
+    let ids: Vec<Id> = s
+        .mailbox
+        .messages_in(folder)
+        .map(|m| m.id)
+        .filter(|id| {
+            let keep = s.mailbox.can_classify_received(*id);
+            skipped += usize::from(!keep);
+            keep
+        })
+        .collect();
+    (ids, skipped)
+}
+
+/// Run every enabled rule for the folder's account on the received messages of `folder`, those
+/// its server has among them, or the rule `only` alone; answers how many messages a rule acted on.
 fn run_on(s: &mut Session, folder: Id, only: Option<Id>) -> CmdResult {
-    let ids: Vec<Id> = s.mailbox.messages_in(folder).map(|m| m.id).collect();
+    receiving(s, folder)?;
+    let (ids, skipped) = classifiable(s, folder);
     let account = s.mailbox.folder(folder).map_or(0, |f| f.account);
     // A rule that reads the body reads it whole: one kept on disk is brought in first (one that
     // can't be read says so in its place, and is matched as that).
@@ -532,7 +565,7 @@ fn run_on(s: &mut Session, folder: Id, only: Option<Id>) -> CmdResult {
             }
         }
     }
-    Ok(json!({"examined": ids.len(), "matched": matched, "applied": applied, "failed": failed, "conflictingMessages":conflicting_messages,
+    Ok(json!({"examined": ids.len(), "skipped": skipped, "matched": matched, "applied": applied, "failed": failed, "conflictingMessages":conflicting_messages,
         "failures": failures, "failureDetailsTruncated": failed > failures.len(), "dryRun": false}))
 }
 
@@ -565,7 +598,8 @@ fn preview(s: &mut Session, v: &Value) -> CmdResult {
         return Err(failed!("no rule with id {id}", id));
     }
     let limit = p::id_strict(v, "limit")?.unwrap_or(100).min(1000) as usize;
-    let ids: Vec<_> = s.mailbox.messages_in(folder).map(|message| message.id).collect();
+    receiving(s, folder)?;
+    let (ids, skipped) = classifiable(s, folder);
     let mut shadow = s.mailbox.clone();
     shadow.messages.clear();
     shadow.pending.clear();
@@ -617,7 +651,7 @@ fn preview(s: &mut Session, v: &Value) -> CmdResult {
         shadow.pending.clear();
         shadow.queued.clear();
     }
-    Ok(json!({"examined": ids.len(), "matched": matched, "messages": messages, "failed": failed, "conflictingMessages":conflicting_messages,
+    Ok(json!({"examined": ids.len(), "skipped": skipped, "matched": matched, "messages": messages, "failed": failed, "conflictingMessages":conflicting_messages,
         "failures": failures, "failureDetailsTruncated": failed > failures.len(),
         "detailsTruncated": matched > messages.len(), "mutated": false}))
 }

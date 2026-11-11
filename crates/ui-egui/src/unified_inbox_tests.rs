@@ -31,3 +31,15 @@ fn combined_navigation_search_and_origin_color_controls_are_wired_in_both_themes
         assert_eq!(h.state().session.view.scope, Scope::Inboxes);
     }
 }
+
+#[test]
+fn custom_color_text_is_kept_per_colour_in_effect() {
+    let scope = egui::Id::new("menu");
+    let old = mailcraft_model::ACCOUNT_ROW_COLORS[0];
+    let new = mailcraft_model::ACCOUNT_ROW_COLORS[1];
+    let ctx = egui::Context::default();
+    ctx.data_mut(|data| data.insert_temp(custom_color_edit_id(scope, 1, None, old), "#123456".to_string()));
+    // A swatch or Reset changed the colour: the next open starts from the new colour, not the old text.
+    assert_eq!(ctx.data_mut(|data| data.get_temp::<String>(custom_color_edit_id(scope, 1, None, new))), None);
+    assert_ne!(custom_color_edit_id(scope, 1, Some("a@example.org"), old), custom_color_edit_id(scope, 1, None, old));
+}

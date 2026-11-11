@@ -184,3 +184,30 @@ fn conflicts_do_not_hide_a_missing_destination_repair_behind_a_false_competing_r
     assert!(!s.mailbox.rules.iter().find(|rule| rule.id == 999).unwrap().repair.is_empty());
     assert!(s.mailbox.rules.iter().any(|rule| rule.id == first));
 }
+
+#[test]
+fn conflicts_treat_delete_and_deleted_subtree_moves_as_one_competing_destination() {
+    let (mut s, account, _, archive) = fixture();
+    let deleted = s.mailbox.folder_of_kind(account, FolderKind::Deleted).unwrap();
+    s.run("rules.add", &draft(account, archive)).unwrap();
+    let mut deleting = draft(account, archive);
+    deleting["actions"] = json!([{"type":"delete"}]);
+    let before = serde_json::to_value(&s.mailbox).unwrap();
+    assert!(s.run("rules.add", &deleting).unwrap_err().to_string().contains("filing conflict"));
+    let mut into_trash = draft(account, deleted);
+    assert!(s.run("rules.add", &into_trash).unwrap_err().to_string().contains("filing conflict"));
+    let under = s.mailbox.add_folder(account, Some(deleted), "Old").unwrap();
+    let before = serde_json::to_value(&s.mailbox).unwrap();
+    assert!(s.run("rules.add", &draft(account, under)).unwrap_err().to_string().contains("filing conflict"));
+    assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), before);
+    // Delete and a move into Deleted Items are the same destination, not a conflict.
+    let mut fresh = fixture();
+    let deleted = fresh.0.mailbox.folder_of_kind(fresh.1, FolderKind::Deleted).unwrap();
+    deleting = draft(fresh.1, fresh.3);
+    deleting["actions"] = json!([{"type":"delete"}]);
+    fresh.0.run("rules.add", &deleting).unwrap();
+    into_trash = draft(fresh.1, deleted);
+    fresh.0.run("rules.add", &into_trash).unwrap();
+    let report = fresh.0.run("rules.conflicts", &json!({"rule":draft(fresh.1, fresh.3)})).unwrap();
+    assert!(report["confirmed"].as_u64().unwrap() >= 1);
+}

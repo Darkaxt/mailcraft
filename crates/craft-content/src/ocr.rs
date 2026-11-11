@@ -20,6 +20,9 @@ use crate::{
 type Result<T> = std::result::Result<T, String>;
 const MAX_TSV_LINE: usize = 64 * 1024;
 const MAX_TEXT_LINE: usize = 24 * 1024;
+/// Generous wall clock for recognizing one image; a hung OCR process is ended
+/// and reported as a resourceLimit gap instead of blocking the content writer.
+pub const OCR_DEADLINE: std::time::Duration = std::time::Duration::from_secs(120);
 const HEADER: &str = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -109,6 +112,7 @@ pub fn recognize(
         .env("OMP_THREAD_LIMIT", "1")
         .env("OMP_NUM_THREADS", "1");
     let mut process = ManagedProcess::spawn(command, cancellation)?;
+    process.deadline(Some(OCR_DEADLINE));
     let input = process.stdin().ok_or("the OCR worker has no owned image input")?;
     let output = process.stdout().ok_or("the OCR worker has no owned text output")?;
     let mut image = File::open(image).map_err(|why| why.to_string())?;
@@ -187,6 +191,13 @@ pub fn recognize(
         process.abort()
     }
     let status = process.wait()?;
+    if process.expired() {
+        return Err(format!(
+            "resourceLimit: OCR did not finish within its {}-second deadline and was ended; original OCR PID {}",
+            OCR_DEADLINE.as_secs(),
+            process.id()
+        ));
+    }
     stderr.seek(SeekFrom::Start(0)).map_err(|why| why.to_string())?;
     stderr.by_ref().take(8193).read_to_string(&mut report.warnings).map_err(|why| why.to_string())?;
     if report.warnings.len() > 8192 {

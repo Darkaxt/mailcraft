@@ -748,7 +748,15 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
         id,
         "rules.add" | "rules.edit" | "rules.enable" | "rules.remove" | "rules.move" | "rules.keepOnServer" | "rules.run" | "rules.fromMessage"
     ) {
-        return if rule_change_deletes_mail(s, id, params) { Access::Owner(Class::Delete) } else { Access::Safe };
+        // Filing into the owner's own accounts is reversible and SAFE; a rule moving or copying
+        // into a shared mailbox discloses mail to other people, as mail.move there does.
+        return if rule_change_deletes_mail(s, id, params) {
+            Access::Owner(Class::Delete)
+        } else if rules_onto_another_server(s, id, params, true) {
+            Access::Owner(Class::Send)
+        } else {
+            Access::Safe
+        };
     }
     // What the owner is writing or changing is theirs to let go of, whatever `--allow` says
     // (#494): Discard throws the message away with its draft; a window closed with changes in its
@@ -1037,29 +1045,43 @@ fn one_account(r: &mailcraft_model::Rule) -> Option<Id> {
     (r.account != 0).then_some(r.account)
 }
 
+/// Whether a rule's moves or copies put mail on another account's server, or with `shared`
+/// only a shared mailbox's (other people's).
+fn rule_onto(s: &Session, r: &mailcraft_model::Rule, from: Option<Id>, shared: bool) -> bool {
+    if !shared {
+        return rule_onto_server(s, r, from).is_some();
+    }
+    r.actions.iter().any(|a| match a {
+        mailcraft_model::Action::MoveTo(f) | mailcraft_model::Action::CopyTo(f) => {
+            folder_onto_server(s, *f, from).and_then(|to| s.mailbox.account(to)).is_some_and(|a| a.is_shared())
+        }
+        _ => false,
+    })
+}
+
 /// Whether the rules this command makes, switches on or runs put mail on another account's
-/// server (#451).
-fn rules_onto_another_server(s: &Session, id: &str, params: &Value) -> bool {
+/// server (#451), or with `shared` only onto a shared mailbox's.
+fn rules_onto_another_server(s: &Session, id: &str, params: &Value, shared: bool) -> bool {
     let mb = &s.mailbox;
     match id {
         // A rule for one account files that account's new mail; one for every account, every
         // account's.
         "rules.add" | "rules.edit" => {
-            crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| rule_onto_server(s, &r, one_account(&r)).is_some())
+            crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| rule_onto(s, &r, one_account(&r), shared))
         }
-        "rules.fromMessage" => crate::cmd::rules::rule_from_message(s, params).is_ok_and(|(r, _)| rule_onto_server(s, &r, one_account(&r)).is_some()),
+        "rules.fromMessage" => crate::cmd::rules::rule_from_message(s, params).is_ok_and(|(r, _)| rule_onto(s, &r, one_account(&r), shared)),
         // Read as the commands read them: what they refuse does nothing, and needs no question.
         "rules.enable" => p::opt_bool(params, "value").is_ok_and(|value| {
             p::id(params, "id")
                 .and_then(|r| mb.rules.iter().find(|x| x.id == r))
-                .is_some_and(|r| value.unwrap_or(!r.enabled) && rule_onto_server(s, r, one_account(r)).is_some())
+                .is_some_and(|r| value.unwrap_or(!r.enabled) && rule_onto(s, r, one_account(r), shared))
         }),
         // The rules that run over the folder: those for its account's mail, or the one named.
         "rules.run" => {
             let (Ok(folder), Ok(only)) = (p::id_strict(params, "folder"), p::id_strict(params, "id")) else { return false };
             let from = mb.folder(folder.unwrap_or(s.view.folder)).map(|f| f.account);
             from.is_some_and(|a| {
-                mb.rules.iter().any(|r| r.enabled && r.is_for(a) && only.is_none_or(|o| o == r.id) && rule_onto_server(s, r, Some(a)).is_some())
+                mb.rules.iter().any(|r| r.enabled && r.is_for(a) && only.is_none_or(|o| o == r.id) && rule_onto(s, r, Some(a), shared))
             })
         }
         _ => false,
@@ -1573,7 +1595,7 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
             }
             Err(_) => "make a rule from a message that can't be made as asked".to_string(),
         },
-        "rules.run" if rules_onto_another_server(s, id, params) => {
+        "rules.run" if rules_onto_another_server(s, id, params, false) => {
             let folder = p::id_strict(params, "folder").ok().flatten().unwrap_or(s.view.folder);
             let from = s.mailbox.folder(folder).map(|f| f.account);
             let only = p::id_strict(params, "id").ok().flatten();

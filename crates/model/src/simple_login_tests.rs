@@ -14,6 +14,7 @@ fn forwarded() -> Message {
             ("X-SimpleLogin-Envelope-To".into(), "shop@aliases.example".into()),
             ("X-SimpleLogin-Original-From".into(), "Shop Team <sender@shop.example>".into()),
             ("X-SimpleLogin-Envelope-From".into(), "bounce@shop.example".into()),
+            ("Received".into(), "from mail-200.simplelogin.co (mail-200.simplelogin.co [192.0.2.10]) by mx.aliases.example".into()),
         ],
         ..Default::default()
     }
@@ -112,4 +113,49 @@ fn explicit_search_and_rule_fields_do_not_reinterpret_transport_matching() {
         let serialized = serde_json::to_vec(&rule).unwrap();
         assert_eq!(serde_json::from_slice::<RuleText>(&serialized).unwrap(), rule);
     }
+}
+
+#[test]
+fn uncorroborated_claims_give_no_alias_or_original_sender() {
+    // A spammer writes the headers but no SimpleLogin hop or signature appears.
+    let mut spoofed = forwarded();
+    spoofed.headers.retain(|(name, _)| name != "Received");
+    spoofed.headers.push(("Received".into(), "from mx.spam.example (mx.spam.example [192.0.2.66]) by mail-200.simplelogin.co".into()));
+    spoofed.headers.push(("DKIM-Signature".into(), "v=1; d=spam.example; s=x; b=y".into()));
+    let identity = spoofed.simple_login().unwrap();
+    assert!(!identity.corroborated);
+    assert!(identity.receiving_alias.is_none());
+    assert!(identity.original_from.is_none());
+    assert!(identity.issues.iter().any(|issue| issue.field == "relay" && issue.reason == "missing"));
+    assert!(!crate::search::Query::parse("alias:shop@aliases.example").matches(&spoofed, 0));
+    // A relay hop but an alias the message was never sent to.
+    let mut elsewhere = forwarded();
+    elsewhere.to = vec![Address::new("", "victim@outlook.example")];
+    let identity = elsewhere.simple_login().unwrap();
+    assert!(identity.receiving_alias.is_none() && identity.original_from.is_none());
+    assert!(identity.issues.iter().any(|issue| issue.field == "receivingAlias" && issue.reason == "notRecipient"));
+    // Delivery headers and a SimpleLogin DKIM result corroborate too, case-insensitively.
+    let mut delivered = forwarded();
+    delivered.to.clear();
+    delivered.headers.retain(|(name, _)| name != "Received");
+    delivered.headers.push(("Delivered-To".into(), "SHOP@aliases.example".into()));
+    delivered.headers.push(("Authentication-Results".into(), "mx.aliases.example; dkim=pass header.d=simplelogin.co".into()));
+    let identity = delivered.simple_login().unwrap();
+    assert!(identity.corroborated);
+    assert_eq!(identity.receiving_alias.as_deref(), Some("shop@aliases.example"));
+}
+
+#[test]
+fn one_bad_alias_colour_loses_only_that_entry_and_keys_are_lower_cased() {
+    use crate::{Mailbox, Rgb};
+    let mb = Mailbox::with_local_account("Ada Lovelace", "ada@example.org");
+    let mut file = serde_json::to_value(&mb).unwrap();
+    file["accounts"][0]["aliasRowColors"] =
+        serde_json::json!({"Shop@Aliases.example": [213, 238, 220], "bad@aliases.example": "red", "news@aliases.example": [999, 0, 0]});
+    let read: Mailbox = serde_json::from_value(file).unwrap();
+    let colours = &read.accounts[0].alias_row_colors;
+    assert_eq!(colours.len(), 1);
+    assert_eq!(colours.get("shop@aliases.example"), Some(&Rgb(213, 238, 220)));
+    assert_eq!(read.accounts[0].origin_row_color(Some("SHOP@aliases.example")), Rgb(213, 238, 220));
+    assert_eq!(read.accounts[0].email, "ada@example.org");
 }

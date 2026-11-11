@@ -417,6 +417,9 @@ mod native {
             if self.busy() {
                 return Err(fail("another source export is being prepared; observe its completion first"));
             }
+            // A cancelled pending export ends as Closed only to acknowledge its
+            // owner's close; it never holds one of the bounded snapshot slots.
+            self.entries.retain(|_, entry| !matches!(entry.state, State::Closed));
             if self.entries.len() >= MAX_SNAPSHOTS {
                 return Err(fail("close a previous source/export token before opening another"));
             }

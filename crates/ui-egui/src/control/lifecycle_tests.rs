@@ -215,3 +215,46 @@ fn normal_mcp_close_waits_for_save_completion_and_save_failure_keeps_it_open() {
         }
     }
 }
+
+#[test]
+fn an_open_search_inspection_token_blocks_close_without_closing_it() {
+    let mut app = app();
+    let observed = crate::search_index_ui::observed(&app);
+    app.search_index_pane = crate::search_index_ui::Pane::ready_for_test("search.gaps", app.session.openings(), observed);
+    let result = call(&mut app, &egui::Context::default(), "close");
+    assert_eq!(result["ok"], false, "{result}");
+    assert!(result["error"].as_str().unwrap().contains("job is active"), "{result}");
+    assert!(app.search_index_pane.holds_inspection());
+    assert!(!app.quit_requested);
+}
+
+#[test]
+fn an_unreleased_bridge_close_is_cancelled_after_a_bounded_wait() {
+    let mut app = app();
+    let ctx = egui::Context::default();
+    let receipt = crate::app_lifecycle::CloseReceipt::default();
+    let mut request = ControlRequest::new("app.lifecycle", json!({"action": "close"})).0.from_agent(Vec::new());
+    request.close_receipt = Some(receipt.clone());
+    let Outcome::Done(answer) = handle(&mut app, &ctx, &request) else { panic!("unexpected pending action") };
+    assert_eq!(answer["ok"], true, "{answer}");
+    receipt.complete(true);
+    assert!(app.lifecycle_close_tick(&ctx), "logic waits while within the bound");
+    let again = call(&mut app, &ctx, "close");
+    assert_eq!(again["ok"], false, "a second close stays rejected while the first is pending");
+    let past = crate::app_lifecycle::BRIDGE_RELEASE_WAIT + std::time::Duration::from_secs(1);
+    app.lifecycle.pending_since = std::time::Instant::now().checked_sub(past);
+    assert!(app.lifecycle.pending_since.is_some());
+    assert!(!app.lifecycle_close_tick(&ctx), "normal logic resumes after the bound");
+    assert!(!app.quit_requested);
+    assert!(app.lifecycle.inspect()["blocked"].as_str().unwrap().contains("did not release"));
+    assert_eq!(app.lifecycle.inspect()["close"], "idle");
+}
+
+#[test]
+fn a_failed_headless_save_does_not_refuse_every_later_close() {
+    let mut app = app();
+    app.start_headless();
+    app.headless_save_failed("synthetic disk full");
+    assert!(!app.headless_close_ready());
+    assert_eq!(app.lifecycle_blocker(), None, "the next headless close retries the save and reports it again");
+}

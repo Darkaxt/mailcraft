@@ -2,15 +2,22 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Explicit app-owned hiding and an idle-only, acknowledged normal close.
 
-use std::sync::{
-    Arc,
-    atomic::{AtomicU8, Ordering},
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicU8, Ordering},
+    },
+    time::{Duration, Instant},
 };
 
 use egui::{Context, ViewportCommand};
 use serde_json::{Value, json};
 
 use crate::MailApp;
+
+/// How long an accepted close waits for its bridge to release before normal
+/// application work resumes and the close is reported as cancelled.
+pub(crate) const BRIDGE_RELEASE_WAIT: Duration = Duration::from_secs(30);
 
 /// Native transport receipt for a close acknowledgement. It is not a permission
 /// token and cannot be supplied by a JSON caller. A failed write keeps the app open.
@@ -60,6 +67,8 @@ pub(crate) struct State {
     hidden: bool,
     apply_hidden: bool,
     pending_close: Option<CloseReceipt>,
+    /// When the pending close was accepted; bounds the wait for bridge release.
+    pub(crate) pending_since: Option<Instant>,
     closing: bool,
     blocked: Option<&'static str>,
 }
@@ -103,6 +112,8 @@ impl MailApp {
     pub fn headless_save_failed(&mut self, why: &str) {
         self.lifecycle.closing = false;
         self.lifecycle.blocked = Some("changes could not be saved; the app stays open");
+        // Unsaved work stays held; the next accepted headless close retries the save
+        // (headless.rs) and reports it again if it still fails.
         self.close_anyway = true;
         self.quit_requested = false;
         self.status(why.to_string());
@@ -134,6 +145,7 @@ impl MailApp {
         }
         if self.lifecycle.pending_close.is_some() && !probe {
             self.lifecycle.pending_close = None;
+            self.lifecycle.pending_since = None;
             self.lifecycle.blocked = Some("another request resumed application work; the original close was cancelled");
         }
         Ok(())
@@ -173,6 +185,8 @@ impl MailApp {
         } else if self.windows.has_open() || self.session.signature_edit.is_some() {
             Some("an editor or secondary window is open")
         } else if self.session.source_export_busy()
+            || self.session.content_index_busy()
+            || self.search_index_pane.holds_inspection()
             || self.sync_rx.is_some()
             || self.graph_rx.is_some()
             || self.graph_pieces.is_some()
@@ -192,7 +206,9 @@ impl MailApp {
             || !self.pending_shots.is_empty()
         {
             Some("native synchronization, sign-in or another job is active or queued")
-        } else if self.close_anyway {
+        } else if self.close_anyway && !self.is_headless() {
+            // Headless close saves synchronously, retries once and reports a failure
+            // without exiting, so a past failure does not refuse every later close.
             Some("changes could not be saved; resolve them before closing")
         } else {
             None
@@ -228,6 +244,7 @@ impl MailApp {
                 }
                 let receipt = receipt.ok_or("the native host cannot acknowledge a close; no close was requested")?;
                 self.lifecycle.pending_close = Some(receipt.clone());
+                self.lifecycle.pending_since = Some(Instant::now());
                 self.lifecycle.blocked = None;
                 Ok(json!({"requested": "close", "pending": "bridgeRelease", "forced": false}))
             }
@@ -239,8 +256,22 @@ impl MailApp {
     /// the control transport's repaint and the saver's real completion signal.
     pub(crate) fn lifecycle_close_tick(&mut self, ctx: &Context) -> bool {
         if let Some(receipt) = &self.lifecycle.pending_close {
-            let Some(delivered) = receipt.outcome() else { return true };
+            let Some(delivered) = receipt.outcome() else {
+                let since = *self.lifecycle.pending_since.get_or_insert_with(Instant::now);
+                let waited = since.elapsed();
+                if waited < BRIDGE_RELEASE_WAIT {
+                    ctx.request_repaint_after(BRIDGE_RELEASE_WAIT - waited);
+                    return true;
+                }
+                // The client never released: application work resumes; the close was not made.
+                self.lifecycle.pending_close = None;
+                self.lifecycle.pending_since = None;
+                self.lifecycle.blocked = Some("the bridge did not release within 30 seconds; the close was cancelled and the app stays open");
+                self.status("A close request timed out waiting for its client; MailCraft stays open.");
+                return false;
+            };
             self.lifecycle.pending_close = None;
+            self.lifecycle.pending_since = None;
             let blocker = if delivered { self.lifecycle_blocker() } else { Some("close acknowledgement was not delivered; the app stays open") };
             if let Some(why) = blocker {
                 self.lifecycle.blocked = Some(why);
@@ -251,7 +282,7 @@ impl MailApp {
         }
         if self.lifecycle.closing {
             self.autosave_tick(ctx);
-            if self.close_anyway {
+            if self.close_anyway && !self.is_headless() {
                 self.lifecycle.closing = false;
                 self.lifecycle.blocked = Some("the mailbox save failed; the app stays open");
                 self.quit_requested = false;

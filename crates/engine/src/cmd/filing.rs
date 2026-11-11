@@ -4,7 +4,7 @@
 
 use super::{bad, fail};
 use crate::{CmdResult, CommandSpec, Module, Scope, Session, p};
-use mailcraft_model::{AccountKind, Action, Condition, FolderKind, Id, Keep, Rule};
+use mailcraft_model::{AccountKind, Action, Condition, FolderKind, Id, Keep, Mailbox, Rule};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -153,7 +153,7 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
     let draft = candidate(&senders, folder);
     draft.validation().map_err(bad)?;
     let conflicts: Vec<_> =
-        s.mailbox.rules.iter().filter(|r| !r.known() || mailcraft_model::rule_conflicts::competing_moves(&draft, r)).cloned().collect();
+        s.mailbox.rules.iter().filter(|r| !r.known() || mailcraft_model::rule_conflicts::competing_moves(&s.mailbox, &draft, r)).cloned().collect();
     // Literal disjoint sender groups are provably independent. More complex unmatched
     // predicates remain visible as potential conflicts, rather than silently assuming safety.
     let conflicts: Vec<_> = conflicts
@@ -175,17 +175,15 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
     let mut by_folder: BTreeMap<Id, usize> = BTreeMap::new();
     let mut history = Vec::new();
     let mut unavailable = Vec::new();
-    let mut probe = s.mailbox.clone();
     for m in s.mailbox.messages.values().filter(|m| {
         s.mailbox.can_classify_received(m.id) && m.filing_override.is_none() && senders.iter().any(|a| a.eq_ignore_ascii_case(&m.from.email))
     }) {
         *by_folder.entry(m.folder).or_default() += 1;
         history.push(m.id);
-        let previous = probe.clone();
-        if let Err(error) = probe.move_message(m.id, folder) {
-            probe = previous;
-            unavailable.push(json!({"id":m.id,"reason":error.to_string()}));
-        }
+    }
+    let mut probe = s.mailbox.clone();
+    for (id, reason) in move_each(&mut probe, &history, folder)? {
+        unavailable.push(json!({"id":id,"reason":reason}));
     }
     let rules: Vec<_> = conflicts
         .iter()
@@ -223,6 +221,35 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
         "selectedUnavailable":selected_unavailable,"rerouteAllowed":conflicts.iter().all(|r|blocked(s,r).is_none()),
         "oneTimeExceptionsExcluded":true,"mutated":false});
     Ok(Plan { ids, senders, conflicts, history, report })
+}
+
+/// Move each of `ids` into `folder` in turn, isolating each failure exactly as restoring the
+/// whole mailbox before every move would, without one clone per message: a failed move may have
+/// partly changed state, so the last checkpoint is restored and the moves since it replayed
+/// (deterministically). Clones scale with failures, not history. Answers the failures in order.
+fn move_each(mailbox: &mut Mailbox, ids: &[Id], folder: Id) -> Result<Vec<(Id, String)>, crate::CmdError> {
+    let mut failures = Vec::new();
+    let mut checkpoint: Option<Mailbox> = None;
+    let mut since: Vec<Id> = Vec::new();
+    for id in ids {
+        if checkpoint.is_none() {
+            checkpoint = Some(mailbox.clone());
+            since.clear();
+        }
+        let Err(error) = mailbox.move_message(*id, folder) else {
+            since.push(*id);
+            continue;
+        };
+        failures.push((*id, error.to_string()));
+        if let Some(restored) = checkpoint.take() {
+            *mailbox = restored;
+        }
+        for moved in &since {
+            mailbox.move_message(*moved, folder)?;
+        }
+        // The next checkpoint is taken lazily, only if a later move remains.
+    }
+    Ok(failures)
 }
 
 fn preview(s: &mut Session, v: &Value) -> CmdResult {
@@ -323,20 +350,17 @@ fn apply(s: &mut Session, v: &Value) -> CmdResult {
     let mut moved = plan.ids.clone();
     let mut unavailable = Vec::new();
     if choice == "reroute" {
-        for id in plan.history.iter().filter(|id| !plan.ids.contains(id)) {
-            let previous = s.mailbox.clone();
-            match s.mailbox.move_message(*id, folder) {
-                Ok(()) => moved.push(*id),
-                Err(error) => {
-                    s.mailbox = previous;
-                    let reason = error.to_string();
-                    s.mailbox.message_mut(*id)?.rule_processing = Some(Box::new(mailcraft_model::RuleProcessing::Failed {
-                        rule: new_rules.last().copied().unwrap_or(0),
-                        error: reason.clone(),
-                    }));
-                    unavailable.push(json!({"id":id,"reason":reason}));
-                }
-            }
+        let history: Vec<Id> = plan.history.iter().copied().filter(|id| !plan.ids.contains(id)).collect();
+        // Session::run still restores the whole mailbox if anything below fails.
+        let failures = move_each(&mut s.mailbox, &history, folder)?;
+        let failed: BTreeSet<Id> = failures.iter().map(|(id, _)| *id).collect();
+        moved.extend(history.iter().copied().filter(|id| !failed.contains(id)));
+        for (id, reason) in failures {
+            s.mailbox.message_mut(id)?.rule_processing = Some(Box::new(mailcraft_model::RuleProcessing::Failed {
+                rule: new_rules.last().copied().unwrap_or(0),
+                error: reason.clone(),
+            }));
+            unavailable.push(json!({"id":id,"reason":reason}));
         }
     }
     super::select_after_removal(s, &before, &moved);

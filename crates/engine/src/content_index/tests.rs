@@ -258,3 +258,36 @@ fn detail_tokens_are_bound_to_the_original_request_and_released_after_completion
     original["close"] = Value::Bool(true);
     assert_eq!(session.run("search.sources", &original).unwrap()["state"], "closed");
 }
+
+#[test]
+fn attachment_parts_cached_before_download_are_not_reused_after_download_completes() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (id, _, _) = fixture(&path);
+    let (mut session, _) = open(&path);
+    Arc::make_mut(session.mailbox.messages.get_mut(&id).unwrap()).unfetched = true;
+    session.mailbox_changed();
+    assert!(!search(&mut session, "AttachmentOnlyCopper").contains(&id));
+    Arc::make_mut(session.mailbox.messages.get_mut(&id).unwrap()).unfetched = false;
+    session.mailbox_changed();
+    assert_eq!(search(&mut session, "AttachmentOnlyCopper"), [id], "the incomplete pre-download attachment part is not reused");
+}
+
+#[test]
+fn extraction_panics_are_reported_as_text_for_that_document_only() {
+    let message = std::panic::catch_unwind(|| panic!("decoder exploded")).unwrap_err();
+    assert_eq!(super::documents::panic_text(&*message), "decoder exploded");
+    let formatted = std::panic::catch_unwind(|| panic!("decoder {}", 7)).unwrap_err();
+    assert_eq!(super::documents::panic_text(&*formatted), "decoder 7");
+    let other = std::panic::catch_unwind(|| std::panic::panic_any(7u8)).unwrap_err();
+    assert_eq!(super::documents::panic_text(&*other), "unknown panic");
+}
+
+#[cfg(windows)]
+#[test]
+fn deterministic_allowance_and_deadline_failures_are_resource_limits_not_retried_failures() {
+    use super::extract::failure;
+    assert_eq!(failure("resourceLimit: extracted native/OCR text exceeds the 256 MiB containing-attachment allowance; original OCR PID 1"), "resourceLimit");
+    assert_eq!(failure("resourceLimit: the native core did not answer within its 120-second response deadline and was ended"), "resourceLimit");
+    assert_eq!(failure("the original OCR process failed"), "failed");
+}

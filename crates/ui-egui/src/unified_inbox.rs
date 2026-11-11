@@ -99,6 +99,7 @@ pub(crate) fn color_menu_for(app: &mut MailApp, ui: &mut Ui, id: Id, alias: Opti
     };
     ui.menu_button(tl!("Origin row color"), |ui| {
         let t = Tokens::get(ui.ctx());
+        let scope = ui.scope_id();
         ui.label(tl!("Origin color in combined views"));
         ui.horizontal(|ui| {
             for color in mailcraft_model::ACCOUNT_ROW_COLORS {
@@ -113,12 +114,16 @@ pub(crate) fn color_menu_for(app: &mut MailApp, ui: &mut Ui, id: Id, alias: Opti
                 response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, color.hex()));
                 if response.on_hover_text(color.hex()).clicked() {
                     let _ = app.run(command, params(json!(color.hex())));
+                    ui.ctx().data_mut(|data| data.remove::<String>(custom_color_edit_id(scope, id, alias, selected)));
                     ui.close();
                 }
             }
         });
-        let edit_id = ui.scope_id().with(("account_row_color", id, alias));
+        // Keyed by the colour now in effect: a swatch, Reset or another writer changing it
+        // never brings back text typed against the previous colour.
+        let edit_id = custom_color_edit_id(scope, id, alias, selected);
         let mut text = ui.ctx().data_mut(|data| data.get_temp::<String>(edit_id)).unwrap_or_else(|| selected.hex());
+        let mut done = false;
         ui.horizontal(|ui| {
             ui.label(tl!("Custom color"));
             ui.add(egui::TextEdit::singleline(&mut text).char_limit(7).desired_width(76.0));
@@ -127,15 +132,26 @@ pub(crate) fn color_menu_for(app: &mut MailApp, ui: &mut Ui, id: Id, alias: Opti
                 if let Some(color) = parsed {
                     let _ = app.run(command, params(json!(color.hex())));
                 }
+                done = true;
                 ui.close();
             }
         });
-        ui.ctx().data_mut(|data| data.insert_temp(edit_id, text));
         if ui.add_enabled(custom, egui::Button::new(tl!("Reset color"))).clicked() {
             let _ = app.run(command, params(Value::Null));
+            done = true;
             ui.close();
         }
+        if done {
+            ui.ctx().data_mut(|data| data.remove::<String>(edit_id));
+        } else {
+            ui.ctx().data_mut(|data| data.insert_temp(edit_id, text));
+        }
     });
+}
+
+/// Where the custom-colour field keeps its text between frames, for the colour in effect.
+pub(crate) fn custom_color_edit_id(scope: egui::Id, account: Id, alias: Option<&str>, selected: Rgb) -> egui::Id {
+    scope.with(("account_row_color", account, alias, selected))
 }
 
 #[cfg(test)]

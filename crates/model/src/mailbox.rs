@@ -340,7 +340,7 @@ pub struct Account {
     #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "crate::sync::lenient")]
     pub row_color: Option<Rgb>,
     /// Local display colours for exact receiving-alias identities; never provider settings.
-    #[serde(skip_serializing_if = "BTreeMap::is_empty", deserialize_with = "crate::load_limit::capped_map")]
+    #[serde(skip_serializing_if = "BTreeMap::is_empty", deserialize_with = "crate::load_limit::capped_alias_map")]
     pub alias_row_colors: BTreeMap<String, Rgb>,
     pub kind: AccountKind,
     #[serde(skip_serializing_if = "Option::is_none")]

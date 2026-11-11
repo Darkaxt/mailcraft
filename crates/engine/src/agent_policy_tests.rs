@@ -179,3 +179,37 @@ fn signature_discard_consent_does_not_reach_later_unsaved_typing() {
     s.run("compose.type", &json!({"text": "Later typing"})).unwrap();
     assert!(shown.check(&s, "signature.close", &params).is_err());
 }
+
+#[test]
+fn rules_filing_into_a_shared_mailbox_are_classified_like_moving_mail_there() {
+    let mut s = sample();
+    let owner = s.mailbox.accounts[0].id;
+    let shared = s.mailbox.add_account(mailcraft_model::Account {
+        email: "team@example.org".into(),
+        kind: mailcraft_model::AccountKind::Imap,
+        shared_of: Some(owner),
+        ..Default::default()
+    });
+    let team = s.mailbox.add_folder(shared, None, "Team").unwrap();
+    let own =
+        s.run("account.add", &json!({"email": "other@example.org", "incoming": {"host": "imap.example.org"}})).unwrap()["id"].as_u64().unwrap();
+    let own_inbox = s.mailbox.folder_of_kind(own, mailcraft_model::FolderKind::Inbox).unwrap();
+    let rule = |action: &str, folder: u64| {
+        json!({"name": "Team", "account": owner, "server": false, "conditions": [{"type": "subjectContains", "value": "team fixture"}],
+            "actions": [{"type": action, "value": folder}]})
+    };
+    for action in ["moveTo", "copyTo"] {
+        assert_eq!(classify(&s, "rules.add", &rule(action, team)), Access::Owner(Class::Send), "{action}");
+        // Filing among the owner's own accounts stays reversible and needs no grant.
+        assert_eq!(classify(&s, "rules.add", &rule(action, own_inbox)), Access::Safe, "{action}");
+    }
+    // Deletion keeps its own, stronger classification.
+    let mut deleting = rule("moveTo", team);
+    deleting["actions"] = json!([{"type": "moveTo", "value": team}, {"type": "delete"}]);
+    assert_eq!(classify(&s, "rules.add", &deleting), Access::Owner(Class::Delete));
+    let mut disabled = rule("moveTo", team);
+    disabled["enabled"] = json!(false);
+    let made = s.run("rules.add", &disabled).unwrap()["id"].as_u64().unwrap();
+    assert_eq!(classify(&s, "rules.enable", &json!({"id": made, "value": true})), Access::Owner(Class::Send));
+    assert_eq!(classify(&s, "rules.enable", &json!({"id": made, "value": false})), Access::Safe);
+}

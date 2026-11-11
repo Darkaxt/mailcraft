@@ -176,7 +176,19 @@ impl Index {
                                     .prefix("mailcraft-content-")
                                     .tempdir_in(&temporary_root)
                                     .map_err(|why| why.to_string())?;
-                                Event::Document(documents::index(&mut database, *input, scratch.path(), &extractor, &stop, phase)?)
+                                let (id, fingerprint) = (input.message.id, input.metadata.content_fp.clone());
+                                let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                    documents::index(&mut database, *input, scratch.path(), &extractor, &stop, phase)
+                                }))
+                                .unwrap_or_else(|panic| Err(format!("content extraction panicked: {}", documents::panic_text(&*panic))));
+                                match outcome {
+                                    Ok(done) => Event::Document(done),
+                                    Err(why) if stop.load(Ordering::Acquire) => return Err(why),
+                                    // One document's failure is recorded for that
+                                    // document only; ingestion continues. Only a
+                                    // database fault recording it remains fatal.
+                                    Err(why) => Event::Document(documents::failed(&mut database, id, fingerprint, &why)?),
+                                }
                             }
                             Job::Prune => {
                                 database.prune()?;
@@ -501,12 +513,22 @@ impl Index {
                         self.presentation = self.presentation.saturating_add(1);
                     }
                     query::Event::Failed(why) => {
-                        if let Some(token) = self.detail_running.take()
+                        // A failed read belongs to that one query. It must not
+                        // disable ingestion or later queries for this session.
+                        let detail = self.detail_running.take();
+                        if let Some(token) = detail
                             && let Some(detail) = self.details.get_mut(&token)
                         {
                             detail.result = Some(Err(why.clone()))
                         }
-                        self.problem = Some(why);
+                        if detail.is_none() && self.requested.is_none() {
+                            // A coverage read is retried at the next generation,
+                            // not re-issued in a tight loop for this one.
+                            let previous = self.coverage.take().map_or(Value::Null, |(_, coverage)| coverage);
+                            self.coverage = Some((self.generation, previous));
+                        }
+                        self.query_problem = Some(why);
+                        self.presentation = self.presentation.saturating_add(1);
                     }
                     query::Event::Cancelled => {}
                     query::Event::Detail { token, generation, result } => {

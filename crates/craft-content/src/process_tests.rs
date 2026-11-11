@@ -81,3 +81,22 @@ fn content_tree_waits_for_descendant_after_root_exit() {
 fn content_tree_cancellation_retains_exit_observation() {
     exercise(true);
 }
+
+#[test]
+fn content_tree_deadline_ends_a_hung_worker_and_reports_expiry() {
+    let cancellation = Cancellation::default();
+    let mut command = Command::new(std::env::current_exe().unwrap());
+    command
+        .args(["--exact", "process::tests::tree_fixture", "--ignored", "--nocapture"])
+        .env("CRAFT_PROCESS_TREE_FIXTURE", "descendant")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut process = ManagedProcess::spawn(command, &cancellation).unwrap();
+    // Hold the input open without writing: the worker blocks like a hung core.
+    let _input = process.stdin().unwrap();
+    process.deadline(Some(std::time::Duration::from_millis(200)));
+    assert!(!process.wait().unwrap().success());
+    assert!(process.expired());
+    assert!(!cancellation.cancelled(), "a deadline ends only this owned tree, not the shared cancellation");
+}

@@ -42,16 +42,21 @@ exact repository, version tag, numeric asset ID, file name, byte count and SHA-2
 in `release-runtime.json`'s `releaseInput` before the final source commit. A draft
 may be prepared against `main`; bind its final target commit and assembled release
 notes after CI passes and before tagging. Download the input by its numeric asset
-API, whose permission is `Contents:read`; draft-by-tag discovery is not a reliable
-input address. Compiler jobs retain read-only repository access. The existing
-Windows build job fetches this prerequisite before compiling, binds every member
-to the committed manifest and hands the
-runtime on with its existing SHA-256 job digest. The signing/package job copies
+API; draft-by-tag discovery is not a reliable input address. GitHub rejected the
+read-only compiler token at this draft endpoint in release run42831898498. A
+separate non-compiling input job uses the protected release writer role to read
+and verify the exact archive and every manifest member. Its sealed artifact and
+independent output digest go straight to the signing/package job, which checks
+that digest itself; the runtime never passes through a compiler job, whose build
+scripts could otherwise alter it before a later seal. Compiler jobs retain
+read-only repository access, never read the draft API or receive the writer token,
+and hand on only the two programs with their own SHA-256 job digest. The signing/package job copies
 the same runtime into the portable tree and generated MSI component fragment,
 and retains the input ZIP in the final checksum-bound release asset set. It
 does not execute a worker, OCR or a program built by the preceding job. The
 existing release checks and explicit final publication still apply. Dry runs
-also need this prepared input for their selected version.
+also need this prepared input for their selected version and must be dispatched
+on an approved version tag, preserving the existing tag-only release environment.
 
 The draft refresh uses the committed numeric release ID and preserves the exact
 runtime asset ID, name, size and digest. It verifies the matching local ZIP and

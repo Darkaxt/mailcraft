@@ -51,6 +51,7 @@ mod signature_tests;
 #[cfg(test)]
 mod tests;
 mod view;
+pub(crate) use view::same_body;
 mod warnings;
 #[cfg(test)]
 mod warnings_tests;

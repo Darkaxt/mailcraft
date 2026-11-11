@@ -1,4 +1,4 @@
-**MailCraft 0.11.2 in short** — the fork's integrated mail workflow
+**MailCraft 0.11.3 in short** — the fork's integrated mail workflow
 - One inbox for all accounts, with editable account and alias colours.
 - Local regex rules, folder-focused editing and filing conflict review.
 - Offline full-text search, attachment text and OCR with explicit coverage.

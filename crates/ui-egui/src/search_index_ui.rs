@@ -25,11 +25,21 @@ struct Page {
     answer: Option<Value>,
     state: String,
     previous: Vec<u64>,
+    /// What a ready result was last checked against ([`observed`]).
+    observed: Option<Observed>,
+}
+
+/// Mailbox revision, content-index generation and whether the index is busy:
+/// a ready inspection can only go stale when one of these changes.
+pub(crate) type Observed = (u64, Option<u64>, bool);
+
+pub(crate) fn observed(app: &MailApp) -> Observed {
+    (app.session.rev(), app.session.content_index_status().get("generation").and_then(Value::as_u64), app.session.content_index_busy())
 }
 
 impl Page {
     fn new(command: &'static str, params: Value) -> Self {
-        Self { command, params, token: None, answer: None, state: "pending".into(), previous: Vec::new() }
+        Self { command, params, token: None, answer: None, state: "pending".into(), previous: Vec::new(), observed: None }
     }
 
     fn call(&self, close: bool) -> Value {
@@ -47,6 +57,10 @@ impl Page {
 impl Pane {
     pub(crate) fn is_open(&self) -> bool {
         self.open
+    }
+    /// A live engine inspection token is held or still being closed.
+    pub(crate) fn holds_inspection(&self) -> bool {
+        !self.retiring.is_empty() || self.page.as_ref().is_some_and(|page| page.token.is_some() && page.state != "closed")
     }
     pub(crate) fn inspect(&self) -> Value {
         json!({"open":self.open,"error":self.error,"page":self.page.as_ref().map(|page|json!({
@@ -179,9 +193,12 @@ pub(crate) fn tick(app: &mut MailApp) {
         }
     }
     pane.retiring = retiring;
+    // Pending pages are polled for their result; a ready one only when what it
+    // was computed against may have changed, never every frame.
+    let now = pane.page.as_ref().filter(|page| page.state == "ready").map(|_| observed(app));
     if pane.retiring.is_empty()
         && let Some(page) = &mut pane.page
-        && matches!(page.state.as_str(), "pending" | "ready")
+        && (page.state == "pending" || (page.state == "ready" && now.is_some_and(|now| page.observed != Some(now))))
     {
         match app.execute(page.command, page.call(false)) {
             Err(why) => {
@@ -192,7 +209,8 @@ pub(crate) fn tick(app: &mut MailApp) {
                 page.token = value.get("token").and_then(Value::as_u64);
                 page.state = value.get("state").and_then(Value::as_str).unwrap_or("failed").to_owned();
                 if page.state == "ready" {
-                    page.answer = value.get("result").cloned()
+                    page.answer = value.get("result").cloned();
+                    page.observed = Some(observed(app));
                 }
                 if let Some(why) = value.get("error").and_then(Value::as_str) {
                     pane.error = Some(why.into())
@@ -201,6 +219,21 @@ pub(crate) fn tick(app: &mut MailApp) {
         }
     }
     app.search_index_pane = pane;
+}
+
+#[cfg(test)]
+impl Pane {
+    /// An open ready page for `command`, last checked against `observed`.
+    pub(crate) fn ready_for_test(command: &'static str, opening: u64, observed: Observed) -> Self {
+        let mut page = Page::new(command, json!({}));
+        page.state = "ready".into();
+        page.token = Some(1);
+        page.observed = Some(observed);
+        Self { open: true, opening, page: Some(page), ..Default::default() }
+    }
+    pub(crate) fn page_state(&self) -> Option<&str> {
+        self.page.as_ref().map(|page| page.state.as_str())
+    }
 }
 
 pub(crate) fn escape(app: &mut MailApp, ctx: &egui::Context) {

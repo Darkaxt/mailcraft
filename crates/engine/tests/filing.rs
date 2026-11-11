@@ -182,7 +182,9 @@ fn alias_origin_colour_is_retained_without_substituting_untrusted_original_sende
         ("X-SimpleLogin-Type".into(), "Forward".into()),
         ("X-SimpleLogin-Envelope-To".into(), "studio@example.org".into()),
         ("X-SimpleLogin-Original-From".into(), "claimed@example.org".into()),
+        ("Received".into(), "from mail-200.simplelogin.co (mail-200.simplelogin.co [192.0.2.10]) by mx.example.org".into()),
     ];
+    s.mailbox.message_mut(id).unwrap().to = vec![Address::new("", "studio@example.org")];
     s.run("aliases.rowColor", &json!({"account":a[1],"alias":"studio@example.org","color":"#E5DDF3"})).unwrap();
     let report = review(&mut s, &[id], new);
     assert_eq!(report["senders"], json!(["reverse@simplelogin.example"]));

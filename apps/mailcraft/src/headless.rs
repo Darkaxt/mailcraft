@@ -177,7 +177,12 @@ fn pump(
         let delay = output.viewport_output.get(&egui::ViewportId::ROOT).map_or(Duration::MAX, |v| v.repaint_delay);
         output.textures_delta.clear();
         if app.headless_close_ready() {
-            let saved = app.save_on_exit().and_then(|()| preferences.as_ref().map_or(Ok(()), |(path, initial)| save_options_at(app, initial, path)));
+            let mut saved = app.save_on_exit().and_then(|()| preferences.as_ref().map_or(Ok(()), |(path, initial)| save_options_at(app, initial, path)));
+            if let Err(why) = &saved {
+                // One retry; a second failure is reported and the app stays open with its data.
+                log::warn!("headless close could not save ({why}); retrying once");
+                saved = app.save_on_exit().and_then(|()| preferences.as_ref().map_or(Ok(()), |(path, initial)| save_options_at(app, initial, path)));
+            }
             match saved {
                 Ok(()) => break,
                 Err(why) => app.headless_save_failed(&why),

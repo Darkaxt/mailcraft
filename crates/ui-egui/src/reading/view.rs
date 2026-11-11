@@ -273,7 +273,7 @@ pub struct Store {
 }
 
 /// Whether two messages show the same body: the same text, HTML and attached bytes.
-fn same_body(a: &Message, b: &Message) -> bool {
+pub(crate) fn same_body(a: &Message, b: &Message) -> bool {
     a.body == b.body
         && a.attachments.len() == b.attachments.len()
         && a.attachments.iter().zip(&b.attachments).all(|(x, y)| x.content_id == y.content_id && Arc::ptr_eq(&x.data, &y.data))

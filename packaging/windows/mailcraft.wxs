@@ -151,9 +151,13 @@
       <Component Id="MailcraftCli">
         <File Id="MailcraftCliExe" Source="$(var.BinDir)\mailcraft-cli.exe" KeyPath="yes" />
       </Component>
-      <Component Id="MailcraftNotices">
+      <!-- One file per component: WiX can only generate a stable automatic GUID for a
+           component whose key path is its only file (WIX0367 otherwise). -->
+      <Component Id="MailcraftNotice">
         <File Id="MailcraftNotice" Source="$(var.BinDir)\NOTICE" KeyPath="yes" />
-        <File Id="MailcraftAttribution" Source="$(var.BinDir)\ATTRIBUTION.md" />
+      </Component>
+      <Component Id="MailcraftAttribution">
+        <File Id="MailcraftAttribution" Source="$(var.BinDir)\ATTRIBUTION.md" KeyPath="yes" />
       </Component>
     </ComponentGroup>
   </Fragment>

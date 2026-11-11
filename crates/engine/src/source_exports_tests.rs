@@ -321,3 +321,20 @@ fn another_mailbox_opening_revokes_old_tokens_even_when_message_ids_are_reused()
     assert!(next > token);
     close(&mut session, "mail.sourcePage", replacement, next);
 }
+
+#[test]
+fn closed_pending_exports_release_their_snapshot_slots() {
+    let (mut session, id) = fixture();
+    for _ in 0..MAX_ROUNDS {
+        let token = session.run("mail.sourcePage", &json!({"id":id})).unwrap()["token"].as_u64().unwrap();
+        let state = session.run("mail.sourcePage", &json!({"id":id,"token":token,"close":true})).unwrap()["state"].clone();
+        assert!(state == "closing" || state == "closed");
+        session.wait_source_exports();
+        assert!(!session.source_export_busy());
+    }
+    let token = session.run("mail.sourcePage", &json!({"id":id})).unwrap()["token"].as_u64().unwrap();
+    session.wait_source_exports();
+    assert_eq!(session.run("mail.sourcePage", &json!({"id":id,"token":token})).unwrap()["state"], "ready");
+}
+
+const MAX_ROUNDS: usize = 6;

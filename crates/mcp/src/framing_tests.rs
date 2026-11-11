@@ -75,6 +75,8 @@ fn fixture() -> Fixture {
                 (marked("headerName"), marked("headerValue")),
                 ("X-SimpleLogin-Type".into(), "Forward".into()),
                 ("X-SimpleLogin-Envelope-To".into(), "hostile@aliases.example.org".into()),
+                ("Delivered-To".into(), "hostile@aliases.example.org".into()),
+                ("Received".into(), "from mail-200.simplelogin.co (mail-200.simplelogin.co [192.0.2.10]) by mx.example.org".into()),
             ],
             ..Default::default()
         })

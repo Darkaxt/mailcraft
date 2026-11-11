@@ -227,3 +227,20 @@ fn prepared_source_export_uses_its_complete_snapshot_without_another_download() 
     assert!(!app.fetching.busy());
     assert!(app.execute("mail.exportEml", json!({"id":id,"token":token})).is_err());
 }
+
+#[test]
+fn flagging_the_message_keeps_the_source_reader_page_and_token() {
+    let (mut app, id) = fixture(true);
+    app.execute("ui.source", json!({"on":true})).unwrap();
+    settle(&mut app);
+    app.execute("ui.source", json!({"page":"next"})).unwrap();
+    settle(&mut app);
+    let offset = app.source_pane.inspect()["offset"].as_u64().unwrap();
+    assert!(offset > 0);
+    let before = app.session.mailbox.messages.get(&id).cloned().unwrap();
+    app.execute("mail.flag", json!({"ids":[id]})).unwrap();
+    assert!(!Arc::ptr_eq(&before, app.session.mailbox.messages.get(&id).unwrap()), "flagging replaces the message");
+    settle(&mut app);
+    assert_eq!(app.source_pane.inspect()["offset"], offset, "a flag update must not reset the reader");
+    assert_eq!(app.source_pane.inspect()["state"], "ready");
+}
