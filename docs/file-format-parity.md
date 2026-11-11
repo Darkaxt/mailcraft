@@ -44,8 +44,10 @@ IMAP and SMTP servers, a Graph stand-in and a JMAP stand-in, not yet against oth
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-10 | minor | #815: `.pst` mail whose body is rich text alone comes in as its text, the rich text kept as an attachment |
 | 2026-11-09 | minor | #30 part 4: vCard `KEY` (S/MIME certificates, OpenPGP keys) read on import and written on export |
 | 2026-11-08 | minor | Native streaming EML export, retained-content verification, legal delivery-status encoding, draft-only Bcc preservation and explicit reconstructed MIME limitations. |
+| 2026-11-07 | minor | #843: `.pst` distribution lists kept in a stream: their members are read |
 | 2026-11-06 | minor | #815 part 3: `.pst` contacts: notes kept only as compressed rich text ([MS-OXRTFCP]) are read as text |
 | 2026-11-05 | minor | #815 part 3 review: `.pst` contacts: Deleted Items, hidden and automatic contact folders left out; notes cut to a vCard line; lists kept in a stream named |
 | 2026-11-05 | minor | #815 part 3: `.pst` contacts are marked as imported from the file (no category); only Deleted Items is left out; a file of contacts alone makes no mail folder |

@@ -97,7 +97,9 @@ be shown when they can't.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-10 | minor | #973: Composer: lists as you type (`* `, `- `, `1. `, `1) `), with a switch in File › Options › Mail |
 | 2026-11-10 | patch | #956: Report a Problem opens a GitHub issue only; Send by Email is gone |
+| 2026-11-08 | minor | #893: each account can have a colour (Account Settings › Colour; a new account gets one of the palette's that no other has): a dot after its name in the folder pane, and a stripe down the left edge of its mail's rows in a search of All Mailboxes |
 | 2026-11-08 | minor | Native reading-pane Source/Message switching and reconstructed EML export. |
 | 2026-11-05 | minor | #761: Add Account: an address at a domain nobody here knows says its servers are only a guess from its domain, and offers the Microsoft 365 and Exchange server choices on the same page |
 | 2026-11-05 | minor | #600: Reading pane: a message is drawn in the first of its fonts installed on this computer |

@@ -1,1 +1,0 @@
-| 2026-11-11 | Fork 0.11.3: upstream 2f0672c3 integrated (account colours #893 drive the default row pastel); QA fixes for SimpleLogin alias corroboration, rule conflict/delete semantics and received-only manual runs, content-index crash and deadline handling, bounded close/bridge release, and the release runtime input fetched only by the protected signing job. |
