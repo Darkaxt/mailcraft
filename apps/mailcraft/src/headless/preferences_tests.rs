@@ -62,7 +62,7 @@ fn an_unchanged_windowless_check_does_not_rewrite_settings() {
     let settings = Settings::new("unchanged");
     let mut app = app();
     let mut initial = app.session.prefs.clone();
-    initial.follow_language(app.language());
+    initial.follow_conventions(app.date_conventions());
     let bytes = b"{\n  \"futureLayout\": true\n}\n";
     std::fs::write(&settings.0, bytes).unwrap();
     let (ctx, _) = super::context();

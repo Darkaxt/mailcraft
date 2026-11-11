@@ -4678,6 +4678,12 @@ impl MailApp {
         i18n::Lang::from_pref(&self.ui.language, self.services.system_locale.as_deref())
     }
 
+    /// The interface language's clock and first day of the week in the system's region (#978):
+    /// what [`Prefs::follow_conventions`](mailcraft_engine::Prefs::follow_conventions) is given.
+    pub fn date_conventions(&self) -> mailcraft_i18n::date::Conventions {
+        self.language().conventions_in(self.services.system_time_locale.as_deref().and_then(mailcraft_i18n::date::region_of))
+    }
+
     /// Put the interface language in force: the window's text, the engine's, and the host's
     /// (`<html lang>` in the browser) when it changed; its dates written the way of the system's
     /// region, and the clock and first day of the week the owner never chose theirs (#978).

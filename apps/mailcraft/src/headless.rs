@@ -150,7 +150,7 @@ fn pump(
     // and week settings. That initialization is not an explicit preference edit.
     let preferences = preferences.map(|(path, initial)| {
         let mut initial = initial.clone();
-        initial.follow_language(app.language());
+        initial.follow_conventions(app.date_conventions());
         (path, initial)
     });
     let started = Instant::now();
