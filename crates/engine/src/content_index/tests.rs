@@ -294,3 +294,167 @@ fn deterministic_allowance_and_deadline_failures_are_resource_limits_not_retried
     assert_eq!(failure("resourceLimit: the native core did not answer within its 120-second response deadline and was ended"), "resourceLimit");
     assert_eq!(failure("the original OCR process failed"), "failed");
 }
+
+/// A mailbox of messages each with `subject` and `body` in the Inbox, and
+/// `junk`/`deleted` bodies in Junk E-mail and Deleted Items.
+fn words_fixture(path: &Path, bodies: &[(&str, &str)], junk: &str, deleted: &str) -> (Vec<u64>, u64, u64) {
+    let mut mailbox = Mailbox::with_local_account("Avery", "avery@example.org");
+    let account = mailbox.accounts[0].id;
+    let inbox = mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let ids = bodies
+        .iter()
+        .map(|(subject, body)| {
+            mailbox
+                .add_message(Message {
+                    account,
+                    folder: inbox,
+                    subject: (*subject).into(),
+                    body: Body { text: (*body).into(), html: None },
+                    ..Default::default()
+                })
+                .unwrap()
+        })
+        .collect();
+    let mut elsewhere = |kind, text: &str| {
+        let folder = mailbox.folder_of_kind(account, kind).unwrap();
+        mailbox
+            .add_message(Message { account, folder, subject: "Elsewhere".into(), body: Body { text: text.into(), html: None }, ..Default::default() })
+            .unwrap()
+    };
+    let junk = elsewhere(FolderKind::Junk, junk);
+    let deleted = elsewhere(FolderKind::Deleted, deleted);
+    crate::store::save(path, &mailbox).unwrap();
+    (ids, junk, deleted)
+}
+
+fn with_options(session: &mut Session, options: Value) {
+    session.run("view.searchOptions", &options).unwrap();
+}
+
+#[test]
+fn substrings_expand_through_the_vocabulary_and_terms_are_anded() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (ids, _, _) = words_fixture(
+        &path,
+        &[("Monthly", "Please pay the invoice today"), ("Call", "A voice message for you"), ("Other", "Nothing relevant here")],
+        "",
+        "",
+    );
+    let (mut session, _) = open(&path);
+    let mut both = vec![ids[0], ids[1]];
+    both.sort_unstable();
+    assert_eq!(search(&mut session, "voice"), both, "voice is found inside invoice");
+    assert_eq!(search(&mut session, "voice pay"), [ids[0]], "free-text terms are ANDed");
+    assert_eq!(search(&mut session, "VOICE"), both, "case-insensitive by default");
+    assert!(search(&mut session, "zzzunknown").is_empty());
+    with_options(&mut session, json!({"wholeWord": true}));
+    assert_eq!(search(&mut session, "voice"), [ids[1]], "whole words do not match inside invoice");
+    with_options(&mut session, json!({"wholeWord": false, "matchCase": true}));
+    assert!(search(&mut session, "VOICE").is_empty(), "matchCase compares the stored text");
+    assert_eq!(search(&mut session, "voice"), both);
+    with_options(&mut session, json!({"matchCase": false, "regex": true}));
+    assert_eq!(search(&mut session, "inv.ice"), [ids[0]]);
+    assert!(session.run("view.searchOptions", &json!({"searchIn": []})).is_err(), "at least one part is searched");
+    with_options(&mut session, json!({"regex": false, "searchIn": ["subject"]}));
+    assert_eq!(search(&mut session, "monthly"), [ids[0]]);
+    assert!(search(&mut session, "invoice").is_empty(), "the body is not searched");
+}
+
+#[test]
+fn relevance_scores_whole_words_above_containing_words_and_ties_by_date() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (ids, _, _) = words_fixture(&path, &[("A", "an invoice"), ("B", "a voice"), ("C", "voiced it"), ("D", "the voice again")], "", "");
+    let (mut session, _) = open(&path);
+    session.view.sort = crate::SortBy::Relevance;
+    session.view.sort_descending = true;
+    search(&mut session, "voice");
+    let rows = session.rows();
+    let scored: Vec<_> = rows.iter().map(|row| (row.id, row.score)).collect();
+    let score = |id| scored.iter().find(|(row, _)| *row == id).and_then(|(_, score)| *score);
+    assert_eq!(score(ids[1]), Some(100));
+    assert_eq!(score(ids[3]), Some(100));
+    assert_eq!(score(ids[2]), Some(83), "voice in voiced: 5 of 6");
+    assert_eq!(score(ids[0]), Some(71), "voice in invoice: 5 of 7");
+    let order: Vec<_> = scored.iter().map(|(id, _)| *id).collect();
+    let position = |id| order.iter().position(|row| *row == id).unwrap();
+    assert!(position(ids[1]).max(position(ids[3])) < position(ids[2]));
+    assert!(position(ids[2]) < position(ids[0]));
+    let detail = &rows.iter().find(|row| row.id == ids[0]).unwrap().score_detail;
+    assert_eq!(detail.first().map(|detail| detail.matched.as_str()), Some("invoice"));
+}
+
+#[test]
+fn junk_and_deleted_items_are_not_indexed_but_still_searched() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (_, junk, deleted) = words_fixture(&path, &[("Inbox", "plain")], "JunkOnlyMarker", "DeletedOnlyMarker");
+    let (mut session, _) = open(&path);
+    search(&mut session, "plain");
+    let stored = super::db::Database::reader(&crate::store::content_index_file(&path)).unwrap().document_ids().unwrap();
+    assert!(!stored.contains(&junk) && !stored.contains(&deleted), "junk and deleted mail stay out of the sidecar");
+    assert_eq!(search(&mut session, "JunkOnlyMarker"), [junk], "read from the message itself");
+    assert_eq!(search(&mut session, "DeletedOnlyMarker"), [deleted]);
+}
+
+#[test]
+fn an_owned_older_schema_sidecar_is_rebuilt_and_a_foreign_file_preserved() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (ids, _, _) = words_fixture(&path, &[("Old", "rebuilt content")], "", "");
+    let sidecar = crate::store::content_index_file(&path);
+    {
+        let old = rusqlite::Connection::open(&sidecar).unwrap();
+        old.execute_batch("CREATE TABLE units(folded TEXT); PRAGMA application_id=1296259121; PRAGMA user_version=1;").unwrap();
+    }
+    let (mut session, _) = open(&path);
+    assert_eq!(search(&mut session, "rebuilt"), [ids[0]]);
+    let version: i64 = rusqlite::Connection::open(&sidecar).unwrap().pragma_query_value(None, "user_version", |row| row.get(0)).unwrap();
+    assert_eq!(version, super::db::SCHEMA);
+    drop(session);
+    let foreign = scratch.path().join("foreign.sqlite");
+    rusqlite::Connection::open(&foreign).unwrap().execute_batch("CREATE TABLE keep(x); PRAGMA user_version=1;").unwrap();
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    assert!(super::db::Database::writer(&foreign, stop).is_err());
+    assert!(foreign.exists(), "a file that is not an owned index is never deleted");
+}
+
+#[test]
+fn cancelling_the_index_stops_without_waiting_and_is_not_reopened() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let bodies: Vec<(String, String)> =
+        (0..200).map(|n| (format!("Message {n}"), format!("body text number {n} {}", "filler ".repeat(500)))).collect();
+    let borrowed: Vec<(&str, &str)> = bodies.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+    words_fixture(&path, &borrowed, "", "");
+    let (mut session, _) = open(&path);
+    session.view.search = "filler".into();
+    session.poll_content_index();
+    let started = std::time::Instant::now();
+    session.cancel_content_index();
+    assert!(started.elapsed() < std::time::Duration::from_secs(10), "close does not wait for the build");
+    session.poll_content_index();
+    assert!(!session.content_index_busy(), "the index is not reopened while the window closes");
+}
+
+#[test]
+fn declared_zip_expansion_is_refused_before_import() {
+    use super::extract::zip_bomb;
+    // One central-directory entry declaring 1 GiB from 1 KiB.
+    let mut zip = b"PK\x03\x04".to_vec();
+    zip.resize(64, 0);
+    let directory = zip.len();
+    let mut entry = vec![0u8; 46];
+    entry[..4].copy_from_slice(b"PK\x01\x02");
+    entry[20..24].copy_from_slice(&1024u32.to_le_bytes());
+    entry[24..28].copy_from_slice(&(1u32 << 30).to_le_bytes());
+    zip.extend(entry);
+    let mut end = vec![0u8; 22];
+    end[..4].copy_from_slice(b"PK\x05\x06");
+    end[10..12].copy_from_slice(&1u16.to_le_bytes());
+    end[16..20].copy_from_slice(&u32::try_from(directory).unwrap().to_le_bytes());
+    zip.extend(end);
+    assert!(zip_bomb(&zip).is_some());
+    assert!(zip_bomb(b"plain text").is_none());
+}

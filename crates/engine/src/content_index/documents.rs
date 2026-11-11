@@ -108,7 +108,10 @@ pub fn panic_text(panic: &(dyn std::any::Any + Send)) -> String {
 /// so a deterministic failure cannot crash or stall every later session.
 pub fn failed(database: &mut Database, id: u64, fingerprint: String, why: &str) -> Result<Completion> {
     let snippet = database.row(id)?.and_then(|row| row.get("snippet").and_then(Value::as_str).map(ToOwned::to_owned)).unwrap_or_default();
-    let _ = database.finish(id, &fingerprint, 0, &snippet, "failed", Some(&format!("content extraction failed: {why}")))?;
+    if database.finish(id, &fingerprint, 0, &snippet, "failed", Some(&format!("content extraction failed: {why}")))? {
+        // Tried again after a bounded backoff, and at the next app start.
+        database.record_failure(id)?;
+    }
     Ok(Completion { id, fingerprint, needs_attachments: false })
 }
 

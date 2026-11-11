@@ -69,6 +69,11 @@ pub struct Doc {
     pub responsive: bool,
     /// The window is dark and the message brings its own design for dark windows.
     pub sender_dark: bool,
+    /// The tracking pictures found in the message ([`super::trackers`]), each once: never asked
+    /// for, and not in `blocks` either, unless `trackers_kept`.
+    pub trackers: Vec<Arc<str>>,
+    /// The owner said "Load anyway": the trackers stay in the message like its other pictures.
+    pub trackers_kept: bool,
 }
 
 impl Doc {
@@ -89,16 +94,28 @@ impl Doc {
     /// The same for a body of a width and a theme (`env`): the message's `@media` is tested
     /// against it.
     pub fn of_in(message: &Message, can_download: bool, env: Env) -> Doc {
+        Doc::of_kept(message, can_download, env, false)
+    }
+
+    /// The same, keeping the message's tracking pictures when `keep_trackers` (the owner said
+    /// "Load anyway"); else they are taken out before anything can ask for them.
+    pub fn of_kept(message: &Message, can_download: bool, env: Env, keep_trackers: bool) -> Doc {
         let lists: Arc<[String]> = message.body.html.as_deref().map(mailcraft_html::media_lists).unwrap_or_default().into();
         let responsive = !lists.is_empty();
         let parsed = message.body.html.as_deref().map(|html| mailcraft_html::parse_in(html, &env));
+        let found: HashSet<String> = message.body.html.as_deref().map(super::trackers::scan).unwrap_or_default().into_iter().collect();
         let (blocks, sender_dark) = match parsed {
             // HTML that came to nothing (only scripts, only pictures that can't be shown) falls back to the text.
             Some(read) if mailcraft_html::has_text(&read.blocks) || shows_a_picture(&read.blocks, message) || message.body.text.trim().is_empty() => {
                 (read.blocks, read.dark_design)
             }
             Some(read) if can_download => {
-                let doc = Doc { lists: lists.clone(), responsive, sender_dark: read.dark_design, ..Doc::from_blocks(read.blocks) };
+                let doc = Doc {
+                    lists: lists.clone(),
+                    responsive,
+                    sender_dark: read.dark_design,
+                    ..Doc::from_blocks_with(read.blocks, &found, keep_trackers)
+                };
                 if !doc.remote.is_empty() {
                     return doc;
                 }
@@ -106,12 +123,28 @@ impl Doc {
             }
             _ => (mailcraft_html::text_blocks(&message.body.text), false),
         };
-        Doc { lists, responsive, sender_dark, ..Doc::from_blocks(blocks) }
+        let mut doc = Doc { lists, responsive, sender_dark, ..Doc::from_blocks_with(blocks, &found, keep_trackers) };
+        // Trackers the parser left out already (hidden, a pixel or two) are counted all the same:
+        // they were in the message, and nothing asked for them.
+        for url in found {
+            if doc.trackers.len() < super::trackers::MAX_TRACKERS && !doc.trackers.iter().any(|kept| **kept == *url) {
+                doc.trackers.push(Arc::from(url));
+            }
+        }
+        doc
     }
 
     /// The blocks as a body, with what is known of their pictures on the web.
+    #[cfg(test)]
     pub(super) fn from_blocks(blocks: Vec<Block>) -> Doc {
-        let mut doc = Doc::default();
+        Doc::from_blocks_with(blocks, &HashSet::new(), false)
+    }
+
+    /// The same, with the trackers the message's HTML was found to have (`found`) and the ones
+    /// the blocks themselves show taken out, unless `keep_trackers`.
+    fn from_blocks_with(mut blocks: Vec<Block>, found: &HashSet<String>, keep_trackers: bool) -> Doc {
+        let mut doc = Doc { trackers_kept: keep_trackers, ..Doc::default() };
+        take_trackers(&mut blocks, found, !keep_trackers, &mut doc.trackers);
         let mut seen = HashSet::new();
         for picture in mailcraft_html::images(&blocks) {
             let BlockKind::Image { src, width, height, .. } = &picture.kind else { continue };
@@ -137,6 +170,46 @@ impl Doc {
         doc.blocks = blocks;
         doc.cuts = cuts.into();
         doc
+    }
+}
+
+/// Whether a picture block is a tracker: one the HTML was found to have, a known open pixel, or
+/// one that says it is 3 pixels or less.
+fn tracker_block(block: &Block, found: &HashSet<String>) -> bool {
+    let BlockKind::Image { src, width, height, .. } = &block.kind else { return false };
+    let src = src.trim();
+    if mailcraft_html::is_embedded(src) || !images::is_remote(src) {
+        return false;
+    }
+    let tiny = |v: &Option<u16>| v.is_some_and(|v| v <= 3);
+    found.contains(src) || super::trackers::known(src) || tiny(width) || tiny(height)
+}
+
+/// Note the trackers among `blocks` (and in their tables) in `out`, and take them out when
+/// `remove`: a tracker renders nothing, not even a stand-in.
+fn take_trackers(blocks: &mut Vec<Block>, found: &HashSet<String>, remove: bool, out: &mut Vec<Arc<str>>) {
+    let note = |block: &Block, out: &mut Vec<Arc<str>>| {
+        if let BlockKind::Image { src, .. } = &block.kind
+            && out.len() < super::trackers::MAX_TRACKERS
+            && !out.iter().any(|kept| **kept == *src.trim())
+        {
+            out.push(Arc::from(src.trim()));
+        }
+    };
+    let mut index = 0;
+    while index < blocks.len() {
+        if tracker_block(&blocks[index], found) {
+            note(&blocks[index], out);
+            if remove {
+                blocks.remove(index);
+                continue;
+            }
+        } else if let BlockKind::Table(table) = &mut blocks[index].kind {
+            for cell in table.rows.iter_mut().flat_map(|r| r.cells.iter_mut()) {
+                take_trackers(&mut cell.blocks, found, remove, out);
+            }
+        }
+        index += 1;
     }
 }
 
@@ -247,6 +320,8 @@ struct Entry {
     /// comes out the same in two widths keeps the one `doc` for both).
     env: Env,
     look: Look,
+    /// The message's trackers are kept in its blocks ("Load anyway").
+    keep: bool,
     /// The blocks made for other looks, most recent first: at most [`KEPT_CLASSES`].
     others: Vec<(Look, Arc<Doc>)>,
     key: Option<Key>,
@@ -270,6 +345,36 @@ pub struct Store {
     /// How many times a message's blocks were made, for tests.
     #[cfg(test)]
     made: usize,
+    /// The messages whose trackers the owner said "Load anyway" for, until the program closes:
+    /// told apart by their number and what they say of themselves.
+    trackers_kept: std::collections::VecDeque<(mailcraft_model::Id, u64)>,
+}
+
+/// Most messages whose trackers are kept on the owner's say-so.
+const MAX_TRACKERS_KEPT: usize = 200;
+
+/// A message, told from another that might come to have its number (another mailbox opened).
+fn tracker_mark(message: &Message) -> (mailcraft_model::Id, u64) {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (&message.message_id, &message.from.email, &message.subject, message.date).hash(&mut hasher);
+    (message.id, hasher.finish())
+}
+
+/// "Load anyway": `message`'s tracking pictures stay in it from now on, like its other pictures.
+/// What was made of its body without them is made again.
+pub fn keep_trackers(ctx: &egui::Context, message: &Message) {
+    let store = Store::of(ctx);
+    let mut store = store.lock().unwrap_or_else(|e| e.into_inner());
+    let mark = tracker_mark(message);
+    if !store.trackers_kept.contains(&mark) {
+        if store.trackers_kept.len() >= MAX_TRACKERS_KEPT {
+            store.trackers_kept.pop_front();
+        }
+        store.trackers_kept.push_back(mark);
+    }
+    store.entries.retain(|e| e.message.id != message.id);
+    ctx.request_repaint();
 }
 
 /// Whether two messages show the same body: the same text, HTML and attached bytes.
@@ -287,6 +392,7 @@ impl Store {
     /// The entry for `message` shown at `place`, parsing its body when it is not known yet
     /// (`can_download`: for a window that can download pictures, see [`Doc::of_where`]).
     fn entry(&mut self, message: &Arc<Message>, place: Place, frame: u64, can_download: bool, env: Env) -> Option<&mut Entry> {
+        let keep = self.trackers_kept.contains(&tracker_mark(message));
         let shows = |e: &Entry| {
             // Flagging or filing a message makes a new one of it; its body is still the same.
             Arc::ptr_eq(&e.message, message) || (e.message.id == message.id && same_body(&e.message, message))
@@ -295,8 +401,11 @@ impl Store {
             Some(index) => index,
             None => {
                 // The body may be known from the other place it is shown in.
-                let doc =
-                    self.entries.iter().find(|e| shows(e) && (!e.doc.responsive || e.look == Look::of(&e.doc.lists, env))).map(|e| e.doc.clone());
+                let doc = self
+                    .entries
+                    .iter()
+                    .find(|e| shows(e) && e.keep == keep && (!e.doc.responsive || e.look == Look::of(&e.doc.lists, env)))
+                    .map(|e| e.doc.clone());
                 // What was kept here of this message before it changed is of no use any more.
                 self.entries.retain(|e| e.place != place || e.message.id != message.id || message.id == 0);
                 let (kept, room) = match place {
@@ -317,7 +426,7 @@ impl Store {
                 {
                     self.made += usize::from(doc.is_none());
                 }
-                let doc = doc.unwrap_or_else(|| Arc::new(Doc::of_in(message, can_download, env)));
+                let doc = doc.unwrap_or_else(|| Arc::new(Doc::of_kept(message, can_download, env, keep)));
                 let look = Look::of(&doc.lists, env);
                 self.entries.push(Entry {
                     message: message.clone(),
@@ -325,6 +434,7 @@ impl Store {
                     doc,
                     env,
                     look,
+                    keep,
                     others: Vec::new(),
                     key: None,
                     laid: Laid::default(),
@@ -389,7 +499,7 @@ impl Entry {
             Some(doc) => doc,
             None => {
                 made = 1;
-                let fresh = Arc::new(Doc::of_in(message, can_download, env));
+                let fresh = Arc::new(Doc::of_kept(message, can_download, env, self.keep));
                 // A look that has the blocks of the one in use keeps them, and what is laid out
                 // and selected in them.
                 if fresh.blocks == self.doc.blocks && fresh.sender_dark == self.doc.sender_dark { self.doc.clone() } else { fresh }

@@ -240,7 +240,9 @@ fn shots_of_reader_and_unsent_draft_with_independent_light_dark_choices() {
                 assert!(!file.exists(), "preserve original rendered evidence");
                 h.render().unwrap().save(&file).unwrap();
                 let viewport = h.ctx.viewport_rect();
-                for label in ["Light", "Dark", "App theme"] {
+                // The reader has them in the floating Message appearance menu; the draft preview in its row.
+                let labels: &[&str] = if draft { &["Light", "Dark", "App theme"] } else { &["Message appearance"] };
+                for label in labels.iter().copied() {
                     let rect = h.get_by_label(label).rect();
                     assert!(viewport.contains_rect(rect), "{label} remains accessible: {rect:?} inside {viewport:?}, {file:?}");
                 }
@@ -256,4 +258,22 @@ fn shots_of_reader_and_unsent_draft_with_independent_light_dark_choices() {
             }
         }
     }
+}
+
+#[test]
+fn the_reader_has_floating_controls_instead_of_an_appearance_row() {
+    let (app, id) = app();
+    let mut h = super::tests::window(app, (1200.0, 850.0));
+    h.run_steps(6);
+    let button = h.state().hit.rect("messageAppearance", id).expect("the floating appearance button");
+    // No row of choices above the message: they are in the menu, which opens from the button.
+    assert!(h.state().hit.rect("messageThemeLight", 0).is_none());
+    let body = h.ctx.viewport_rect();
+    assert!(body.contains_rect(button));
+    super::tests::click_at(&mut h, button.center());
+    h.run_steps(3);
+    let light = h.state().hit.rect("messageThemeLight", 0).expect("the menu offers Light");
+    super::tests::click_at(&mut h, light.center());
+    h.run_steps(4);
+    assert_eq!(h.state().ui.message_theme, Some(MessageTheme::Light));
 }

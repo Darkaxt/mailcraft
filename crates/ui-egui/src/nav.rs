@@ -52,8 +52,7 @@ const STRIP_W: f32 = 30.0;
 /// folders' ids and the accounts' (an account's heading folds under the account's own id).
 /// Accounts and folders are numbered from 1 in one sequence, so none of the three collide.
 const FAVORITES: Id = 0;
-/// The dot of an account's colour after its name in its heading (#893), and the room it takes there.
-const ACCOUNT_DOT_RADIUS: f32 = 4.5;
+/// The room an account's origin-colour swatch takes after its name in its heading (#893).
 const ACCOUNT_DOT_ROOM: f32 = 16.0;
 
 /// The module bar. It runs from under the title bar down to the status bar, beside the tabs and
@@ -225,19 +224,17 @@ fn heading(app: &mut MailApp, ui: &mut Ui, id: Id, name: &str, height: f32, text
     let open = !app.ui.collapsed_folders.contains(&id);
     let y = r.min.y + text_y;
     chevron(ui.painter(), pos2(r.min.x + CHEVRON_X, y + 2.0), HEADING_CHEVRON, open, if resp.hovered() { t.accent_text } else { t.text });
-    // An account's colour (#893): a dot after its name, which leaves room for it.
-    let color = app.session.mailbox.account(id).and_then(|a| a.color).filter(|_| id != FAVORITES);
+    // An account's origin colour (#893), as its rows in combined views wear it: a small swatch
+    // after its name, which leaves room for it. (Ringed, so a colour near the pane's shows; in
+    // High Contrast the ring is in the text's colour.)
+    let color = app.session.mailbox.account(id).map(|a| a.effective_row_color()).filter(|_| id != FAVORITES);
     let room = if color.is_some() { ACCOUNT_DOT_ROOM } else { 0.0 };
     let w =
         paint_clipped(ui.painter(), pos2(r.min.x + NAME_LEFT, y), (r.width() - NAME_LEFT - 8.0 - room).max(0.0), name, regular(HEADING_SIZE), t.text);
     if let Some(color) = color {
         let center = pos2(r.min.x + NAME_LEFT + w + ACCOUNT_DOT_ROOM / 2.0 + 1.0, y + 1.0);
-        ui.painter().circle_filled(center, ACCOUNT_DOT_RADIUS, crate::theme::c32(color));
-        // (In High Contrast a ring in the text's colour, so that a mid-tone stays in sight.)
-        if t.high_contrast {
-            ui.painter().circle_stroke(center, ACCOUNT_DOT_RADIUS, Stroke::new(1.0, t.text));
-        }
-        app.hit.add("accountColor", id, Rect::from_center_size(center, vec2(2.0 * ACCOUNT_DOT_RADIUS, 2.0 * ACCOUNT_DOT_RADIUS)));
+        let at = crate::unified_inbox::swatch(ui.painter(), &t, center, color);
+        app.hit.add("accountColor", id, at);
     }
     if resp.clicked() {
         let _ = app.execute("ui.toggleFolder", json!({"id": id}));
@@ -400,15 +397,25 @@ fn picked_in_list(ui: &Ui) -> bool {
 }
 
 /// A folder's row, `selected` when it is the one the folder in view is highlighted in. `key` tells
-/// the Favorites' rows (`fav`) from the accounts' (`tree`).
+/// the Favorites' rows (`fav`) from the accounts' (`tree`) and from the unified mailbox's filing
+/// tree (`unified`), whose rows open the filing view and file what is dropped on them.
 fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_children: bool, key: &str, count: Count, selected: bool) {
+    let unified = key == "unified";
     // Under Favorites a shared mailbox's folder says whose it is (#70), and so does one whose name
-    // another account's folder has too (two Inboxes); in its tree, its name.
-    let name = if key == "fav" { result_folder_label(&app.session.mailbox, f) } else { folder_name(f).to_string() };
+    // another account's folder has too (two Inboxes); in its tree, its name. In the unified
+    // mailbox the filing account's Inbox lists what is not filed yet, beside the root's Inbox.
+    let name = if key == "fav" {
+        result_folder_label(&app.session.mailbox, f)
+    } else if unified && f.kind == FolderKind::Inbox {
+        tl!("Unfiled").to_string()
+    } else {
+        folder_name(f).to_string()
+    };
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
     let resp = ui.interact(r, ui.scope_id().with((key, f.id)), Sense::click());
-    app.hit.add("folder", f.id, r);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &name));
+    app.hit.add(if unified { "unifiedFolder" } else { "folder" }, f.id, r);
     let row = highlight(r);
     if selected {
         ui.painter().rect_filled(row, 6.0, t.accent_soft);
@@ -416,6 +423,9 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     } else if resp.hovered() {
         // Quieter than on the ribbon: the pane is darker, and the selected row must stay the one that stands out.
         ui.painter().rect_filled(row, 6.0, t.hover_nav);
+    }
+    if resp.has_focus() {
+        ui.painter().rect_stroke(row, 6.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
     }
     let x = r.min.x + depth.min(MAX_INDENT_DEPTH) as f32 * INDENT;
     // The chevron has its own click target, only on a folder with something under it.
@@ -452,17 +462,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     }
     // The count, flush right, in a pill: an unread count in the accent's soft colour, a total
     // (Drafts, Junk) in a quiet grey one.
-    let mut name_end = right_edge - COUNT_RIGHT;
-    if count != Count::Nothing {
-        let (fill, ink) = if matches!(count, Count::Unread(_)) { (t.accent_soft, t.accent_soft_text) } else { (t.pill_quiet, t.text_dim) };
-        let fill = if selected && matches!(count, Count::Unread(_)) { t.surface } else { fill };
-        let galley = ui.painter().layout_no_wrap(count.digits(), bold(NAME_SIZE - 1.0), ink);
-        let w = (galley.size().x + 12.0).max(20.0);
-        let pill = Rect::from_center_size(pos2(right_edge - COUNT_RIGHT + 4.0 - w / 2.0, r.center().y), vec2(w, 18.0));
-        ui.painter().rect_filled(pill, 9.0, fill);
-        ui.painter().galley(pill.center() - galley.size() / 2.0, galley, ink);
-        name_end = pill.min.x - 6.0;
-    }
+    let name_end = count_pill(ui.painter(), &t, r, right_edge, count, selected);
     let font = if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) };
     paint_clipped(
         ui.painter(),
@@ -474,8 +474,8 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     );
     if resp.clicked() && !rules_clicked {
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("folder_picked_in_list"), key == "tree"));
-        if let Some(account) = app.session.view.filing {
-            let _ = app.run("view.filing", json!({"account":account,"folder":f.id}));
+        if unified {
+            let _ = app.run("view.filing", json!({"account":f.account,"folder":f.id}));
         } else {
             let _ = app.run("folder.select", json!({"id": f.id}));
         }
@@ -492,7 +492,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         // Only what isn't here already.
         let ids = crate::drag_pointer::movable(&app.session.mailbox, &drag.0, f.id);
         if !ids.is_empty() {
-            if app.session.view.filing.is_some() {
+            if unified {
                 crate::filing::begin(app, ids, f.id);
             } else {
                 let _ = app.run("mail.move", json!({"ids": ids, "folder": f.id}));
@@ -536,6 +536,102 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         ui.separator();
         item(ui, app, "Properties…", "folder.properties", json!({"id": id}), true);
     });
+}
+
+/// A row's count, flush right before `right_edge`, in a pill: an unread count in the accent's soft
+/// colour, a total (Drafts, Junk) in a quiet grey one. Returns where the row's name has to end.
+fn count_pill(painter: &Painter, t: &Tokens, r: Rect, right_edge: f32, count: Count, selected: bool) -> f32 {
+    if count == Count::Nothing {
+        return right_edge - COUNT_RIGHT;
+    }
+    let (fill, ink) = if matches!(count, Count::Unread(_)) { (t.accent_soft, t.accent_soft_text) } else { (t.pill_quiet, t.text_dim) };
+    let fill = if selected && matches!(count, Count::Unread(_)) { t.surface } else { fill };
+    let galley = painter.layout_no_wrap(count.digits(), bold(NAME_SIZE - 1.0), ink);
+    let w = (galley.size().x + 12.0).max(20.0);
+    let pill = Rect::from_center_size(pos2(right_edge - COUNT_RIGHT + 4.0 - w / 2.0, r.center().y), vec2(w, 18.0));
+    painter.rect_filled(pill, 9.0, fill);
+    painter.galley(pill.center() - galley.size() / 2.0, galley, ink);
+    pill.min.x - 6.0
+}
+
+/// The "Unified mailbox" root at the top of the pane, drawn as an account's heading is: a chevron
+/// that folds what is under it (kept as an account's is, under
+/// [`crate::unified_inbox::UNIFIED_ROOT`]), its name, and a small "+" at its right for a new search
+/// folder. Its context menu picks the filing account when there are several. `true` when what is
+/// under it shows.
+fn unified_heading(app: &mut MailApp, ui: &mut Ui, accounts: &[(Id, String)], current: Option<Id>) -> bool {
+    let t = Tokens::get(ui.ctx());
+    let id = crate::unified_inbox::UNIFIED_ROOT;
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+    let y = r.min.y + 7.5;
+    let plus = Rect::from_center_size(pos2(r.max.x - 14.0, y + 1.0), vec2(20.0, 20.0));
+    let head = Rect::from_min_max(r.min, pos2(plus.min.x - 2.0, r.max.y));
+    let resp = ui.interact(head, ui.scope_id().with(("heading", id)), Sense::click());
+    app.hit.add("folderHeading", id, head);
+    app.hit.add("unifiedFiling", 0, head);
+    let open = !app.ui.collapsed_folders.contains(&id);
+    let name = tl!("Unified mailbox");
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, name));
+    if resp.has_focus() {
+        ui.painter().rect_stroke(highlight(head), 4.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    chevron(ui.painter(), pos2(r.min.x + CHEVRON_X, y + 2.0), HEADING_CHEVRON, open, if resp.hovered() { t.accent_text } else { t.text });
+    paint_clipped(ui.painter(), pos2(r.min.x + NAME_LEFT, y), (head.max.x - r.min.x - NAME_LEFT - 4.0).max(0.0), name, regular(HEADING_SIZE), t.text);
+    // "New search folder…": a small icon button beside the name.
+    let presp = ui.interact(plus, ui.scope_id().with("unified_new_search_folder"), Sense::click());
+    app.hit.add("searchFolderNew", 0, plus);
+    presp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("New search folder")));
+    if presp.hovered() {
+        ui.painter().rect_filled(plus, 4.0, if presp.is_pointer_button_down_on() { t.pressed } else { t.hover });
+    }
+    if presp.has_focus() {
+        ui.painter().rect_stroke(plus, 4.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    icons::paint(ui.painter(), plus.shrink(3.0), "plus", if presp.hovered() { t.accent_text } else { t.icon }, t.accent);
+    if presp.on_hover_text(tl!("New search folder")).clicked() {
+        let _ = app.run("ui.dialog", json!({"name":"searchFolder"}));
+    }
+    let resp = resp.on_hover_text(tl!(
+        "Every account's Inbox, the filing account's real folder tree for all accounts (Unfiled lists what is not filed yet) and your search folders. Right-click to choose the filing account."
+    ));
+    if resp.clicked() {
+        let _ = app.execute("ui.toggleFolder", json!({"id": id}));
+    }
+    resp.context_menu(|ui| crate::unified_inbox::root_menu(app, ui, accounts, current));
+    open
+}
+
+/// The unified mailbox's Inbox: every account's Inbox together (`view.allInboxes`), with their
+/// unread mail counted.
+fn unified_inbox_row(app: &mut MailApp, ui: &mut Ui, unread: usize, selected: bool) {
+    let t = Tokens::get(ui.ctx());
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+    let resp = ui.interact(r, ui.scope_id().with("unified_inbox"), Sense::click());
+    app.hit.add("allInboxes", 0, r);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("All inboxes")));
+    let row = highlight(r);
+    if selected {
+        ui.painter().rect_filled(row, 6.0, t.accent_soft);
+        ui.painter().rect_filled(Rect::from_center_size(pos2(row.min.x + 1.5, row.center().y), vec2(3.0, 14.0)), 1.5, t.selection_edge);
+    } else if resp.hovered() {
+        ui.painter().rect_filled(row, 6.0, t.hover_nav);
+    }
+    if resp.has_focus() {
+        ui.painter().rect_stroke(row, 6.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    let count = if unread > 0 { Count::Unread(unread) } else { Count::Nothing };
+    let name_end = count_pill(ui.painter(), &t, r, r.max.x, count, selected);
+    paint_clipped(
+        ui.painter(),
+        pos2(r.min.x + NAME_LEFT, r.center().y - TEXT_RISE),
+        (name_end - r.min.x - NAME_LEFT).max(0.0),
+        tl!("Inbox"),
+        if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) },
+        if selected { t.accent_soft_text } else { t.text },
+    );
+    if resp.on_hover_text(tl!("All inboxes")).clicked() {
+        let _ = app.run("view.allInboxes", json!({}));
+    }
 }
 
 /// What the window calls one of Gmail's categories (#911).
@@ -793,30 +889,63 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
         pane_top(app, ui, &t);
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-            crate::unified_inbox::navigation(app, ui);
-            crate::filing::navigation(app, ui);
-            crate::search_folders::navigation(app, ui);
             // (Counted once per change to the mailbox, not at every frame: `Session::folder_counts`.)
             let counts = app.session.folder_counts();
-            let unfiled = app.session.view.filing.map(|account| {
-                mailcraft_engine::cmd::filing::unfiled_folders(&app.session, account)
-                    .into_iter()
-                    .fold((0usize, 0usize), |(total, unread), id| (total.saturating_add(counts.total(id)), unread.saturating_add(counts.unread(id))))
-            });
+            // What is listed: the unified mailbox, the favourites, and under each account what
+            // isn't folded away.
+            let folded = app.ui.collapsed_folders.clone();
+            // The unified mailbox at the top: every Inbox, the filing account's real tree for all
+            // accounts, and the saved search folders.
+            let filing_accounts = crate::unified_inbox::filing_accounts(app);
+            let filing_account = crate::unified_inbox::filing_account(app, &filing_accounts);
+            if unified_heading(app, ui, &filing_accounts, filing_account) {
+                let view = &app.session.view;
+                let all_inboxes = view.scope == mailcraft_engine::Scope::Inboxes && view.search_folder.is_none() && view.filing.is_none();
+                let unread = app
+                    .session
+                    .mailbox
+                    .folders
+                    .iter()
+                    .filter(|f| f.kind == FolderKind::Inbox)
+                    .fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)));
+                unified_inbox_row(app, ui, unread, all_inboxes);
+                if let Some(account) = filing_account {
+                    // Its Inbox counts what is not filed in its tree yet, from every account.
+                    let (total, unread) = mailcraft_engine::cmd::filing::unfiled_folders(&app.session, account)
+                        .into_iter()
+                        .fold((0usize, 0usize), |(total, unread), id| {
+                            (total.saturating_add(counts.total(id)), unread.saturating_add(counts.unread(id)))
+                        });
+                    let mut tree = trees(&app.session.mailbox, |a| a == account);
+                    let rows = visible_in(tree.remove(&account).unwrap_or_default(), &folded);
+                    let in_view = app.session.view.filing.is_some() && app.session.view.search_folder.is_none();
+                    for (f, depth, has_children) in &rows {
+                        // (A row out of sight takes its place and is not drawn, as in an account's tree.)
+                        let top = ui.cursor().min.y;
+                        let clip = ui.clip_rect();
+                        if top > clip.max.y || top + ROW_H < clip.min.y {
+                            let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+                            app.hit.add("unifiedFolder", f.id, r);
+                            continue;
+                        }
+                        let count = if f.kind == FolderKind::Inbox {
+                            Count::of(f.kind, total, unread)
+                        } else {
+                            let held = counts.folder(f.id);
+                            Count::of(f.kind, held.total, held.unread)
+                        };
+                        folder_row(app, ui, f, *depth, *has_children, "unified", count, in_view && f.id == app.session.view.folder);
+                    }
+                }
+                crate::search_folders::rows(app, ui);
+            }
             let aliases = app.session.aliases();
             let alias_query = mailcraft_model::search::Query::parse(&app.session.view.search);
             let selected_alias = (app.session.view.scope == mailcraft_engine::Scope::Mailbox).then(|| alias_query.receiving_alias()).flatten();
             let count = |f: &Folder| {
-                if f.kind == FolderKind::Inbox
-                    && let Some((total, unread)) = unfiled
-                {
-                    return Count::of(f.kind, total, unread);
-                }
                 let held = counts.folder(f.id);
                 Count::of(f.kind, held.total, held.unread)
             };
-            // What is listed: the favourites, and under each account what isn't folded away.
-            let folded = app.ui.collapsed_folders.clone();
             // The favourites as the engine lists them: Outlook's own, in Outlook's order, for an
             // account whose server has them; else the ones that are marked here.
             let favorites: Vec<Folder> =
@@ -831,7 +960,6 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                 .mailbox
                 .accounts_in_order()
                 .into_iter()
-                .filter(|a| app.session.view.filing.is_none_or(|id| a.id == id))
                 .map(|a| {
                     let rows = visible_in(trees.remove(&a.id).unwrap_or_default(), &folded);
                     (a.id, heading_name(app, a), rows)
@@ -852,18 +980,11 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             // are two at least; a shared mailbox goes with its account.
             let own = owners(&app.session.mailbox);
             let movable: HashSet<Id> = if own.len() > 1 { own.into_iter().collect() } else { HashSet::new() };
-            // The first heading sits right under the top of the pane; each later one starts a
-            // new block, with a rule above it.
-            let pane_top = ui.cursor().min.y;
-            let mut first = true;
-            let mut head = |app: &mut MailApp, ui: &mut Ui, id: Id, name: &str| {
-                if std::mem::take(&mut first) {
-                    heading(app, ui, id, name, ROW_H, 7.5, false, movable.contains(&id))
-                } else {
-                    heading(app, ui, id, name, 2.0 * ROW_H, 34.5, true, movable.contains(&id))
-                }
-            };
-            if app.session.view.filing.is_none() && (!favorites.is_empty() || note.is_some()) && head(app, ui, FAVORITES, tl!("Favorites")) {
+            // The unified mailbox's heading sits right under the top of the pane; each later one
+            // starts a new block, with a rule above it.
+            let head =
+                |app: &mut MailApp, ui: &mut Ui, id: Id, name: &str| heading(app, ui, id, name, 2.0 * ROW_H, 34.5, true, movable.contains(&id));
+            if (!favorites.is_empty() || note.is_some()) && head(app, ui, FAVORITES, tl!("Favorites")) {
                 if let Some((account, note)) = &note {
                     favorites_note(app, ui, *account, note);
                 }
@@ -889,8 +1010,8 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             for (account, name, rows) in &lists {
                 if movable.contains(account) {
                     let top = ui.cursor().min.y;
-                    // (On the rule above a heading; at the top of the pane, just under it.)
-                    let line = if top <= pane_top { top + 1.0 } else { top + 9.5 };
+                    // (On the rule above its heading.)
+                    let line = top + 9.5;
                     blocks.push(Block { account: *account, top, line });
                 }
                 if !head(app, ui, *account, if name.is_empty() { tl!("Mailbox") } else { name }) {
@@ -922,6 +1043,7 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                         "tree",
                         count(f),
                         app.session.view.search_folder.is_none()
+                            && app.session.view.filing.is_none()
                             && app.session.view.scope != mailcraft_engine::Scope::Inboxes
                             && selected_alias.is_none()
                             && !favorite_selected
@@ -1007,7 +1129,13 @@ fn alias_rows(app: &mut MailApp, ui: &mut Ui, account: Id, observed: &mailcraft_
                     ui.painter().galley(pill.center() - galley.size() / 2.0, galley, t.accent_soft_text);
                     end = pill.min.x - 6.0;
                 }
-                let start = rect.min.x + NAME_LEFT + INDENT;
+                // The alias's origin colour, as its rows in combined views wear it.
+                let mut start = rect.min.x + NAME_LEFT + INDENT;
+                if let Some(color) = app.session.mailbox.account(account).map(|a| a.origin_row_color(Some(&alias.address))) {
+                    let at = crate::unified_inbox::swatch(ui.painter(), &t, pos2(start + 5.0, rect.center().y), color);
+                    app.hit.add("aliasColor", key, at);
+                    start += 15.0;
+                }
                 paint_clipped(
                     ui.painter(),
                     pos2(start, rect.center().y - TEXT_RISE),

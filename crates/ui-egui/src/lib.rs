@@ -167,6 +167,7 @@ mod search_folders;
 mod search_index_ui;
 #[cfg(test)]
 mod search_index_ui_tests;
+mod search_options;
 mod search_pills;
 #[cfg(test)]
 mod search_pills_tests;
@@ -225,7 +226,7 @@ pub mod theme;
 #[cfg(test)]
 mod theme_choice_tests;
 pub mod unconfirmed;
-mod unified_inbox;
+pub mod unified_inbox;
 #[cfg(test)]
 mod update_switches_tests;
 pub mod updates;
@@ -989,6 +990,11 @@ pub struct UiState {
     pub collapsed_folders: Vec<Id>,
     /// Accounts whose observed SimpleLogin alias filters are expanded.
     pub expanded_alias_accounts: Vec<Id>,
+    /// The Microsoft account whose real folder tree the "Unified mailbox" root shows, as the owner
+    /// last picked it; `None` (or one that no longer qualifies) for the first.
+    pub unified_filing_account: Option<Id>,
+    /// How rows of combined views show their origin colour: a stripe (the default) or the full row.
+    pub origin_colors: unified_inbox::OriginColors,
     /// Mailbox files opened lately, most recent first.
     pub recent: Vec<String>,
     /// The application (client) id Microsoft knows this installation by, for accounts that sign
@@ -1010,8 +1016,12 @@ pub struct UiState {
     pub confirmed_mailboxes: Vec<ConfirmedMailbox>,
     /// Reminders the owner dismissed (`event@occurrence`), so they don't come back at the next start.
     pub dismissed_reminders: Vec<String>,
-    /// Download the pictures mail refers to on the web without being asked. Off unless the owner
-    /// turns it on: a picture on the web tells its sender that the message was opened.
+    /// Download the pictures mail refers to on the web without being asked, except in Junk
+    /// E-mail; tracking pictures are left out all the same (`reading::trackers`). On unless the
+    /// owner turns it off. Kept under a key of its own since 0.11.4: the old `downloadPictures`
+    /// was off by default and an owner who never touched it is indistinguishable from one who
+    /// turned it off, so settings without the new key get the new default once.
+    #[serde(rename = "picturesInAllMail")]
     pub download_pictures: bool,
     /// Senders whose pictures are downloaded without asking (addresses, in lower case).
     pub picture_senders: Vec<String>,
@@ -1083,6 +1093,8 @@ impl Default for UiState {
             sync_panel_height: 0.0,
             collapsed_folders: Vec::new(),
             expanded_alias_accounts: Vec::new(),
+            unified_filing_account: None,
+            origin_colors: Default::default(),
             recent: Vec::new(),
             microsoft_client_id: String::new(),
             google_client_id: String::new(),
@@ -1092,7 +1104,7 @@ impl Default for UiState {
             confirmed_mailboxes: Vec::new(),
             dismissed_reminders: Vec::new(),
             advanced_filters: Default::default(),
-            download_pictures: false,
+            download_pictures: true,
             picture_senders: Vec::new(),
             picture_domains: Vec::new(),
             sender_images: false,
@@ -5222,6 +5234,9 @@ impl MailApp {
     fn drop_for_close(&mut self) {
         // Nor is a mailbox read in the background opened on the way out.
         opening::cancel_ahead(self);
+        // The content index stops now (a rolled-back batch is redone next time)
+        // instead of holding the close until its batch or merge finishes.
+        self.session.cancel_content_index();
         if let Some((id, params)) = self.after_save.take() {
             opening::forget_unopened(&id, &params);
             self.after_save_outcome = Some(json!({"command": id, "ok": false, "error": "the window was closed instead"}));

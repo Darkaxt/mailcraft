@@ -38,7 +38,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("mail.filingStatus", "Inspect Filing State", "Mail", filing_status).reads().params(
             r#"{"id": number} — read stored placement/source-removal state for exactly one message, without fetching content, running sync or changing selection. Recorded provider ids are the last native server observation, not a new server lookup; pending placement is not a confirmed remote copy."#,
         ),
-        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "Inbox/Projects", "query"?: string,"scope"?:"folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes"} — inboxes is the virtual union of actual account inboxes; omit folder. Bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone."#),
+        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "Inbox/Projects", "query"?: string,"scope"?:"folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes", "matchCase"?: bool, "wholeWord"?: bool, "regex"?: bool, "searchIn"?: ["subject"|"people"|"body"|"attachments"]} — the search options apply to this call only (default: those of view.searchOptions). Rows of a search the index answered carry "score" (0-100) and "scoreDetail": [{"term","matched","extra","field"}]. inboxes is the virtual union of actual account inboxes; omit folder. Bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone."#),
         CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_movable),
         CommandSpec::new("mail.deletePermanently", "Delete Permanently", "Home › Delete", delete_permanently)
             .key("Shift+Delete")
@@ -683,6 +683,18 @@ fn digital_signature(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn list(s: &mut Session, v: &Value) -> CmdResult {
+    // Search options for this call only; the view's own stay as they are.
+    let options = super::view::read_search_options(v, &s.view.search_options)?;
+    if options == s.view.search_options {
+        return list_with(s, v);
+    }
+    let saved = std::mem::replace(&mut s.view.search_options, options);
+    let out = list_with(s, v);
+    s.view.search_options = saved;
+    out
+}
+
+fn list_with(s: &mut Session, v: &Value) -> CmdResult {
     let limit = p::u64(v, "limit").unwrap_or(200).min(10_000) as usize;
     let offset = usize::try_from(p::u64(v, "offset").unwrap_or(0)).map_err(|_| bad("the list offset is too large for this platform"))?;
     // A named folder or a search is read from a view of its own: the owner's folder, search and
@@ -782,6 +794,10 @@ fn list_in_view(s: &mut Session, limit: usize, offset: usize) -> CmdResult {
                 if r.copy > 0 {
                     o.insert("copy".into(), json!(r.copy));
                 }
+                if let Some(score) = r.score {
+                    o.insert("score".into(), json!(score));
+                    o.insert("scoreDetail".into(), json!(r.score_detail));
+                }
             }
             Some(m)
         })
@@ -790,7 +806,7 @@ fn list_in_view(s: &mut Session, limit: usize, offset: usize) -> CmdResult {
     Ok(json!({"folder":s.view.folder,"scope":s.view.scope,"filingAccount":s.view.filing,
         "scopeProblem":super::search_folders::active_problem(s),"total":listed(&rows),"rows":rows.len(),"messages":items,
         "offset":offset,"nextOffset":(next<rows.len()).then_some(next),"searchIndex":s.content_index_status(),
-        "unsearched":s.unsearched}))
+        "searchOptions":s.view.search_options,"unsearched":s.unsearched}))
 }
 
 fn delete(s: &mut Session, v: &Value) -> CmdResult {

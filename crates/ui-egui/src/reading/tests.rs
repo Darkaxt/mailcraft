@@ -357,6 +357,9 @@ fn corpus_app(large: bool) -> (MailApp, Vec<(&'static str, u64)>) {
     let mut app = MailApp::new(Session::at(mailbox, NOW, 0), Services::default());
     app.autosave = false;
     app.auto_sync = false;
+    // These windows start from the owner's opt-out of pictures in all mail (on by default since
+    // 0.11.4), so that what each other way of asking does can be seen on its own.
+    app.ui.download_pictures = false;
     (app, ids)
 }
 
@@ -1316,12 +1319,14 @@ pub(super) fn app_with(messages: Vec<Message>) -> (MailApp, Vec<u64>) {
     let mut app = MailApp::new(Session::at(mailbox, NOW, 0), Services::default());
     app.autosave = false;
     app.auto_sync = false;
+    // Pictures in all mail turned off, as for the windows above.
+    app.ui.download_pictures = false;
     (app, ids)
 }
 
 type Window = egui_kittest::Harness<'static, MailApp>;
 
-fn click_at(harness: &mut Window, pos: egui::Pos2) {
+pub(super) fn click_at(harness: &mut Window, pos: egui::Pos2) {
     harness.event(egui::Event::PointerMoved(pos));
     harness.step();
     for pressed in [true, false] {
@@ -1470,12 +1475,13 @@ fn a_remembered_sender_and_the_switch_for_all_mail() {
 
     // It is kept with the settings, and comes back with them.
     let saved = serde_json::to_value(harness.state().prefs()).unwrap();
-    assert_eq!((&saved["pictureSenders"], &saved["downloadPictures"]), (&json!([shop]), &json!(false)));
+    assert_eq!((&saved["pictureSenders"], &saved["picturesInAllMail"]), (&json!([shop]), &json!(false)));
     let restored: crate::UiState = serde_json::from_value(saved).unwrap();
     assert_eq!(restored.picture_senders, [shop]);
-    // Settings from before there was such a thing say nothing, which is "ask me".
+    // Settings from before there was such a thing say nothing: no senders, and pictures in all
+    // mail, the default since 0.11.4.
     let old: crate::UiState = serde_json::from_value(json!({"tab": "Home"})).unwrap();
-    assert!(!old.download_pictures && old.picture_senders.is_empty());
+    assert!(old.download_pictures && old.picture_senders.is_empty());
 
     // File › Options lists the sender, and takes it off again: its pictures are stand-ins once more.
     harness.state_mut().execute("ui.backstage", json!({"value": true, "page": "options"})).unwrap();
@@ -4524,7 +4530,7 @@ fn the_bar_turns_on_pictures_in_all_mail_after_asking() {
     let mut harness = window(app, (1280.0, 800.0));
     let asking = |harness: &Window| matches!(&harness.state().dialog, Some(crate::dialogs::Dialog::Confirm { command, .. }) if command == "ui.downloadPicturesAutomatically");
 
-    // Off unless the owner turns it on; the bar offers it, and not in Junk E-mail.
+    // Off here (the owner turned it off); the bar offers it, and not in Junk E-mail.
     assert!(!harness.state().ui.download_pictures);
     select(&mut harness, junk);
     assert!(harness.state().hit.rect("downloadPictures", junk).is_some());
@@ -4561,7 +4567,7 @@ fn the_bar_turns_on_pictures_in_all_mail_after_asking() {
 
     // It is kept with the settings, and comes back with them.
     let saved = serde_json::to_value(harness.state().prefs()).unwrap();
-    assert_eq!(saved["downloadPictures"], json!(true));
+    assert_eq!(saved["picturesInAllMail"], json!(true));
     let restored: crate::UiState = serde_json::from_value(saved).unwrap();
     assert!(restored.download_pictures);
 
@@ -4587,4 +4593,62 @@ fn the_bar_turns_on_pictures_in_all_mail_after_asking() {
     // A script or an agent is never asked: the command does what it is told.
     assert_eq!(harness.state_mut().execute("ui.downloadPicturesAutomatically", json!({"value": true})).unwrap()["value"], true);
     assert!(harness.state().dialog.is_none());
+}
+
+#[test]
+fn pictures_in_all_mail_are_on_by_default_and_old_settings_move_onto_it_once() {
+    // A new install, and settings saved before 0.11.4 whether or not their owner ever touched
+    // the old switch (its "off" was the default and says nothing): on.
+    assert!(crate::UiState::default().download_pictures);
+    for old in [json!({"tab": "Home"}), json!({"downloadPictures": false}), json!({"downloadPictures": true})] {
+        let read: crate::UiState = serde_json::from_value(old.clone()).unwrap();
+        assert!(read.download_pictures, "{old}");
+    }
+    // Turned off after that, it stays off.
+    let off = crate::UiState { download_pictures: false, ..Default::default() };
+    let saved = serde_json::to_value(&off).unwrap();
+    assert_eq!(saved["picturesInAllMail"], json!(false));
+    assert!(saved.get("downloadPictures").is_none());
+    let read: crate::UiState = serde_json::from_value(saved).unwrap();
+    assert!(!read.download_pictures);
+}
+
+#[test]
+fn by_default_pictures_come_for_all_mail_but_junk_and_trackers_never_do() {
+    let tracked = format!(
+        "{}<img src=\"https://u1.ct.sendgrid.net/wf/open?upn=u001.Zb4nQ3xT9kLmP2rV8sW1yA7cD5eF\"><img src=\"https://pixel.shop.example/o.gif\" width=1 height=1>",
+        web_pictures("a.shop.example", 2)
+            .iter()
+            .map(|src| format!("<p>Picture:</p><img src=\"{src}\" width=40 height=30 alt=\"A picture\">"))
+            .collect::<String>()
+    );
+    let (mut app, ids) = app_with(vec![
+        message(0, ("A Sender", "news@shop.example"), "Tracked", Some(tracked), String::new()),
+        web_message(1, "news@shop.example", "In the junk", &web_pictures("c.shop.example", 2)),
+    ]);
+    // The default, as a new install or older settings have it.
+    app.ui.download_pictures = crate::UiState::default().download_pictures;
+    let (first, junk) = (ids[0], ids[1]);
+    app.execute("mail.junk", json!({"ids": [junk]})).unwrap();
+    let host = Host::answering(&mut app, |_| Ok(png(40, 30)));
+    let mut harness = window(app, (1280.0, 800.0));
+    select(&mut harness, first);
+    assert_eq!(shown(&harness, first), (2, 0, 0));
+    assert!(host.asked().iter().all(|url| !url.contains("sendgrid") && !url.contains("pixel.shop")), "{:?}", host.asked());
+    let doc = super::view::doc_where(&harness.ctx, harness.state().session.mailbox.messages.get(&first).unwrap(), Place::Pane, true);
+    assert_eq!((doc.trackers.len(), doc.trackers_kept), (2, false));
+    // The shield over the message says so, and "Load anyway" lets them in for this message.
+    assert!(harness.state().hit.rect("trackersShield", first).is_some());
+    assert!(says(&harness, "2 trackers blocked"));
+    let shield = harness.state().hit.rect("trackersShield", first).unwrap();
+    click_at(&mut harness, shield.center());
+    harness.run_steps(3);
+    let load = harness.state().hit.rect("loadTrackers", first).expect("the shield offers Load anyway");
+    click_at(&mut harness, load.center());
+    harness.run_steps(8);
+    assert!(host.asked().iter().any(|url| url.contains("sendgrid")), "{:?}", host.asked());
+    assert!(says(&harness, "2 trackers loaded"));
+    select(&mut harness, junk);
+    assert_eq!(shown(&harness, junk), (0, 2, 2));
+    assert!(host.asked().iter().all(|url| !url.contains("c.shop")), "{:?}", host.asked());
 }

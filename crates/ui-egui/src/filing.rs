@@ -4,43 +4,8 @@
 
 use crate::{MailApp, theme::Tokens};
 use egui::{RichText, Ui};
-use mailcraft_model::{AccountKind, Id};
+use mailcraft_model::Id;
 use serde_json::{Value, json};
-
-pub(crate) fn navigation(app: &mut MailApp, ui: &mut Ui) {
-    let accounts: Vec<_> = app
-        .session
-        .mailbox
-        .accounts_in_order()
-        .into_iter()
-        .filter(|a| a.kind == AccountKind::Microsoft && !a.is_shared())
-        .map(|a| (a.id, a.email.clone()))
-        .collect();
-    if accounts.is_empty() {
-        return;
-    }
-    let active = app.session.view.filing;
-    let response = if let [(id, _)] = accounts.as_slice() {
-        let response = ui.selectable_label(active == Some(*id), tl!("Unified filing"));
-        if response.clicked() {
-            let _ = app.run("view.filing", json!({"account":id}));
-        }
-        response
-    } else {
-        ui.menu_button(tl!("Unified filing"), |ui| {
-            for (id, email) in &accounts {
-                if ui.selectable_label(active == Some(*id), email).clicked() {
-                    let _ = app.run("view.filing", json!({"account":id}));
-                    ui.close();
-                }
-            }
-        })
-        .response
-    };
-    app.hit.add("unifiedFiling", 0, response.rect);
-    response.on_hover_text(tl!("Use your filing account's real folder tree for all accounts. Inbox includes mail not yet filed in that tree. Drag received mail to learn exact sender rules."));
-    ui.add_space(4.0);
-}
 
 pub(crate) fn begin(app: &mut MailApp, ids: Vec<Id>, folder: Id) {
     let params = json!({"ids":ids,"folder":folder});

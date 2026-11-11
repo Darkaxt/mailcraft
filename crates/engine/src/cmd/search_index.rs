@@ -62,7 +62,8 @@ fn sources(s: &mut Session, v: &Value) -> CmdResult {
             return Err(bad(why));
         }
         let (offset, limit) = page(v)?;
-        inspect(s, v, crate::content_index::DetailRequest::Sources { document, query, offset, limit })
+        let options = s.view.search_options.clone();
+        inspect(s, v, crate::content_index::DetailRequest::Sources { document, query, options, offset, limit })
     }
     #[cfg(target_arch = "wasm32")]
     {

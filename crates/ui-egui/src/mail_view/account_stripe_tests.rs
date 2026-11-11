@@ -48,10 +48,12 @@ fn each_account_heading_wears_its_colour() {
         let dot = harness.state().hit.rect("accountColor", account).unwrap_or_else(|| panic!("no dot for {account}"));
         assert!(heading.contains_rect(dot), "{dot:?} in {heading:?}");
     }
-    // Taken away, the dot goes.
+    // Taken away, the swatch stays in the origin colour its rows still wear: the palette's.
     harness.state_mut().execute("account.edit", json!({"id": second, "color": null})).unwrap();
     harness.run_steps(3);
-    assert!(harness.state().hit.rect("accountColor", second).is_none());
+    assert!(harness.state().hit.rect("accountColor", second).is_some());
+    let account = harness.state().session.mailbox.account(second).unwrap();
+    assert_eq!(account.effective_row_color(), mailcraft_model::ACCOUNT_ROW_COLORS[(second % 8) as usize]);
 }
 
 #[test]
@@ -88,4 +90,30 @@ fn one_account_never_mixes() {
     assert!(mixes_accounts(&s));
     s.run("view.clearSearch", &json!({})).unwrap();
     assert!(!mixes_accounts(&s));
+}
+
+/// In a combined view every row wears its origin colour: a solid stripe by default, and with
+/// full-row tints a stripe only where the tint is covered. The mode's dropdown sits beside the sort
+/// menu there, and nowhere else.
+#[test]
+fn combined_views_stripe_rows_in_their_origin_colour_and_offer_the_mode() {
+    let (mut harness, first, _, _) = window();
+    assert!(harness.state().hit.rect("originColors", 0).is_none(), "one folder is not a combined view");
+    harness.state_mut().execute("view.allInboxes", json!({})).unwrap();
+    harness.run_steps(3);
+    let rows = harness.state_mut().session.rows();
+    let striped: Vec<Id> = rows.iter().filter(|row| harness.state().hit.rect("messageOriginColor", row.id).is_some()).map(|row| row.id).collect();
+    let drawn = rows.iter().filter(|r| harness.state().hit.rect("message", r.id).is_some()).count();
+    assert!(!striped.is_empty() && striped.len() >= drawn.min(1), "{striped:?} of {drawn}");
+    let mode = harness.state().hit.rect("originColors", 0).expect("the mode beside the sort menu");
+    let sort = harness.state().hit.rect("listSort", 0).unwrap();
+    assert!(mode.max.x <= sort.min.x && sort.min.x - mode.max.x < 12.0, "{mode:?} beside {sort:?}");
+    // The stripe is the account's real colour, not a pastel of it.
+    let color = harness.state().session.mailbox.account(first).unwrap().effective_row_color();
+    assert_eq!(color, mailcraft_model::Rgb(0x2F, 0x6F, 0xD0));
+    harness.state_mut().ui.origin_colors = crate::unified_inbox::OriginColors::FullRow;
+    harness.state_mut().execute("mail.selectNone", json!({})).ok();
+    harness.run_steps(3);
+    let still: usize = rows.iter().filter(|row| harness.state().hit.rect("messageOriginColor", row.id).is_some()).count();
+    assert!(still < striped.len(), "full-row tints replace the stripe on ordinary rows");
 }

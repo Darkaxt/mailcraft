@@ -114,7 +114,9 @@ jobs:
     needs: [version]
     runs-on: windows-latest
     environment: release
-    # GitHub refuses private draft assets to the compiler's read-only token.
+    # GitHub refuses private draft assets to the compiler's read-only token: listing and
+    # downloading a draft release's asset needs contents: write, so this is the minimum scope.
+    # The token reaches only the read-only `gh api` GETs of prepare-runtime-input.py (step env).
     # This separate role builds/runs no native program and receives no signing key.
     permissions:
       contents: write
@@ -140,7 +142,9 @@ jobs:
           name: native-content-input
           path: native-input/
           if-no-files-found: error
-          retention-days: 7
+          # Consumed only by package.yml's non-compiling Windows signing job in this same run; the
+          # private input is not kept as a downloadable run artifact longer than that needs.
+          retention-days: 1
 
   # A run by hand: unsigned, no secrets, nothing published.
   dry-run:

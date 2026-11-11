@@ -190,6 +190,11 @@ impl Extractor {
             } else {
                 coverage.sources.push(json!({"location":location,"engine":"decoded text","charset":charset}));
             }
+        } else if let Some(why) = zip_bomb(bytes) {
+            // Office documents and archives are ZIP containers: one that
+            // declares an implausible expansion is not handed to a native
+            // importer at all.
+            coverage.gap(&location, "resourceLimit", why);
         } else {
             #[cfg(windows)]
             match &self.runtime {
@@ -539,4 +544,56 @@ fn located(spool: &mut Spool, record: Record, coverage: &mut Coverage) -> Result
     spool.record(record)?;
     coverage.text_bytes = count;
     Ok(())
+}
+
+/// Entries a ZIP container may declare before it is refused unopened.
+const ZIP_ENTRIES: u64 = 20_000;
+/// Total declared uncompressed bytes a ZIP container may hold.
+const ZIP_UNCOMPRESSED: u64 = 1024 * 1024 * 1024;
+/// Largest declared expansion of one entry over 1 MiB (compressed × ratio).
+const ZIP_RATIO: u64 = 200;
+
+/// A ZIP container (`PK\x03\x04`) whose central directory declares too many
+/// entries, too much uncompressed data or an implausible compression ratio:
+/// the reason. Reads only the directory; nothing is decompressed. A
+/// directory that cannot be read is left to the importer's own checks.
+pub(super) fn zip_bomb(bytes: &[u8]) -> Option<String> {
+    if !bytes.starts_with(b"PK\x03\x04") {
+        return None;
+    }
+    let u16_at = |at: usize| bytes.get(at..at + 2).map(|b| u64::from(u16::from_le_bytes([b[0], b[1]])));
+    let u32_at = |at: usize| bytes.get(at..at + 4).map(|b| u64::from(u32::from_le_bytes([b[0], b[1], b[2], b[3]])));
+    // The end-of-central-directory record is within the last 64 KiB + 22 bytes.
+    let floor = bytes.len().saturating_sub(65_535 + 22);
+    let end = (floor..bytes.len().saturating_sub(21)).rev().find(|&at| bytes.get(at..at + 4) == Some(&b"PK\x05\x06"[..]))?;
+    let entries = u16_at(end + 10)?;
+    let offset = u32_at(end + 16)?;
+    if entries == 0xFFFF || offset == 0xFFFF_FFFF {
+        return Some("ZIP64 container exceeds the indexed archive allowance".into());
+    }
+    if entries > ZIP_ENTRIES {
+        return Some(format!("ZIP container declares {entries} entries, over the {ZIP_ENTRIES}-entry allowance"));
+    }
+    let mut at = usize::try_from(offset).ok()?;
+    let mut total = 0u64;
+    for _ in 0..entries {
+        if bytes.get(at..at + 4) != Some(&b"PK\x01\x02"[..]) {
+            return None;
+        }
+        let compressed = u32_at(at + 20)?;
+        let uncompressed = u32_at(at + 24)?;
+        if compressed == 0xFFFF_FFFF || uncompressed == 0xFFFF_FFFF {
+            return Some("ZIP64 entry exceeds the indexed archive allowance".into());
+        }
+        if uncompressed > 1024 * 1024 && uncompressed > compressed.max(1).saturating_mul(ZIP_RATIO) {
+            return Some(format!("ZIP entry expands {uncompressed} bytes from {compressed}, over the {ZIP_RATIO}:1 ratio allowance"));
+        }
+        total = total.saturating_add(uncompressed);
+        if total > ZIP_UNCOMPRESSED {
+            return Some("ZIP container declares more than 1 GiB uncompressed".into());
+        }
+        let names = u16_at(at + 28)? + u16_at(at + 30)? + u16_at(at + 32)?;
+        at = at.checked_add(46)?.checked_add(usize::try_from(names).ok()?)?;
+    }
+    None
 }

@@ -85,10 +85,15 @@ pub enum SortBy {
     Size,
     Importance,
     Categories,
+    /// The best free-text search match first ([`SearchScore`]): score high to low, then a match
+    /// in the subject before people, body and attachments, then newest first. Without free text
+    /// in the search it is the date order.
+    Relevance,
 }
 
 impl SortBy {
-    pub const ALL: [SortBy; 6] = [SortBy::Date, SortBy::From, SortBy::Subject, SortBy::Size, SortBy::Importance, SortBy::Categories];
+    pub const ALL: [SortBy; 7] =
+        [SortBy::Date, SortBy::From, SortBy::Subject, SortBy::Size, SortBy::Importance, SortBy::Categories, SortBy::Relevance];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -98,6 +103,7 @@ impl SortBy {
             SortBy::Size => "Size",
             SortBy::Importance => "Importance",
             SortBy::Categories => "Categories",
+            SortBy::Relevance => "Relevance",
         }
     }
 
@@ -239,6 +245,113 @@ impl TaskFilter {
     }
 }
 
+/// A part of a message free-text search looks in (`searchIn` of `view.searchOptions`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SearchIn {
+    Subject,
+    /// The sender and the recipients (From, To, Cc).
+    People,
+    Body,
+    /// Attachment names and the text read from attachments.
+    Attachments,
+}
+
+impl SearchIn {
+    pub const ALL: [SearchIn; 4] = [SearchIn::Subject, SearchIn::People, SearchIn::Body, SearchIn::Attachments];
+
+    /// The [`mailcraft_model::words`] parts it stands for.
+    pub fn fields(self) -> u8 {
+        use mailcraft_model::words;
+        match self {
+            SearchIn::Subject => words::SUBJECT,
+            SearchIn::People => words::FROM | words::TO | words::CC,
+            SearchIn::Body => words::BODY,
+            SearchIn::Attachments => words::ATTACHMENT | words::ATTACHMENT_CONTENT,
+        }
+    }
+}
+
+/// How free text in a search is compared with the indexed text (`view.searchOptions`, and per
+/// call in `mail.list`). The default: case- and accent-insensitive substring matching in every
+/// part of a message.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct SearchOptions {
+    /// Upper and lower case must be as typed.
+    pub match_case: bool,
+    /// Only whole words match (ignored with `regex`).
+    pub whole_word: bool,
+    /// Each free-text term is a regular expression.
+    pub regex: bool,
+    /// The parts looked in; every part when all four are named.
+    pub search_in: Vec<SearchIn>,
+}
+
+impl Default for SearchOptions {
+    fn default() -> Self {
+        SearchOptions { match_case: false, whole_word: false, regex: false, search_in: SearchIn::ALL.to_vec() }
+    }
+}
+
+impl SearchOptions {
+    /// The [`mailcraft_model::words`] parts searched: every part (headers included) when all four
+    /// are named.
+    pub fn fields(&self) -> u8 {
+        if SearchIn::ALL.iter().all(|part| self.search_in.contains(part)) {
+            return mailcraft_model::words::ALL;
+        }
+        self.search_in.iter().fold(0, |fields, part| fields | part.fields())
+    }
+
+    /// Whether whole-word matching applies (never with a regular expression).
+    pub fn whole_words(&self) -> bool {
+        self.whole_word && !self.regex
+    }
+}
+
+/// Where the best match of one search term is, for [`SortBy::Relevance`]'s ties: the subject
+/// first, then people, the body and attachments.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ScoreField {
+    Subject,
+    People,
+    Body,
+    Attachment,
+}
+
+/// One search term's best match in a message.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScoreDetail {
+    /// The term as searched for.
+    pub term: String,
+    /// The word (or, for a regular expression, the text) it matched.
+    pub matched: String,
+    /// Characters of `matched` the term didn't cover.
+    pub extra: u32,
+    pub field: ScoreField,
+}
+
+/// How well a message matches the free text of a search: per term, 100 × the term's length ÷ the
+/// length of the word it was found in (`voice` in `invoice` is 71, an exact word 100; every hit
+/// is 100 with whole words or a regular expression), and for the message the average over its
+/// terms, 0-100.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchScore {
+    pub score: u8,
+    pub detail: Vec<ScoreDetail>,
+}
+
+impl SearchScore {
+    /// The part the best-placed term match is in ([`ScoreField`] order).
+    pub fn field(&self) -> ScoreField {
+        self.detail.iter().map(|detail| detail.field).min().unwrap_or(ScoreField::Attachment)
+    }
+}
+
 /// An enum from the code commands and JSON use (`workWeek`); the first letter's case doesn't matter.
 pub fn parse_enum<T: DeserializeOwned>(s: &str) -> Option<T> {
     let s = s.trim();
@@ -283,6 +396,8 @@ pub struct ViewState {
     /// folders under it in the folder pane (#911; `view.gmailCategories`). Off: as folders.
     pub gmail_tabs: bool,
     pub search: String,
+    /// How the search's free text is compared ([`SearchOptions`], `view.searchOptions`).
+    pub search_options: SearchOptions,
     pub scope: Scope,
     /// Canonical real Outlook account for the unified filing tree; ordinary views have none.
     pub filing: Option<Id>,
@@ -328,6 +443,7 @@ impl Default for ViewState {
             gmail: None,
             gmail_tabs: false,
             search: String::new(),
+            search_options: SearchOptions::default(),
             scope: Scope::Folder,
             filing: None,
             search_folder: None,
@@ -1159,6 +1275,8 @@ pub struct Session {
     /// ([`Session::folder_counts`]).
     pub(crate) counts_cache: Option<((u64, usize), Arc<crate::counts::FolderCounts>)>,
     pub(crate) aliases_cache: Option<((u64, usize), Arc<crate::aliases::Inventory>)>,
+    /// Each message's parsed SimpleLogin facts, kept across revisions ([`Session::aliases`]).
+    pub(crate) aliases_memo: crate::aliases::FactsMemo,
     /// The conversation last asked for ([`Session::conversation`]), as of the revision, message
     /// count and message it was worked out for.
     conversation_cache: Option<((u64, usize, Id, bool), Arc<Vec<Id>>)>,
@@ -1241,6 +1359,9 @@ pub struct Session {
     index_query_origin: crate::content_index::QueryOrigin,
     #[cfg(not(target_arch = "wasm32"))]
     index_initialization_problem: Option<(PathBuf, String)>,
+    /// The window is closing ([`Session::cancel_content_index`]): the index is not opened again.
+    #[cfg(not(target_arch = "wasm32"))]
+    index_closing: bool,
 }
 
 /// Message `id` was `old` and is `new`, the same message with more or less of it in memory.
@@ -1335,6 +1456,7 @@ impl Session {
             list_cache: None,
             counts_cache: None,
             aliases_cache: None,
+            aliases_memo: Default::default(),
             conversation_cache: None,
             threads_cache: Default::default(),
             list_builds: 0,
@@ -1363,6 +1485,8 @@ impl Session {
             words: None,
             #[cfg(not(target_arch = "wasm32"))]
             index_query_origin: crate::content_index::QueryOrigin::Window,
+            #[cfg(not(target_arch = "wasm32"))]
+            index_closing: false,
             #[cfg(not(target_arch = "wasm32"))]
             index_initialization_problem: None,
         };
@@ -2017,6 +2141,9 @@ impl Session {
     /// done.
     #[cfg(not(target_arch = "wasm32"))]
     fn words_in_step(&mut self, search: bool) {
+        if self.index_closing {
+            return;
+        }
         let Some(path) = self.path.clone().filter(|_| self.index_words) else {
             self.words = None;
             return;
@@ -2041,7 +2168,7 @@ impl Session {
         };
         words.poll(self);
         if search {
-            words.query(self.search_query(), self.index_query_origin)
+            words.query(self.search_query(), self.view.search_options.clone(), self.index_query_origin)
         }
         self.words = Some(words);
     }
@@ -2058,7 +2185,7 @@ impl Session {
     fn search_words(&self) -> (std::collections::HashMap<Id, bool>, usize) {
         let query = self.search_query();
         if let Some(index) = &self.words {
-            return index.decisions(self, &query);
+            return index.decisions(self, &query, &self.view.search_options);
         }
         if self.native_content_index_enabled() && query.reads_bodies() {
             let in_view = crate::list::in_view(self);
@@ -2132,7 +2259,8 @@ impl Session {
             if let Some(index) = &self.words {
                 let mut status = index.status();
                 if let Some(status) = status.as_object_mut() {
-                    status.insert("queryPending".into(), Value::Bool(index.query_pending(&self.search_query())));
+                    status.insert("queryPending".into(), Value::Bool(index.query_pending(&self.search_query(), &self.view.search_options)));
+                    status.insert("searchOptions".into(), serde_json::to_value(&self.view.search_options).unwrap_or(Value::Null));
                 }
                 return status;
             }
@@ -2195,6 +2323,35 @@ impl Session {
         }
         #[cfg(target_arch = "wasm32")]
         Err("persistent attachment indexing requires the native app".into())
+    }
+
+    /// How well each of `ids` matches the free text of the search in view
+    /// ([`SearchScore`]), from the persistent index's answer for this search and its
+    /// [`SearchOptions`]: those it has an answer for, as they are now.
+    pub fn search_scores(&self, ids: impl IntoIterator<Item = Id>) -> HashMap<Id, SearchScore> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(index) = &self.words {
+            let query = self.search_query();
+            let ids: Vec<Id> = ids.into_iter().collect();
+            return index.scores(self, &query, &self.view.search_options, &ids);
+        }
+        let _ = ids.into_iter();
+        HashMap::new()
+    }
+
+    /// The window is closing: signal the index's workers to stop (native extraction, SQLite
+    /// statements and batches observe it) and join them, without waiting for a batch or a merge
+    /// to finish. A rolled-back partial batch is redone next time. The index is not reopened in
+    /// this session.
+    pub fn cancel_content_index(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.index_closing = true;
+            if let Some(index) = self.words.take() {
+                index.cancel();
+                drop(index);
+            }
+        }
     }
 
     /// Stop and join the owned derived-data workers before an explicitly
@@ -3067,6 +3224,7 @@ impl Session {
         self.jmap_read.clear();
         self.auto_replies.clear();
         self.openings = self.openings.wrapping_add(1);
+        self.aliases_memo = Default::default();
         self.pst_running = None;
         self.pst_tops.clear();
         self.history.clear();

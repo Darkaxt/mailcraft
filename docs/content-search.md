@@ -19,6 +19,39 @@ by default; explicit `case:sensitive` compares the original address spelling,
 ignoring only surrounding whitespace.
 An invalid or excessive query returns its specific error rather than silently shortening it.
 
+## Matching, options and relevance (index schema 2)
+
+Free-text terms match anywhere inside a word: `voice` finds `invoice`. Several
+terms must all match. The index finds candidate words through its vocabulary
+(stage 1) and then checks each candidate's stored text with the active options
+(stage 2). A very common fragment expanding to more than 2,000 words is answered
+through its 2,000 most frequent words plus every word starting with it; the
+status line and `searchIndex.queryNotes` say so. A regular expression without
+literal text is answered by a cancellable scan whose progress is reported as
+`searchIndex.queryProgress`.
+
+`view.searchOptions` (and the per-call `searchOptions` of `mail.list`) sets
+`matchCase`, `wholeWord`, `regex` and `searchIn` (one or more of `subject`,
+`people`, `body`, `attachments`). Options apply to the stored text; they do not
+rebuild the index. `case:sensitive` in the query still selects exact case.
+
+Each matching indexed message has a score from 0 to 100: per term, the term's
+length divided by the length of the word it was found in (`voice` in `invoice`
+is 71, `voiced` 83, a whole word 100; every hit scores 100 with whole words or a
+regular expression), averaged over the terms. `mail.list` rows carry `score` and
+`scoreDetail`; `view.sort relevance` orders by it, ties broken by the part
+(subject, people, body, attachment) and then newest first. Messages answered
+without the index have no score.
+
+Junk E-mail and Deleted Items are not indexed; searches there read the messages.
+The sidecar stores each text unit once behind an FTS5 index without positions
+(about the size of the extracted text). An older-schema sidecar MailCraft owns is
+deleted and rebuilt; another file at that path is preserved and refused. Writes
+are batched (about every 250 ms), new mail is indexed Inbox first and newest
+first, failed documents are retried with a backoff up to a day and at each start,
+and closing the window cancels extraction and SQLite work instead of waiting.
+On a network or mapped drive the sidecar uses a rollback journal, not WAL.
+
 `mail.list` supports `offset`, `limit`, exact totals and `nextOffset`. Its
 `searchIndex` and `unsearched` fields distinguish pending or missing content from
 a complete negative result. Request the same search after its original query is

@@ -93,7 +93,9 @@ pub(crate) fn preview_command(app: &mut MailApp, params: &Value) -> Result<Value
     Ok(json!({"compose":id,"on":on}))
 }
 
-fn controls(app: &mut MailApp, ui: &mut Ui, place: Place) {
+/// The three choices of message appearance, as selectable labels: in the reader's floating
+/// menu ([`super::controls`]) and in the draft preview's row.
+pub(super) fn controls(app: &mut MailApp, ui: &mut Ui, place: Place) {
     let selected = choice(app, place);
     let (target, id) = match place {
         Place::DraftPreview(id) => ("draft", id),
@@ -111,16 +113,6 @@ fn controls(app: &mut MailApp, ui: &mut Ui, place: Place) {
             let _ = app.run("ui.messageTheme", json!({"target":target,"value":value.code()}));
         }
     }
-}
-
-pub(super) fn toolbar(app: &mut MailApp, ui: &mut Ui, place: Place) {
-    egui::Frame::NONE.inner_margin(egui::Margin { left: 20, right: 12, top: 4, bottom: 4 }).show(ui, |ui| {
-        ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing = egui::vec2(8.0, 4.0);
-            ui.label(tl!("Message appearance"));
-            controls(app, ui, place);
-        });
-    });
 }
 
 /// Both embedded and separate compose windows use this before editable fields.

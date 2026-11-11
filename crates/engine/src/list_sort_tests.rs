@@ -15,7 +15,7 @@ const NOW: i64 = 1_791_993_600;
 fn reference(shown: &mut [&Message], sort: SortBy, desc: bool) {
     shown.sort_by(|a, b| {
         let key = match sort {
-            SortBy::Date => when(a).cmp(&when(b)),
+            SortBy::Date | SortBy::Relevance => when(a).cmp(&when(b)),
             SortBy::From => a.from.display().to_lowercase().cmp(&b.from.display().to_lowercase()).then(when(b).cmp(&when(a))),
             SortBy::Subject => a.topic().to_lowercase().cmp(&b.topic().to_lowercase()).then(when(b).cmp(&when(a))),
             SortBy::Size => a.list_size().cmp(&b.list_size()),
@@ -47,7 +47,8 @@ fn every_arrangement_lists_in_the_order_comparing_messages_gives() {
         m.importance = if i % 3 == 0 { Importance::High } else { Importance::Normal };
         m.flag = FlagStatus::None;
     }
-    for sort in ["date", "from", "subject", "size", "importance"] {
+    // Relevance without a search is the date order.
+    for sort in ["date", "from", "subject", "size", "importance", "relevance"] {
         for descending in [false, true] {
             s.run("view.sort", &json!({"by": sort, "descending": descending})).unwrap();
             let listed: Vec<_> = s.rows().iter().map(|r| r.id).collect();

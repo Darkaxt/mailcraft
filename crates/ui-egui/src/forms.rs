@@ -4850,6 +4850,28 @@ pub(crate) mod rules {
         ran: Option<u64>,
         error: String,
         focus: bool,
+        /// The rules listed and their marks, as of [`ListedKey`] ([`RulesForm::show`]).
+        listed: Option<(ListedKey, std::sync::Arc<Listed>)>,
+        /// Whether the server could keep the rule being made, as of the revision and the draft.
+        cannot: Option<((u64, Value), Option<NotOnServer>)>,
+    }
+
+    /// What the listed rules and their marks depend on.
+    #[derive(Clone, Debug, Default, PartialEq, Eq)]
+    struct ListedKey {
+        rev: u64,
+        rules: usize,
+        account: Id,
+        destination: Option<Id>,
+        perm: Vec<(Id, crate::rule_sync::Permission)>,
+    }
+
+    /// The rules shown (on the server, on this computer) and each one's mark.
+    #[derive(Clone, Debug, Default, PartialEq, Eq)]
+    struct Listed {
+        there: Vec<Rule>,
+        here: Vec<Rule>,
+        marks: Vec<(Id, String)>,
     }
 
     impl RulesForm {
@@ -5025,35 +5047,60 @@ pub(crate) mod rules {
             let account = self.account;
             let mb = &app.session.mailbox;
             let on_server = mb.keeps_rules(account);
-            let rules = self.listed_rules(mb);
-            let (there, here): (Vec<Rule>, Vec<Rule>) = rules.into_iter().partition(|r| r.account == account && r.keep == Keep::Server);
+            // The listed rules and their marks are worked out once per change to the mailbox, the
+            // account shown or a permission, not at every frame (QA v0.11.3).
+            let mut perm: Vec<(Id, crate::rule_sync::Permission)> = app.rules.perm.iter().map(|(id, p)| (*id, p.clone())).collect();
+            perm.sort_by_key(|(id, _)| *id);
+            let key = ListedKey { rev: app.session.rev(), rules: mb.rules.len(), account, destination: self.destination, perm };
+            let listed = match self.listed.as_ref().filter(|(at, _)| *at == key) {
+                Some((_, listed)) => listed.clone(),
+                None => {
+                    let rules = self.listed_rules(mb);
+                    let (there, here): (Vec<Rule>, Vec<Rule>) = rules.into_iter().partition(|r| r.account == account && r.keep == Keep::Server);
+                    let marks: Vec<(Id, String)> = there
+                        .iter()
+                        .chain(&here)
+                        .map(|r| {
+                            let mark = mark(app, r, if r.account == 0 { account } else { r.account });
+                            let source = app.session.mailbox.account(r.account).map(|a| a.email.as_str()).unwrap_or(tl!("All accounts"));
+                            let position = advanced::rule_order(mb, r, if r.account == 0 { account } else { r.account }).0;
+                            let order = crate::i18n::fmt(tl!("Order {position}"), &[("position", &position.to_string())]);
+                            (r.id, if self.destination.is_some() { format!("{source} — {order} — {mark}") } else { mark })
+                        })
+                        .collect();
+                    let listed = std::sync::Arc::new(Listed { there, here, marks });
+                    self.listed = Some((key, listed.clone()));
+                    listed
+                }
+            };
+            let (there, here, marks) = (&listed.there, &listed.here, &listed.marks);
             let servers = rule_accounts(mb).into_iter().filter(|(id, _)| mb.keeps_rules(*id)).collect::<Vec<_>>();
             let categories: Vec<String> = mb.every_category().into_iter().map(|c| c.name).collect();
             let folder_in_view = crate::nav::folder_path(mb, app.session.view.folder);
-            let marks: Vec<(Id, String)> = there
-                .iter()
-                .chain(&here)
-                .map(|r| {
-                    let mark = mark(app, r, if r.account == 0 { account } else { r.account });
-                    let source = app.session.mailbox.account(r.account).map(|a| a.email.as_str()).unwrap_or(tl!("All accounts"));
-                    let position = advanced::rule_order(mb, r, if r.account == 0 { account } else { r.account }).0;
-                    let order = crate::i18n::fmt(tl!("Order {position}"), &[("position", &position.to_string())]);
-                    (r.id, if self.destination.is_some() { format!("{source} — {order} — {mark}") } else { mark })
-                })
-                .collect();
             let held = app.rules_held(account);
             let gone = if held { mb.rule_gone.iter().filter(|g| g.account == account && !g.id.is_empty()).count() } else { 0 };
             // Whether the rule being made could be kept on the server, and why not (an account on
             // this computer alone has none).
-            let place = mb
-                .account(account)
-                .filter(|a| self.open && self.editing.is_none() && a.kind != mailcraft_model::AccountKind::Local)
-                .map(|a| (a.email.clone(), server_cannot_draft(&app.session, &self.command().1)));
+            let draft_before = self.command().1;
+            let place = match mb.account(account).filter(|a| self.open && self.editing.is_none() && a.kind != mailcraft_model::AccountKind::Local) {
+                None => None,
+                Some(a) => {
+                    let at = (app.session.rev(), draft_before.clone());
+                    let cannot = match self.cannot.as_ref().filter(|(key, _)| *key == at) {
+                        Some((_, cannot)) => *cannot,
+                        None => {
+                            let cannot = server_cannot_draft(&app.session, &draft_before);
+                            self.cannot = Some((at, cannot));
+                            cannot
+                        }
+                    };
+                    Some((a.email.clone(), cannot))
+                }
+            };
             let mut run: Option<(&'static str, Value)> = None;
             let mut chosen = None;
             let mut add = false;
             let mut edit = None;
-            let draft_before = self.command().1;
             let below = error_room(ui, &self.error);
             body_over(ui, below, |ui| {
                 if let Some(destination) = self.destination {

@@ -1515,6 +1515,10 @@ fn menu_contents(ui: &mut Ui, app: &mut MailApp, menu: Menu) {
         Menu::ArrangeBy => {
             let sort = app.session.view.sort;
             for s in SortBy::ALL {
+                // Relevance needs a free-text search; the message list's sort menu offers it then.
+                if s == SortBy::Relevance && sort != s {
+                    continue;
+                }
                 mi_check(ui, app, s.label(), sort == s, "view.sort", json!({"by": s}));
             }
             ui.separator();

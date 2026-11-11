@@ -1,48 +1,154 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Combined inbox navigation and theme-adapted, locally persisted account colours.
+//! The unified mailbox root's helpers, origin colours (a stripe or the full row) and their menus.
 
 use crate::{
     MailApp,
-    theme::{Tokens, semibold},
+    theme::{Tokens, regular},
 };
-use egui::{Align2, Color32, Rect, Sense, Stroke, Ui, pos2, vec2};
-use mailcraft_engine::Scope;
-use mailcraft_model::{FolderKind, Id, Rgb};
+use egui::{Color32, Rect, Sense, Stroke, Ui, pos2, vec2};
+use mailcraft_model::{AccountKind, Id, Rgb};
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-pub(crate) fn navigation(app: &mut MailApp, ui: &mut Ui) {
+/// The id the "Unified mailbox" root is folded under in `UiState::collapsed_folders`, beside the
+/// Favorites' (0) and the accounts' and folders' ids, which are numbered from 1 and never reach it
+/// (kept within what a JSON number holds exactly, for agents reading the settings).
+pub(crate) const UNIFIED_ROOT: Id = (1 << 53) - 1;
+
+/// How rows of combined views (unified inbox, filing tree, search folders) show where they came
+/// from: a slim bar of the origin colour at the row's left edge, or that colour over the whole row.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OriginColors {
+    #[default]
+    Stripe,
+    FullRow,
+}
+
+impl OriginColors {
+    pub const ALL: [OriginColors; 2] = [OriginColors::Stripe, OriginColors::FullRow];
+
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            OriginColors::Stripe => tl!("Stripe"),
+            OriginColors::FullRow => tl!("Full row"),
+        }
+    }
+}
+
+/// The accounts whose real folder tree can be the unified filing tree: the owner's own Microsoft
+/// accounts, in the pane's order, each with its address.
+pub(crate) fn filing_accounts(app: &MailApp) -> Vec<(Id, String)> {
+    app.session
+        .mailbox
+        .accounts_in_order()
+        .into_iter()
+        .filter(|a| a.kind == AccountKind::Microsoft && !a.is_shared())
+        .map(|a| (a.id, if a.email.is_empty() { a.name.clone() } else { a.email.clone() }))
+        .collect()
+}
+
+/// The filing account whose tree the unified mailbox shows: the one in view, else the one the
+/// owner picked last (while it still qualifies), else the first.
+pub(crate) fn filing_account(app: &MailApp, accounts: &[(Id, String)]) -> Option<Id> {
+    let qualifies = |id: &Id| accounts.iter().any(|(a, _)| a == id);
+    app.session.view.filing.filter(qualifies).or(app.ui.unified_filing_account.filter(qualifies)).or_else(|| accounts.first().map(|(id, _)| *id))
+}
+
+/// Whether the list in view is a combined one, whose rows wear their origin's colour.
+pub(crate) fn combined_view(s: &mailcraft_engine::Session) -> bool {
+    s.view.search_folder.is_some() || s.view.filing.is_some() || s.view.scope == mailcraft_engine::Scope::Inboxes
+}
+
+/// The root's context menu: the filing account (when there are several), a new search folder,
+/// and how origin colours are drawn.
+pub(crate) fn root_menu(app: &mut MailApp, ui: &mut Ui, accounts: &[(Id, String)], current: Option<Id>) {
+    ui.set_min_width(220.0);
+    if accounts.len() > 1 {
+        ui.label(egui::RichText::new(tl!("Filing account")).font(regular(11.0)).weak());
+        for (id, email) in accounts {
+            if ui.selectable_label(current == Some(*id), email).clicked() {
+                pick_filing_account(app, *id);
+                ui.close();
+            }
+        }
+        ui.separator();
+    }
+    if ui.button(tl!("New search folder…")).clicked() {
+        let _ = app.run("ui.dialog", json!({"name":"searchFolder"}));
+        ui.close();
+    }
+    ui.separator();
+    ui.label(egui::RichText::new(tl!("Origin colors")).font(regular(11.0)).weak());
+    for mode in OriginColors::ALL {
+        if ui.selectable_label(app.ui.origin_colors == mode, mode.label()).clicked() {
+            app.ui.origin_colors = mode;
+            ui.close();
+        }
+    }
+}
+
+/// Remembers `id` as the unified filing account, and shows its tree at once while a filing view
+/// is in front.
+pub(crate) fn pick_filing_account(app: &mut MailApp, id: Id) {
+    app.ui.unified_filing_account = Some(id);
+    if app.session.view.filing.is_some_and(|now| now != id) {
+        let _ = app.run("view.filing", json!({"account":id}));
+    }
+}
+
+/// The small dropdown beside the list's sort menu that chooses how origin colours are drawn, in
+/// `r`: a sample of the mode and a chevron.
+pub(crate) fn mode_dropdown(app: &mut MailApp, ui: &mut Ui, r: Rect) {
     let t = Tokens::get(ui.ctx());
-    let selected = app.session.view.scope == Scope::Inboxes && app.session.view.search_folder.is_none();
-    let counts = app.session.folder_counts();
-    let unread =
-        app.session.mailbox.folders.iter().filter(|f| f.kind == FolderKind::Inbox).fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)));
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
-    let card = rect.shrink2(vec2(6.0, 1.0));
-    if selected || response.hovered() {
-        ui.painter().rect_filled(card, 5.0, if selected { t.selection } else { t.hover });
+    let mode = app.ui.origin_colors;
+    let resp = ui.interact(r, ui.scope_id().with("origin_colors"), Sense::click());
+    app.hit.add("originColors", 0, r);
+    let name = format!("{}: {}", tl!("Origin colors"), mode.label());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, &name));
+    if resp.hovered() {
+        ui.painter().rect_filled(r, 4.0, t.hover);
     }
-    if response.has_focus() {
-        ui.painter().rect_stroke(card, 5.0, Stroke::new(1.0, t.border_strong), egui::StrokeKind::Inside);
+    if resp.has_focus() {
+        ui.painter().rect_stroke(r, 4.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
     }
-    crate::icons::paint(ui.painter(), Rect::from_center_size(pos2(rect.left() + 22.0, rect.center().y), vec2(16.0, 16.0)), "mail", t.icon, t.accent);
-    crate::theme::paint_clipped(
-        ui.painter(),
-        pos2(rect.left() + 38.0, rect.center().y),
-        (rect.width() - 86.0).max(0.0),
-        tl!("All inboxes"),
-        semibold(12.0),
-        t.text,
-    );
-    if unread > 0 {
-        ui.painter().text(pos2(rect.right() - 16.0, rect.center().y), Align2::RIGHT_CENTER, unread.to_string(), semibold(11.0), t.text);
+    // The mode as a tiny row: a box with a bar down its left edge, or a tinted fill.
+    let sample = Rect::from_center_size(pos2(r.min.x + 11.0, r.center().y), vec2(12.0, 10.0));
+    let ink = crate::theme::c32(mailcraft_model::ACCOUNT_ROW_COLORS[0]);
+    match mode {
+        OriginColors::Stripe => {
+            ui.painter().rect_stroke(sample, 2.0, Stroke::new(1.0, t.text_dim), egui::StrokeKind::Inside);
+            ui.painter().rect_filled(Rect::from_min_size(sample.min, vec2(3.0, sample.height())), 1.0, ink);
+        }
+        OriginColors::FullRow => {
+            ui.painter().rect_filled(sample, 2.0, mix(t.surface, ink, 0.45));
+            ui.painter().rect_stroke(sample, 2.0, Stroke::new(1.0, t.text_dim), egui::StrokeKind::Inside);
+        }
     }
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("All inboxes")));
-    app.hit.add("allInboxes", 0, rect);
-    if response.clicked() {
-        let _ = app.run("view.allInboxes", json!({}));
-    }
-    ui.add_space(6.0);
+    let c = pos2(r.max.x - 7.0, r.center().y + 1.0);
+    ui.painter().line(vec![c + vec2(-3.5, -2.0), c + vec2(0.0, 2.0), c + vec2(3.5, -2.0)], Stroke::new(1.2, t.text));
+    let resp = resp.on_hover_text(tl!("How rows of combined views show their account or alias color"));
+    egui::Popup::menu(&resp).show(|ui| {
+        ui.set_min_width(150.0);
+        ui.label(egui::RichText::new(tl!("Origin colors")).font(regular(11.0)).weak());
+        for option in OriginColors::ALL {
+            if ui.selectable_label(app.ui.origin_colors == option, option.label()).clicked() {
+                app.ui.origin_colors = option;
+                ui.close();
+            }
+        }
+    });
+}
+
+/// A small swatch of an origin colour (beside an account's root, an alias row), ringed so that a
+/// colour close to the pane's still shows.
+pub(crate) fn swatch(painter: &egui::Painter, t: &Tokens, center: egui::Pos2, color: Rgb) -> Rect {
+    let r = Rect::from_center_size(center, vec2(10.0, 10.0));
+    painter.rect_filled(r, 2.5, crate::theme::c32(color));
+    let ring = if t.high_contrast { t.text } else { t.border_strong };
+    painter.rect_stroke(r, 2.5, Stroke::new(1.0, ring), egui::StrokeKind::Inside);
+    r
 }
 
 fn luminance(color: Color32) -> f32 {
@@ -53,7 +159,7 @@ fn luminance(color: Color32) -> f32 {
     0.2126 * linear(color.r()) + 0.7152 * linear(color.g()) + 0.0722 * linear(color.b())
 }
 
-fn contrast(a: Color32, b: Color32) -> f32 {
+pub(crate) fn contrast(a: Color32, b: Color32) -> f32 {
     let (a, b) = (luminance(a), luminance(b));
     (a.max(b) + 0.05) / (a.min(b) + 0.05)
 }
@@ -63,20 +169,17 @@ pub(crate) fn mix(a: Color32, b: Color32, weight: f32) -> Color32 {
     Color32::from_rgb(channel(a.r(), b.r()), channel(a.g(), b.g()), channel(a.b(), b.b()))
 }
 
-/// Hue comes from the account; text and high-contrast states retain their readable surface.
+/// The full-row tint of an origin colour: the real colour mixed into the list's surface as
+/// strongly as text, dimmed text and overdue text keep a contrast of 4.5 on it. `None` in High
+/// Contrast (the stripe shows the origin there) or when no visible strength keeps that contrast.
 pub(crate) fn row_tint(t: &Tokens, color: Rgb) -> Option<Color32> {
     if t.high_contrast {
         return None;
     }
-    let pastel = if color.0.min(color.1).min(color.2) < 170 {
-        let c = |v: u8| 170 + ((u16::from(v) * 85) / 255) as u8;
-        Color32::from_rgb(c(color.0), c(color.1), c(color.2))
-    } else {
-        crate::theme::c32(color)
-    };
-    let strength = if t.dark { 0.14 } else { 0.70 };
-    for step in (0..=10).rev() {
-        let result = mix(t.surface, pastel, strength * step as f32 / 10.0);
+    let color = crate::theme::c32(color);
+    let strength = if t.dark { 0.32 } else { 0.24 };
+    for step in (1..=10).rev() {
+        let result = mix(t.surface, color, strength * step as f32 / 10.0);
         if [t.text, t.text_dim, t.overdue].iter().all(|ink| contrast(*ink, result) >= 4.5) {
             return Some(result);
         }

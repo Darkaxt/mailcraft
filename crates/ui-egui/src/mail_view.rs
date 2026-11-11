@@ -46,6 +46,10 @@ const ROW_INSET: f32 = 2.0;
 const READ_STRIP: f32 = 12.0;
 /// How wide the stripe of an account's colour is at a row's left edge (#893).
 const ACCOUNT_STRIPE: f32 = 3.0;
+/// How wide the stripe of a row's origin colour is in a combined view: slim, and solid.
+const ORIGIN_STRIPE: f32 = 4.0;
+/// The Score column of a free-text search: room for "100".
+const SCORE_W: f32 = 24.0;
 /// Where a row's text starts, from the list's left edge.
 const TEXT_LEFT: f32 = 30.0;
 /// How far in the messages listed under their open conversation start (#503).
@@ -229,6 +233,7 @@ fn sort_label(sort: SortBy) -> &'static str {
         SortBy::Size => tl!("By Size"),
         SortBy::Importance => tl!("By Importance"),
         SortBy::Categories => tl!("By Categories"),
+        SortBy::Relevance => tl!("By Relevance"),
     }
 }
 
@@ -243,6 +248,8 @@ fn direction_label(sort: SortBy, descending: bool) -> &'static str {
         (SortBy::Size, false) => tl!("Smallest on top"),
         (SortBy::Importance, true) => tl!("High on top"),
         (SortBy::Importance, false) => tl!("Low on top"),
+        (SortBy::Relevance, true) => tl!("Best match on top"),
+        (SortBy::Relevance, false) => tl!("Weakest match on top"),
     }
 }
 
@@ -283,10 +290,17 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
     let line = Stroke::new(1.2, t.text);
     ui.painter().line(vec![chevron + vec2(-4.5, -2.5), chevron + vec2(0.0, 2.5), chevron + vec2(4.5, -2.5)], line);
     let filter = app.session.view.filter;
+    let free_text = crate::search_options::free_text_active(&app.session);
     egui::Popup::menu(&sresp).show(|ui| {
         ui.set_min_width(170.0);
-        for s in SortBy::ALL {
-            crate::widgets::mi_check(ui, app, s.label(), s == sort, "view.sort", json!({"by": s}));
+        for s in crate::search_options::sort_choices() {
+            // By relevance ranks the matches of a free-text search; there is nothing to rank otherwise.
+            let _ = ui
+                .add_enabled_ui(s != SortBy::Relevance || free_text, |ui| {
+                    crate::widgets::mi_check(ui, app, s.label(), s == sort, "view.sort", json!({"by": s}));
+                })
+                .response
+                .on_disabled_hover_text(tl!("Type words in the search box to sort by relevance"));
         }
         ui.separator();
         crate::widgets::mi(ui, app, "Reverse Sort", "view.reverseSort", json!({}));
@@ -298,6 +312,15 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
             crate::widgets::mi_check(ui, app, f.label(), f == filter, "view.filter", json!({"value": f}));
         }
     });
+
+    // In a combined view, how rows show their origin colour: a small dropdown right beside the
+    // arrangement's.
+    let mut controls_left = sr.min.x;
+    if crate::unified_inbox::combined_view(&app.session) {
+        let at = Rect::from_min_max(pos2(sr.min.x - 34.0, sr.min.y), pos2(sr.min.x - 4.0, sr.max.y));
+        crate::unified_inbox::mode_dropdown(app, ui, at);
+        controls_left = at.min.x;
+    }
 
     // The tabs. A filter that has none (Flagged, Has Attachments, To Me) shows as a third one
     // while it is in use.
@@ -311,7 +334,7 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
     let mut x = r.min.x + TEXT_LEFT - 1.0;
     // In a list too narrow for them all, the tab in use is the last to give: the others are
     // cut short, then left out (the arrangement's menu has every filter), then it is cut too.
-    let mut over = tabs.iter().map(|(.., w)| w + 3.0).sum::<f32>() + TAB_GAP * tabs.len().saturating_sub(1) as f32 - (sr.min.x - 8.0 - x);
+    let mut over = tabs.iter().map(|(.., w)| w + 3.0).sum::<f32>() + TAB_GAP * tabs.len().saturating_sub(1) as f32 - (controls_left - 8.0 - x);
     for (.., w) in tabs.iter_mut().rev().filter(|(f, ..)| *f != filter) {
         let cut = over.clamp(0.0, (*w - TAB_MIN).max(0.0));
         *w -= cut;
@@ -940,12 +963,14 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     // accent edge (quieter while the list has no focus); a flag's tint is laid first, so it shows
     // through the selection rather than being replaced by it.
     let card = body.shrink2(vec2(4.0, 1.0));
-    let origin_color = app.session.mailbox.account(m.origin_account()).map(|account| account.origin_row_color(m.origin_alias().as_deref()));
-    let origin_tint =
-        (app.session.view.search_folder.is_some() || app.session.view.filing.is_some() || app.session.view.scope == mailcraft_engine::Scope::Inboxes)
-            .then_some(origin_color)
-            .flatten()
-            .and_then(|color| crate::unified_inbox::row_tint(&t, color));
+    // In a combined view (unified inbox, filing tree, search folder) a row wears its origin's
+    // colour (account or alias), as a stripe at its left edge or over the whole row
+    // (`UiState::origin_colors`).
+    let origin_color = crate::unified_inbox::combined_view(&app.session)
+        .then(|| app.session.mailbox.account(m.origin_account()).map(|account| account.origin_row_color(m.origin_alias().as_deref())))
+        .flatten();
+    let full_row = app.ui.origin_colors == crate::unified_inbox::OriginColors::FullRow;
+    let origin_tint = origin_color.filter(|_| full_row).and_then(|color| crate::unified_inbox::row_tint(&t, color));
     if let Some(tint) = origin_tint {
         p.rect_filled(card, 6.0, tint);
     }
@@ -967,13 +992,18 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
         // The pointer's shade goes over a flagged row's tint.
         p.rect_filled(card, 6.0, origin_tint.map(|tint| crate::unified_inbox::mix(tint, t.hover_subtle, 0.25)).unwrap_or(t.hover_subtle));
     }
-    // Keep origin visible when the ordinary row wash is covered by selection or a flag.
-    // The text label remains the non-colour cue, including in high-contrast mode.
-    if origin_tint.is_some()
-        && let Some(color) = origin_color
-    {
-        let stripe = Rect::from_min_max(pos2(card.left() + 2.0, card.top() + 5.0), pos2(card.left() + 5.0, card.bottom() - 5.0));
-        p.rect_filled(stripe, 1.5, crate::theme::c32(color));
+    // The stripe: the origin's real colour, solid, at the row's left edge and over the selection
+    // and a flag's tint, so it reads on every row. With full-row tints it shows where the tint is
+    // covered (selected, flagged) or not drawn (High Contrast). The folder label stays the
+    // non-colour cue.
+    let origin_stripe = origin_color.filter(|_| !full_row || origin_tint.is_none() || selected || flag_tint);
+    if let Some(color) = origin_stripe {
+        let stripe = Rect::from_min_max(pos2(rect.min.x + 1.0, rect.min.y + 2.0), pos2(rect.min.x + 1.0 + ORIGIN_STRIPE, rect.max.y - 3.0));
+        p.rect_filled(stripe, 2.0, crate::theme::c32(color));
+        if t.high_contrast {
+            p.rect_stroke(stripe, 2.0, Stroke::new(1.0, t.text), egui::StrokeKind::Inside);
+        }
+        app.hit.add("messageOriginColor", row.id, stripe);
     }
     // Past its due date, its text is red.
     let overdue = follow_up == FollowUp::Overdue;
@@ -993,7 +1023,7 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     }
     // Where mail of several accounts is listed together, a stripe of its account's colour down
     // the row's left edge (#893), left of the selection's card so that it shows on a selected row too.
-    if let Some(color) = account_stripe(&app.session, &m) {
+    if let Some(color) = account_stripe(&app.session, &m).filter(|_| origin_stripe.is_none()) {
         let stripe = Rect::from_min_max(pos2(rect.min.x + 1.0, rect.min.y + 3.0), pos2(rect.min.x + 1.0 + ACCOUNT_STRIPE, rect.max.y - 3.0));
         p.rect_filled(stripe, 1.5, crate::theme::c32(color));
         // (In High Contrast an edge in the text's colour, so that a mid-tone stays in sight.)
@@ -1149,6 +1179,20 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
     } else {
         (time_end - date_w - 8.0, line2)
     };
+    // While a free-text search is in effect, the row's relevance: a right-aligned number in a
+    // column of its own, and under the pointer how each term matched.
+    if let Some((score, detail)) = crate::search_options::free_text_active(&app.session).then(|| crate::search_options::score(row)).flatten() {
+        let column = Rect::from_min_max(pos2(sx - SCORE_W, tail_y - 8.0), pos2(sx, tail_y + 8.0));
+        p.text(pos2(sx, tail_y), Align2::RIGHT_CENTER, score.to_string(), semibold(LIST_TEXT), t.text_dim);
+        let tip = if detail.is_empty() {
+            crate::i18n::fmt(tl!("Relevance {score} of 100"), &[("score", &score.to_string())])
+        } else {
+            format!("{}\n{}", crate::i18n::fmt(tl!("Relevance {score} of 100"), &[("score", &score.to_string())]), detail.join("\n"))
+        };
+        let _ = ui.interact(column, ui.scope_id().with(("msg_score", key)), Sense::hover()).on_hover_text(tip);
+        app.hit.add("messageScore", row.id, column);
+        sx = column.min.x - 6.0;
+    }
     if let Some(galley) = size {
         let at = Align2::RIGHT_CENTER.anchor_size(pos2(sx, tail_y), galley.size());
         p.galley(at.min, galley, t.text_dim);

@@ -217,15 +217,15 @@ fn normal_mcp_close_waits_for_save_completion_and_save_failure_keeps_it_open() {
 }
 
 #[test]
-fn an_open_search_inspection_token_blocks_close_without_closing_it() {
+fn a_ready_search_coverage_result_does_not_block_close() {
     let mut app = app();
     let observed = crate::search_index_ui::observed(&app);
     app.search_index_pane = crate::search_index_ui::Pane::ready_for_test("search.gaps", app.session.openings(), observed);
-    let result = call(&mut app, &egui::Context::default(), "close");
-    assert_eq!(result["ok"], false, "{result}");
-    assert!(result["error"].as_str().unwrap().contains("job is active"), "{result}");
     assert!(app.search_index_pane.holds_inspection());
-    assert!(!app.quit_requested);
+    assert!(!app.search_index_pane.inspection_running());
+    assert_eq!(app.lifecycle_blocker(), None);
+    let result = call(&mut app, &egui::Context::default(), "close");
+    assert_eq!(result["ok"], true, "{result}");
 }
 
 #[test]

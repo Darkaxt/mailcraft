@@ -133,22 +133,13 @@ fn search_box(app: &mut MailApp, ui: &mut Ui, rect: Rect) {
     // Advanced Search's button, at the right of the text as in Outlook: Mail's alone.
     let in_mail = app.session.view.module == Module::Mail;
     let advanced_w = if in_mail { 28.0 } else { 0.0 };
-    let case_w = if in_mail && rect.width() >= 360.0 { 28.0 } else { 0.0 };
+    // Match case, Match whole word, Regex and where to look, at the right end of the text, while
+    // the box has room for them besides the text.
+    let options_w = if in_mail && rect.width() >= 420.0 { crate::search_options::TOGGLES_W } else { 0.0 };
     let edit_rect =
-        Rect::from_min_max(pos2(rect.min.x + 28.0, rect.min.y + 1.0), pos2(rect.max.x - scope_w - advanced_w - case_w - 4.0, rect.max.y - 1.0));
-    if case_w > 0.0 {
-        let area = Rect::from_center_size(pos2(rect.max.x - scope_w - advanced_w - case_w / 2.0 - 2.0, rect.center().y), vec2(24.0, 22.0));
-        let sensitive = mailcraft_model::search::Query::parse(&app.session.view.search).case_sensitive();
-        let response = ui.interact(area, ui.scope_id().with("search_case"), Sense::click());
-        response.widget_info(|| egui::WidgetInfo::selected(egui::Role::CheckBox, true, sensitive, tl!("Case sensitive search")));
-        app.hit.add("searchCase", 0, area);
-        if sensitive || response.hovered() {
-            ui.painter().rect_filled(area, 4.0, if sensitive { t.checked } else { t.hover });
-        }
-        ui.painter().text(area.center(), egui::Align2::CENTER_CENTER, "Aa", regular(12.0), if sensitive { t.accent_text } else { t.text_dim });
-        if response.on_hover_text(tl!("Match letter case. Quoted text also preserves punctuation, accents and spacing.")).clicked() && free {
-            let _ = app.execute("ui.searchCase", json!({"sensitive":!sensitive}));
-        }
+        Rect::from_min_max(pos2(rect.min.x + 28.0, rect.min.y + 1.0), pos2(rect.max.x - scope_w - advanced_w - options_w - 4.0, rect.max.y - 1.0));
+    if options_w > 0.0 {
+        crate::search_options::toggles(app, ui, rect, rect.max.x - scope_w - advanced_w - 2.0, free);
     }
     app.hit.add("searchBox", 0, rect);
     let advanced = Rect::from_center_size(pos2(rect.max.x - scope_w - advanced_w / 2.0 - 2.0, rect.center().y), vec2(24.0, 22.0));

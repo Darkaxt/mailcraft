@@ -288,6 +288,7 @@ const SAFE: &[&str] = &[
     "view.reverseSort",
     "view.filter",
     "view.search",
+    "view.searchOptions",
     "view.alias",
     "view.clearSearch",
     "view.searchSuggestions",

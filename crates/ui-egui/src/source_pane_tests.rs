@@ -70,18 +70,22 @@ fn native_source_toggle_keyboard_selection_and_paging_preserve_the_message() {
     let mut h = harness(app);
     assert_eq!(h.state().source_pane.inspect()["format"], "html");
     assert!(h.query_by_label("HTML source").is_some());
-    h.get_by_label("Selectable message source").focus();
-    h.run_steps(1);
+    // No pager: one scroll, the next page asked for by command (as scrolling does) and the
+    // last taken back.
+    assert!(h.query_by_label("Next page").is_none() && h.query_by_label("Previous page").is_none());
     h.key_press(Key::A);
     h.run_steps(1);
     assert_eq!(serde_json::to_value(&h.state().session.mailbox).unwrap(), original);
-    h.get_by_label("Next page").click();
+    h.state_mut().execute("ui.source", json!({"page":"next"})).unwrap();
+    settle(h.state_mut());
     h.run_steps(2);
     assert!(h.state().source_pane.inspect()["offset"].as_u64().unwrap() > 0);
-    h.get_by_label("Previous page").click();
+    assert_eq!(h.state().source_pane.inspect()["pages"], 2);
+    h.state_mut().execute("ui.source", json!({"page":"previous"})).unwrap();
     h.run_steps(2);
     assert_eq!(h.state().source_pane.inspect()["offset"], 0);
-    h.get_by_label("Message").click();
+    // The toggle in the floating controls goes back to the message.
+    h.get_by_label("Source").click();
     h.run_steps(3);
     assert!(!h.state().source_pane.showing(id));
     assert!(h.query_by_label("HTML source").is_none());
@@ -183,7 +187,7 @@ fn shots_of_source_reader_in_both_themes_and_native_viewports() {
             let viewport = egui::Rect::from_min_size(egui::Pos2::ZERO, vec2(width, height));
             let file = std::path::Path::new(&directory).join(format!("source-{theme}-{}-{}.png", width as u32, (pixels * 100.0) as u32));
             h.render().unwrap().save(&file).unwrap();
-            for label in ["Source", "Message", "HTML source", "Export .eml"] {
+            for label in ["Source", "Message appearance", "HTML source", "Export .eml"] {
                 assert!(viewport.contains_rect(h.get_by_label(label).rect()), "{label} at {width}x{height}@{pixels}");
             }
             let body = h.state().hit.rect("sourceBody", id).unwrap();
@@ -243,4 +247,90 @@ fn flagging_the_message_keeps_the_source_reader_page_and_token() {
     settle(&mut app);
     assert_eq!(app.source_pane.inspect()["offset"], offset, "a flag update must not reset the reader");
     assert_eq!(app.source_pane.inspect()["state"], "ready");
+}
+
+#[test]
+fn scrolling_to_the_end_loads_the_following_pages_by_itself() {
+    let (mut app, id) = fixture(true);
+    app.execute("ui.source", json!({"on":true})).unwrap();
+    settle(&mut app);
+    let mut h = harness(app);
+    let viewport = h.state().hit.rect("sourceViewport", id).unwrap();
+    let before = h.state().source_pane.inspect()["pages"].as_u64().unwrap();
+    for _ in 0..40 {
+        h.event(egui::Event::PointerMoved(viewport.center()));
+        h.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: vec2(0.0, -4000.0),
+            phase: egui::TouchPhase::Move,
+            modifiers: egui::Modifiers::NONE,
+            source: egui::MouseWheelSource::Unknown,
+        });
+        h.run_steps(1);
+        settle(h.state_mut());
+        h.run_steps(1);
+    }
+    let after = h.state().source_pane.inspect();
+    assert!(after["pages"].as_u64().unwrap() > before, "{after}");
+    assert_eq!(after["capped"], false);
+}
+
+#[test]
+fn source_colouring_tells_headers_boundaries_html_and_encoded_blocks_apart() {
+    use crate::source_pane::{Kind, Scan, spans};
+    let text = "From: Example Studio <orders@example.org>\n\
+                Subject: Your receipt\n\
+                \x20continued\n\
+                \n\
+                --b1_abcdef123456\n\
+                Content-Type: text/html; charset=utf-8\n\
+                \n\
+                <p class=\"note\">Caf\u{e9} <!-- hidden --></p>\n\
+                PGh0bWw+PGJvZHk+SGVsbG8gV29ybGQ8L2JvZHk+PC9odG1sPg0KPGh0bWw+PGJvZHk+SGVsbG8=\n\
+                --b1_abcdef123456--\n";
+    let mut scan = Scan::default();
+    let runs = spans(text, &mut scan);
+    let kind_at = |needle: &str| {
+        let at = text.find(needle).unwrap();
+        runs.iter().find(|(end, _)| *end > at).map(|(_, kind)| *kind).unwrap()
+    };
+    assert_eq!(kind_at("From"), Kind::HeaderName);
+    assert_eq!(kind_at("Example Studio"), Kind::HeaderValue);
+    assert_eq!(kind_at(" continued"), Kind::HeaderValue);
+    assert_eq!(kind_at("--b1_abcdef123456\n"), Kind::Boundary);
+    assert_eq!(kind_at("Content-Type"), Kind::HeaderName);
+    assert_eq!(kind_at("<p"), Kind::Tag);
+    assert_eq!(kind_at("class"), Kind::Attribute);
+    assert_eq!(kind_at("\"note\""), Kind::String);
+    assert_eq!(kind_at("Caf"), Kind::Text);
+    assert_eq!(kind_at("<!--"), Kind::Comment);
+    assert_eq!(kind_at("PGh0"), Kind::Encoded);
+    assert_eq!(runs.last().unwrap().0, text.len());
+    // Runs only grow, and every end is a character's.
+    assert!(runs.windows(2).all(|w| w[0].0 < w[1].0));
+    assert!(runs.iter().all(|(end, _)| text.is_char_boundary(*end)));
+    assert_eq!(scan, Scan { headers: true, begun: true, ..Scan::default() });
+}
+
+#[test]
+fn colouring_goes_on_across_pages() {
+    use crate::source_pane::{Kind, Scan, spans};
+    let mut scan = Scan::default();
+    let first = spans("<html>\n<!-- a comment that\n", &mut scan);
+    assert!(scan.in_comment);
+    assert_eq!(first.last().unwrap().1, Kind::Comment);
+    let second = spans("goes on --> <b title='x\n", &mut scan);
+    assert_eq!(second.first().unwrap().1, Kind::Comment);
+    assert_eq!(scan.quote, Some(b'\''));
+    let third = spans("y'>bold</b>\n", &mut scan);
+    assert_eq!(third.first().unwrap().1, Kind::String);
+    assert!(!scan.in_tag && scan.quote.is_none());
+    // Plain prose is plain text, however long; quoted-printable with escapes is dimmed.
+    let mut scan = Scan::default();
+    let prose = spans("Thank you for your order. It ships tomorrow and should arrive by Friday, weather permitting.\n", &mut scan);
+    assert_eq!(prose, [(93, Kind::Text)]);
+    let mut scan = Scan { begun: true, ..Scan::default() };
+    let qp = spans("Caf=C3=A9 au lait =E2=80=94 the =E2=80=9Cbest=E2=80=9D in town\n", &mut scan);
+    assert_eq!(qp.len(), 1);
+    assert_eq!(qp[0].1, Kind::Encoded);
 }

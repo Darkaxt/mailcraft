@@ -10,7 +10,7 @@ use mailcraft_model::{FlagStatus, FolderKind, Id, Importance, Message, ThreadInd
 use mailcraft_time::{Date, DateGroup, Timestamp};
 use serde::Serialize;
 
-use crate::{Filter, Scope, Session, SortBy};
+use crate::{Filter, Scope, ScoreDetail, SearchScore, Session, SortBy};
 
 /// Filing changes storage ownership, not the observed origin of a combined-view thread.
 pub(crate) fn conversation_account(s: &Session, m: &Message) -> Id {
@@ -49,6 +49,13 @@ pub struct Row {
     /// For a conversation's row: it is open, and its messages are listed under it.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub open: bool,
+    /// How well the message matches the free text of the search, 0-100 ([`SearchScore`]), when
+    /// the persistent index has answered the search.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<u8>,
+    /// Each term's best match behind `score`.
+    #[serde(rename = "scoreDetail", skip_serializing_if = "Vec::is_empty")]
+    pub score_detail: Vec<ScoreDetail>,
 }
 
 impl Row {
@@ -64,6 +71,8 @@ impl Row {
             copy,
             under: None,
             open: false,
+            score: None,
+            score_detail: Vec::new(),
         }
     }
 
@@ -139,7 +148,7 @@ fn group_label(s: &Session, m: &Message) -> Option<String> {
         ),
         // Each row of a message arranged by categories has a heading of its own (`by_category`).
         SortBy::Categories => None,
-        SortBy::Subject | SortBy::Size => None,
+        SortBy::Subject | SortBy::Size | SortBy::Relevance => None,
     }
 }
 
@@ -320,15 +329,22 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
         })
         .collect();
 
+    // How well each found message matches the search's free text, from the persistent index.
+    let scores = if (0..query.len()).any(|i| query.text_of(i).is_some()) { s.search_scores(shown.iter().map(|m| m.id)) } else { HashMap::new() };
     let desc = s.view.sort_descending;
-    if matches!(s.view.sort, SortBy::Date | SortBy::Importance | SortBy::Categories) {
-        sort_by_dates(&mut shown, s.view.sort, desc);
+    if s.view.sort == SortBy::Relevance && !scores.is_empty() {
+        sort_by_relevance(&mut shown, &scores, desc);
+    } else if matches!(s.view.sort, SortBy::Date | SortBy::Importance | SortBy::Categories | SortBy::Relevance) {
+        // (Relevance without scores: the date order.)
+        sort_by_dates(&mut shown, if s.view.sort == SortBy::Relevance { SortBy::Date } else { s.view.sort }, desc);
     } else {
         sort_by_words(&mut shown, s.view.sort, desc);
     }
 
     if s.view.sort == SortBy::Categories {
-        return (by_category(s, &shown, desc), kept_only, unfetched);
+        let mut rows = by_category(s, &shown, desc);
+        scored(&mut rows, &scores);
+        return (rows, kept_only, unfetched);
     }
 
     let mut out: Vec<Row> = Vec::new();
@@ -394,7 +410,40 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
             }
         }
     }
+    scored(&mut out, &scores);
     (out, kept_only, unfetched)
+}
+
+/// Each row's search score, from `scores`.
+fn scored(rows: &mut [Row], scores: &HashMap<Id, SearchScore>) {
+    if scores.is_empty() {
+        return;
+    }
+    for row in rows {
+        if let Some(score) = scores.get(&row.id) {
+            row.score = Some(score.score);
+            row.score_detail = score.detail.clone();
+        }
+    }
+}
+
+/// `shown` by relevance ([`SortBy::Relevance`]): pinned first, then the score (high to low
+/// when `desc`), then the part of the best-placed match (subject, people, body, attachment), then
+/// newest first, ids breaking ties. A message without a score counts as 0.
+fn sort_by_relevance(shown: &mut Vec<&Message>, scores: &HashMap<Id, SearchScore>, desc: bool) {
+    let mut keyed: Vec<(bool, u8, crate::ScoreField, Timestamp, Id, &Message)> = shown
+        .iter()
+        .map(|m| {
+            let score = scores.get(&m.id);
+            (m.pinned, score.map_or(0, |s| s.score), score.map_or(crate::ScoreField::Attachment, SearchScore::field), when(m), m.id, *m)
+        })
+        .collect();
+    keyed.sort_unstable_by(|a, b| {
+        let score = if desc { b.1.cmp(&a.1) } else { a.1.cmp(&b.1) };
+        b.0.cmp(&a.0).then(score).then(a.2.cmp(&b.2)).then(b.3.cmp(&a.3)).then(b.4.cmp(&a.4))
+    });
+    shown.clear();
+    shown.extend(keyed.into_iter().map(|k| k.5));
 }
 
 /// `shown` in the order of a sort by name or size (From, Subject, Size): pinned first, ids
@@ -417,7 +466,7 @@ fn sort_by_words(shown: &mut Vec<&Message>, sort: SortBy, desc: bool) {
             SortBy::Importance => a.importance.cmp(&b.importance).then(when(a).cmp(&when(b))),
             // Newest first; `by_category` then lists each under its categories.
             SortBy::Categories => when(b).cmp(&when(a)),
-            SortBy::Date => when(a).cmp(&when(b)),
+            SortBy::Date | SortBy::Relevance => when(a).cmp(&when(b)),
         };
         // Pinned messages stay on top whichever way the list is sorted; ids break ties so the
         // order never depends on the map's iteration.

@@ -11,44 +11,55 @@ use mailcraft_engine::Scope;
 use mailcraft_model::{FolderKind, SearchFolder};
 use serde_json::{Value, json};
 
-pub(crate) fn navigation(app: &mut MailApp, ui: &mut Ui) {
-    egui::CollapsingHeader::new(tl!("Search folders")).default_open(true).show(ui, |ui| {
-        let response = ui.button(tl!("New search folder…"));
-        app.hit.add("searchFolderNew", 0, response.rect);
-        if response.clicked() {
-            let _ = app.run("ui.dialog", json!({"name":"searchFolder"}));
-        }
-        let searches = app.session.mailbox.search_folders.clone();
-        if searches.is_empty() {
-            ui.label(egui::RichText::new(tl!("Save a search to use it again without moving mail.")).small().weak());
-            return;
-        }
-        let t = Tokens::get(ui.ctx());
-        egui::ScrollArea::vertical().id_salt("search_folders").max_height(7.0 * 26.0).show_rows(ui, 26.0, searches.len(), |ui, range| {
+/// The saved search folders, as the last children of the unified mailbox in the folder pane (its
+/// "+" makes a new one). Rows line up with the pane's folder rows.
+pub(crate) fn rows(app: &mut MailApp, ui: &mut Ui) {
+    let searches = app.session.mailbox.search_folders.clone();
+    if searches.is_empty() {
+        return;
+    }
+    let t = Tokens::get(ui.ctx());
+    const ROW: f32 = 24.0;
+    egui::ScrollArea::vertical().id_salt("search_folders").max_height(7.0 * ROW).auto_shrink([false, true]).show_rows(
+        ui,
+        ROW,
+        searches.len(),
+        |ui, range| {
             for search in searches.get(range).unwrap_or_default() {
                 let problem = mailcraft_engine::cmd::search_folders::anchor_problem(&app.session, search);
                 let selected = app.session.view.search_folder == Some(search.id);
-                let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
-                if selected || response.hovered() {
-                    ui.painter().rect_filled(rect.shrink(1.0), 4.0, if selected { t.selection } else { t.hover_nav });
+                let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), ROW), Sense::click());
+                let row = Rect::from_min_max(pos2(rect.min.x + 6.0, rect.min.y), pos2(rect.max.x - 4.0, rect.max.y));
+                if selected {
+                    ui.painter().rect_filled(row, 6.0, t.accent_soft);
+                    ui.painter().rect_filled(Rect::from_center_size(pos2(row.min.x + 1.5, row.center().y), vec2(3.0, 14.0)), 1.5, t.selection_edge);
+                } else if response.hovered() {
+                    ui.painter().rect_filled(row, 6.0, t.hover_nav);
                 }
                 if response.has_focus() {
-                    ui.painter().rect_stroke(rect.shrink(1.0), 4.0, Stroke::new(1.0, t.focus_ring), egui::StrokeKind::Inside);
+                    ui.painter().rect_stroke(row, 6.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
                 }
                 crate::icons::paint(
                     ui.painter(),
-                    Rect::from_center_size(pos2(rect.left() + 11.0, rect.center().y), vec2(14.0, 14.0)),
+                    Rect::from_center_size(pos2(rect.left() + 28.0, rect.center().y), vec2(14.0, 14.0)),
                     "search",
-                    t.icon,
+                    if selected { t.accent_soft_text } else { t.icon },
                     t.accent,
                 );
+                let ink = if problem.is_some() {
+                    t.text_disabled
+                } else if selected {
+                    t.accent_soft_text
+                } else {
+                    t.text
+                };
                 paint_clipped(
                     ui.painter(),
-                    pos2(rect.left() + 24.0, rect.center().y - 7.0),
-                    (rect.width() - 28.0).max(0.0),
+                    pos2(rect.left() + 40.0, rect.center().y - 1.5),
+                    (rect.width() - 52.0).max(0.0),
                     &search.name,
                     if selected { semibold(12.0) } else { regular(12.0) },
-                    if problem.is_some() { t.text_disabled } else { t.text },
+                    ink,
                 );
                 let label = match &problem {
                     Some(reason) => format!("{} — {}: {reason}", search.name, tl!("Unavailable")),
@@ -67,7 +78,14 @@ pub(crate) fn navigation(app: &mut MailApp, ui: &mut Ui) {
                     }
                     ui.label(tl!("Deletes only this saved search, never its messages."));
                 });
-                if response.on_hover_text(format!("{label}\n{}", search.query)).clicked() {
+                if response
+                    .on_hover_text(format!(
+                        "{label}
+{}",
+                        search.query
+                    ))
+                    .clicked()
+                {
                     if problem.is_some() {
                         let _ = app.run("ui.dialog", json!({"name":"searchFolder","id":search.id}));
                     } else {
@@ -75,9 +93,8 @@ pub(crate) fn navigation(app: &mut MailApp, ui: &mut Ui) {
                     }
                 }
             }
-        });
-    });
-    ui.add_space(5.0);
+        },
+    );
 }
 
 pub struct SearchForm {

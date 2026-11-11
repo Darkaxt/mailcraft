@@ -56,14 +56,14 @@ fn a_new_account_gets_a_colour_no_other_has() {
     assert_eq!(mb.unused_account_color(), PALETTE[1]);
 }
 
-/// A row's pastel follows the account's colour unless one of its own was chosen; an alias's own
-/// colour wins over both, and an account with neither keeps the pastel of its stable id.
+/// A row's origin colour is the account's own (unlightened) unless one of its own was chosen; an
+/// alias's own colour wins over both, and an account with neither keeps the palette colour of its
+/// stable id.
 #[test]
 fn rows_follow_the_accounts_colour_until_one_is_chosen() {
     let green = Rgb(0x2E, 0x8B, 0x57);
     let mut account = Account { id: 3, color: Some(green), ..Default::default() };
-    assert_eq!(account.effective_row_color(), crate::mailbox::pastel(green));
-    assert_eq!(crate::mailbox::pastel(Rgb(255, 255, 255)), Rgb(255, 255, 255));
+    assert_eq!(account.effective_row_color(), green);
     let chosen = Rgb(232, 212, 250);
     account.row_color = Some(chosen);
     assert_eq!(account.effective_row_color(), chosen);
@@ -72,4 +72,20 @@ fn rows_follow_the_accounts_colour_until_one_is_chosen() {
     assert_eq!(account.origin_row_color(Some("other@example.org")), chosen);
     let plain = Account { id: 3, ..Default::default() };
     assert_eq!(plain.effective_row_color(), ACCOUNT_ROW_COLORS[3]);
+}
+
+/// The default origin palette is saturated and distinct: no near-white pastel, no two alike.
+#[test]
+fn default_origin_palette_is_saturated_and_distinct() {
+    for (i, c) in ACCOUNT_ROW_COLORS.iter().enumerate() {
+        let (max, min) = (c.0.max(c.1).max(c.2), c.0.min(c.1).min(c.2));
+        assert!(max - min >= 80, "{} is not saturated", c.hex());
+        assert!(min < 0xB0, "{} is too pale", c.hex());
+        for other in &ACCOUNT_ROW_COLORS[i + 1..] {
+            let d = (i32::from(c.0) - i32::from(other.0)).abs()
+                + (i32::from(c.1) - i32::from(other.1)).abs()
+                + (i32::from(c.2) - i32::from(other.2)).abs();
+            assert!(d >= 90, "{} and {} are too alike", c.hex(), other.hex());
+        }
+    }
 }

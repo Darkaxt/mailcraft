@@ -59,8 +59,16 @@ impl Pane {
         self.open
     }
     /// A live engine inspection token is held or still being closed.
+    #[cfg(test)]
     pub(crate) fn holds_inspection(&self) -> bool {
         !self.retiring.is_empty() || self.page.as_ref().is_some_and(|page| page.token.is_some() && page.state != "closed")
+    }
+    /// An inspection is still being worked out or closed. A ready (or failed) result held
+    /// open in the pane is only something to look at, and does not keep the app from closing:
+    /// the session that owns its token joins its readers when it goes.
+    pub(crate) fn inspection_running(&self) -> bool {
+        !self.retiring.is_empty()
+            || self.page.as_ref().is_some_and(|page| page.token.is_some() && !matches!(page.state.as_str(), "ready" | "failed" | "closed"))
     }
     pub(crate) fn inspect(&self) -> Value {
         json!({"open":self.open,"error":self.error,"page":self.page.as_ref().map(|page|json!({

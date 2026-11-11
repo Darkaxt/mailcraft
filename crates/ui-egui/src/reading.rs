@@ -9,10 +9,13 @@
 //! the window's before they are used ([`colors`]). Pictures attached to the message are decoded
 //! and shown where they belong ([`images`]).
 //!
-//! Pictures a message refers to on the web are placeholders, so that opening a message tells its
-//! sender nothing, unless the owner asks for them: for the message, for its sender or its
-//! sender's domain, or for all mail ([`remote`]). Then the host downloads them (or has them
-//! from the last time); nothing in this crate goes anywhere, and nothing in it keeps a file.
+//! Pictures a message refers to on the web are downloaded for all mail outside Junk E-mail
+//! unless the owner turned that off; then, and in Junk E-mail, they are placeholders until the
+//! owner asks for them: for the message, for its sender or its sender's domain ([`remote`]).
+//! Tracking pictures are kept out before anything is asked for, whatever was said ([`trackers`]);
+//! the shield in the reader's floating controls ([`controls`]) counts them and offers "Load
+//! anyway". The host downloads pictures (or has them from the last time); nothing in this crate
+//! goes anywhere, and nothing in it keeps a file.
 //!
 //! The body is laid out once per message, place, width and theme ([`layout`]) and painted from
 //! that every frame ([`view`]).
@@ -30,6 +33,7 @@ pub use appearance::MessageTheme;
 pub(crate) mod colors;
 #[cfg(test)]
 mod colors_strong_tests;
+mod controls;
 #[cfg(test)]
 mod dark_palette_tests;
 pub(crate) mod fonts;
@@ -50,6 +54,9 @@ mod signature;
 mod signature_tests;
 #[cfg(test)]
 mod tests;
+pub(crate) mod trackers;
+#[cfg(test)]
+mod trackers_tests;
 mod view;
 pub(crate) use view::same_body;
 mod warnings;
@@ -105,7 +112,6 @@ pub enum Place {
 /// asking nothing of the mailbox: its own pictures (`cid:`) are shown, pictures on the web are
 /// never fetched for it, and it has no invitation or sharing bar, no sender picture from the web.
 pub fn show_file_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place) {
-    appearance::toolbar(app, ui, place);
     let ctx = ui.ctx().clone();
     remote::tick(app, &ctx);
     select::begin(app, ui, m, place);
@@ -129,6 +135,7 @@ pub fn show_file_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place
             });
         });
     });
+    controls::overlay(app, ui, room, m, place, false, None);
 }
 
 /// The reading pane: the selected message, or a word on why there is none to show.
@@ -193,19 +200,17 @@ fn draft_bar(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
 /// The reading pane shows the selected message with it, and a message window its own.
 pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place) {
     let ctx = ui.ctx().clone();
-    if place == Place::Pane {
-        crate::source_pane::toolbar(app, ui, m.id);
-        if app.source_pane.showing(m.id) {
-            // This precedes rendered-body layout, sender pictures and remote
-            // image work. Source is only selectable plain text.
-            select::begin(app, ui, m, place);
-            header(app, ui, m, place, |_, _, _| {});
-            crate::source_pane::show(app, ui);
-            return;
-        }
-    }
-    if matches!(place, Place::Pane | Place::Window(_)) {
-        appearance::toolbar(app, ui, place);
+    // The source toggle is the reading pane's (the native app's: the web build has no source reader).
+    let source = place == Place::Pane && !cfg!(target_arch = "wasm32");
+    if place == Place::Pane && app.source_pane.showing(m.id) {
+        // This precedes rendered-body layout, sender pictures and remote
+        // image work. Source is only selectable plain text.
+        select::begin(app, ui, m, place);
+        header(app, ui, m, place, |_, _, _| {});
+        let room = ui.available_rect_before_wrap().intersect(ui.clip_rect());
+        crate::source_pane::show(app, ui);
+        controls::overlay(app, ui, room, m, place, source, None);
+        return;
     }
     // A window shows its own copy of the message: what the mailbox keeps on disk is brought in
     // here, and the window takes the whole message up at its next frame.
@@ -270,6 +275,12 @@ pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Pla
             });
         });
     });
+    // Over the body's top-right corner: appearance, source and the tracker shield. A quote or a
+    // preview is the owner's own, and has none.
+    if matches!(place, Place::Pane | Place::Window(_)) {
+        let trackers = controls::Trackers { count: doc.trackers.len(), kept: doc.trackers_kept };
+        controls::overlay(app, ui, room, m, place, source, Some(trackers));
+    }
     select::settle(app, ui, place);
 }
 

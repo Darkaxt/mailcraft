@@ -35,7 +35,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.conversations", "Show as Conversations", "View › Messages", conversations).reads().params(TOGGLE),
         CommandSpec::new("view.sort", "Arrange By", "View › Arrangement", sort)
             .reads()
-            .params(r#"{"by": "date"|"from"|"subject"|"size"|"importance"|"categories", "descending"?: bool}"#),
+            .params(r#"{"by": "date"|"from"|"subject"|"size"|"importance"|"categories"|"relevance", "descending"?: bool} — relevance: the best free-text search match first (score, then subject > people > body > attachment, then newest); without free text in the search, the date order"#),
         CommandSpec::new("view.reverseSort", "Reverse Sort", "View › Arrangement", reverse_sort).reads(),
         CommandSpec::new("view.filter", "Filter Email", "Home › Find", filter)
             .reads()
@@ -44,6 +44,9 @@ pub fn specs() -> Vec<CommandSpec> {
             .reads()
             .key("Mod+E / F3")
             .params(r#"{"query": string, "scope"?: "folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes"}"#),
+        CommandSpec::new("view.searchOptions", "Search Options", "Search", search_options).reads().params(
+            r#"{"matchCase"?: bool, "wholeWord"?: bool, "regex"?: bool, "searchIn"?: ["subject"|"people"|"body"|"attachments"]} — how the search's free text is compared with the indexed text; what is not given stays as it is. Default: case- and accent-insensitive substring matching in every part. wholeWord is ignored with regex. Answers the options in force"#,
+        ),
         CommandSpec::new("view.clearSearch", "Close Search", "Search", clear_search).reads(),
         CommandSpec::new("view.searchSuggestions", "Search Suggestions", "Search", search_suggestions_command).reads().params(
             r#"{"query": string, "cursor"?: number (characters; default: the end)} — answers what the search box offers for the word the cursor is at the end of: keywords, categories, what is: and has: take, and after from:, to: and cc: people from the contacts and the mail on this computer. Each with "name" (what the list shows), "text" (what goes in place of characters "start" to "end"), and "email" (a person's address) or "color" (a category)"#,
@@ -150,7 +153,8 @@ fn conversations(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn sort(s: &mut Session, v: &Value) -> CmdResult {
-    let by = parse_enum::<SortBy>(p::req_str(v, "by")?).ok_or_else(|| bad("`by` is date, from, subject, size, importance or categories"))?;
+    let by =
+        parse_enum::<SortBy>(p::req_str(v, "by")?).ok_or_else(|| bad("`by` is date, from, subject, size, importance, categories or relevance"))?;
     // Names start at A; dates, sizes and importance start at the top.
     let natural = by.starts_high();
     s.view.sort_descending = p::bool(v, "descending").unwrap_or(if s.view.sort == by { s.view.sort_descending } else { natural });
@@ -189,6 +193,49 @@ fn search(s: &mut Session, v: &Value) -> CmdResult {
     let found = crate::list::listed(&s.rows());
     Ok(json!({"query":s.view.search,"scope":s.view.scope,"found":found,
         "queryError":mailcraft_model::search::Query::parse(&s.view.search).error(),"searchIndex":s.content_index_status()}))
+}
+
+/// `options` with the search options `v` names ([`crate::SearchOptions`]): `matchCase`, `wholeWord`,
+/// `regex` and `searchIn`, each strictly typed; what isn't named stays as it is.
+pub(crate) fn read_search_options(v: &Value, options: &crate::SearchOptions) -> Result<crate::SearchOptions, crate::CmdError> {
+    let mut out = options.clone();
+    if let Some(value) = p::opt_bool(v, "matchCase")? {
+        out.match_case = value;
+    }
+    if let Some(value) = p::opt_bool(v, "wholeWord")? {
+        out.whole_word = value;
+    }
+    if let Some(value) = p::opt_bool(v, "regex")? {
+        out.regex = value;
+    }
+    match v.get("searchIn") {
+        None => {}
+        Some(Value::Array(parts)) => {
+            let mut search_in = Vec::new();
+            for part in parts {
+                let part = part
+                    .as_str()
+                    .and_then(parse_enum::<crate::SearchIn>)
+                    .ok_or_else(|| bad("`searchIn` names subject, people, body or attachments"))?;
+                if !search_in.contains(&part) {
+                    search_in.push(part);
+                }
+            }
+            if search_in.is_empty() {
+                return Err(bad("`searchIn` names at least one of subject, people, body and attachments"));
+            }
+            // One order, so that the same choice is the same view (and the same list key).
+            search_in.sort_by_key(|part| crate::SearchIn::ALL.iter().position(|known| known == part));
+            out.search_in = search_in;
+        }
+        Some(_) => return Err(bad("`searchIn` is an array of subject, people, body and attachments")),
+    }
+    Ok(out)
+}
+
+fn search_options(s: &mut Session, v: &Value) -> CmdResult {
+    s.view.search_options = read_search_options(v, &s.view.search_options)?;
+    Ok(json!({"options": s.view.search_options, "searchIndex": s.content_index_status()}))
 }
 
 /// What the search box offers for the word being typed in `query`, the cursor at byte `cursor`

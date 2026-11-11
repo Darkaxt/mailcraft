@@ -138,7 +138,8 @@ impl Server {
 
     /// Handle one line; returns the reply line (None for notifications and blank lines).
     pub fn handle_line(&mut self, line: &str) -> Option<String> {
-        let line = line.trim();
+        // Windows PowerShell 5.1 prefixes redirected stdin with a UTF-8 BOM, which trim() keeps.
+        let line = line.trim().trim_start_matches('\u{feff}').trim();
         if line.is_empty() {
             return None;
         }

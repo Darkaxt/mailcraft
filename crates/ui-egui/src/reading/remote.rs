@@ -3,14 +3,19 @@
 //! Pictures from the web: whether a message may show them, asking the host for them, and what
 //! the owner is told and can do about it.
 //!
-//! A picture on the web tells whoever serves it that the message was opened, when, and from
-//! what address. So none is asked for unless the owner said so, in one of four ways: "Download
-//! pictures" for the message at hand (it holds until the program closes), "Always download
-//! pictures from" its sender or from everybody at its sender's domain (remembered in the
-//! settings), or the switch in File › Options that downloads them for all mail (off unless the
-//! owner turns it on). The last three do not hold for what is in Junk E-mail (or under it). A
-//! remembered sender or domain holds only for a message the receiving server vouches for
-//! ([`vouched`]): a `From:` line is anybody's to write.
+//! Pictures are downloaded for all mail outside Junk E-mail (and its subfolders): the switch in
+//! File › Options is on unless the owner turns it off (it was off before 0.11.4; settings from
+//! then are moved onto the new default once, see `UiState::download_pictures`). What tells a
+//! sender that the message was opened is kept out before anything is asked for, whatever the
+//! switch says: tracking pictures ([`super::trackers`]) are never downloaded unless the owner
+//! says "Load anyway" for the message.
+//!
+//! With the switch off, or for what is in Junk E-mail, a picture is asked for only when the owner
+//! said so, in one of three ways: "Download pictures" for the message at hand (it holds until
+//! the program closes), or "Always download pictures from" its sender or from everybody at its
+//! sender's domain (remembered in the settings). Only the first holds for what is in Junk
+//! E-mail (or under it). A remembered sender or domain holds only for a message the receiving
+//! server vouches for ([`vouched`]): a `From:` line is anybody's to write.
 //!
 //! This crate opens no connections and keeps no files. It hands an address to the host
 //! ([`Services::pictures`]) and takes back bytes or a refusal; the host is the one that checks
@@ -502,7 +507,7 @@ fn size_label(bytes: u64) -> String {
 pub fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     let mut all = app.ui.download_pictures;
     let tip = tl!(
-        "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."
+        "On: pictures are downloaded in all mail except Junk E-mail, and tracking pictures are always left out. Off: pictures are downloaded only for the messages, senders and domains you say."
     );
     if ui.checkbox(&mut all, tl!("Download pictures in mail automatically")).on_hover_text(tip).changed() {
         let _ = app.run("ui.downloadPicturesAutomatically", json!({"value": all}));

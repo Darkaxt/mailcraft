@@ -42,6 +42,8 @@ ring = { workspace = true }
 tempfile = { workspace = true }
 rusqlite = { workspace = true }
 craft-content = { workspace = true, features = ["runtime"] }
+# Regular-expression search over the persistent content index (`content_index::matcher`).
+regex = { workspace = true }
 
 # `O_NONBLOCK` for opening a file named from outside (`io::regular_file`).
 [target.'cfg(unix)'.dependencies]

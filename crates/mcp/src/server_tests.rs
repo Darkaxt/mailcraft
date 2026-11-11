@@ -87,3 +87,13 @@ fn errors_give_back_little_of_the_clients_words() {
     assert_eq!(crate::server::clip("short"), "short");
     assert_eq!(crate::server::clip(&"é".repeat(300)).chars().count(), 201);
 }
+
+#[test]
+fn a_leading_utf8_bom_is_ignored() {
+    // Windows PowerShell 5.1 writes a BOM at the start of redirected stdin.
+    let mut s = Server::new(Box::new(Headless::default()));
+    let line = format!("\u{feff}{}", json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}}));
+    let r: Value = serde_json::from_str(&s.handle_line(&line).unwrap()).unwrap();
+    assert_eq!(r["result"]["serverInfo"]["name"], "mailcraft");
+    assert!(s.handle_line("\u{feff}\r\n").is_none());
+}

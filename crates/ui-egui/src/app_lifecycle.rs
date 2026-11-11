@@ -186,7 +186,7 @@ impl MailApp {
             Some("an editor or secondary window is open")
         } else if self.session.source_export_busy()
             || self.session.content_index_busy()
-            || self.search_index_pane.holds_inspection()
+            || self.search_index_pane.inspection_running()
             || self.sync_rx.is_some()
             || self.graph_rx.is_some()
             || self.graph_pieces.is_some()

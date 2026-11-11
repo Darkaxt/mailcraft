@@ -444,13 +444,12 @@ pub struct Account {
 }
 
 impl Account {
-    /// The theme-neutral pastel behind this account's message rows. An explicit row colour wins;
-    /// otherwise the account's own colour (#893), lightened to a pastel, so its dot, stripe and
-    /// rows agree; otherwise a pastel chosen by its stable id (reordering never changes it).
+    /// The origin colour of this account's message rows in combined views, drawn as it is (a
+    /// stripe, or mixed into the surface for a full-row tint). An explicit row colour wins;
+    /// otherwise the account's own colour (#893), so its dot, stripe and rows agree; otherwise a
+    /// palette colour chosen by its stable id (reordering never changes it).
     pub fn effective_row_color(&self) -> Rgb {
-        self.row_color
-            .or_else(|| self.color.map(pastel))
-            .unwrap_or_else(|| ACCOUNT_ROW_COLORS.get((self.id % 8) as usize).copied().unwrap_or_default())
+        self.row_color.or(self.color).unwrap_or_else(|| ACCOUNT_ROW_COLORS.get((self.id % 8) as usize).copied().unwrap_or_default())
     }
 
     pub fn origin_row_color(&self, alias: Option<&str>) -> Rgb {
@@ -1034,22 +1033,18 @@ pub const PALETTE: [Rgb; 12] = [
 /// The colour of a category with none: one a list doesn't have, or one new to the list.
 pub const GREY_CATEGORY: Rgb = Rgb(0x8A, 0x8A, 0x8A);
 
-/// An account colour lightened to the strength of [`ACCOUNT_ROW_COLORS`]: 82% white, keeping its hue.
-pub fn pastel(c: Rgb) -> Rgb {
-    let mix = |v: u8| ((u16::from(v) * 18 + 255 * 82 + 50) / 100) as u8;
-    Rgb(mix(c.0), mix(c.1), mix(c.2))
-}
-
-/// Theme-neutral account pastels. The renderer adapts their strength to the surface.
+/// Default origin colours of accounts in combined views: strong, saturated and told apart from
+/// one another, each readable as a stripe on a light and on a dark list (a full-row tint is mixed
+/// into the surface by the renderer, which keeps text contrast).
 pub const ACCOUNT_ROW_COLORS: [Rgb; 8] = [
-    Rgb(225, 233, 252),
-    Rgb(222, 243, 231),
-    Rgb(252, 231, 219),
-    Rgb(239, 226, 249),
-    Rgb(219, 242, 245),
-    Rgb(250, 240, 211),
-    Rgb(249, 225, 235),
-    Rgb(230, 237, 221),
+    Rgb(0x2F, 0x6F, 0xD0),
+    Rgb(0x2E, 0x9E, 0x5B),
+    Rgb(0xE0, 0x7B, 0x1F),
+    Rgb(0x8E, 0x5B, 0xD0),
+    Rgb(0x14, 0xA0, 0xAE),
+    Rgb(0xD6, 0x3E, 0x3E),
+    Rgb(0xC8, 0x4C, 0xA0),
+    Rgb(0xB8, 0x90, 0x00),
 ];
 
 /// Our own colours for the numbered colours Outlook gives a category (0 to 24: red, orange,

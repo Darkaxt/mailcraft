@@ -66,6 +66,8 @@ fn window(answer: impl Fn(&str) -> Result<Vec<u8>, String> + 'static) -> (MailAp
     };
     let mut app = MailApp::new(Session::at(mailbox, NOW, 0), services);
     app.ui.sender_images = true;
+    // Pictures in all mail are on by default since 0.11.4; these tests turn them on where they mean to.
+    app.ui.download_pictures = false;
     (app, asked, shown)
 }
 
