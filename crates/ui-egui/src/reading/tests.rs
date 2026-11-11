@@ -1757,9 +1757,12 @@ fn only_what_is_shown_as_a_picture_is_asked_for() {
         picture("httpx://t.example/a.png", None, None),
         picture("", None, None),
     ]);
-    assert_eq!(doc.remote.iter().map(|url| &**url).collect::<Vec<_>>(), ["https://t.example/real.png", "HTTPS://t.example/unsized.png"]);
+    // The four that say they are 3 pixels or less are trackers, taken out before anything is
+    // counted: the 3x3 `real.png` goes, its 300x300 namesake stays.
+    assert_eq!(doc.remote.iter().map(|url| &**url).collect::<Vec<_>>(), ["HTTPS://t.example/unsized.png", "https://t.example/real.png"]);
+    assert_eq!(doc.trackers.len(), 4);
     // A picture written into the message (`data:`) is the message's own, as a `cid:` one is.
-    assert_eq!((doc.remote_pictures, doc.remote_left_out), (12, 0));
+    assert_eq!((doc.remote_pictures, doc.remote_left_out), (8, 0));
     for (src, on_the_web) in [
         ("http://a.example/x", true),
         ("HtTpS://a.example/x", true),

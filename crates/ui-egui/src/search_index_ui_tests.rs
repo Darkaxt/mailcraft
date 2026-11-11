@@ -86,6 +86,13 @@ fn coverage_reads_real_counts_and_source_pages_without_changing_the_search_or_se
         app,
     );
     wait_index(&mut h);
+    // The search's answer lists the message before it is selected: selecting what the list does
+    // not show yet would show its whole folder, with no search (#485).
+    let started = std::time::Instant::now();
+    while !h.state_mut().session.rows().iter().any(|row| row.members.contains(&id)) {
+        assert!(started.elapsed().as_secs() < 120, "the search never listed the message");
+        h.run_steps(1);
+    }
     h.state_mut().execute("mail.select", json!({"id":id})).unwrap();
     wait_index(&mut h);
     let selected = vec![id];
