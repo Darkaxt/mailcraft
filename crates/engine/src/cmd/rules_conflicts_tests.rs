@@ -192,7 +192,6 @@ fn conflicts_treat_delete_and_deleted_subtree_moves_as_one_competing_destination
     s.run("rules.add", &draft(account, archive)).unwrap();
     let mut deleting = draft(account, archive);
     deleting["actions"] = json!([{"type":"delete"}]);
-    let before = serde_json::to_value(&s.mailbox).unwrap();
     assert!(s.run("rules.add", &deleting).unwrap_err().to_string().contains("filing conflict"));
     let mut into_trash = draft(account, deleted);
     assert!(s.run("rules.add", &into_trash).unwrap_err().to_string().contains("filing conflict"));

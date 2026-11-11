@@ -34,7 +34,7 @@ fn combined_navigation_search_and_origin_color_controls_are_wired_in_both_themes
 
 #[test]
 fn custom_color_text_is_kept_per_colour_in_effect() {
-    let scope = egui::Id::new("menu");
+    let scope = egui::Id::unique("menu");
     let old = mailcraft_model::ACCOUNT_ROW_COLORS[0];
     let new = mailcraft_model::ACCOUNT_ROW_COLORS[1];
     let ctx = egui::Context::default();
