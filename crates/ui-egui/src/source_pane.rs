@@ -155,13 +155,8 @@ pub(crate) fn command(app: &mut MailApp, params: &Value) -> Result<Value, String
                 app.source_pane.retire(active);
             }
             let message = app.session.mailbox.messages.get(&id).ok_or("the message no longer exists")?;
-            app.source_pane.active = Some(Active {
-                id,
-                opening: app.session.openings(),
-                message: message.clone(),
-                body: Reader::new("mail.sourcePage"),
-                export: None,
-            });
+            app.source_pane.active =
+                Some(Active { id, opening: app.session.openings(), message: message.clone(), body: Reader::new("mail.sourcePage"), export: None });
         }
         if let Some(active) = &mut app.source_pane.active {
             if let Some(page) = page {

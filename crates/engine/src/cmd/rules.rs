@@ -565,8 +565,10 @@ fn run_on(s: &mut Session, folder: Id, only: Option<Id>) -> CmdResult {
             }
         }
     }
-    Ok(json!({"examined": ids.len(), "skipped": skipped, "matched": matched, "applied": applied, "failed": failed, "conflictingMessages":conflicting_messages,
-        "failures": failures, "failureDetailsTruncated": failed > failures.len(), "dryRun": false}))
+    Ok(
+        json!({"examined": ids.len(), "skipped": skipped, "matched": matched, "applied": applied, "failed": failed, "conflictingMessages":conflicting_messages,
+        "failures": failures, "failureDetailsTruncated": failed > failures.len(), "dryRun": false}),
+    )
 }
 
 fn run(s: &mut Session, v: &Value) -> CmdResult {
@@ -651,9 +653,11 @@ fn preview(s: &mut Session, v: &Value) -> CmdResult {
         shadow.pending.clear();
         shadow.queued.clear();
     }
-    Ok(json!({"examined": ids.len(), "skipped": skipped, "matched": matched, "messages": messages, "failed": failed, "conflictingMessages":conflicting_messages,
+    Ok(
+        json!({"examined": ids.len(), "skipped": skipped, "matched": matched, "messages": messages, "failed": failed, "conflictingMessages":conflicting_messages,
         "failures": failures, "failureDetailsTruncated": failed > failures.len(),
-        "detailsTruncated": matched > messages.len(), "mutated": false}))
+        "detailsTruncated": matched > messages.len(), "mutated": false}),
+    )
 }
 
 /// The rule `rules.fromMessage` makes from `v`, with no id yet, and the folder the message is in

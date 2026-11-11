@@ -1066,9 +1066,7 @@ fn rules_onto_another_server(s: &Session, id: &str, params: &Value, shared: bool
     match id {
         // A rule for one account files that account's new mail; one for every account, every
         // account's.
-        "rules.add" | "rules.edit" => {
-            crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| rule_onto(s, &r, one_account(&r), shared))
-        }
+        "rules.add" | "rules.edit" => crate::cmd::rules::rule_from_params(s, params).is_ok_and(|r| rule_onto(s, &r, one_account(&r), shared)),
         "rules.fromMessage" => crate::cmd::rules::rule_from_message(s, params).is_ok_and(|(r, _)| rule_onto(s, &r, one_account(&r), shared)),
         // Read as the commands read them: what they refuse does nothing, and needs no question.
         "rules.enable" => p::opt_bool(params, "value").is_ok_and(|value| {

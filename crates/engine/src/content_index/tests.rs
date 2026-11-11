@@ -287,7 +287,10 @@ fn extraction_panics_are_reported_as_text_for_that_document_only() {
 #[test]
 fn deterministic_allowance_and_deadline_failures_are_resource_limits_not_retried_failures() {
     use super::extract::failure;
-    assert_eq!(failure("resourceLimit: extracted native/OCR text exceeds the 256 MiB containing-attachment allowance; original OCR PID 1"), "resourceLimit");
+    assert_eq!(
+        failure("resourceLimit: extracted native/OCR text exceeds the 256 MiB containing-attachment allowance; original OCR PID 1"),
+        "resourceLimit"
+    );
     assert_eq!(failure("resourceLimit: the native core did not answer within its 120-second response deadline and was ended"), "resourceLimit");
     assert_eq!(failure("the original OCR process failed"), "failed");
 }

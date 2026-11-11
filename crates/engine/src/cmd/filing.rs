@@ -356,10 +356,8 @@ fn apply(s: &mut Session, v: &Value) -> CmdResult {
         let failed: BTreeSet<Id> = failures.iter().map(|(id, _)| *id).collect();
         moved.extend(history.iter().copied().filter(|id| !failed.contains(id)));
         for (id, reason) in failures {
-            s.mailbox.message_mut(id)?.rule_processing = Some(Box::new(mailcraft_model::RuleProcessing::Failed {
-                rule: new_rules.last().copied().unwrap_or(0),
-                error: reason.clone(),
-            }));
+            s.mailbox.message_mut(id)?.rule_processing =
+                Some(Box::new(mailcraft_model::RuleProcessing::Failed { rule: new_rules.last().copied().unwrap_or(0), error: reason.clone() }));
             unavailable.push(json!({"id":id,"reason":reason}));
         }
     }

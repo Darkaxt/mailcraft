@@ -151,11 +151,7 @@ impl ManagedProcess {
                             watched_signal.expired.store(true, Ordering::Release);
                             break;
                         }
-                        state = watched_signal
-                            .changed
-                            .wait_timeout(state, deadline - now)
-                            .unwrap_or_else(std::sync::PoisonError::into_inner)
-                            .0;
+                        state = watched_signal.changed.wait_timeout(state, deadline - now).unwrap_or_else(std::sync::PoisonError::into_inner).0;
                     }
                 }
             }

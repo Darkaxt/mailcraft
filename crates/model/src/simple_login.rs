@@ -93,9 +93,8 @@ fn relayed(message: &Message) -> bool {
             return value.split(';').any(|clause| {
                 let mut words = clause.split_whitespace();
                 words.next().is_some_and(|result| result.eq_ignore_ascii_case("dkim=pass"))
-                    && words.any(|word| {
-                        word.split_once('=').is_some_and(|(key, domain)| key.eq_ignore_ascii_case("header.d") && relay_domain(domain))
-                    })
+                    && words
+                        .any(|word| word.split_once('=').is_some_and(|(key, domain)| key.eq_ignore_ascii_case("header.d") && relay_domain(domain)))
             });
         }
         false

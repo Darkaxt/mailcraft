@@ -191,8 +191,7 @@ fn rules_filing_into_a_shared_mailbox_are_classified_like_moving_mail_there() {
         ..Default::default()
     });
     let team = s.mailbox.add_folder(shared, None, "Team").unwrap();
-    let own =
-        s.run("account.add", &json!({"email": "other@example.org", "incoming": {"host": "imap.example.org"}})).unwrap()["id"].as_u64().unwrap();
+    let own = s.run("account.add", &json!({"email": "other@example.org", "incoming": {"host": "imap.example.org"}})).unwrap()["id"].as_u64().unwrap();
     let own_inbox = s.mailbox.folder_of_kind(own, mailcraft_model::FolderKind::Inbox).unwrap();
     let rule = |action: &str, folder: u64| {
         json!({"name": "Team", "account": owner, "server": false, "conditions": [{"type": "subjectContains", "value": "team fixture"}],
