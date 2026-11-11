@@ -116,8 +116,8 @@ new performance measurements for this index or proof of undiscovered mail.
 
 | Date | Change | Summary |
 |---|---|---|
-| 2026-11-10 | minor | #815: gap 12: a `.pst` body that is rich text alone comes in as its text |
 | 2026-11-11 | minor | Content index schema 2: substring matching with Match case / Whole word / Regex / Search in options, relevance scores and sort, a smaller sidecar rebuilt from older schemas, Junk and Deleted Items not indexed, and close no longer waiting for indexing |
+| 2026-11-10 | minor | #815: gap 12: a `.pst` body that is rich text alone comes in as its text |
 | 2026-11-10 | patch | #966: rough edges: Mail to keep offline applies to Exchange server accounts too |
 | 2026-11-09 | minor | #30 part 2: gap 16: an S/MIME Digital signature is checked, one of four results in a bar with Details and a seal on the row, read by agents too; certificates kept for the sender; the browser build trusts no authority; revocation not checked; OpenPGP not checked yet |
 | 2026-11-09 | patch | #30 part 3: gap 16: OpenPGP Digital signatures can be checked by a library (`mailcraft-openpgp`), not yet shown in the window; the row is unchanged until it is |

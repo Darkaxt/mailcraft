@@ -61,6 +61,14 @@ fn window_of(app: MailApp, size: egui::Vec2) -> Harness<'static, MailApp> {
     harness
 }
 
+/// A folder's link in Folder Size (a button), not its row in the pane (a tree item), which the
+/// Unified mailbox may show as well.
+fn size_row<'a>(h: &'a Harness<'static, MailApp>, name: &str) -> egui_kittest::Node<'a> {
+    h.get_all_by_role(egui::accesskit::Role::Button)
+        .find(|node| node.accesskit_node().label().is_some_and(|label| label.contains(name)))
+        .unwrap_or_else(|| panic!("no {name:?} in Folder Size"))
+}
+
 fn click(h: &mut Harness<'static, MailApp>, label: &str) {
     h.get_by_label(label).click();
     h.run_steps(3);
@@ -248,7 +256,7 @@ fn a_folders_name_goes_to_it_and_closes_the_dialog() {
     let mut h = window(a);
     assert!(h.query_all_by_label_contains("Inbox Properties").next().is_some());
     click(&mut h, "Folder Size…");
-    h.get_by_label_contains("Quarterly reports").click();
+    size_row(&h, "Quarterly reports").click();
     h.run_steps(4);
     assert!(h.state().dialog.is_none());
     assert_eq!(h.state().session.view.folder, reports);
@@ -296,7 +304,7 @@ fn a_folder_removed_meanwhile_leaves_folder_size_open() {
     let mut h = window(a);
     click(&mut h, "Folder Size…");
     h.state_mut().session.mailbox.folders.retain(|f| f.id != reports);
-    h.get_by_label_contains("Quarterly reports").click();
+    size_row(&h, "Quarterly reports").click();
     h.run_steps(4);
     assert!(open(h.state()).size_open);
     assert_eq!(h.state().session.view.folder, in_view);

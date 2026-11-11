@@ -6,7 +6,7 @@ messages without loading their full bodies. The index follows edits, moves,
 account removal and deletions, and reuses unchanged content after restart.
 
 Double quotes select literal phrases, preserving punctuation, accents and
-whitespace. Ordinary terms keep prefix matching. `case:sensitive` selects exact
+whitespace. Ordinary terms match inside words through the index (below). `case:sensitive` selects exact
 letter case; the search box's Aa control changes the same query option. Literal
 case-insensitive comparisons use Unicode default case folding, without accent
 removal; whitespace is not collapsed. Within quotes, a backslash escapes the
@@ -22,7 +22,9 @@ An invalid or excessive query returns its specific error rather than silently sh
 ## Matching, options and relevance (index schema 2)
 
 Free-text terms match anywhere inside a word: `voice` finds `invoice`. Several
-terms must all match. The index finds candidate words through its vocabulary
+terms must all match. Messages the index does not hold (Junk E-mail, Deleted
+Items, and mail it has not reached yet) are read directly and still match words by
+their beginning. The index finds candidate words through its vocabulary
 (stage 1) and then checks each candidate's stored text with the active options
 (stage 2). A very common fragment expanding to more than 2,000 words is answered
 through its 2,000 most frequent words plus every word starting with it; the

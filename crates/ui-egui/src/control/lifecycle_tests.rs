@@ -224,7 +224,9 @@ fn a_ready_search_coverage_result_does_not_block_close() {
     assert!(app.search_index_pane.holds_inspection());
     assert!(!app.search_index_pane.inspection_running());
     assert_eq!(app.lifecycle_blocker(), None);
-    let result = call(&mut app, &egui::Context::default(), "close");
+    let mut request = ControlRequest::new("app.lifecycle", json!({"action": "close"})).0.from_agent(Vec::new());
+    request.close_receipt = Some(crate::app_lifecycle::CloseReceipt::default());
+    let Outcome::Done(result) = handle(&mut app, &egui::Context::default(), &request) else { panic!("unexpected pending action") };
     assert_eq!(result["ok"], true, "{result}");
 }
 

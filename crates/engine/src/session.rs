@@ -1307,6 +1307,9 @@ pub struct Session {
     /// Messages the last search left out because their bodies weren't in memory and loading them
     /// ran past [`Session::search_time`]; the list says so.
     pub unsearched: usize,
+    /// Of [`Session::unsearched`], the messages whose bodies the last pass ran out of time for
+    /// (the rest are what the content index hasn't answered yet, which changes as it is built).
+    bodies_unsearched: usize,
     /// How long one search spends bringing bodies into memory before it goes with what it has.
     pub search_time: std::time::Duration,
     /// How many bytes brought into messages are kept there ([`LOADED_MAX`]).
@@ -1468,6 +1471,7 @@ impl Session {
             source_exports: Default::default(),
             loads: 0,
             unsearched: 0,
+            bodies_unsearched: 0,
             search_time: SEARCH_TIME,
             loaded_budget: LOADED_MAX,
             resident: std::collections::VecDeque::new(),
@@ -1850,17 +1854,19 @@ impl Session {
         let (decided, unverified) = self.search_words();
         #[cfg(target_arch = "wasm32")]
         let (decided, unverified) = (std::collections::HashMap::new(), 0);
-        let indexed = self.native_content_index_enabled();
-        let searched = if indexed {
-            self.unsearched = unverified;
-            std::collections::HashMap::new()
-        } else {
+        // (With the content index, what it leaves undecided is Junk E-mail and Deleted Items,
+        // which it doesn't hold: those are read from the messages themselves, as without it.)
+        let searched = {
             match &self.search_pass {
                 // Only content came in or went since this list was searched (a result opened): what
                 // was found stands, and nothing is brought in for it again.
-                Some((_, hits)) if self.searched_for.as_deref() == Some(list_now.as_str()) => hits.clone(),
+                Some((_, hits)) if self.searched_for.as_deref() == Some(list_now.as_str()) => {
+                    self.unsearched = self.bodies_unsearched.saturating_add(unverified);
+                    hits.clone()
+                }
                 _ => {
                     let hits = self.load_bodies_for_search(&decided);
+                    self.bodies_unsearched = self.unsearched;
                     self.unsearched = self.unsearched.saturating_add(unverified);
                     self.searched_for = self.search_pass.is_some().then_some(list_now);
                     hits

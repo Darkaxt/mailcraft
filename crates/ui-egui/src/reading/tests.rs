@@ -460,9 +460,10 @@ fn remote_pictures_are_stand_ins_and_nothing_is_looked_at_for_them() {
             assert_eq!((built.stats.placeholders, built.stats.remote), (9, 9));
             assert!(stand_ins(&built).contains(&("A table by a window at dusk, three candles lit", true)));
             assert!(built.stats.texts >= 8, "{:?}", built.stats);
-            // Eight pictures survive the parser; one of them is `cid:` with nothing attached.
+            // Eight pictures survive the parser; one of them is `cid:` with nothing attached, and
+            // the one placed off the page is a tracking picture, blocked rather than stood in for.
             let remote = lay_out(ctx, &corpus_message("remote"), 820.0);
-            assert_eq!((remote.stats.placeholders, remote.stats.remote), (8, 7));
+            assert_eq!((remote.stats.placeholders, remote.stats.remote), (7, 6));
             assert!(stand_ins(&remote).contains(&("missing part", false)));
             // No picture on the web was kept, because no bytes of one were ever looked at: there
             // were none to look at. The one written into the message was looked at, and is kept
@@ -1187,8 +1188,8 @@ fn the_reading_pane_names_nothing_that_could_fetch() {
         checked += 1;
     }
     assert_eq!(
-        checked, 23,
-        "reading.rs and its complete local helper/test inventory, including appearance/preview, semantic dark colours and signature inspection"
+        checked, 26,
+        "reading.rs and its complete local helper/test inventory, including appearance/preview, semantic dark colours, signature inspection, the floating controls and tracker blocking"
     );
 }
 
@@ -1390,7 +1391,7 @@ fn pictures_on_the_web_are_placeholders_until_the_owner_asks() {
         // and coming back asks for nothing again.
         select(&mut harness, id_of(&ids, "remote"));
         // (Its picture written into the message is shown: #533.)
-        assert_eq!(shown(&harness, id_of(&ids, "remote")), (1, 8, 7));
+        assert_eq!(shown(&harness, id_of(&ids, "remote")), (1, 7, 6));
         select(&mut harness, id);
         harness.run_steps(10);
         assert_eq!(shown(&harness, id), (8, 0, 0));
@@ -1714,7 +1715,7 @@ fn only_what_is_shown_as_a_picture_is_asked_for() {
             "http://evil.example/insecure.gif",
             // The one written without its scheme, read as `https`.
             "https://evil.example/schemeless.gif",
-            "https://evil.example/lazy.gif",
+            // (Not the one placed off the page, a tracking picture: `trackers`.)
             "https://evil.example/picture-fallback.jpg",
             "https://evil.example/noscript.gif",
             "https://evil.example/mathml.gif",

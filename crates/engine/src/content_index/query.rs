@@ -105,7 +105,9 @@ fn expression(
                 if index % 8192 == 0 && cancelled.load(Ordering::Acquire) {
                     return Err("search cancelled".into());
                 }
-                if token.contains(piece.as_str()) {
+                // (The tokenizer drops the accents of Latin letters only: a token in another
+                // script, `καλημέρα`, is folded as the pieces are before it is compared.)
+                if if token.is_ascii() { token.contains(piece.as_str()) } else { fold_words(token).contains(piece.as_str()) } {
                     found.push((token, *documents));
                 }
             }

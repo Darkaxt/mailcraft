@@ -678,7 +678,12 @@ pub fn access(id: &str) -> Option<Access> {
             _ => Access::Safe,
         }
     } else if is(MAILBOX) || is(SETTINGS) {
-        Access::Safe
+        match id {
+            // Public keys decide which Digital signatures check out: a trust anchor, not an
+            // options-page setting, so the owner says yes to it (as with `ui.confirmServers`).
+            "keys.import" | "keys.remove" => Access::Owner(Class::Settings),
+            _ => Access::Safe,
+        }
     } else if is(NEVER) {
         Access::Never
     } else {

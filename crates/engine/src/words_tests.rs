@@ -696,7 +696,6 @@ mod answered {
     const QUERIES: &[&str] = &[
         "budget",
         "budg",
-        "udget",
         "BUDGET review",
         "\"budget review\"",
         "\"review budget\"",
@@ -757,13 +756,17 @@ mod answered {
         assert_eq!(found(&mut indexed, "budg", Scope::Everywhere), ["Meeting on Tuesday", "Re: Budget"]);
         assert_eq!(found(&mut indexed, "\"budget review\"", Scope::Folder), ["Meeting on Tuesday"]);
         assert_eq!(found(&mut indexed, "gvozdar", Scope::Folder), ["Meeting on Tuesday"]);
-        assert!(found(&mut indexed, "udget", Scope::Everywhere).is_empty());
+        // The content index finds a word inside a longer one; reading the messages without it
+        // finds words by their beginning (`docs/content-search.md`).
+        assert_eq!(found(&mut indexed, "udget", Scope::Everywhere), ["Meeting on Tuesday", "Re: Budget"]);
+        assert!(found(&mut read, "udget", Scope::Everywhere).is_empty());
+        assert_eq!(found(&mut indexed, "from: stuart si", Scope::Everywhere), ["IQA-2026 sign-off", "[IQA] Audit dates"]);
+        assert_eq!(found(&mut read, "from: stuart si", Scope::Everywhere), ["IQA-2026 sign-off"]);
         // #194: `from: stuart subject: iqa` is `from:stuart subject:iqa`, found by either way.
         for s in [&mut indexed, &mut read] {
             let stuart = ["IQA-2026 sign-off", "[IQA] Audit dates"];
             assert_eq!(found(s, "from: stuart subject: iqa", Scope::Everywhere), stuart);
             assert_eq!(found(s, "from: stuart subject:", Scope::Everywhere), stuart);
-            assert_eq!(found(s, "from: stuart si", Scope::Everywhere), ["IQA-2026 sign-off"]);
             assert_eq!(found(s, "subject: iqa", Scope::Folder), ["IQA-2026 sign-off", "RE: IQA", "[IQA] Audit dates"]);
         }
     }
