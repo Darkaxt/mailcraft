@@ -42,6 +42,8 @@ pub mod agent_gate;
 #[cfg(test)]
 mod agent_gate_binding_tests;
 #[cfg(test)]
+mod agent_gate_headless_tests;
+#[cfg(test)]
 mod agent_gate_tests;
 #[cfg(test)]
 mod agent_leaves_tests;
@@ -250,6 +252,7 @@ use mailcraft_model::sync::{SyncPhase, SyncRequest, SyncResult, Tokens};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+pub use agent_gate::OwnerQuestion;
 pub use approval::{AdminConsentAnswer, AdminConsentRequest};
 pub use control::ControlRequest;
 pub use files::FileDialogRequest;
@@ -521,6 +524,14 @@ pub struct Services {
     /// when it can't, and hands back which were clicked. Only the window asks for one, never a
     /// command. Absent in the browser and the tests: nothing is shown.
     pub alert: Option<Box<dyn alerts::AlertHost>>,
+    /// Headless: ask the owner an agent's question ([`agent_gate`]) in a small window of the
+    /// host's own, since there is no MailCraft window to ask it in. The host sends the owner's
+    /// answer through the returned channel (only a click on the yes button is a yes; anything
+    /// else, the window closed, Escape, its time running out or `cancel` set, is a no) and wakes
+    /// the app; a dropped sender is a no. One question is shown at a time. Absent on the desktop
+    /// (the question is asked over the window), in the browser and in the tests: a headless
+    /// agent's question is then refused.
+    pub ask_owner: Option<Box<dyn Fn(agent_gate::OwnerQuestion) -> Receiver<bool>>>,
     /// The system's locale (`fr-FR`; the browser's in the browser build), which the interface
     /// language follows while it is Automatic. `None` (the tests, scripts): English.
     pub system_locale: Option<String>,
@@ -1789,6 +1800,8 @@ pub struct MailApp {
     pub(crate) synthetic: Vec<egui::Event>,
     /// What agents want that waits for the owner's yes ([`agent_gate`]).
     pub(crate) asking: agent_gate::Questions,
+    /// Headless: the host's window showing the first of `asking` ([`agent_gate::ask_owner_tick`]).
+    pub(crate) owner_window: Option<agent_gate::OwnerWindow>,
     styled: bool,
     /// The interface theme last installed in egui ([`theme::apply`]).
     applied_theme: Option<(egui::ThemePreference, theme::ThemeChoice)>,
@@ -2052,6 +2065,7 @@ impl MailApp {
             pending_shots: Vec::new(),
             synthetic: Vec::new(),
             asking: Default::default(),
+            owner_window: None,
             styled: false,
             applied_theme: None,
             applied_language: None,
@@ -4879,6 +4893,10 @@ impl MailApp {
         // Before anything can start or end a Send/Receive in this frame ([`alerts`]).
         alerts::tick(self, ctx);
         self.drain_control(ctx);
+        // Headless: the owner answers agents' questions in the host's own small window.
+        if self.is_headless() {
+            agent_gate::ask_owner_tick(self, ctx);
+        }
         // No new background job starts after an accepted idle close. The native
         // host's reply delivery and the existing saver govern progress, not time.
         if self.lifecycle_close_tick(ctx) {

@@ -1,0 +1,1 @@
+- A mailbox's bodies and attachments take much less space on disk: content that shrinks (text and HTML mail, most PDFs) is kept compressed in its folder beside the mailbox file, and what was written before is compressed in the background a little at a time; every file is still checked against its SHA-256 when it is read, and the mailbox file itself doesn't change.

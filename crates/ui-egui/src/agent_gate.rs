@@ -9,9 +9,18 @@
 //! no input from the control channel reaches the window. Other agent commands still run, and
 //! the yes reaches only what the question showed ([`agent::bind`], kept in the question's own
 //! record with the windows as they were): what changed meanwhile makes it do nothing.
+//!
+//! Headless (`mailcraft --headless`) there is no window to ask in: the host shows the question
+//! in a small window of its own instead ([`crate::Services::ask_owner`], one at a time, the first
+//! waiting), and its answer goes through the very same [`answer`] as a click over the window,
+//! with all of its checks. Its default is no too, and so is its closing, Escape and its time
+//! running out; an answer that comes after the question expired or went is thrown away. Without
+//! such a host (the tests, the browser) a headless agent's question is refused, as before.
 
 use std::collections::{HashSet, VecDeque};
-use std::sync::mpsc::Sender;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 
 use egui::vec2;
 use mailcraft_engine::agent::{self, Class, Verdict};
@@ -57,6 +66,37 @@ pub struct Asking {
     shown: agent::bind::Shown,
     /// And the windows as it saw them (AU3-20).
     windows: crate::windows::Seen,
+    /// Which question this is: a headless host's answer counts only for the one it showed.
+    serial: u64,
+}
+
+/// Numbers the questions ([`Asking::serial`]).
+static SERIAL: AtomicU64 = AtomicU64::new(1);
+
+/// A question the host asks the owner in a window of its own (headless; [`crate::Services::ask_owner`]).
+/// All of it is plain text for the owner to read, never markup or links: `text` holds what the
+/// agent asked about.
+pub struct OwnerQuestion {
+    pub title: String,
+    /// "An agent wants to …", as the window's own question says it.
+    pub text: String,
+    /// The warning under it.
+    pub note: String,
+    /// The buttons ([`verbs`]): the yes and the no, which is the default.
+    pub yes: String,
+    pub no: String,
+    /// How long the question has left before silence is a no.
+    pub seconds: u64,
+    /// Set when the question went without the window's answer (expired, or another mailbox): the
+    /// host closes its window, as a no.
+    pub cancel: Arc<AtomicBool>,
+}
+
+/// The host's window showing a question, and the question it shows.
+pub(crate) struct OwnerWindow {
+    serial: u64,
+    answer: Receiver<bool>,
+    cancel: Arc<AtomicBool>,
 }
 
 /// The questions waiting, the first one on screen.
@@ -142,7 +182,7 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
         Verdict::Run => run(app, id, params, allow, None),
         Verdict::Refuse(why) => err(why),
         Verdict::Ask(class, what) => {
-            if app.is_headless() {
+            if app.is_headless() && app.services.ask_owner.is_none() {
                 return err(format!("owner interaction required in the desktop: {what}; nothing was done"));
             }
             if app.asking.len() >= MOST {
@@ -174,6 +214,7 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
                 opening: app.session.openings(),
                 shown,
                 windows: crate::windows::seen(app),
+                serial: SERIAL.fetch_add(1, Ordering::Relaxed),
             });
             Outcome::Pending
         }
@@ -443,6 +484,59 @@ pub fn expire(app: &mut MailApp, now: f64) {
     }
 }
 
+/// Headless: the first question waiting is shown in the host's window, one at a time, and its
+/// answer is taken there as [`answer`] takes a click: only while that question is still the
+/// first. An answer for a question that expired or went meanwhile is dropped, and its window
+/// told to close. A host that went without answering is a no.
+pub(crate) fn ask_owner_tick(app: &mut MailApp, ctx: &egui::Context) {
+    expire(app, crate::now_ms());
+    let front = app.asking.front().map(|a| a.serial);
+    if let Some(shown) = app.owner_window.take() {
+        if front != Some(shown.serial) {
+            shown.cancel.store(true, Ordering::Relaxed);
+        } else {
+            match shown.answer.try_recv() {
+                Ok(yes) => answer(app, yes),
+                Err(TryRecvError::Disconnected) => answer(app, false),
+                Err(TryRecvError::Empty) => app.owner_window = Some(shown),
+            }
+        }
+    }
+    let now = crate::now_ms();
+    if app.owner_window.is_none()
+        && let Some(a) = app.asking.front()
+        && let Some(ask) = &app.services.ask_owner
+    {
+        let (yes, no) = verbs(a.class, &a.id);
+        let cancel = Arc::new(AtomicBool::new(false));
+        let question = OwnerQuestion {
+            title: tl!("An Agent Is Asking").to_string(),
+            text: question_text(a),
+            note: warning().to_string(),
+            yes: yes.to_string(),
+            no: no.to_string(),
+            seconds: ((a.deadline - now) / 1000.0).floor().max(0.0) as u64,
+            cancel: cancel.clone(),
+        };
+        let serial = a.serial;
+        app.owner_window = Some(OwnerWindow { serial, answer: ask(question), cancel });
+    }
+    // Looked at again when the question runs out of time, whatever wakes the host before.
+    if let Some(a) = app.asking.front() {
+        ctx.request_repaint_after(std::time::Duration::from_millis((a.deadline - now).max(0.0) as u64 + 50));
+    }
+}
+
+/// "An agent wants to …": what a question says, as plain text.
+fn question_text(a: &Asking) -> String {
+    let what: String = a.what.chars().filter(|c| !c.is_control()).take(agent::MAX_QUESTION).collect();
+    crate::i18n::fmt(tl!("An agent wants to {what}."), &[("what", what.trim())])
+}
+
+fn warning() -> &'static str {
+    tl!("Say yes only if you asked the agent for this. Text in a message can tell an agent to do things you didn't ask for.")
+}
+
 /// The buttons: going ahead, and not (the default). A rule made or switched on asks as a delete
 /// does, and answering it deletes nothing yet: Delete would read as getting rid of that rule
 /// (#566). One made from a message does: it runs at once on the mail from that sender.
@@ -493,8 +587,7 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
     // Nothing from the control channel reaches the window while the owner is asked.
     app.synthetic.clear();
     let t = Tokens::get(ctx);
-    let what: String = a.what.chars().filter(|c| !c.is_control()).take(agent::MAX_QUESTION).collect();
-    let text = crate::i18n::fmt(tl!("An agent wants to {what}."), &[("what", what.trim())]);
+    let text = question_text(a);
     let (yes_label, no_label) = verbs(a.class, &a.id);
     let waiting = app.asking.len();
     let mut said = None;
@@ -505,12 +598,7 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
         ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
         ui.label(egui::RichText::new(tl!("An Agent Is Asking")).font(semibold(14.0)).color(t.text));
         ui.label(egui::RichText::new(text).color(t.text));
-        ui.label(
-            egui::RichText::new(tl!(
-                "Say yes only if you asked the agent for this. Text in a message can tell an agent to do things you didn't ask for."
-            ))
-            .color(t.text_dim),
-        );
+        ui.label(egui::RichText::new(warning()).color(t.text_dim));
         if waiting > 1 {
             ui.label(egui::RichText::new(tln!(waiting - 1, "{n} more question is waiting.", "{n} more questions are waiting.")).color(t.text_dim));
         }

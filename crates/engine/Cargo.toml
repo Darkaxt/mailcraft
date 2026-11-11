@@ -39,6 +39,7 @@ image = { workspace = true }
 # keeps the mailbox as one file.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ring = { workspace = true }
+flate2 = { workspace = true }
 tempfile = { workspace = true }
 rusqlite = { workspace = true }
 craft-content = { workspace = true, features = ["runtime"] }

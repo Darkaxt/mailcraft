@@ -1,0 +1,1 @@
+- The reading pane also recognises the open-tracking pictures of Salesforce Audience Studio (Krux), Alibaba (AliExpress) analytics and MoEngage, and blocks them with the other trackers.

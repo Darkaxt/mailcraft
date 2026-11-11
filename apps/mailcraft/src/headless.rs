@@ -3,6 +3,11 @@
 //! The single mail owner without a native window, event loop, renderer or GPU.
 //! Existing mailbox services wake it for work; their requested schedules govern
 //! waiting. A scheduled wake never cancels work or changes its outcome.
+//!
+//! An agent's command that needs the owner (sending, permanent deletion and the like) is asked
+//! about in a small window of a separate, short-lived copy of the program (`owner_question`,
+//! wired as `Services::ask_owner` for headless mode only): its answer, which is no unless the
+//! owner clicks yes, wakes this loop and goes through the desktop's own answer and checks.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex};

@@ -3234,6 +3234,7 @@ name = "mailcraft-engine"
 version = "0.11.4"
 dependencies = [
  "craft-content",
+ "flate2",
  "image",
  "libc",
  "log",

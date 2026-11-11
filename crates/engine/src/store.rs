@@ -14,7 +14,20 @@
 //! mailbox.mailcraft.blobs/    the content, one file per distinct body or attachment
 //!     3f/3f2a…                named by the SHA-256 of its bytes (64 lowercase hex digits), in a
 //!                             folder named by the first two
+//!     3f/3f2a….z              or the same content compressed (a zlib stream), under the same
+//!                             name with `.z` after it
 //! ```
+//!
+//! - **Two forms of a content file:** the bytes themselves, or (`<name>.z`) the bytes compressed,
+//!   which content of at least [`INLINE_MAX`] bytes that shrinks to nine tenths or less is
+//!   written as (bodies of text and HTML shrink to a sixth to a third; pictures and archives
+//!   don't, and stay as they are). The name is always the SHA-256 of the bytes themselves, and
+//!   the length the mailbox file gives is theirs: the mailbox file is the same either way. Only
+//!   one form is written; a plain file already there stays, and is read first. A compressed one
+//!   is inflated to no more than the length its name promises (and one byte, to tell when it is
+//!   longer) and checked against its SHA-256 as a plain one is. Plain files written before are
+//!   compressed in the background, a batch at a time, after a sweep ([`compress_existing`],
+//!   `file.compressContent`).
 //!
 //! - **What moves out:** a body or an attachment of more than [`INLINE_MAX`] bytes. A content file
 //!   is written once and never changed. The same file attached to ten messages is kept once (and
@@ -33,7 +46,8 @@
 //!   renamed over (until then the old file is the mailbox), and the old file is kept beside it as
 //!   `mailbox.mailcraft.format1` or `.format2`. A format 1 file too large to hold in memory whole is read as a stream
 //!   (`store_stream.rs`, #649): its content goes to the content folder as each message is read. Everything read back is hostile: a content file is
-//!   taken only when it is a plain file of the length and SHA-256 the mailbox file names; names
+//!   taken only when it is a plain file of the length and SHA-256 the mailbox file names (once
+//!   inflated, for a compressed one); names
 //!   are 64 hex digits or nothing; sizes are capped; a record counts only whole, with its
 //!   checksum, and closed by a commit. Bytes after the last commit (a save cut short, or damage)
 //!   are reported, and so is a save left out because a record of it is damaged (the saves after
@@ -891,6 +905,9 @@ struct Shared {
     /// sequence number of the last time it was asked for: left alone by every sweep until a
     /// mailbox file saved from a state after that names it.
     ahead: Mutex<HashMap<Digest, u64>>,
+    /// Plain content files [`compress_existing`] looked at and left as they are (not worth
+    /// compressing, or not what their name says): not looked at again while the program runs.
+    left_plain: Mutex<HashSet<Digest>>,
 }
 
 /// Most content names waiting to be forgotten ([`forget_when_saved`]); past this the sweep
@@ -1197,32 +1214,126 @@ fn blob_path(dir: &Path, hash: &Digest) -> Option<(PathBuf, PathBuf)> {
     Some((sub, file))
 }
 
+/// What the name of a content file kept compressed ends in: `<hash>.z` holds a zlib stream of the
+/// content whose SHA-256 is `<hash>`.
+const PACKED: &str = ".z";
+
+/// The compressed form of the content file `file`: the same name with [`PACKED`] after it.
+fn packed(file: &Path) -> PathBuf {
+    let mut name = file.as_os_str().to_os_string();
+    name.push(PACKED);
+    PathBuf::from(name)
+}
+
+/// The content a file of the content folder keeps, by its name: `<hash>` or `<hash>.z`.
+fn content_of(name: &str) -> Option<Digest> {
+    Digest::parse(name.strip_suffix(PACKED).unwrap_or(name))
+}
+
+/// Whether `name` is a temporary file the writer of a content file (of either form) made.
+fn is_content_temp(name: &str) -> bool {
+    name.get(..64).is_some_and(|stem| Digest::parse(stem).is_some() && (is_temp_of(name, stem) || is_temp_of(name, &format!("{stem}{PACKED}"))))
+}
+
+/// Whether a plain file is at `path` (not a link, not a folder).
+fn is_plain_file(path: &Path) -> bool {
+    fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_file())
+}
+
+/// Whether the content `r` is at `file`, by a look at the file alone: a plain file of its length,
+/// or, when nothing is under the plain name, its compressed form (whose length says nothing of
+/// the content's: its bytes are checked when it is read).
+fn kept_at(file: &Path, r: &Ref) -> bool {
+    match fs::symlink_metadata(file) {
+        Ok(m) => m.file_type().is_file() && m.len() == r.len,
+        Err(_) => is_plain_file(&packed(file)),
+    }
+}
+
+/// Whether content written into the content folder `dir` may be compressed: always, but under
+/// test only in the folders a test asks for ([`compress_under_test`]), so that the many tests that
+/// look at content files as the bytes themselves keep doing so.
+fn packs(dir: &Path) -> bool {
+    !cfg!(test) || lock(packing_under_test()).contains(dir)
+}
+
+/// The content folders whose content a test lets be compressed ([`packs`]).
+fn packing_under_test() -> &'static Mutex<HashSet<PathBuf>> {
+    static DIRS: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
+    DIRS.get_or_init(Default::default)
+}
+
+/// Let content written beside the mailbox file at `path` be compressed, as it always is outside
+/// tests.
+#[cfg(test)]
+pub(crate) fn compress_under_test(path: &Path) {
+    lock(packing_under_test()).insert(blob_dir(&resolve(path)));
+}
+
+/// `bytes` compressed to be kept at rest, when that is worth it: content of at least
+/// [`INLINE_MAX`] bytes that shrinks to nine tenths of its size or less (text and HTML do; pictures
+/// and archives mostly don't).
+fn pack(bytes: &[u8]) -> Option<Vec<u8>> {
+    if bytes.len() < INLINE_MAX {
+        return None;
+    }
+    let mut out = flate2::write::ZlibEncoder::new(Vec::with_capacity(bytes.len() / 2), flate2::Compression::new(6));
+    out.write_all(bytes).ok()?;
+    let out = out.finish().ok()?;
+    ((out.len() as u64).saturating_mul(10) <= (bytes.len() as u64).saturating_mul(9)).then_some(out)
+}
+
+/// The content `r` kept at `file`, opened to be read as its bytes: the plain file when there is
+/// one (of the length `r` says), otherwise its compressed form inflated, never to more than one
+/// byte past that length however much the stream would give. A link is never followed. What it
+/// yields is the caller's to check against `r` (its length and SHA-256).
+fn open_content(file: &Path, r: &Ref) -> Option<Box<dyn Read + Send>> {
+    if let Some((f, on_disk)) = open_plain(file) {
+        return (on_disk == r.len).then(|| Box::new(f) as Box<dyn Read + Send>);
+    }
+    let (f, _) = open_plain(&packed(file))?;
+    Some(Box::new(flate2::read::ZlibDecoder::new(f).take(r.len.checked_add(1)?)))
+}
+
 /// Make sure the content `r` is on disk under `dir`, and safe from a sweep for a while. Returns
 /// whether it had to be written. A file of the right length that is already there is this
-/// content (nothing else is ever written under its name): only its time is renewed.
+/// content (nothing else is ever written under its name), and so is its compressed form: only
+/// its time is renewed. Content that compresses well ([`pack`]) is written compressed, unless
+/// something is already under the plain name (which is then written over, as before).
 fn put(dir: &Path, r: &Ref, bytes: &[u8]) -> std::io::Result<bool> {
     let (sub, file) = blob_path(dir, &r.hash).ok_or_else(|| std::io::Error::other("no name"))?;
-    let there = |file: &Path| fs::symlink_metadata(file).is_ok_and(|m| m.file_type().is_file() && m.len() == r.len);
-    if there(&file) {
-        let renewed = fs::OpenOptions::new().write(true).open(&file).and_then(|f| f.set_modified(SystemTime::now()));
-        if renewed.is_ok() {
-            return Ok(false);
-        }
+    if renew(&file, r) {
+        return Ok(false);
     }
+    let packed_bytes = (fs::symlink_metadata(&file).is_err() && packs(dir)).then(|| pack(bytes)).flatten();
+    let (to, payload) = match &packed_bytes {
+        Some(p) => (packed(&file), p.as_slice()),
+        None => (file.clone(), bytes),
+    };
     // Twice at most: a folder that went missing between making it and writing into it (a sweep, a
     // tidy-up tool) is made again.
     let mut last = None;
     for _ in 0..2 {
         own_dir(&sub)?;
-        match write_atomic(&file, bytes) {
+        match write_atomic(&to, payload) {
             Ok(()) => return Ok(true),
             // Somebody else saving the same content at the same moment is no failure.
-            Err(_) if there(&file) => return Ok(false),
+            Err(_) if kept_at(&file, r) => return Ok(false),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => last = Some(e),
             Err(e) => return Err(e),
         }
     }
     Err(last.unwrap_or_else(|| std::io::Error::other("the content folder keeps going away")))
+}
+
+/// When the content `r` is at `file` in either form ([`kept_at`]), renew its time so a sweep
+/// leaves it for a while; whether it was there and renewed.
+fn renew(file: &Path, r: &Ref) -> bool {
+    if !kept_at(file, r) {
+        return false;
+    }
+    let at = if fs::symlink_metadata(file).is_ok() { file.to_path_buf() } else { packed(file) };
+    fs::OpenOptions::new().write(true).open(&at).and_then(|f| f.set_modified(SystemTime::now())).is_ok()
 }
 
 /// Write `bytes`, whose SHA-256 is `hash`, into the content folder of the mailbox file at `path`
@@ -1289,14 +1400,13 @@ pub fn copy_content(from: &Path, to: &Path, mailbox: &Mailbox) -> Result<usize, 
     let mut copied = 0usize;
     for r in wanted {
         let (Some((_, from_file)), Some((sub, to_file))) = (blob_path(&src, &r.hash), blob_path(&dst, &r.hash)) else { continue };
-        let there = |f: &Path| fs::symlink_metadata(f).is_ok_and(|m| m.file_type().is_file() && m.len() == r.len);
-        // Only a plain file of the right length is content of ours; a link is never followed.
-        if !there(&from_file) {
+        // Only a plain file of the right length, or the compressed form when there is no plain
+        // file, is content of ours; a link is never followed. Whichever it is keeps its name.
+        if !kept_at(&from_file, &r) || kept_at(&to_file, &r) {
             continue;
         }
-        if there(&to_file) {
-            continue;
-        }
+        let (from_file, to_file) =
+            if fs::symlink_metadata(&from_file).is_ok() { (from_file, to_file) } else { (packed(&from_file), packed(&to_file)) };
         own_dir(&sub).map_err(|e| format!("{}: {e}", sub.display()))?;
         if fs::hard_link(&from_file, &to_file).is_err() {
             let mut out = AtomicFile::create(&to_file).map_err(|e| format!("{}: {e}", to_file.display()))?;
@@ -1332,10 +1442,7 @@ pub fn remove_unwritten(path: &Path) -> usize {
         }
         for entry in fs::read_dir(sub.path()).into_iter().flatten().flatten().take(MAX_ENTRIES) {
             let name = entry.file_name();
-            let ours = name.to_str().is_some_and(|n| {
-                Digest::parse(n).is_some_and(|_| n.starts_with(folder))
-                    || n.get(..64).is_some_and(|stem| Digest::parse(stem).is_some() && is_temp_of(n, stem))
-            });
+            let ours = name.to_str().is_some_and(|n| content_of(n).is_some_and(|_| n.starts_with(folder)) || is_content_temp(n));
             if ours && entry.file_type().is_ok_and(|t| t.is_file()) && fs::remove_file(entry.path()).is_ok() {
                 removed += 1;
             }
@@ -1389,16 +1496,14 @@ fn open_plain(file: &Path) -> Option<(fs::File, u64)> {
 }
 
 /// The content `r` from under `dir`, if it is there and is what its name says: a plain file (not
-/// a link, and in a folder that isn't one either) of that length with that SHA-256.
+/// a link, and in a folder that isn't one either) of that length with that SHA-256, or its
+/// compressed form that inflates to just that ([`open_content`]).
 fn get(dir: &Path, r: &Ref, folders: &Folders) -> Option<Vec<u8>> {
     let (sub, file) = blob_path(dir, &r.hash)?;
     if r.len > MAX_BLOB || !folders.real(&r.hash, &sub) {
         return None;
     }
-    let (file, on_disk) = open_plain(&file)?;
-    if on_disk != r.len {
-        return None;
-    }
+    let file = open_content(&file, r)?;
     let len = usize::try_from(r.len).ok()?;
     let mut bytes = Vec::new();
     // Memory that isn't there is content that is unavailable, not a crash.
@@ -2253,11 +2358,9 @@ struct Filled {
 }
 
 /// Whether the content `r` is on disk under `dir`, by a look at the file alone (its kind and
-/// length, not its bytes).
+/// length, not its bytes; of a compressed one, its kind alone: [`kept_at`]).
 fn present(dir: &Path, r: &Ref, folders: &Folders) -> bool {
-    blob_path(dir, &r.hash).is_some_and(|(sub, file)| {
-        r.len <= MAX_BLOB && folders.real(&r.hash, &sub) && fs::symlink_metadata(&file).is_ok_and(|m| m.file_type().is_file() && m.len() == r.len)
-    })
+    blob_path(dir, &r.hash).is_some_and(|(sub, file)| r.len <= MAX_BLOB && folders.real(&r.hash, &sub) && kept_at(&file, r))
 }
 
 /// Which of `on_disk` (content under `dir`, with how many parts name each) are missing, looked
@@ -2281,7 +2384,12 @@ fn absent_in(dir: &Path, r: &Ref, folders: &Folders) -> bool {
     blob_path(dir, &r.hash).is_some_and(|(sub, file)| {
         folders.real(&r.hash, &sub)
             && match fs::symlink_metadata(&file) {
-                Err(e) => e.kind() == std::io::ErrorKind::NotFound && !evicted(&sub, &r.hash) && folders.whole(dir, &sub),
+                Err(e) => {
+                    e.kind() == std::io::ErrorKind::NotFound
+                        && fs::symlink_metadata(packed(&file)).is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound)
+                        && !evicted(&sub, &r.hash)
+                        && folders.whole(dir, &sub)
+                }
                 Ok(m) => !(m.file_type().is_file() && m.len() == r.len) && folders.whole(dir, &sub),
             }
     })
@@ -2304,7 +2412,7 @@ fn one_reads(dir: &Path, first: &Path) -> bool {
     let subs = std::iter::once(first.to_path_buf()).chain(others.map(|e| e.path()));
     subs.flat_map(|sub| fs::read_dir(sub).into_iter().flatten().flatten()).take(WHOLE_LOOKS).any(|e| {
         // (A name of 64 hex digits alone: never a cloud drive's `.<name>.icloud` stand-in.)
-        e.file_name().to_str().is_some_and(|n| !n.starts_with('.') && Digest::parse(n).is_some())
+        e.file_name().to_str().is_some_and(|n| !n.starts_with('.') && content_of(n).is_some())
             && open_plain(&e.path()).is_some_and(|(mut f, len)| len > 0 && std::io::Read::read(&mut f, &mut [0u8; 1]).is_ok_and(|n| n == 1))
     })
 }
@@ -2766,10 +2874,10 @@ impl ContentSource for Content {
         if wanted.len > MAX_BLOB || !Folders::new().real(&wanted.hash, &sub) {
             return Err("the retained content folder is missing or not a plain folder".into());
         }
-        let (file, len) = open_plain(&path).ok_or("the retained content is missing or not a plain file")?;
-        if len != wanted.len {
+        if fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_file() && m.len() != wanted.len) {
             return Err("the retained content length is damaged".into());
         }
+        let file = open_content(&path, &wanted).ok_or("the retained content is missing or not a plain file")?;
         Ok(Box::new(VerifiedContent { file, wanted, count: 0, hash: Some(ring::digest::Context::new(&ring::digest::SHA256)), failed: false }))
     }
 }
@@ -2778,7 +2886,7 @@ impl ContentSource for Content {
 /// is an error, never an apparently successful short file. Exporters consume EOF
 /// before publishing their private output.
 struct VerifiedContent {
-    file: fs::File,
+    file: Box<dyn Read + Send>,
     wanted: Ref,
     count: u64,
     hash: Option<ring::digest::Context>,
@@ -3987,12 +4095,14 @@ pub fn forget_due(path: &Path, rev: u64) -> Swept {
     named.extend(lock(&shared.ahead).keys().copied());
     let dir = blob_dir(&file);
     for hash in due.difference(&named) {
-        let Some((_, stale)) = blob_path(&dir, hash) else { continue };
-        // Only a plain file of ours: a link is never followed.
-        let Ok(meta) = fs::symlink_metadata(&stale) else { continue };
-        if meta.file_type().is_file() && fs::remove_file(&stale).is_ok() {
-            swept.removed += 1;
-            swept.bytes = swept.bytes.saturating_add(meta.len());
+        let Some((_, plain)) = blob_path(&dir, hash) else { continue };
+        // Either form. Only a plain file of ours: a link is never followed.
+        for stale in [packed(&plain), plain] {
+            let Ok(meta) = fs::symlink_metadata(&stale) else { continue };
+            if meta.file_type().is_file() && fs::remove_file(&stale).is_ok() {
+                swept.removed += 1;
+                swept.bytes = swept.bytes.saturating_add(meta.len());
+            }
         }
     }
     drop(st);
@@ -4068,9 +4178,9 @@ pub fn sweep(path: &Path, grace: Duration) -> Result<Swept, String> {
             if meta.is_dir() {
                 continue;
             }
-            let stale = match Digest::parse(name) {
+            let stale = match content_of(name) {
                 Some(hash) => !name.starts_with(folder) || !named.contains(&hash),
-                None => name.get(..64).is_some_and(|stem| Digest::parse(stem).is_some() && is_temp_of(name, stem)),
+                None => is_content_temp(name),
             };
             if stale && old(&meta) {
                 remove(&entry.path(), &meta, &mut swept);
@@ -4091,6 +4201,103 @@ pub fn sweep(path: &Path, grace: Duration) -> Result<Swept, String> {
         }
     }
     Ok(swept)
+}
+
+/// What [`compress_existing`] did.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CompressReport {
+    /// Content files now kept compressed.
+    pub files: usize,
+    /// What they took on disk before.
+    pub bytes_before: u64,
+    /// What they take now.
+    pub bytes_after: u64,
+    /// Plain content files past `most`, not looked at yet.
+    pub left: usize,
+}
+
+/// Keep the plain content files beside the mailbox file at `path` compressed where that is worth
+/// it ([`pack`]), looking at `most` of them at most: each is read and checked against its name,
+/// its compressed form is written ([`write_atomic`]) and read back to the very same bytes, and
+/// only then does the plain file go. One that isn't worth it, or isn't what its name says, is
+/// left as it is, and not looked at again while the program runs. Either form reads the same at
+/// every moment, so whatever reads or saves meanwhile never minds, and the mailbox file is not
+/// touched.
+pub fn compress_existing(path: &Path, most: usize) -> CompressReport {
+    let dir = blob_dir(&resolve(path));
+    let mut report = CompressReport::default();
+    // A link is somebody else's folder: it is never followed.
+    if fs::symlink_metadata(&dir).is_ok_and(|m| m.file_type().is_symlink()) {
+        return report;
+    }
+    let shared = shared(path);
+    let (mut looked, mut seen) = (0usize, 0usize);
+    'folders: for sub in fs::read_dir(&dir).into_iter().flatten().flatten() {
+        let folder = sub.file_name();
+        let Some(folder) = folder.to_str().filter(|n| n.len() == 2 && is_hex(n)) else { continue };
+        if !sub.file_type().is_ok_and(|t| t.is_dir()) {
+            continue;
+        }
+        for entry in fs::read_dir(sub.path()).into_iter().flatten().flatten() {
+            seen += 1;
+            if seen > MAX_ENTRIES {
+                break 'folders;
+            }
+            let name = entry.file_name();
+            let Some(hash) = name.to_str().filter(|n| n.starts_with(folder)).and_then(Digest::parse) else { continue };
+            if !entry.file_type().is_ok_and(|t| t.is_file()) || lock(&shared.left_plain).contains(&hash) {
+                continue;
+            }
+            if looked >= most {
+                report.left += 1;
+                continue;
+            }
+            looked += 1;
+            match compress_one(&entry.path(), &hash) {
+                Some((before, after)) => {
+                    report.files += 1;
+                    report.bytes_before = report.bytes_before.saturating_add(before);
+                    report.bytes_after = report.bytes_after.saturating_add(after);
+                }
+                None => {
+                    lock(&shared.left_plain).insert(hash);
+                }
+            }
+        }
+    }
+    report
+}
+
+/// Keep the plain content file `file`, named `hash`, compressed ([`compress_existing`]): what it
+/// took on disk before and takes now, or `None` when it stays as it is.
+fn compress_one(file: &Path, hash: &Digest) -> Option<(u64, u64)> {
+    let (f, len) = open_plain(file)?;
+    if len > MAX_BLOB {
+        return None;
+    }
+    let size = usize::try_from(len).ok()?;
+    let mut bytes = Vec::new();
+    bytes.try_reserve_exact(size.checked_add(1)?).ok()?;
+    f.take(len.checked_add(1)?).read_to_end(&mut bytes).ok()?;
+    if bytes.len() != size || Digest::of(&bytes) != *hash {
+        return None;
+    }
+    let to = packed(file);
+    // (A compressed form already there, from a run that stopped before the plain file went, is
+    // read back as one just written is.)
+    if !is_plain_file(&to) {
+        write_atomic(&to, &pack(&bytes)?).ok()?;
+    }
+    let (z, after) = open_plain(&to)?;
+    let mut back = Vec::new();
+    back.try_reserve_exact(size.checked_add(1)?).ok()?;
+    let read = flate2::read::ZlibDecoder::new(z).take(len.checked_add(1)?).read_to_end(&mut back);
+    if read.is_err() || back != bytes {
+        let _ = fs::remove_file(&to);
+        return None;
+    }
+    fs::remove_file(file).ok()?;
+    Some((len, after))
 }
 
 // ---- saving in the background ----
@@ -4125,6 +4332,9 @@ struct Jobs {
     /// The content folder being swept, and since when: the file is busy meanwhile (a sweep holds
     /// its state from start to end), which [`BackgroundSave::progress`] says.
     sweeping: Option<Instant>,
+    /// Content folders whose plain files are being compressed a batch at a time when there is
+    /// nothing else to do ([`compress_existing`]). Not a busy file: both forms read the same.
+    compressing: Vec<PathBuf>,
     reports: Vec<SaveReport>,
     closed: bool,
 }
@@ -4139,7 +4349,12 @@ struct Job {
 enum Work {
     Save(Box<Job>),
     Sweep(PathBuf),
+    Compress(PathBuf),
 }
+
+/// Most plain content files the saver's thread looks at in one batch of [`compress_existing`]
+/// before it looks for a save to write again.
+const COMPRESS_BATCH: usize = 64;
 
 impl Saver {
     /// Start the thread. `notify` is called (on that thread) each time a state has been written
@@ -4273,6 +4488,9 @@ impl Queue {
                         jobs.sweeping = Some(Instant::now());
                         break Work::Sweep(path);
                     }
+                    if let Some(path) = jobs.compressing.pop() {
+                        break Work::Compress(path);
+                    }
                     jobs = self.work.wait(jobs).unwrap_or_else(|e| e.into_inner());
                 }
             };
@@ -4306,11 +4524,33 @@ impl Queue {
                         Ok(Err(e)) => log::warn!("sweeping the mailbox's content folder failed: {e}"),
                         Err(_) => log::error!("sweeping the mailbox's content folder stopped unexpectedly"),
                     }
-                    lock(&self.jobs).sweeping = None;
+                    {
+                        let mut jobs = lock(&self.jobs);
+                        jobs.sweeping = None;
+                        // Then its plain content files are compressed, a batch at a time while
+                        // nothing else is to be done.
+                        if packs(&blob_dir(&resolve(&path))) && !jobs.compressing.contains(&path) {
+                            jobs.compressing.push(path);
+                        }
+                    }
                     // Whoever waits for the file to be free (the window, to open another mailbox)
                     // looks again.
                     (self.notify)();
                 }
+                Work::Compress(path) => match std::panic::catch_unwind(|| compress_existing(&path, COMPRESS_BATCH)) {
+                    Ok(done) => {
+                        if done.files > 0 {
+                            let (files, before, after) = (done.files, done.bytes_before, done.bytes_after);
+                            log::info!("{}: compressed {files} content file(s), {before} bytes to {after}", path.display());
+                        }
+                        // The rest in the next batch, once whatever is waiting is written.
+                        let mut jobs = lock(&self.jobs);
+                        if done.left > 0 && !jobs.closed && !jobs.compressing.contains(&path) {
+                            jobs.compressing.insert(0, path);
+                        }
+                    }
+                    Err(_) => log::error!("compressing the mailbox's content files stopped unexpectedly"),
+                },
             }
         }
     }

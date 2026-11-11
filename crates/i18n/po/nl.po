@@ -2919,6 +2919,11 @@ msgstr "Voltooid op {date}"
 msgid "Completed."
 msgstr "Voltooid."
 
+#. command label
+#: crates/engine/src/cmd/file.rs
+msgid "Compress Mailbox Content"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/unconfirmed.rs
 #, fuzzy

@@ -2777,6 +2777,11 @@ msgstr "Erledigt am {date}"
 msgid "Completed."
 msgstr "Erledigt."
 
+#. command label
+#: crates/engine/src/cmd/file.rs
+msgid "Compress Mailbox Content"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/unconfirmed.rs
 msgid "Confirm Servers"

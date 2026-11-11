@@ -23,6 +23,9 @@ fn the_open_pixels_of_mail_services_are_known() {
         "https://www.facebook.com/tr?id=1234567890&ev=PageView&noscript=1",
         "//t.hubspotemail.net/e2t/to/VWxyz",
         "https://spgo.io/q/AbC123",
+        "https://beacon.krxd.net/event.gif?event_id=AbC123&event_type=open",
+        "https://ae.mmstat.com/ae.mail.open?spm=a2g0o&uid=123",
+        "https://moe_sluk.api-02.moengage.com/v1/emailtracking/open?cid=abc",
     ] {
         assert!(known(url), "{url}");
     }
@@ -37,6 +40,8 @@ fn the_picture_hosts_of_the_same_services_are_not() {
         "https://www.facebook.com/images/fb_icon_325x325.png",
         "https://www.trackingshoes.example/track/open-house.jpg",
         "https://list-manage.com.evil.example/track/open.php",
+        "https://image.moengage.com/brand/hero.png",
+        "https://krxd.net.example/banner.png",
         "mailto:someone@example.org",
         "cid:logo@example.org",
     ] {

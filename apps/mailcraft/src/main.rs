@@ -79,6 +79,7 @@ mod opened_files;
 #[cfg(test)]
 mod opened_flow;
 mod own_keys;
+mod owner_question;
 mod picture_cache;
 mod quit;
 #[cfg(target_os = "macos")]
@@ -1750,6 +1751,7 @@ fn services(
     let tree_ctx = ctx.clone();
     let pst_ctx = ctx.clone();
     let alert_ctx = ctx.clone();
+    let ask_ctx = ctx.clone();
     let (keys_ctx, keys_store) = (ctx.clone(), secrets::store());
     let (sync_ctx, sign_in_ctx, graph_ctx, mx_ctx, test_ctx) = (ctx.clone(), ctx.clone(), ctx.clone(), ctx.clone(), ctx);
     let sync_cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -1909,6 +1911,9 @@ fn services(
         // Desktop alerts, through the system's notifications (`alerts`).
         alert: (!headless).then(|| alerts::host(alert_ctx)).flatten(),
         clipboard: (!headless).then(clipboard::board).flatten(),
+        // Headless: an agent's question to the owner in a small window of its own; the desktop
+        // asks over its window instead.
+        ask_owner: headless.then(|| owner_question::hook(ask_ctx)),
         // Help › Copy Diagnostics: the version, the platform and the redacted end of the logs.
         diagnostics: Some(Box::new(|| diagnostics::report(env!("CARGO_PKG_VERSION"), build_sha(), log_dir().filter(|_| prefs_enabled()).as_deref()))),
         // Help › Report a Problem › Send report (#956), on the owner's click alone: the report the
@@ -2082,6 +2087,11 @@ fn already_open() {
 }
 
 fn main() -> eframe::Result {
+    // Headless MailCraft's question to the owner (`owner_question`): a window and nothing else,
+    // before the log, the settings, the single-instance lock and the control port.
+    if std::env::args_os().nth(1).is_some_and(|a| a == owner_question::ARG) {
+        std::process::exit(owner_question::window());
+    }
     // First, so the panic hook and every start-up warning are recorded (`logging`).
     let logger = logging::install();
     logging::install_panic_hook();

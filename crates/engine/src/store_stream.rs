@@ -171,17 +171,22 @@ fn kept_cap(len: u64) -> u64 {
 
 /// The content `r` as a file under `dir`, in place only once it is whole and flushed to the disk:
 /// written to a temporary file beside it, flushed, then renamed. A file of the right length that
-/// is already there is this content (nothing else is ever written under its name): only its
-/// time is renewed.
+/// is already there is this content (nothing else is ever written under its name), and so is its
+/// compressed form: only its time is renewed. Content that compresses well is written compressed
+/// ([`pack`]), as a save writes it.
 fn write_blob(dir: &Path, r: &Ref, bytes: &[u8]) -> std::io::Result<()> {
     let (_, file) = blob_path(dir, &r.hash).ok_or_else(|| std::io::Error::other("no name"))?;
-    let there = |file: &Path| fs::symlink_metadata(file).is_ok_and(|m| m.file_type().is_file() && m.len() == r.len);
-    if there(&file) && fs::OpenOptions::new().write(true).open(&file).and_then(|f| f.set_modified(SystemTime::now())).is_ok() {
+    if renew(&file, r) {
         return Ok(());
     }
+    let packed_bytes = (fs::symlink_metadata(&file).is_err() && packs(dir)).then(|| pack(bytes)).flatten();
+    let (to, bytes) = match &packed_bytes {
+        Some(p) => (packed(&file), p.as_slice()),
+        None => (file.clone(), bytes),
+    };
     let mut tries = 0;
     let (tmp, mut out) = loop {
-        let tmp = temp_beside(&file);
+        let tmp = temp_beside(&to);
         match create_private(&tmp) {
             Ok(out) => break (tmp, out),
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && tries < 8 => tries += 1,
@@ -190,12 +195,12 @@ fn write_blob(dir: &Path, r: &Ref, bytes: &[u8]) -> std::io::Result<()> {
     };
     let written = out.write_all(bytes).and_then(|()| out.sync_all()).and_then(|()| {
         drop(out);
-        rename_over(&tmp, &file)
+        rename_over(&tmp, &to)
     });
     match written {
         Ok(()) => Ok(()),
         // Somebody else saving the same content at the same moment is no failure.
-        Err(_) if there(&file) => {
+        Err(_) if kept_at(&file, r) => {
             let _ = fs::remove_file(&tmp);
             Ok(())
         }

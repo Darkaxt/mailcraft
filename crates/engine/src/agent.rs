@@ -124,6 +124,8 @@ const SAFE: &[&str] = &[
     "file.exportCalendar",
     "file.exportContacts",
     "file.info",
+    // Keeps the content files compressed: the same mail, read the same; nothing changes.
+    "file.compressContent",
     // Reads what is known of the automatic replies (and has the window read them again).
     "account.automaticReplies",
     "edit.undo",

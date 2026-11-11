@@ -2093,6 +2093,9 @@ mod launch;
 #[path = "store_hidden_tests.rs"]
 mod hidden;
 
+#[path = "store_compress_tests.rs"]
+mod compress;
+
 #[path = "store_original_tests.rs"]
 mod original;
 

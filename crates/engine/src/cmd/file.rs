@@ -36,6 +36,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("file.info", "Info", "File › Info", info).pure().params(
             r#"{"memory"?: bool} — optional read-only resident payload/capacity accounting; does not load content, build the index or report a total process heap"#,
         ),
+        CommandSpec::new("file.compressContent", "Compress Mailbox Content", "File › Info", compress_content).pure().params(
+            r#"{"most"?: number (default and at most 10000)} — the open mailbox's content files (bodies and attachments in the folder `<file>.blobs`) that shrink to nine tenths or less are kept compressed, at most "most" of them looked at; each is checked, and read back compressed to the very same bytes, before the plain file goes. Changes no mail and nothing in the mailbox file; the window does it by itself in the background, a batch at a time. Answers {"files": number (now compressed), "bytesBefore": number, "bytesAfter": number, "left": number (not looked at yet, past "most")}"#,
+        ),
         CommandSpec::new("file.options", "Options", "File", options).pure().params(
             r#"{"twelveHour"?: bool, "weekStart"?: "sun"|"mon"|…, "workDays"?: ["mon",…], "workStart"?: 0-23, "workEnd"?: 1-24, "markReadOnOpen"?: bool, "defaultReminder"?: minutes | null, "quoteOnReply"?: bool, "autoLists"?: bool, "previewLines"?: 0-3, "syncLimit"?: number, "syncMinutes"?: 0-1440 (0: only when asked)}"#,
         ),
@@ -476,6 +479,23 @@ fn export_contacts(s: &mut Session, v: &Value) -> CmdResult {
     };
     let r = deliver(v, &name, mailcraft_vcard::write(&contacts).into_bytes())?;
     Ok(with(r, "contacts", json!(contacts.len())))
+}
+
+/// Most content files one `file.compressContent` looks at.
+const COMPRESS_MOST: usize = 10_000;
+
+/// `file.compressContent`: plain content files of the open mailbox kept compressed
+/// ([`crate::store::compress_existing`]).
+fn compress_content(s: &mut Session, v: &Value) -> CmdResult {
+    let most = p::u64(v, "most").map_or(COMPRESS_MOST, |n| usize::try_from(n).unwrap_or(COMPRESS_MOST).clamp(1, COMPRESS_MOST));
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(path) = &s.path {
+        let done = crate::store::compress_existing(path, most);
+        return Ok(json!({"files": done.files, "bytesBefore": done.bytes_before, "bytesAfter": done.bytes_after, "left": done.left}));
+    }
+    // (Nowhere to keep content: nothing to compress.)
+    let _ = (s, most);
+    Ok(json!({"files": 0, "bytesBefore": 0, "bytesAfter": 0, "left": 0}))
 }
 
 fn info(s: &mut Session, params: &Value) -> CmdResult {

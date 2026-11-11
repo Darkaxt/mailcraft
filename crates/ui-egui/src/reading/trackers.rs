@@ -95,6 +95,14 @@ pub const KNOWN: &[(&str, &str)] = &[
     ("google-analytics.com", "/g/collect"),
     // Facebook pixel: https://www.facebook.com/tr?id=…&ev=…
     ("facebook.com", "/tr"),
+    // Salesforce Audience Studio (Krux): https://beacon.krxd.net/event.gif?… on its beacon host.
+    ("beacon.krxd.net", ""),
+    // Alibaba (AliExpress) analytics: https://ae.mmstat.com/… is a measurement host, never pictures.
+    ("mmstat.com", ""),
+    // MoEngage: opens are counted on its API hosts (https://<app>.api-02.moengage.com/…).
+    ("api-01.moengage.com", ""),
+    ("api-02.moengage.com", ""),
+    ("api-03.moengage.com", ""),
 ];
 
 /// An `<img>` as written: what tells a tracker from a picture.

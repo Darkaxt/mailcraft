@@ -63,7 +63,7 @@ doesn't rely on the agent's judgement: every command has a class for agents (`ag
 | Class | What | Through MCP |
 |---|---|---|
 | `safe` | reads and searches; flagging and ordinary filing, including between private accounts; reversible account metadata, options and saved signature edits; private calendar, contact and task edits; reading rules and non-mutating previews; creating, editing, enabling, reordering or running non-deleting filing rules; disabling or removing rule definitions; saving the mailbox in place; opening or replacing it when no unsaved work is lost; writing and saving messages without sending; closing a composer after saving to Drafts; Send/Receive; undo and redo without the protected effects below | runs without a consent prompt |
-| `owner`: `delete` | permanently removing messages, attachments, folders, contacts, tasks, events, calendars or categories; deleting an account's content or thinning its offline copy; replacing protocol state; forgetting remembered credentials; discarding unsaved mailbox, message, form or signature edits; rules that delete mail or route it to Deleted Items or descendants, and server-rule changes whose effects cannot be established; undo or redo that removes content or restores deleting rules | bridged: asks about the destructive effect; headless: refused without an existing `delete` grant |
+| `owner`: `delete` | permanently removing messages, attachments, folders, contacts, tasks, events, calendars or categories; deleting an account's content or thinning its offline copy; replacing protocol state; forgetting remembered credentials; discarding unsaved mailbox, message, form or signature edits; rules that delete mail or route it to Deleted Items or descendants, and server-rule changes whose effects cannot be established; undo or redo that removes content or restores deleting rules | bridged: asks about the destructive effect; headless: asks in a small owner-question window (refused where the host has none) |
 | `owner`: `send` | actual messages or invitations to other people, Outbox placement, returning online with queued Outbox messages, automatic replies, filing into a shared mailbox, and changes to shared Microsoft To Do content or its categories that disclose changes to other people; undo or redo with those effects | preserves the separate sending/disclosure authorization |
 | `owner`: `accounts` | trusting an imported mailbox's servers to use credentials, trusting a new TLS certificate outside system trust, or undoing a trust revocation | preserves the credential/server-trust authorization |
 | `never` | the host's side of a synchronisation (`sync.*`), file pickers (`ui.open`, `ui.import`, `ui.attach`), putting an agent's text or the owner's selected text on the clipboard (`ui.copyLinkAddress`, `ui.copySelection`), the diagnostics text (`ui.copyDiagnostics`), opening an attachment with another program (`mail.openAttachment`: only the owner's double-click or Open; an agent saves it as `data` with `mail.saveAttachment`), the owner's own keys and marking a key Verified (`ui.importPrivateKey`, `ui.removePrivateKey`, `ui.refreshOwnKeys`, `ui.importPublicKey`, `ui.verifyKey`, `ui.markKeyVerified`) | refused |
@@ -102,8 +102,8 @@ attachment opener refuses or asks about first: programs and scripts, web pages (
 
 **`--allow`.** `--allow send`, `delete`, `accounts`, `mailbox`, `settings` or `input`, repeated
 or separated by commas, lets the agent do that class without asking. There is no way to allow
-everything at once. Headless, it is the only way to let an agent do the owner's things; bridged,
-it skips the question for that class. `input` (raw clicks and keys in the window, with which an
+everything at once. Bridged or headless, it skips the question for that class; without it, the
+owner is asked (headless, in a small window of its own). `input` (raw clicks and keys in the window, with which an
 agent could press anything, Send too) is never asked about: without `--allow input`, `click` and
 `key` are refused.
 
@@ -279,8 +279,15 @@ mode. Normal desktop launch remains available.
 
 Headless background checks do no UI layout or rendering and do not open a browser,
 file dialog, notification or clipboard. Existing refresh tokens can renew silently;
-an action needing owner consent returns an interaction-required error. It never
-answers that consent or opens the desktop automatically. `status.lifecycle.mode`
+an action needing owner consent is asked about in a small always-on-top
+owner-question window ("MailCraft — an agent is asking"), a separate short-lived
+process that opens no mailbox, control port or settings. It shows the same
+"An agent wants to …" sentence as the desktop question, as plain text, with the
+same buttons; the default is no, and closing it, Escape or 50 seconds of silence
+is no. Only a click on its yes button runs the command, through the desktop's own
+answer path and re-checks. One question is shown at a time. A host without that
+window returns an interaction-required error instead. It never answers that
+consent or opens the desktop automatically. `status.lifecycle.mode`
 is `headless`, `nativeWindow` is false, and window visibility/focus remain null.
 The launcher can wait for the single endpoint-ready JSON line on stdout, which
 names the native PID and port and contains no key or credentials. Mailbox opening
