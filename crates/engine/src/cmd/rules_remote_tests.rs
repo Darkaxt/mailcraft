@@ -1008,7 +1008,8 @@ fn a_rule_never_sent_isnt_taken_for_one_made_elsewhere_that_looks_the_same() {
 fn removing_an_account_takes_its_rules_with_it() {
     let (mut s, account, local, news) = session();
     merge_rules(&mut s.mailbox, &download(account, vec![remote("r1", "Server's", 1)])).unwrap();
-    add(&mut s, account, "Mine", json!([{"type": "subjectContains", "value": "digest"}]), json!([{"type": "delete"}]));
+    // A sender the Newsletters rule never files: deleting what it files would be a conflict.
+    add(&mut s, account, "Mine", json!([{"type": "fromContains", "value": "weekly@lists.example"}]), json!([{"type": "delete"}]));
     news_rule(&mut s, account, news);
     add(&mut s, local, "Local", json!([{"type": "hasAttachment"}]), json!([{"type": "markRead"}]));
     run(&mut s, "rules.add", json!({"name": "Everyone", "conditions": [{"type": "hasAttachment"}], "actions": [{"type": "markRead"}]}));
@@ -1016,7 +1017,7 @@ fn removing_an_account_takes_its_rules_with_it() {
     let left: Vec<(&str, Id)> = s.mailbox.rules.iter().map(|r| (r.name.as_str(), r.account)).collect();
     assert_eq!(left, [("Local", local), ("Everyone", 0)]);
     // So the account's "delete the digests" acts on no other account's mail.
-    let m = arriving(&mut s, local, "digest@news.example", "Weekly digest");
+    let m = arriving(&mut s, local, "weekly@lists.example", "Weekly digest");
     s.mailbox.apply_rules(m);
     assert_eq!(s.mailbox.message(m).map(|m| m.folder), s.mailbox.folder_of_kind(local, FolderKind::Inbox));
 }

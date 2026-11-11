@@ -220,6 +220,8 @@ fn undo_reversible_metadata_is_safe_and_restoring_deleting_rules_requires_consen
     assert_eq!(check(&s, "edit.redo", &json!({}), &[]), Verdict::Run);
     assert!(s.redo());
     let mut deletion = rule_to(archive);
+    // Mail no filing rule also takes: a delete competing with the Archive move is a conflict.
+    deletion["conditions"] = json!([{"type":"fromContains","value":"spam@junk.test"}]);
     deletion["actions"] = json!([{"type":"delete"}]);
     s.run("rules.add", &deletion).unwrap();
     assert_eq!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run);
