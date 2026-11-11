@@ -47,6 +47,8 @@ struct Fixture {
     contact: Id,
     task: Id,
     filing_folder: Id,
+    note: Id,
+    entry: Id,
 }
 
 fn fixture() -> Fixture {
@@ -169,12 +171,25 @@ fn fixture() -> Fixture {
         list: marked("list"),
         ..Default::default()
     });
+    let note = s.mailbox.add_note(mailcraft_engine::model::Note {
+        text: marked("noteText"),
+        categories: vec![marked("noteCategory")],
+        ..Default::default()
+    });
+    let entry = s.mailbox.add_journal(mailcraft_engine::model::JournalEntry {
+        subject: marked("journalSubject"),
+        activity: marked("journalActivity"),
+        text: marked("journalText"),
+        people: vec![addr("journalPerson")],
+        categories: vec![marked("journalCategory")],
+        ..Default::default()
+    });
     let filing_account = s.run("account.add", &json!({"email":"filing@example.org","kind":"microsoft"})).unwrap()["id"].as_u64().unwrap();
     let filing_folder = s.mailbox.folder_of_kind(filing_account, FolderKind::Inbox).unwrap();
     s.mailbox.folder_mut(filing_folder).unwrap().name = marked("filingFolder");
     s.mailbox_changed();
     s.run("folder.newSearchFolder", &json!({"name":marked("savedFolder"),"query":"Hostile","scope":"everywhere"})).unwrap();
-    Fixture { session: s, account, message, invitation, event, joinable, contact, task, filing_folder }
+    Fixture { session: s, account, message, invitation, event, joinable, contact, task, note, entry, filing_folder }
 }
 
 /// Where in an answer a marker stands outside a frame (or a frame holds one inside it).
@@ -224,6 +239,8 @@ fn params(f: &Fixture, id: &str) -> Value {
         "people.search" | "compose.suggest" => json!({"query": "Hostile"}),
         "view.searchSuggestions" => json!({"query": "from:Hostile"}),
         "tasks.get" => json!({"id": t}),
+        "notes.get" => json!({"id": f.note}),
+        "journal.get" => json!({"id": f.entry}),
         "tasks.list" => json!({"account": "all", "filter": "all"}),
         "edit.copy" | "edit.cut" => json!({"from": 0, "to": marked("composed").chars().count()}),
         _ => json!({}),
@@ -332,4 +349,35 @@ fn every_content_command_is_put_to_the_test() {
     for id in ["mail.viewSource", "mail.findRelated", "mail.findFromSender", "calendar.get", "calendar.list", "calendar.join"] {
         assert!(CONTENT.contains(&id), "{id}");
     }
+}
+
+/// A host that answers every command with the report of a `.pst` import.
+struct Reporting(Value);
+
+impl crate::Backend for Reporting {
+    fn call(&mut self, _: &str, _: Value) -> Result<Value, String> {
+        Ok(self.0.clone())
+    }
+    fn has_ui(&self) -> bool {
+        false
+    }
+    fn describe(&self) -> String {
+        String::new()
+    }
+}
+
+#[test]
+fn what_an_import_report_names_from_the_file_is_framed() {
+    let item = json!({"folder": MARKS, "what": MARKS, "why": MARKS});
+    let report = json!({
+        "file": MARKS, "name": MARKS, "added": 1,
+        "folders": [{"path": MARKS, "into": MARKS}],
+        "leftOutItems": [item], "notes": [item], "notBrought": [item], "damage": [MARKS],
+    });
+    let answer = exec(&mut Reporting(report), &Policy::default(), "file.importPst", json!({})).unwrap();
+    let mut bare = Vec::new();
+    bare_marks(&answer, "", &mut bare);
+    assert!(bare.is_empty(), "{bare:?}");
+    assert_eq!((&answer["added"], &answer["untrusted"]), (&json!(1), &json!(true)));
+    assert_eq!(answer["notes"][0]["what"].as_str().unwrap().matches(UNTRUSTED_OPEN).count(), 1, "framed once: {answer}");
 }
