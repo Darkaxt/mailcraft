@@ -399,6 +399,7 @@ parameters.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-11 | minor | Headless owner consent is asked in a separate owner-question window through the desktop's answer path; refused only where the host has no such window. |
 | 2026-11-11 | minor | #30 part 4a: `mail.digitalSignature` checks OpenPGP too (`format`); `keys.list` (safe), `keys.import` and `keys.remove` (settings; a path only from the owner) |
 | 2026-11-11 | minor | #30 part 4b: the window's key commands (`ui.importPrivateKey`, `ui.removePrivateKey`, `ui.refreshOwnKeys`, `ui.importPublicKey`, `ui.verifyKey`, `ui.markKeyVerified`) are never for agents |
 | 2026-11-10 | minor | Explain retained protected-MIME export provenance and complete-stream verification. |

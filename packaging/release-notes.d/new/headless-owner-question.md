@@ -1,1 +1,0 @@
-- Headless MailCraft asks the owner about what an agent wants (sending, permanent deletion and the like) in a small always-on-top window instead of refusing; the answer is no unless the owner clicks yes.

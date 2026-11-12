@@ -1,14 +1,13 @@
-**MailCraft 0.11.4 in short** — one unified mailbox, faster search, a calmer reader
-- A Unified mailbox root: every Inbox, the filing tree and saved search folders in one place, with + for a new search folder.
-- Strong account colours as a slim stripe or a full row, switched beside the sort menu.
-- Search inside words (`voice` finds `invoice`) with Match case, Whole word, Regex and Search in toggles.
-- A 0–100 relevance score per message and a By Relevance sort.
-- A smaller, faster content index that never holds the window open on close.
-- Pictures download by default outside Junk; tracking pictures are blocked behind a shield.
-- Floating reader controls and a continuous, coloured message source view.
+**MailCraft 0.11.5 in short** — smaller on disk, and agents can ask you from headless
+- Mail bodies and attachments are kept compressed on disk; existing ones are compressed in the background, and each is still checked against its SHA-256 when read.
+- Headless MailCraft asks you in a small always-on-top window when an agent wants to send or permanently delete; No is the default, and Escape, closing or the timeout answer no.
+- More open-tracking pictures blocked (Krux, Alibaba analytics, MoEngage).
 - Upstream fixes through November 10 are included; this fork delivers Windows only.
+- Note: earlier versions can't read the compressed files, so going back to 0.11.4 needs the pre-update checkpoint.
 
 **What's new**
+- Headless MailCraft asks the owner about what an agent wants (sending, permanent deletion and the like) in a small always-on-top window instead of refusing; the answer is no unless the owner clicks yes.
+- A mailbox's bodies and attachments take much less space on disk: content that shrinks (text and HTML mail, most PDFs) is kept compressed in its folder beside the mailbox file, and what was written before is compressed in the background a little at a time; every file is still checked against its SHA-256 when it is read, and the mailbox file itself doesn't change.
 - **Unified mailbox.** A root at the top of the folder pane holds every Inbox together, the filing account's real folder tree (its Inbox shown as Unfiled) and the saved search folders; the + beside it makes a new search folder, and its menu picks the filing account and how origin colours are drawn.
 - Account and alias colours are strong, saturated colours, shown as a slim stripe or across the whole row; the choice sits beside the sort menu and is remembered.
 - Search finds a word inside a longer one (`voice` finds `invoice`), plain and case-insensitive by default, with Match case, Match whole word and Regular expression toggles in the search box and a Search in menu (subject, people, body, attachments). Each result has a score from 0 to 100 (a whole-word match is 100) and the list can be sorted By Relevance.
@@ -51,6 +50,10 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- The reading pane also recognises the open-tracking pictures of Salesforce Audience Studio (Krux), Alibaba (AliExpress) analytics and MoEngage, and blocks them with the other trackers.
+- Week numbers in the calendar line up: in the Month view and in the date navigator every digit has a place of one width, where a number such as 20 used to start left of the others ([#1009](https://github.com/GITHUB_REPOSITORY/issues/1009)).
+- HTML newsletters keep headings up to 48 pixels, inline line height, image spacing, and the width of centered tables that size to their contents. CSS table rows and cells use the same layout as HTML table tags ([#1021](https://github.com/GITHUB_REPOSITORY/issues/1021)).
+- The Flatpak uses installed host fonts for Japanese and other scripts, and links in the reading pane are underlined close to their text ([#1016](https://github.com/UCS-Care-Group/mailcraft/issues/1016)).
 - A message an earlier version left in the Outbox from a draft begun on another device, and that a run then held, goes again with Send Again (Microsoft and Exchange server accounts; [#738](https://github.com/GITHUB_REPOSITORY/issues/738)).
 - Fork QA (0.11.3): SimpleLogin alias folders, colours and original senders are given only to mail relayed by SimpleLogin to that alias, so copied headers can't pose as an alias; one unreadable alias colour no longer drops an account's others. Rules: deleting and filing into Deleted Items count as one competing destination in conflict review, manual runs and previews classify received mail only, filing into a shared mailbox asks the owner as moving mail there does, and editing a merged rule's senders drops its stale merge history. Offline search: an attachment read before its message was downloaded is read again after, a document whose extraction crashes is recorded as failed instead of stopping indexing, a hung document or OCR worker is ended after two minutes, and closed source exports free their slots. Closing waits for open search inspections and gives up on an unreleased MCP bridge after 30 seconds; a failed headless save is retried and never makes later closes impossible.
 - Import a .pst File no longer brings mail kept only as rich text in with an empty body: its text is the body, and the rich text is kept as an attachment ([#815](https://github.com/GITHUB_REPOSITORY/issues/815)).
