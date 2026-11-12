@@ -1,0 +1,1 @@
+- Attachments of a message you read are scanned by Microsoft Defender from a temporary copy, never in the mailbox; one it flags is marked in the message and asks before it is opened or saved, and nothing is deleted.

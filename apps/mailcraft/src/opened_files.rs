@@ -164,7 +164,7 @@ impl Opened {
 
 /// `path` and the folders above it that are missing, the last for this user only. A link at
 /// `path` is refused.
-fn private_dirs(path: &Path) -> std::io::Result<()> {
+pub(crate) fn private_dirs(path: &Path) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -182,7 +182,7 @@ fn private_dirs(path: &Path) -> std::io::Result<()> {
 }
 
 /// A new folder for this user only; an error if anything is there already.
-fn private_dir(path: &Path) -> std::io::Result<()> {
+pub(crate) fn private_dir(path: &Path) -> std::io::Result<()> {
     #[cfg_attr(not(unix), allow(unused_mut))]
     let mut builder = fs::DirBuilder::new();
     #[cfg(unix)]
@@ -202,7 +202,7 @@ fn restrict(path: &Path) {
 }
 
 /// A file made new, for this user only; an error if anything is there already.
-fn new_file(path: &Path) -> std::io::Result<fs::File> {
+pub(crate) fn new_file(path: &Path) -> std::io::Result<fs::File> {
     let mut options = fs::OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -212,7 +212,7 @@ fn new_file(path: &Path) -> std::io::Result<fs::File> {
 
 /// Remove `path`: a file or a link as it is (a link is never followed), a folder with what is in
 /// it, `depth` levels at most.
-fn remove_tree(path: &Path, depth: usize) {
+pub(crate) fn remove_tree(path: &Path, depth: usize) {
     let Ok(meta) = fs::symlink_metadata(path) else { return };
     if !meta.is_dir() {
         // Windows won't remove a read-only file.

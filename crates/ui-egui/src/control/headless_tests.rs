@@ -128,3 +128,19 @@ fn unreadable_headless_mailbox_can_close_without_continuing_or_writing_it() {
     assert!(app.save_on_exit().is_ok());
     assert!(app.session.path.is_none());
 }
+
+#[test]
+fn a_headless_agents_message_closed_or_sent_takes_its_window_along_and_close_is_free_again() {
+    let mut app = MailApp::new(Session::new(mailcraft_engine::sample::mailbox(0, 0)), Services::default());
+    app.start_headless();
+    let said = request(&mut app, "engine.execute", json!({"command": "mail.new", "params": {"subject": "Headless"}}));
+    assert_eq!(said["ok"], true, "{said}");
+    assert!(app.windows.has_open(), "an agent's message opens in a window behind");
+    let closed = request(&mut app, "engine.execute", json!({"command": "compose.close", "params": {}}));
+    assert_eq!(closed["ok"], true, "{closed}");
+    // Headless never draws; its logic drops the window whose message went.
+    app.logic(&egui::Context::default());
+    assert!(!app.windows.has_open());
+    let status = request(&mut app, "app.status", json!({}));
+    assert_eq!(status["result"]["lifecycle"]["closeBlocker"], Value::Null, "{status}");
+}

@@ -26,6 +26,7 @@ mod alerts;
 mod apple_events;
 #[cfg(test)]
 mod approval_flow;
+mod attachment_scan;
 mod block_on;
 mod browser;
 #[cfg(test)]
@@ -113,6 +114,7 @@ use std::path::PathBuf;
 
 use mailcraft_engine::Session;
 use mailcraft_model::sync::Tokens;
+use mailcraft_ui_egui::attachment_scan::{ScanOutcome, ScanRequest};
 use mailcraft_ui_egui::{
     AdminConsentAnswer, AdminConsentRequest, CalendarCheckRequest, CalendarCheckResult, CalendarCheckStep, FreeBusyRequest, FreeBusyResult,
     GraphRequest, GraphResult, MailApp, Services, SettingsUnread, SignInRequest, UiState,
@@ -1752,6 +1754,7 @@ fn services(
     let pst_ctx = ctx.clone();
     let alert_ctx = ctx.clone();
     let ask_ctx = ctx.clone();
+    let scan_ctx = ctx.clone();
     let (keys_ctx, keys_store) = (ctx.clone(), secrets::store());
     let (sync_ctx, sign_in_ctx, graph_ctx, mx_ctx, test_ctx) = (ctx.clone(), ctx.clone(), ctx.clone(), ctx.clone(), ctx);
     let sync_cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -1891,6 +1894,14 @@ fn services(
             .then(opened_files)
             .flatten()
             .map(|opened| Box::new(move |name: &str, bytes: &[u8]| opened.open(name, bytes)) as Box<dyn Fn(&str, &[u8]) -> Result<(), String>>),
+        // An attachment the owner read, scanned by Microsoft Defender in a copy outside the
+        // mailbox's folders; nothing is done to the file (Windows).
+        scan_file: (!headless).then(attachment_scan::available).flatten().map(|(base, scanner)| {
+            Box::new(move |request: ScanRequest| {
+                let (base, scanner) = (base.clone(), scanner.clone());
+                background(&scan_ctx, "attachment scan", move || attachment_scan::scan(&base, &scanner, request))
+            }) as Box<dyn Fn(ScanRequest) -> std::sync::mpsc::Receiver<ScanOutcome>>
+        }),
         secrets: secrets::store(),
         // File › Options › Security (#30 R13): the owner's own certificates and keys listed,
         // GnuPG's valid keys read, and a key file imported, each on a thread of its own.

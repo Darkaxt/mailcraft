@@ -39,6 +39,10 @@ const OTHER_WRITERS: &[(&str, &str)] = &[
     ("crates/engine/src/import_pst.rs", "the import's own report"),
     ("crates/net/src/update_download.rs", "a new version of the program, checked by its signature"),
     ("crates/ui-egui/src/theme.rs", "its tests"),
+    (
+        "crates/ui-egui/src/attachment_scan.rs",
+        "the attachments' scan verdicts beside the mailbox: content hashes and threat names, never a sender's bytes",
+    ),
     ("apps/mailcraft/src/control_server.rs", "the control channel's key"),
     ("apps/mailcraft/src/desktop_icons.rs", "the desktop's entry for the program"),
     ("apps/mailcraft/src/diagnostics.rs", "its tests"),

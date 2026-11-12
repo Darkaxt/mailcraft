@@ -650,7 +650,7 @@ msgid "Accounts"
 msgstr "Account"
 
 #. ribbon, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Actions"
 msgstr "Azioni"
@@ -1674,7 +1674,7 @@ msgid "Attachment options for {name}"
 msgstr ""
 
 #. interface, ribbon location
-#: crates/engine/src/cmd/mail.rs crates/ui-egui/src/advanced_search.rs
+#: crates/engine/src/cmd/mail.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Attachments"
 msgstr "Allegati"
@@ -1684,6 +1684,11 @@ msgstr "Allegati"
 #, fuzzy
 msgid "Attachments can't be opened here: save it with Save As instead."
 msgstr "Gli allegati non si possono aprire qui: salvarli invece con Salva con nome."
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Attachments can't be scanned here: Microsoft Defender's scanner isn't available."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/search_index_ui.rs
@@ -4728,11 +4733,16 @@ msgstr "Contrassegna messaggio"
 msgid "Flag for follow-up"
 msgstr "Contrassegna per completamento"
 
-#. name
-#: crates/engine/src/session.rs
+#. interface, name
+#: crates/engine/src/session.rs crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Flagged"
 msgstr "Contrassegnato"
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Flagged by Microsoft Defender: {threats}. The file is kept unchanged."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
@@ -7494,6 +7504,28 @@ msgstr ""
 msgid "Microsoft Application ID"
 msgstr "ID applicazione Microsoft"
 
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Microsoft Defender flagged an attachment. The file is kept unchanged."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Microsoft Defender flagged {files}. The file is kept unchanged. Save it only if you are sure it is safe."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_open.rs
+msgid "Microsoft Defender flagged {name}: {threats}. The file is kept unchanged. Open it only if you are sure it is safe."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Microsoft Defender flagged {n} attachment of this message. It is kept unchanged."
+msgid_plural "Microsoft Defender flagged {n} attachments of this message. They are kept unchanged."
+msgstr[0] ""
+msgstr[1] ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Microsoft To Do"
@@ -9144,6 +9176,11 @@ msgstr "Apri sotto questo account una cassetta postale dell'organizzazione per c
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 msgid "Open a message you sent as a new one"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_open.rs
+msgid "Open anyway"
 msgstr ""
 
 #. interface
@@ -11082,6 +11119,11 @@ msgid "Save Signature"
 msgstr "Salva firma"
 
 #. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Save anyway"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Save as iCalendar…"
@@ -11163,6 +11205,11 @@ msgid "Saved {n} attachment"
 msgid_plural "Saved {n} attachments"
 msgstr[0] ""
 msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Saving Mail Attachment"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -11253,6 +11300,21 @@ msgstr "Rispondere sì solo se lo si è chiesto all'agente. Il testo di un messa
 #, fuzzy
 msgid "Says what you and your organisation's administrator can do, and lets an administrator approve MailCraft on Microsoft's page from here."
 msgstr "Indica cosa possono fare l'utente e l'amministratore dell'organizzazione, e consente a un amministratore di approvare MailCraft da qui nella pagina di Microsoft."
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Scan Attachment"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Scan with Microsoft Defender"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Scanning…"
+msgstr ""
 
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
@@ -13341,6 +13403,16 @@ msgid "The approval didn't go through."
 msgstr "L'approvazione non è andata a buon fine."
 
 #. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "The attachment is empty"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "The attachment is too large to be scanned"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/files.rs
 msgid "The browser can't read files by path"
 msgstr ""
@@ -13779,7 +13851,7 @@ msgid "The merged contact's {field} would be too large ({now}, at most {max}), s
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/attachment_open.rs
+#: crates/ui-egui/src/attachment_open.rs crates/ui-egui/src/attachment_scan.rs
 #, fuzzy
 msgid "The message has no such attachment"
 msgstr "Il messaggio non ha questo allegato"
@@ -17022,6 +17094,11 @@ msgstr "le immagini di una firma sono PNG, JPEG o GIF (molti programmi di posta 
 #, fuzzy
 msgid "a task needs a title"
 msgstr "un'attività richiede un titolo"
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "a threat"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/folder.rs crates/engine/src/cmd/signature.rs

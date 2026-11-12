@@ -57,6 +57,7 @@ pub mod approval;
 #[cfg(test)]
 mod attachment_menu_tests;
 mod attachment_open;
+pub mod attachment_scan;
 pub mod auto_replies;
 #[cfg(test)]
 mod auto_replies_tests;
@@ -293,6 +294,14 @@ pub struct Services {
     /// programs and scripts and asked about macros. An error means nothing was opened. Absent in
     /// the browser (the file is downloaded instead) and the tests.
     pub open_file: Option<Box<dyn Fn(&str, &[u8]) -> Result<(), String>>>,
+    /// Desktop (Windows): scan an attachment the owner read, or asked to have scanned, with
+    /// Microsoft Defender, on a background thread ([`attachment_scan`]): the host writes the
+    /// bytes it is handed (decoded, under the name given, made safe there) into a folder of
+    /// MailCraft's own outside the mailbox's folders, has Defender report on it without acting
+    /// on it, and removes the copy. Nothing of the mailbox's files is read, written, moved or
+    /// removed. What it found arrives through the channel and the host wakes the UI. Absent in
+    /// the browser, headless, the tests and where the scanner isn't there: nothing is scanned.
+    pub scan_file: Option<Box<dyn Fn(attachment_scan::ScanRequest) -> Receiver<attachment_scan::ScanOutcome>>>,
     /// Web: hand bytes to the browser as a download. An error means no download started.
     pub download: Option<Box<dyn Fn(&str, &[u8]) -> Result<(), String>>>,
     /// Web: told whether there are unsaved changes after each pass, for the leave-page guard.
@@ -1533,6 +1542,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "Help",
         r#"{"what": string, "title"?: string, "expected"?: string, "via"?: "github" (the default) | "send", "username"?: string (send), "diagnostics"?: bool, "path"?: string (github: where the diagnostics file is saved), "open"?: bool (default true)} — by hand without `what`: the Report a Problem window. send: the window, filled in with the title, what was typed and the GitHub username, for the owner to read and send with Send report; nothing is sent (only the owner's own click sends a report, never a script or an agent). Answers {"via": "send", "draft": true, "sent": false}. github: opens the repository's new-issue page in the system's browser, filled in with the title, what was typed, the version and the platform, and nothing else (never the diagnostics, never more than 8,000 characters: text that doesn't fit is refused); with `diagnostics`, the same text as `ui.copyDiagnostics` is saved to `path` (without one it is answered as `name` and `data`), to attach on the page. `open: false` only answers what would be opened. MailCraft posts nothing itself. Answers {"via", "url", "length", "saved"?, "name"?, "data"?}"#,
     ),
+    (
+        "ui.scanAttachment",
+        "Scan Attachment",
+        "Attachments › Actions",
+        r#"{"index": number, "id"?: number (default: the selected message)} — has Microsoft Defender scan the attachment again now (Windows), in a copy outside the mailbox's folders; it only reports, and nothing is done to the file. Answers {"queued": true, "hash"} (its content's SHA-256); what it finds shows on the attachment and in `mail.get`'s `scan`. Refused where there is no scanner"#,
+    ),
     ("ui.copyLinkAddress", "Copy Link Address", "Message", r#"{"url": string} — a link's address (http, https, mailto or tel) to the clipboard"#),
     (
         "ui.checkForUpdates",
@@ -1930,6 +1945,8 @@ pub struct MailApp {
     pub(crate) remote_pictures: reading::RemotePictures,
     /// The pictures of the senders in the message list, as far as they have come.
     pub(crate) sender_images: sender_images::SenderImages,
+    /// What Microsoft Defender found in the attachments read, and the scans waiting ([`attachment_scan`]).
+    pub(crate) scans: attachment_scan::Scans,
     /// The text selected in the messages that are being read, in the pane and in windows.
     pub(crate) text_selection: reading::Selections,
     /// The last calendar command the owner ran to its end ([`MailApp::run`]), numbered, with how
@@ -2119,6 +2136,7 @@ impl MailApp {
             windows: Default::default(),
             remote_pictures: Default::default(),
             sender_images: Default::default(),
+            scans: Default::default(),
             text_selection: Default::default(),
             ran: (0, String::new(), Ok(Value::Null)),
             free_busy: Default::default(),
@@ -2306,6 +2324,14 @@ impl MailApp {
             }
             return r;
         }
+        // A file Microsoft Defender flagged is saved only once the owner said so, before the
+        // folder or the name is asked for ([`attachment_scan`]).
+        if params.get("confirmed").and_then(Value::as_bool) != Some(true)
+            && let Some((params, ask)) = attachment_scan::save_question(self, id, &params)
+        {
+            self.dialog = Some(dialogs::Dialog::Confirm { command: id.to_string(), params, ask });
+            return Ok(json!({"pending": "confirm"}));
+        }
         if let Some(r) = files::intercept(self, id, &params) {
             return r;
         }
@@ -2482,6 +2508,8 @@ impl MailApp {
         }
         // Automatic replies (File › Info): read on the server, or changed there, by the host.
         let r = self.auto_replies_after(id, r);
+        // What Microsoft Defender found in a message's attachments, for whoever reads it.
+        let r = attachment_scan::annotate(self, id, r);
         // A calendar opened by address (#70), from the dialog or a script: read at once.
         if let (Ok(opened), "calendar.openShared") = (&r, id)
             && let Some(account) = opened.get("account").and_then(Value::as_u64)
@@ -2988,6 +3016,7 @@ impl MailApp {
                     .or_else(|| graph_switch::ui_command(self, id, p))
                     .or_else(|| updates::ui_command(self, id, p))
                     .or_else(|| attachment_open::ui_command(self, id, p))
+                    .or_else(|| attachment_scan::ui_command(self, id, p))
                     .or_else(|| report_problem::ui_command(self, id, p))
                     .or_else(|| sender_images::ui_command(self, id, p));
             }
@@ -4865,6 +4894,9 @@ impl MailApp {
         if self.ctx.is_none() {
             self.ctx = Some(ctx.clone());
         }
+        if self.is_headless() {
+            windows::prune_headless(self);
+        }
         // Waiting for the mailbox: nothing else happens.
         if self.opening.is_some() {
             opening::logic(self, ctx);
@@ -4918,6 +4950,7 @@ impl MailApp {
         self.secrets_tick();
         self.poll_graph();
         self.drive_fetch();
+        attachment_scan::tick(self);
         self.offline_tick();
         self.drive_server_search();
         if self.server_searching.busy() {

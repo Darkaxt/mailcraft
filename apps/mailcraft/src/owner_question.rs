@@ -24,8 +24,12 @@ pub const ARG: &str = "--owner-question";
 /// Most bytes of a question read from standard input.
 const MOST_BYTES: u64 = 64 * 1024;
 
-/// Most seconds a question window stays up, whatever it is told.
-const MOST_SECONDS: u64 = 120;
+/// Most seconds a question window stays up, whatever it is told: a day, so that an owner who is
+/// away still finds it (`agent_gate::HEADLESS_WAIT_MS`).
+const MOST_SECONDS: u64 = 86_400;
+
+/// Below this many seconds left, the window shows how long it has.
+const COUNTDOWN_SECONDS: u64 = 600;
 
 /// The host's `ask_owner`: each question in a window process of its own, whose answer is sent
 /// and the app woken when it has gone.
@@ -166,7 +170,9 @@ impl eframe::App for Window {
             ui.label(egui::RichText::new(self.shown.title.as_str()).strong());
             ui.label(self.shown.text.as_str());
             ui.label(egui::RichText::new(self.shown.note.as_str()).weak());
-            ui.label(egui::RichText::new(format!("{} s", left.as_secs())).weak());
+            if left.as_secs() < COUNTDOWN_SECONDS {
+                ui.label(egui::RichText::new(format!("{} s", left.as_secs())).weak());
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let no = ui.add(egui::Button::new(self.shown.no.as_str()).min_size(egui::vec2(88.0, 26.0)));
                 let yes = ui.add(egui::Button::new(self.shown.yes.as_str()).min_size(egui::vec2(72.0, 26.0)));

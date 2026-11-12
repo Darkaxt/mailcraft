@@ -373,7 +373,7 @@ pub fn read_regular_file(path: &std::path::Path) -> Result<Vec<u8>, ReadError> {
 pub const OPENED_FROM: &str = mailcraft_mime::OPENED_FILE_HEADER;
 
 /// The SHA-256 of a file, in hex (none in the browser, which opens no files from the system).
-fn file_sha256(bytes: &[u8]) -> Option<String> {
+pub fn file_sha256(bytes: &[u8]) -> Option<String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let digest = ring::digest::digest(&ring::digest::SHA256, bytes);

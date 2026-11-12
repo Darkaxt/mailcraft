@@ -1,0 +1,1 @@
+- Headless, an agent's question waits for you for up to a day instead of two minutes; the agent is told at once and reads the outcome with `agent.answer`.

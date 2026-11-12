@@ -200,6 +200,10 @@ fn draft_bar(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
 /// The reading pane shows the selected message with it, and a message window its own.
 pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place) {
     let ctx = ui.ctx().clone();
+    // Read by the owner: its files are scanned by Microsoft Defender (the desktop on Windows).
+    if matches!(place, Place::Pane | Place::Window(_)) {
+        crate::attachment_scan::notice(app, m.id);
+    }
     // The source toggle is the reading pane's (the native app's: the web build has no source reader).
     let source = place == Place::Pane && !cfg!(target_arch = "wasm32");
     if place == Place::Pane && app.source_pane.showing(m.id) {
@@ -725,14 +729,41 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
     if files.is_empty() {
         return;
     }
+    // What Microsoft Defender found, by file: said above the files and on each one flagged.
+    let flagged: Vec<Option<String>> = files.iter().map(|(index, _)| crate::attachment_scan::flagged(app, m.id, *index)).collect();
+    let n = flagged.iter().flatten().count();
+    if n > 0 {
+        ui.add_space(2.0);
+        ui.horizontal(|ui| {
+            let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
+            icons::paint(ui.painter(), r, "warning", t.red, t.red);
+            let said = tln!(
+                n,
+                "Microsoft Defender flagged {n} attachment of this message. It is kept unchanged.",
+                "Microsoft Defender flagged {n} attachments of this message. They are kept unchanged."
+            );
+            ui.label(egui::RichText::new(said).font(regular(11.5)).color(t.red));
+        });
+    }
     ui.add_space(2.0);
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
-        for (index, a) in files {
+        for ((index, a), threats) in files.into_iter().zip(flagged) {
             // The name it is opened and saved under, not the one the sender wrote: a right-to-left
             // override can make `fdp.exe` read as `exe.pdf`.
             let shown = mailcraft_engine::opening::file_name(&a.name);
             let name_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(shown.clone(), regular(12.0), t.text).size().x).min(220.0);
+            // Under the name: its size, and what Microsoft Defender found or that it is being scanned.
+            let size = mailcraft_model::size_label_in(crate::i18n::current(), a.size() as u64);
+            let (under, under_color) = if threats.is_some() {
+                (format!("{size} · {}", tl!("Flagged")), t.red)
+            } else if crate::attachment_scan::scanning(app, m.id, index) {
+                (format!("{size} · {}", tl!("Scanning…")), t.text_dim)
+            } else {
+                (size, t.text_dim)
+            };
+            let under_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(under.clone(), regular(10.5), under_color).size().x);
+            let name_w = name_w.max(under_w);
             // The chip, and at its right end a `▾` that opens the menu a right-click opens (#785).
             let (r, _) = ui.allocate_exact_size(vec2(name_w + 44.0 + crate::ribbon::DROP_W, 38.0), Sense::hover());
             let drop_rect = Rect::from_min_max(pos2(r.max.x - crate::ribbon::DROP_W, r.min.y), r.max);
@@ -743,7 +774,8 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
             let drop = ui.interact(drop_rect, ui.make_persistent_id(("attachmentMenu", m.id, index)), drop_sense);
             app.hit.add("attachment", attachment_key(m.id, index), main_rect);
             app.hit.add("attachmentMenu", attachment_key(m.id, index), drop_rect);
-            ui.painter().rect(r, 5.0, t.panel, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
+            let frame = if threats.is_some() { Stroke::new(1.5, t.red) } else { Stroke::new(1.0, t.border) };
+            ui.painter().rect(r, 5.0, t.panel, frame, egui::StrokeKind::Inside);
             let left = egui::CornerRadius { nw: 5, sw: 5, ne: 0, se: 0 };
             let right = egui::CornerRadius { nw: 0, sw: 0, ne: 5, se: 5 };
             if resp.hovered() {
@@ -762,15 +794,14 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
                 ui.painter().rect_stroke(drop_rect.shrink(1.0), right, Stroke::new(2.0, t.focus_ring), egui::StrokeKind::Inside);
             }
             resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &shown));
-            icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 17.0, r.center().y), vec2(20.0, 20.0)), "attach", t.icon, t.accent);
+            let icon_rect = Rect::from_center_size(pos2(r.min.x + 17.0, r.center().y), vec2(20.0, 20.0));
+            if threats.is_some() {
+                icons::paint(ui.painter(), icon_rect, "warning", t.red, t.red);
+            } else {
+                icons::paint(ui.painter(), icon_rect, "attach", t.icon, t.accent);
+            }
             paint_clipped(ui.painter(), pos2(r.min.x + 34.0, r.min.y + 13.0), name_w + 4.0, &shown, regular(12.0), t.text);
-            ui.painter().text(
-                pos2(r.min.x + 34.0, r.min.y + 27.0),
-                Align2::LEFT_CENTER,
-                mailcraft_model::size_label_in(crate::i18n::current(), a.size() as u64),
-                regular(10.5),
-                t.text_dim,
-            );
+            ui.painter().text(pos2(r.min.x + 34.0, r.min.y + 27.0), Align2::LEFT_CENTER, under, regular(10.5), under_color);
             // Double-click opens it, as in Outlook; its menu opens or saves it.
             // (A message that is not in the mailbox has no number to name it by: attachments are
             // opened and saved once it is filed, and its `▾` is greyed and opens nothing.)
@@ -780,7 +811,15 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
                 drop.on_hover_text(why);
                 continue;
             }
-            let resp = resp.on_hover_text(crate::i18n::fmt(tl!("Double-click to open {name}; right-click to save it"), &[("name", &shown)]));
+            let hint = crate::i18n::fmt(tl!("Double-click to open {name}; right-click to save it"), &[("name", &shown)]);
+            let hint = match &threats {
+                Some(threats) => format!(
+                    "{}\n{hint}",
+                    crate::i18n::fmt(tl!("Flagged by Microsoft Defender: {threats}. The file is kept unchanged."), &[("threats", threats)])
+                ),
+                None => hint,
+            };
+            let resp = resp.on_hover_text(hint);
             if resp.double_clicked() {
                 let _ = app.run("mail.openAttachment", json!({"id": m.id, "index": index}));
             }
@@ -806,5 +845,9 @@ pub(super) fn attachment_menu(ui: &mut Ui, app: &mut MailApp, id: u64, index: us
     crate::widgets::mi(ui, app, "Open", "mail.openAttachment", json!({"id": id, "index": index}));
     crate::widgets::mi(ui, app, "Save As…", "mail.saveAttachment", json!({"id": id, "index": index}));
     crate::widgets::mi(ui, app, "Save All Attachments…", "mail.saveAllAttachments", json!({"id": id}));
+    // Microsoft Defender asked again now (where it is there): it only reports.
+    if app.services.scan_file.is_some() {
+        crate::widgets::mi(ui, app, "Scan with Microsoft Defender", "ui.scanAttachment", json!({"id": id, "index": index}));
+    }
     crate::widgets::mi(ui, app, "Remove Attachment", "mail.removeAttachment", json!({"id": id, "index": index}));
 }

@@ -8,13 +8,13 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Sender;
 
 use mailcraft_engine::Session;
 use mailcraft_model::FolderKind;
 use serde_json::{Value, json};
 
-use crate::agent_gate::{OwnerQuestion, WAIT_MS, ask_owner_tick, expire};
+use crate::agent_gate::{HEADLESS_WAIT_MS, OwnerQuestion, ask_owner_tick, expire};
 use crate::control::{ControlRequest, Outcome};
 use crate::{MailApp, Services};
 
@@ -41,10 +41,25 @@ fn headless(host: bool) -> (MailApp, Shown) {
     (app, shown)
 }
 
-fn agent(app: &mut MailApp, command: &str, params: Value) -> (Option<Value>, Receiver<Value>) {
-    let (req, rx) = ControlRequest::new("engine.execute", json!({"command": command, "params": params}));
-    let out = crate::control::handle(app, &egui::Context::default(), &req.from_agent(Vec::new()));
-    (if let Outcome::Done(v) = out { Some(v) } else { None }, rx)
+fn agent(app: &mut MailApp, command: &str, params: Value) -> Value {
+    let (req, _rx) = ControlRequest::new("engine.execute", json!({"command": command, "params": params}));
+    match crate::control::handle(app, &egui::Context::default(), &req.from_agent(Vec::new())) {
+        Outcome::Done(v) => v,
+        _ => panic!("headless, an agent's request is answered at once, also when the owner is asked"),
+    }
+}
+
+/// An agent's command the owner is asked about: answered at once that it waits, with its question.
+fn asked(app: &mut MailApp, command: &str, params: Value) -> u64 {
+    let now = agent(app, command, params);
+    assert_eq!((&now["ok"], &now["result"]["pending"]), (&json!(true), &json!(true)), "{now}");
+    now["result"]["question"].as_u64().unwrap()
+}
+
+/// What came of question `q` (`agent.answer`): `None` while the owner hasn't answered.
+fn outcome(app: &mut MailApp, q: u64) -> Option<Value> {
+    let v = agent(app, "agent.answer", json!({"question": q}));
+    if v["ok"] == true && v["result"]["pending"] == true { None } else { Some(v) }
 }
 
 fn tick(app: &mut MailApp) {
@@ -69,8 +84,7 @@ fn say(shown: &Shown, which: usize, yes: bool) {
 fn a_yes_in_the_hosts_window_sends() {
     let (mut a, shown) = headless(true);
     write(&mut a);
-    let (now, rx) = agent(&mut a, "compose.send", json!({}));
-    assert!(now.is_none(), "asked first");
+    let q = asked(&mut a, "compose.send", json!({}));
     tick(&mut a);
     {
         let asked = shown.borrow();
@@ -78,16 +92,19 @@ fn a_yes_in_the_hosts_window_sends() {
         let q = &asked[0].0;
         assert!(q.text.starts_with("An agent wants to ") && q.text.contains("Re: Invoice"), "{}", q.text);
         assert_eq!((q.yes.as_str(), q.no.as_str()), ("Send", "Don't Send"));
-        assert!(q.seconds > 0 && (q.seconds as f64) < WAIT_MS / 1000.0, "{}", q.seconds);
+        assert!(q.seconds > 0 && (q.seconds as f64) < HEADLESS_WAIT_MS / 1000.0, "{}", q.seconds);
+        assert!(q.seconds > 3600, "an owner who is away still finds it: {}", q.seconds);
         assert!(!q.note.is_empty());
     }
     // Nothing yet: still waiting for the owner.
     tick(&mut a);
-    assert!(rx.try_recv().is_err());
+    assert!(outcome(&mut a, q).is_none());
     assert_eq!(sent(&a), 0);
     say(&shown, 0, true);
     tick(&mut a);
-    assert_eq!(rx.try_recv().unwrap()["ok"], true);
+    assert_eq!(outcome(&mut a, q).unwrap()["ok"], true);
+    let again = outcome(&mut a, q).unwrap();
+    assert_eq!(again["ok"], false, "read once: {again}");
     assert_eq!(sent(&a), 1);
     assert!(a.asking.is_empty());
     assert!(a.owner_window.is_none());
@@ -97,19 +114,19 @@ fn a_yes_in_the_hosts_window_sends() {
 fn a_no_or_a_window_gone_without_answering_sends_nothing() {
     let (mut a, shown) = headless(true);
     write(&mut a);
-    let (_, rx) = agent(&mut a, "compose.send", json!({}));
+    let q = asked(&mut a, "compose.send", json!({}));
     tick(&mut a);
     say(&shown, 0, false);
     tick(&mut a);
-    assert!(rx.try_recv().unwrap()["error"].as_str().unwrap().contains("the owner said no"));
+    assert!(outcome(&mut a, q).unwrap()["error"].as_str().unwrap().contains("the owner said no"));
     assert_eq!(sent(&a), 0);
     // The host went without an answer (its sender dropped): no.
-    let (_, rx) = agent(&mut a, "compose.send", json!({}));
+    let q = asked(&mut a, "compose.send", json!({}));
     tick(&mut a);
     assert_eq!(shown.borrow().len(), 2);
     shown.borrow_mut().pop();
     tick(&mut a);
-    assert!(rx.try_recv().unwrap()["error"].as_str().unwrap().contains("the owner said no"));
+    assert!(outcome(&mut a, q).unwrap()["error"].as_str().unwrap().contains("the owner said no"));
     assert_eq!(sent(&a), 0);
     assert!(a.session.compose.is_some());
 }
@@ -118,8 +135,7 @@ fn a_no_or_a_window_gone_without_answering_sends_nothing() {
 fn without_a_host_headless_questions_are_refused_as_before() {
     let (mut a, _) = headless(false);
     write(&mut a);
-    let (now, _) = agent(&mut a, "compose.send", json!({}));
-    let now = now.expect("refused at once");
+    let now = agent(&mut a, "compose.send", json!({}));
     assert_eq!(now["ok"], false);
     assert!(now["error"].as_str().unwrap().contains("owner interaction required in the desktop"), "{now}");
     assert!(a.asking.is_empty());
@@ -130,15 +146,18 @@ fn without_a_host_headless_questions_are_refused_as_before() {
 fn an_answer_after_the_question_ran_out_is_thrown_away() {
     let (mut a, shown) = headless(true);
     write(&mut a);
-    let (_, rx) = agent(&mut a, "compose.send", json!({}));
+    let q = asked(&mut a, "compose.send", json!({}));
     tick(&mut a);
-    expire(&mut a, crate::now_ms() + WAIT_MS + 1.0);
-    assert!(rx.try_recv().unwrap()["error"].as_str().unwrap().contains("in time"));
+    // Not before a day.
+    expire(&mut a, crate::now_ms() + 3_600_000.0);
+    assert!(outcome(&mut a, q).is_none());
+    expire(&mut a, crate::now_ms() + HEADLESS_WAIT_MS + 1.0);
+    assert!(outcome(&mut a, q).unwrap()["error"].as_str().unwrap().contains("in time"));
     // The owner clicks yes too late.
     say(&shown, 0, true);
     tick(&mut a);
     assert_eq!(sent(&a), 0);
-    assert!(rx.try_recv().is_err(), "one answer only");
+    assert_eq!(outcome(&mut a, q).unwrap()["ok"], false, "one answer only");
     assert!(shown.borrow()[0].0.cancel.load(Ordering::Relaxed), "the host's window is told to close");
     assert!(a.owner_window.is_none());
 }
@@ -149,20 +168,20 @@ fn questions_are_shown_one_after_the_other() {
     write(&mut a);
     let outbox = a.session.mailbox.folders.iter().find(|f| f.kind == FolderKind::Outbox).unwrap().id;
     let id = *a.session.mailbox.messages.keys().next().unwrap();
-    let (_, first) = agent(&mut a, "compose.send", json!({}));
-    let (_, second) = agent(&mut a, "mail.copy", json!({"folder": outbox, "ids": [id]}));
+    let first = asked(&mut a, "compose.send", json!({}));
+    let second = asked(&mut a, "mail.copy", json!({"folder": outbox, "ids": [id]}));
     assert_eq!(a.asking.len(), 2);
     tick(&mut a);
     tick(&mut a);
     assert_eq!(shown.borrow().len(), 1, "one window at a time");
     say(&shown, 0, false);
     tick(&mut a);
-    assert!(first.try_recv().unwrap()["error"].as_str().unwrap().contains("the owner said no"));
+    assert!(outcome(&mut a, first).unwrap()["error"].as_str().unwrap().contains("the owner said no"));
     assert_eq!(shown.borrow().len(), 2, "the next question comes up");
-    assert!(second.try_recv().is_err());
+    assert!(outcome(&mut a, second).is_none());
     say(&shown, 1, false);
     tick(&mut a);
-    assert!(second.try_recv().unwrap()["error"].as_str().unwrap().contains("the owner said no"));
+    assert!(outcome(&mut a, second).unwrap()["error"].as_str().unwrap().contains("the owner said no"));
     assert_eq!(a.session.mailbox.count(outbox), 0);
     assert_eq!(sent(&a), 0);
     assert!(a.owner_window.is_none());

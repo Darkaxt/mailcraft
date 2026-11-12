@@ -20,7 +20,7 @@ use crate::MailApp;
 pub(crate) const OPEN: &str = "mail.openAttachment";
 
 /// The attachment the params name: its message, its index and its name.
-fn target(app: &MailApp, p: &Value) -> Result<(Id, usize, String), String> {
+pub(crate) fn target(app: &MailApp, p: &Value) -> Result<(Id, usize, String), String> {
     // Read as the engine reads it (#553): named wrongly, it is refused, never taken for the selection.
     let id = mailcraft_engine::p::message_strict(p)
         .map_err(|e| e.to_string())?
@@ -33,11 +33,21 @@ fn target(app: &MailApp, p: &Value) -> Result<(Id, usize, String), String> {
     Ok((id, index, a.name.clone()))
 }
 
-/// What the owner is asked before an Office file with macros or a web page is opened; `None`
-/// for everything else (it opens, or it is refused, without a question).
+/// What the owner is asked before a file Microsoft Defender flagged, an Office file with macros
+/// or a web page is opened; `None` for everything else (it opens, or it is refused, without a
+/// question).
 pub(crate) fn question(app: &MailApp, p: &Value) -> Option<(String, String, String)> {
-    let (_, _, name) = target(app, p).ok()?;
+    let (message, index, name) = target(app, p).ok()?;
     let shown = opening::file_name(&name);
+    if opening::verdict(&name) != Verdict::Blocked
+        && let Some(threats) = crate::attachment_scan::flagged(app, message, index)
+    {
+        let text = crate::i18n::fmt(
+            tl!("Microsoft Defender flagged {name}: {threats}. The file is kept unchanged. Open it only if you are sure it is safe."),
+            &[("name", &shown), ("threats", &threats)],
+        );
+        return Some((tl!("Opening Mail Attachment").to_string(), text, tl!("Open anyway").to_string()));
+    }
     let why = match opening::verdict(&name) {
         Verdict::Macros => tl!("Files like this can carry macros, which run as programs do. Open it only if you know who sent it and expect it."),
         Verdict::Scripts => {

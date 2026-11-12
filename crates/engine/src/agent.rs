@@ -108,6 +108,9 @@ impl Access {
 }
 
 const SAFE: &[&str] = &[
+    // What came of a question a headless owner is asked in a window of its own (the window's
+    // `agent_gate`): reading it changes nothing.
+    "agent.answer",
     "search.indexStatus",
     "search.sources",
     "search.gaps",
@@ -194,6 +197,8 @@ const SAFE: &[&str] = &[
     "mail.findFromSender",
     "mail.saveAttachment",
     "mail.saveAllAttachments",
+    // Microsoft Defender asked about an attachment again: it only reports, and the file is left as it is.
+    "ui.scanAttachment",
     // The message's source as plain text: message text is data, never instructions.
     "mail.viewSource",
     "mail.sourcePage",

@@ -884,6 +884,40 @@ pub(crate) fn viewports(app: &MailApp) -> Vec<egui::ViewportId> {
 /// Show the windows that are open, and close the ones whose subject is gone. Once a frame,
 /// before the main window's shortcuts: where the windows are inside the main one, the keys of
 /// the active one (Escape closes it) are not also the main window's.
+/// Whether what a window shows is still there, refreshing a message window's copy of it.
+fn still_there(app: &MailApp, what: &mut What) -> bool {
+    match what {
+        What::Message { message, seen } => match app.session.mailbox.messages.get(message) {
+            Some(now) if same_message(seen, now) => {
+                *seen = now.clone();
+                true
+            }
+            _ => false,
+        },
+        What::Event { event: Some((event, uid)), .. } => app.session.mailbox.event(*event).is_some_and(|e| e.uid == *uid),
+        // What is being made is there until it is saved or given up.
+        What::Event { event: None, .. } => true,
+        // A file's message is its own: nothing in the mailbox can take it away.
+        What::File { .. } => true,
+        // A message being written that was sent, closed or thrown away takes its window along.
+        What::Compose { compose, .. } => app.session.composing_by_id(*compose).is_some(),
+    }
+}
+
+/// Headless never draws, so [`show`] never runs: windows whose content went (a draft that was
+/// sent or closed) are dropped here instead, or they would block a normal close for ever.
+pub(crate) fn prune_headless(app: &mut MailApp) {
+    if app.windows.open.is_empty() {
+        return;
+    }
+    let mut open = std::mem::take(&mut app.windows.open);
+    open.retain_mut(|w| still_there(app, &mut w.what));
+    app.windows.open = open;
+    if app.windows.open.is_empty() && std::mem::take(&mut app.windows.quitting) {
+        app.quit_requested = true;
+    }
+}
+
 pub fn show(app: &mut MailApp, ctx: &egui::Context) {
     crate::reading::tick(app, ctx);
     // The message being written in the window that has the keyboard is the current one (#286).
@@ -899,22 +933,7 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
     let mut open = std::mem::take(&mut app.windows.open);
     app.windows.out = open.iter().map(|w| (w.id, w.what.compose())).collect();
     // What a window shows may have gone since the last frame, or become something else.
-    open.retain_mut(|w| match &mut w.what {
-        What::Message { message, seen } => match app.session.mailbox.messages.get(message) {
-            Some(now) if same_message(seen, now) => {
-                *seen = now.clone();
-                true
-            }
-            _ => false,
-        },
-        What::Event { event: Some((event, uid)), .. } => app.session.mailbox.event(*event).is_some_and(|e| e.uid == *uid),
-        // What is being made is there until it is saved or given up.
-        What::Event { event: None, .. } => true,
-        // A file's message is its own: nothing in the mailbox can take it away.
-        What::File { .. } => true,
-        // A message being written that was sent, closed or thrown away takes its window along.
-        What::Compose { compose, .. } => app.session.composing_by_id(*compose).is_some(),
-    });
+    open.retain_mut(|w| still_there(app, &mut w.what));
     // Inside the main window the active one is the one of them that has the keyboard: the one
     // last clicked or typed in (#406), not the one in front.
     let active = crate::keys::active(ctx);

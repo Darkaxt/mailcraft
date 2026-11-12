@@ -5,7 +5,8 @@
 //! in advance), and those go through [`mailcraft_engine::agent`]'s gate here. A command that is
 //! not for agents, or names a file, is refused; one that needs the owner is asked about in a
 //! question over the window ("An agent wants to send …"), whose default answer is no. It runs
-//! only on the owner's yes; nobody's answer within [`WAIT_MS`] is a no. While a question is up,
+//! only on the owner's yes; nobody's answer within [`WAIT_MS`] is a no (headless, within
+//! [`HEADLESS_WAIT_MS`], the agent told at once and reading the outcome with `agent.answer`). While a question is up,
 //! no input from the control channel reaches the window. Other agent commands still run, and
 //! the yes reaches only what the question showed ([`agent::bind`], kept in the question's own
 //! record with the windows as they were): what changed meanwhile makes it do nothing.
@@ -33,6 +34,42 @@ use crate::widgets::primary_button;
 
 /// How long a question waits for the owner (the control channel gives up at 60 s).
 pub const WAIT_MS: f64 = 50_000.0;
+
+/// How long a headless question waits for the owner in the host's window: a day. The agent's
+/// request isn't held open meanwhile (the control channel would give up): it is answered at once
+/// that the owner is being asked, and what came of it is read with `agent.answer`.
+pub const HEADLESS_WAIT_MS: f64 = 86_400_000.0;
+
+/// What came of each headless question, by its serial, until the agent reads it with
+/// `agent.answer` ([`owner_answer`]). The serials are unique to this process.
+static ANSWERS: std::sync::Mutex<std::collections::BTreeMap<u64, Receiver<Value>>> = std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+fn answers() -> std::sync::MutexGuard<'static, std::collections::BTreeMap<u64, Receiver<Value>>> {
+    ANSWERS.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// `agent.answer {"question": n}`: the answer of a headless question once the owner answered it
+/// (or it went), as the command itself would have answered; `{"pending": true}` while it waits.
+fn owner_answer(params: &Value) -> Outcome {
+    let Some(question) = params.get("question").and_then(Value::as_u64) else {
+        return err("bad parameters: `question` (number) is required");
+    };
+    let mut waiting = answers();
+    let Some(rx) = waiting.get(&question) else {
+        return err(format!("no question {question} is waiting, or its answer was read already"));
+    };
+    match rx.try_recv() {
+        Ok(v) => {
+            waiting.remove(&question);
+            Outcome::Done(v)
+        }
+        Err(TryRecvError::Empty) => ok(json!({"pending": true, "question": question, "waitingFor": "owner"})),
+        Err(TryRecvError::Disconnected) => {
+            waiting.remove(&question);
+            err("the question went without an answer: nothing was done")
+        }
+    }
+}
 
 /// Most questions waiting at once.
 const MOST: usize = 8;
@@ -143,6 +180,9 @@ pub fn screen(app: &mut MailApp, req: &ControlRequest, allow: &[Class]) -> Optio
 }
 
 fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, allow: &[Class]) -> Outcome {
+    if id == "agent.answer" {
+        return owner_answer(&params);
+    }
     // Check before `run` temporarily sets aside an unsaved form. Requesting
     // provider authorization must preserve every existing owner dialog.
     if id == "ui.requestRulesPermission" && app.dialog.is_some() {
@@ -178,6 +218,10 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
     if let Some(why) = overwrites(app, id, &params) {
         return err(why);
     }
+    // A file Microsoft Defender flagged is the owner's to save, never an agent's.
+    if let Some(why) = crate::attachment_scan::agent_refusal(app, id, &params) {
+        return err(why);
+    }
     match agent::check(&app.session, id, &params, allow) {
         Verdict::Run => run(app, id, params, allow, None),
         Verdict::Refuse(why) => err(why),
@@ -198,6 +242,17 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
             let also = agent::also(&app.session, id, &params, class);
             let (taken, items) = undo_takes(app, id);
             let steps = app.session.undo_steps_moved();
+            let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
+            // Headless, the owner may be away: the question stays up and the agent is told so now.
+            let headless = app.is_headless();
+            let (reply, deadline) = if headless {
+                let (tx, rx) = std::sync::mpsc::channel();
+                answers().insert(serial, rx);
+                (tx, crate::now_ms() + HEADLESS_WAIT_MS)
+            } else {
+                (req.reply.clone(), crate::now_ms() + WAIT_MS)
+            };
+            let asked = what.clone();
             app.asking.push_back(Asking {
                 id: id.to_string(),
                 counted,
@@ -209,13 +264,17 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
                 items,
                 what,
                 allow: allow.to_vec(),
-                reply: req.reply.clone(),
-                deadline: crate::now_ms() + WAIT_MS,
+                reply,
+                deadline,
                 opening: app.session.openings(),
                 shown,
                 windows: crate::windows::seen(app),
-                serial: SERIAL.fetch_add(1, Ordering::Relaxed),
+                serial,
             });
+            if headless {
+                return ok(json!({"pending": true, "question": serial, "waitingFor": "owner", "asked": asked,
+                    "next": format!("agent.answer {{\"question\": {serial}}} gives the command's own answer once the owner answered")}));
+            }
             Outcome::Pending
         }
     }
