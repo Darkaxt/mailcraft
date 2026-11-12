@@ -213,11 +213,11 @@ mod shared_mailboxes;
 mod signatures;
 #[cfg(test)]
 mod simple_login_ui_tests;
+pub mod software;
 mod source_pane;
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod source_pane_tests;
-pub mod software;
 mod symbol;
 mod sync_panel;
 pub mod task_sync;
@@ -258,11 +258,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 pub use agent_gate::OwnerQuestion;
-pub use send_preview::{PreviewWindow, SendPreview};
 pub use approval::{AdminConsentAnswer, AdminConsentRequest};
 pub use control::ControlRequest;
 pub use files::FileDialogRequest;
 pub use scheduling::{FreeBusyRequest, FreeBusyResult};
+pub use send_preview::{PreviewWindow, SendPreview};
 pub use settings_notice::SettingsUnread;
 pub use unconfirmed::ConfirmedMailbox;
 
