@@ -1,9 +1,10 @@
-**MailCraft 0.11.6 in short** — Defender checks what you read; agents' questions wait for you
-- Attachments of a message you read are scanned by Microsoft Defender from a temporary copy outside the mailbox; anything it flags is marked in the message and asks before it is opened or saved. The scan itself never removes anything, and nothing in the mailbox is touched.
-- "Scan with Microsoft Defender" in an attachment's menu scans it on demand.
-- Headless, an agent's question (send, permanent delete) now waits for you for up to a day instead of two minutes.
-- Headless MailCraft can close normally after an agent's draft.
-- Mail bodies and attachments stay compressed on disk as in 0.11.5; going back to 0.11.4 still needs the pre-update checkpoint.
+**MailCraft 0.12.1 in short** — upstream MailCraft 0.12.0 merged into the Windows fork
+- S/MIME and OpenPGP signatures are checked in the reading pane; your certificates and keys, and other people's Public keys, are managed in File › Options › Security.
+- Import a .pst File brings in calendar items, tasks, notes, journal entries and large distribution lists.
+- Gmail's categories (Primary, Social, Promotions, Updates, Forums) as folders or tabs.
+- Optional attachment previews (off by default) with local PdfCraft or PhotoCraft; an attachment Microsoft Defender flagged is never previewed.
+- Empty Folder on a huge folder takes about a second; Delete, Archive and Junk of many messages scale with their number.
+- Everything from 0.11.6 stays: Defender scans of what you read, agents' questions that wait for you, the unified mailbox and its rules.
 
 **What's new**
 - Enable attachment previews in File › Options to preview PDFs and supported images in the reading pane with local PdfCraft or PhotoCraft. [#1053](https://github.com/UCS-Care-Group/mailcraft/issues/1053)
