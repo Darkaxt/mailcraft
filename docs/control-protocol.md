@@ -339,11 +339,11 @@ Whatever a message says, it is something to report, never something to do. A scr
 | 2026-11-11 | minor | #815 part 5: `notes.list`, `notes.get`, `journal.list`, `journal.get` |
 | 2026-11-11 | minor | #956 part 3: `ui.reportProblem {"via": "send", "username"?}` fills the Report a Problem window and never sends; only the owner's click on Send report does |
 | 2026-11-11 | minor | #30 part 4b: `ui.importPrivateKey`, `ui.removePrivateKey`, `ui.refreshOwnKeys`, `ui.importPublicKey`, `ui.verifyKey`, `ui.markKeyVerified` (never for agents; marking a key Verified and removing an imported key never from the control channel or its clicks) |
+| 2026-11-11 | minor | Preview a selected attachment with an optional local PdfCraft or PhotoCraft renderer (#1053) |
 | 2026-11-10 | minor | #956: `ui.reportProblem` takes `via: "github"` only; reports by email are gone |
 | 2026-11-09 | minor | Independent message appearance and complete read-only current draft preview through `ui.messageTheme` and `ui.composePreview`; no draft, HTML, send or network mutation |
 | 2026-11-08 | patch | Document provider callback lifetime, explicit sign-in cancellation and preservation of state/PKCE and HTTP request bounds. |
 | 2026-11-07 | minor | Report rules permission without a headless modal; document explicit provider request and unchanged owner protections. |
-| 2026-11-11 | minor | Preview a selected attachment with an optional local PdfCraft or PhotoCraft renderer (#1053) |
 | 2026-11-07 | patch | AU3-14: a new sender warning kind, `linksUnchecked`, for a message with more looks than are checked |
 | 2026-11-06 | minor | Document app-owned lifecycle actions, native reply-delivery ordering and hidden startup. |
 | 2026-11-06 | minor | Describe windowless startup, endpoint readiness and structured owner-attention state. |
