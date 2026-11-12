@@ -179,3 +179,21 @@ fn mail_from_others_whose_reply_to_names_only_the_owner_replies_to_the_sender() 
     let (to, cc) = reply(&mut s, "mail.replyAll", id);
     assert_eq!((to.as_str(), cc.as_str()), ("sender@example.net; alex@example.net", "sam@example.net"));
 }
+
+#[test]
+fn mail_from_the_owners_other_accounts_is_answered_as_anyones() {
+    // Three accounts of their own, each its own sign-in: as in Outlook, only the account the
+    // reply is written from is "me" (the owner's report: Reply All went to himself alone).
+    let (mut s, owner) = session();
+    let gmail = s.run("account.add", &json!({"email": "me@gmail.example", "kind": "local"})).unwrap()["id"].as_u64().unwrap();
+    s.run("account.add", &json!({"email": "other@gmail.example", "kind": "local"})).unwrap();
+    let id = message(&mut s, owner, "me@gmail.example", &[OWNER], &["other@gmail.example", SHARED], &[]);
+    let (to, cc) = reply(&mut s, "mail.reply", id);
+    assert_eq!((to.as_str(), cc.as_str()), ("me@gmail.example", ""));
+    let (to, cc) = reply(&mut s, "mail.replyAll", id);
+    assert_eq!((to.as_str(), cc.as_str()), ("me@gmail.example", "other@gmail.example"), "the shared mailbox is the same sign-in's");
+    // From the other side: a message the owner sent from that account replies to its recipients.
+    let sent = message(&mut s, gmail, "me@gmail.example", &[OWNER], &["other@gmail.example"], &[]);
+    let (to, cc) = reply(&mut s, "mail.replyAll", sent);
+    assert_eq!((to.as_str(), cc.as_str()), (OWNER, "other@gmail.example"));
+}

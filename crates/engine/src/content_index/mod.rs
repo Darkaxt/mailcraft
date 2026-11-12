@@ -706,20 +706,14 @@ impl Index {
                 }) {
                     self.pending_queries.pop_front();
                 }
-                let building = self.problem.is_none()
-                    && (!self.initialized
-                        || self.active
-                        || !self.metadata_set.is_empty()
-                        || !self.body_set.is_empty()
-                        || !self.attachment_set.is_empty());
                 if let Some((query, options, origin)) = self.pending_queries.pop_front() {
                     let generation = self.generation;
-                    match reader.request(Some((query.clone(), options.clone())), generation, building) {
+                    match reader.request(Some((query.clone(), options.clone())), generation) {
                         Ok(()) => self.requested = Some((query, options, generation, origin)),
                         Err(why) => self.problem = Some(why),
                     }
                 } else if self.coverage.as_ref().is_none_or(|(generation, _)| *generation != self.generation)
-                    && let Err(why) = reader.request(None, self.generation, building)
+                    && let Err(why) = reader.request(None, self.generation)
                 {
                     self.problem = Some(why)
                 }

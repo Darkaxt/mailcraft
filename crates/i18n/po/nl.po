@@ -1725,6 +1725,11 @@ msgstr[0] "{n} bestand bijgevoegd"
 msgstr[1] "{n} bestanden bijgevoegd"
 
 #. interface
+#: crates/ui-egui/src/send_preview.rs
+msgid "Attached: {files}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Attachment keywords"

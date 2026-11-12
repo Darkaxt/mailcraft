@@ -458,7 +458,21 @@ fn respond(s: &mut Session, v: &Value, mode: ComposeMode) -> CmdResult {
         ComposeMode::Forward => source_message(s, v)?,
         _ => reply_source(s, v)?,
     };
-    let mine: Vec<String> = s.mailbox.accounts.iter().map(|a| a.email.to_lowercase()).filter(|e| !e.is_empty()).collect();
+    // "Me" is the account the reply is written from, with the shared mailboxes opened through
+    // the same sign-in (and the one it is opened through), and the alias the message came to, as
+    // in Outlook: the owner's other accounts are people like any others here, so a reply to mail
+    // from one of them goes back to it, and Reply All keeps them on the To and Cc lines.
+    let replying = s.mailbox.account(m.origin_account());
+    let login = replying.map(|a| a.shared_of.unwrap_or(a.id));
+    let mine: Vec<String> = s
+        .mailbox
+        .accounts
+        .iter()
+        .filter(|a| login.is_some_and(|login| a.id == login || a.shared_of == Some(login)))
+        .map(|a| a.email.to_lowercase())
+        .filter(|e| !e.is_empty())
+        .chain(m.origin_alias().map(|a| a.to_lowercase()))
+        .collect();
     let is_mine = |a: &Address| mine.contains(&a.email.to_lowercase());
     let (to, cc) = match mode {
         ComposeMode::Forward => (Vec::new(), Vec::new()),
@@ -1188,6 +1202,12 @@ fn low_importance(s: &mut Session, _: &Value) -> CmdResult {
 /// writing, allocating mailbox IDs, resolving recipients or changing compose state.
 pub fn preview(s: &Session) -> Result<Message, CmdError> {
     let compose = s.compose.as_ref().ok_or_else(|| fail("no message is being written"))?;
+    preview_of(s, compose)
+}
+
+/// [`preview`] of any message being written (`Session::compose_named`): what an owner asked about
+/// sending it is shown, as Send would build it.
+pub fn preview_of(s: &Session, compose: &Compose) -> Result<Message, CmdError> {
     let fallback = format!("mailcraft-preview-{}@mailcraft.invalid", compose.id);
     let message_id = compose
         .draft

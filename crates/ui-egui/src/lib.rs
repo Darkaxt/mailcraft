@@ -200,6 +200,7 @@ pub mod security;
 mod security_fixtures_tests;
 #[cfg(test)]
 mod security_tests;
+pub mod send_preview;
 mod send_receive;
 mod sender_images;
 mod sending;
@@ -257,6 +258,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 pub use agent_gate::OwnerQuestion;
+pub use send_preview::{PreviewWindow, SendPreview};
 pub use approval::{AdminConsentAnswer, AdminConsentRequest};
 pub use control::ControlRequest;
 pub use files::FileDialogRequest;

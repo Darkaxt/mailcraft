@@ -472,16 +472,15 @@ msgid "A part of this key is RSA (a subkey for encryption, perhaps), which MailC
 msgstr "O parte a acestei chei este RSA (poate o subcheie pentru criptare), pe care MailCraft nu o folosește singur: păstrați cheia în GnuPG, cu al cărui agent semnează MailCraft, și nu o adăugați aici."
 
 #. interface
-#: crates/ui-egui/src/reading/remote.rs
-#, fuzzy
-msgid "A picture couldn't be downloaded."
-msgstr "O imagine nu a putut fi descărcată."
+#: crates/ui-egui/src/filing.rs
+msgid "A per-message exception survives reopening and repeated sync. It does not exempt future mail."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 #, fuzzy
-msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."
-msgstr "O imagine de pe web îi spune expeditorului că ați deschis mesajul și când. Cu opțiunea oprită, imaginile se descarcă doar pentru mesajele, expeditorii și domeniile pe care le alegeți."
+msgid "A picture couldn't be downloaded."
+msgstr "O imagine nu a putut fi descărcată."
 
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
@@ -512,6 +511,11 @@ msgstr "O regulă are nevoie de un nume și de ceva de căutat."
 #, fuzzy
 msgid "A save of the mailbox is still running: try again in a moment"
 msgstr "O salvare a cutiei poștale încă rulează: încercați din nou peste un moment"
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "A search folder is a saved view. It never relocates or duplicates messages."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -665,6 +669,11 @@ msgstr ""
 msgid "Account Settings"
 msgstr "Setări cont"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Account scope"
+msgstr ""
+
 #. interface, ribbon
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -672,7 +681,7 @@ msgid "Accounts"
 msgstr "Conturi"
 
 #. ribbon, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Actions"
 msgstr "Acțiuni"
@@ -943,6 +952,16 @@ msgstr "După"
 msgid "After you accept, tentatively accept or decline a meeting request in the mail, or take a cancelled meeting out of your calendar, the message goes to Deleted Items. Left off, it stays where it is and says what you answered."
 msgstr "După ce acceptați, acceptați provizoriu sau refuzați o invitație la întâlnire din e-mail ori scoateți din calendar o întâlnire anulată, mesajul ajunge în Elemente șterse. Cu opțiunea oprită, rămâne unde este și arată ce ați răspuns."
 
+#. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Alias row color"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Aliases"
+msgstr ""
+
 #. interface, name
 #: crates/engine/src/session.rs crates/model/src/offline.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/keep_offline.rs
 #, fuzzy
@@ -974,7 +993,7 @@ msgid "All Mailboxes"
 msgstr "Toate cutiile poștale"
 
 #. interface
-#: crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
 #, fuzzy
 msgid "All accounts"
 msgstr "Toate conturile"
@@ -986,10 +1005,25 @@ msgid "All day"
 msgstr "Toată ziua"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "All failed history items are retained with their rules-processing status."
+msgstr ""
+
+#. command label, interface
+#: crates/engine/src/cmd/view.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
+msgid "All inboxes"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "All of them"
 msgstr "Toate"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "All source details"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -1283,13 +1317,18 @@ msgid "Anything still waiting to go to the server goes first: mail in the Outbox
 msgstr "Tot ce încă așteaptă să ajungă pe server pleacă primul: e-mailurile din Mesaje de trimis și marcajele și mutările făcute cât ați fost offline. Dacă MailCraft nu poate contacta serverul, schimbarea așteaptă până poate."
 
 #. interface
+#: crates/ui-egui/src/reading/appearance.rs
+msgid "App theme"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Application (client) ID"
 msgstr "ID aplicație (client)"
 
 #. interface
-#: crates/ui-egui/src/ribbon.rs
+#: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/unified_inbox.rs
 #, fuzzy
 msgid "Apply"
 msgstr "Aplicare"
@@ -1413,6 +1452,11 @@ msgstr "Aplicare modificări de reguli trimise"
 #, fuzzy
 msgid "Apply Sent To-do Changes"
 msgstr "Aplicare modificări de sarcini trimise"
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Apply filing"
+msgstr ""
 
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/zones.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs
@@ -1696,6 +1740,11 @@ msgstr[1] "S-au atașat {n} fișiere"
 msgstr[2] "S-au atașat {n} de fișiere"
 
 #. interface
+#: crates/ui-egui/src/send_preview.rs
+msgid "Attached: {files}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Attachment keywords"
@@ -1724,6 +1773,21 @@ msgstr "Atașamente"
 #, fuzzy
 msgid "Attachments can't be opened here: save it with Save As instead."
 msgstr "Atașamentele nu pot fi deschise aici: salvați-l cu Salvare ca."
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Attachments can't be scanned here: Microsoft Defender's scanner isn't available."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Attachments pending"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Attachments: {discovered} discovered, {downloaded} downloaded"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
@@ -1936,6 +2000,16 @@ msgid "Back to account settings"
 msgstr "Înapoi la setările contului"
 
 #. interface
+#: crates/ui-egui/src/reading/appearance.rs
+msgid "Back to editing"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Back to the message as it is meant to be read"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/ews_setup.rs
 #, fuzzy
 msgid "Basic (user name and password over a secure connection)"
@@ -1970,6 +2044,11 @@ msgstr "Fiți atent cu acest mesaj."
 #, fuzzy
 msgid "Before anything changes, a copy of your whole mailbox is saved next to it, with today's date in its name."
 msgstr "Înainte de orice modificare, se salvează lângă ea o copie a întregii cutii poștale, cu data de azi în nume."
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Best match on top"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/people_view.rs
@@ -2025,12 +2104,6 @@ msgstr "Aducere calendar în față"
 msgid "Bring in"
 msgstr "Preluare"
 
-#. interface
-#: crates/ui-egui/src/chrome.rs
-#, fuzzy
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
-msgstr "Se construiește indexul pe care se bazează căutarea; până e gata, unele e-mailuri mai vechi se caută mai încet"
-
 #. command label, ribbon
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -2072,6 +2145,11 @@ msgstr "După expeditor"
 #, fuzzy
 msgid "By Importance"
 msgstr "După importanță"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "By Relevance"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
@@ -2188,7 +2266,7 @@ msgid "Can't sign"
 msgstr "Nu se poate semna"
 
 #. interface
-#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/security.rs
+#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs
 #, fuzzy
 msgid "Cancel"
 msgstr "Anulare"
@@ -2246,10 +2324,25 @@ msgid "Cancel This Meeting?"
 msgstr "Anulați această întâlnire?"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Cancel edit"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Cancelled"
 msgstr "Anulat"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Case Sensitive Search"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/search_index_ui.rs
+msgid "Case sensitive"
+msgstr ""
 
 #. interface, name
 #: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/tasks_view.rs
@@ -2469,6 +2562,16 @@ msgstr "Verificare nume"
 msgid "Check Now"
 msgstr "Verificare acum"
 
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Check Rule Conflicts"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Check conflicts"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
@@ -2572,6 +2675,11 @@ msgid "Choose a category"
 msgstr "Alegeți o categorie"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Choose a filing destination"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Choose a first and a last day, at most a year apart."
@@ -2584,10 +2692,20 @@ msgid "Choose a folder"
 msgstr "Alegeți un dosar"
 
 #. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Choose account"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "Choose default signatures"
 msgstr "Alegeți semnăturile implicite"
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Choose real folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -2703,8 +2821,8 @@ msgstr "Clic pentru previzualizarea {name}; dublu clic pentru deschidere"
 msgid "Clipboard"
 msgstr "Clipboard"
 
-#. interface, ribbon
-#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs
+#. command label, interface, ribbon
+#: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
 #, fuzzy
 msgid "Close"
 msgstr "Închidere"
@@ -2744,6 +2862,11 @@ msgstr "Închidere semnătură"
 #, fuzzy
 msgid "Close Window"
 msgstr "Închidere fereastră"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Close the current dialog first."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -2841,6 +2964,11 @@ msgstr "Finalizat la {date}"
 msgid "Completed."
 msgstr "Finalizat."
 
+#. command label
+#: crates/engine/src/cmd/file.rs
+msgid "Compress Mailbox Content"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/unconfirmed.rs
 #, fuzzy
@@ -2854,6 +2982,16 @@ msgid "Confirm servers"
 msgstr "Confirmați serverele"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Confirmed"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Conflicting destinations: {confirmed} confirmed; {potential} potential."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Connect"
@@ -2864,6 +3002,16 @@ msgstr "Conectare"
 #, fuzzy
 msgid "Connect Calendar and Contacts"
 msgstr "Conectare calendar și contacte"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Connect Microsoft To Do manually in the desktop app."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Connect Microsoft To Do…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/favorites_sync.rs
@@ -2960,7 +3108,7 @@ msgid "Copies a short message with the address of Microsoft's page where an admi
 msgstr "Copiază un mesaj scurt cu adresa paginii Microsoft unde un administrator al organizației aprobă MailCraft, o dată pentru toți. Nu se trimite nimic: lipiți-l chiar dvs. într-un e-mail sau chat."
 
 #. command label, interface, name
-#: crates/engine/src/cmd/format.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/menubar.rs crates/ui-egui/src/view_source.rs
+#: crates/engine/src/cmd/format.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/menubar.rs crates/ui-egui/src/source_pane.rs crates/ui-egui/src/view_source.rs
 #, fuzzy
 msgid "Copy"
 msgstr "Copiere"
@@ -3036,6 +3184,11 @@ msgid "Copy problems"
 msgstr "Copiere probleme"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Copy the source shown here"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "Copy the version, the platform and the end of MailCraft's own record, to paste into a problem report. No message, address, password or token is in it, and nothing is sent."
@@ -3046,6 +3199,11 @@ msgstr "Copiază versiunea, platforma și finalul jurnalului propriu MailCraft, 
 #, fuzzy
 msgid "Copy to Folder"
 msgstr "Copiere în dosar"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Copy to folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -3258,6 +3416,11 @@ msgid "Country"
 msgstr "Țară"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Coverage is not available yet."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Create Message"
@@ -3299,6 +3462,11 @@ msgstr "Cutia poștală curentă"
 msgid "Current View"
 msgstr "Vizualizarea curentă"
 
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Custom color"
+msgstr ""
+
 #. command label, name
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
@@ -3311,8 +3479,8 @@ msgstr "Decupare"
 msgid "DOMAIN\\user or you@example.org; empty for your address"
 msgstr "DOMENIU\\utilizator sau dvs@example.org; gol pentru adresa dvs."
 
-#. name
-#: crates/ui-egui/src/theme.rs
+#. interface, name
+#: crates/ui-egui/src/reading/appearance.rs crates/ui-egui/src/theme.rs
 #, fuzzy
 msgid "Dark"
 msgstr "Întunecat"
@@ -3512,6 +3680,11 @@ msgid "Delete Rule"
 msgstr "Ștergere regulă"
 
 #. command label
+#: crates/engine/src/cmd/search_folders.rs
+msgid "Delete Search Folder"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/signature.rs
 #, fuzzy
 msgid "Delete Signature"
@@ -3548,6 +3721,11 @@ msgid "Delete on a conversation's row that takes more than one message asks firs
 msgstr "Ștergerea pe rândul unei conversații cu mai multe mesaje cere confirmare."
 
 #. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Delete search folder"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Delete this category"
@@ -3570,6 +3748,11 @@ msgstr "Ștergeți această regulă"
 #, fuzzy
 msgid "Deleted Items"
 msgstr "Elemente șterse"
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Deletes only this saved search, never its messages."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3709,11 +3892,26 @@ msgstr "Semnat digital, semnatar neverificat"
 msgid "Direct Replies To"
 msgstr "Răspunsurile să meargă la"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Disabled rules remain disabled. Only the selected messages move; their one-time placement is preserved."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Disabled until repaired: {why}"
+msgstr ""
+
 #. command label, interface, ribbon
-#: crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/compose.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Discard"
 msgstr "Renunțare"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Disconnect To Do"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs crates/ui-egui/src/reminders.rs
@@ -3943,6 +4141,11 @@ msgid "Download the bytes this message came as again, to check its Digital signa
 msgstr "Descărcați din nou octeții cu care a sosit acest mesaj, ca să-i verificați semnătura digitală"
 
 #. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Download this message's tracking pictures too, until MailCraft closes"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Downloaded pictures and opened attachments can't be told apart by account: File › Info › Remove MailCraft's data from this computer clears them."
@@ -3968,6 +4171,11 @@ msgstr[2] "S-au descărcat {n} de atașamente"
 #, fuzzy
 msgid "Downloading pictures…"
 msgstr "Se descarcă imaginile…"
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Downloading the complete message…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/graph_fetch.rs
@@ -4140,10 +4348,20 @@ msgid "Edit Event"
 msgstr "Editare eveniment"
 
 #. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Edit Local Rule"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "Edit Message"
 msgstr "Editare mesaj"
+
+#. command label
+#: crates/engine/src/cmd/search_folders.rs
+msgid "Edit Search Folder"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/signature.rs
@@ -4164,10 +4382,25 @@ msgid "Edit Task"
 msgstr "Editare sarcină"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit rule"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs crates/ui-egui/src/search_folders.rs
+msgid "Edit search folder…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/compose.rs
 #, fuzzy
 msgid "Edit signature as text"
 msgstr "Editare semnătură ca text"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Edit this local rule"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/edit.rs crates/ui-egui/src/ribbon.rs
@@ -4262,6 +4495,11 @@ msgid "Enable Rule"
 msgstr "Activare regulă"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Enabled"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "End"
@@ -4296,6 +4534,11 @@ msgstr "Ecuație"
 #, fuzzy
 msgid "Every"
 msgstr "La fiecare"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Every account's Inbox, the filing account's real folder tree for all accounts (Unfiled lists what is not filed yet) and your search folders. Right-click to choose the filing account."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -4352,7 +4595,7 @@ msgid "Everyone outside my organization"
 msgstr "Toți cei din afara organizației mele"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/search_options.rs
 #, fuzzy
 msgid "Everything"
 msgstr "Totul"
@@ -4388,6 +4631,21 @@ msgid "Everything the interface does is a command: {commands} of them, covering 
 msgstr "Tot ce face interfața este o comandă: {commands} în total, acoperind {percent}% din catalogul de funcții. Linia de comandă, canalul de control și serverul MCP rulează aceleași comenzi."
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Exact transport senders"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Except"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Exception"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "Exchange server"
@@ -4417,11 +4675,21 @@ msgstr "Server Exchange {host}"
 msgid "Exchange server · no usable server address"
 msgstr "Server Exchange · nicio adresă de server utilizabilă"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Existing rules use other destinations"
+msgstr ""
+
 #. command label
 #: crates/engine/src/cmd/mail.rs
 #, fuzzy
 msgid "Expand Conversation"
 msgstr "Extindere conversație"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Expand or Collapse Alias Filters"
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -4467,6 +4735,16 @@ msgstr ""
 "Export\n"
 "dosar"
 
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Export .eml"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/mail.rs
+msgid "Export Complete Message"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/file.rs crates/ui-egui/src/backstage.rs
 #, fuzzy
@@ -4496,6 +4774,11 @@ msgstr "Extern"
 #, fuzzy
 msgid "FAILED"
 msgstr "EȘUAT"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Failed"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -4557,6 +4840,11 @@ msgstr "Mai puțin de două dintre aceste contacte mai sunt aici, deci nu e nimi
 msgid "File"
 msgstr "Fișier"
 
+#. command label
+#: crates/engine/src/cmd/filing.rs
+msgid "File and learn senders"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/files.rs crates/ui-egui/src/report_problem.rs
 #, fuzzy
@@ -4574,6 +4862,16 @@ msgstr "Fișier:"
 #, fuzzy
 msgid "Files like this can carry macros, which run as programs do. Open it only if you know who sent it and expect it."
 msgstr "Fișierele de acest tip pot conține macrocomenzi, care rulează ca programele. Deschideți-l doar dacă știți cine l-a trimis și îl așteptați."
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Filing account"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Filing changes are queued"
+msgstr ""
 
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
@@ -4602,6 +4900,11 @@ msgstr "Filtrare e-mail"
 #, fuzzy
 msgid "Filter Tasks"
 msgstr "Filtrare sarcini"
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Filter folder paths"
+msgstr ""
 
 #. command label, interface, ribbon, ribbon location
 #: crates/engine/src/cmd/calendar/share.rs crates/engine/src/cmd/edit.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
@@ -4663,6 +4966,11 @@ msgstr "Amprentă:"
 msgid "Finish signing in first (your browser is waiting)"
 msgstr "Terminați întâi conectarea (browserul așteaptă)"
 
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "First 50 matches shown. Open the search folder for all results and coverage details."
+msgstr ""
+
 #. command label
 #: crates/engine/src/cmd/mail.rs
 #, fuzzy
@@ -4699,11 +5007,16 @@ msgstr "Marcare mesaj"
 msgid "Flag for follow-up"
 msgstr "Marcare pentru urmărire"
 
-#. name
-#: crates/engine/src/session.rs
+#. interface, name
+#: crates/engine/src/session.rs crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Flagged"
 msgstr "Marcat"
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Flagged by Microsoft Defender: {threats}. The file is kept unchanged."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
@@ -4712,7 +5025,7 @@ msgid "Fold the calendars of this group away"
 msgstr "Restrângeți calendarele acestui grup"
 
 #. interface, name, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_folders.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
 msgid "Folder"
 msgstr "Dosar"
@@ -4738,7 +5051,7 @@ msgstr ""
 "dosar"
 
 #. command label, ribbon location
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/view.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/filing.rs crates/engine/src/cmd/view.rs
 #, fuzzy
 msgid "Folder Pane"
 msgstr "Panou dosare"
@@ -4854,7 +5167,7 @@ msgid "For an account that signs in with Microsoft: the folders you keep under F
 msgstr "Pentru un cont care se conectează cu Microsoft: dosarele pe care le țineți la Favorite în Outlook, în aceeași ordine. Sunt citite de pe server și nu sunt modificate niciodată acolo. Fără aceasta, se afișează favoritele marcate în MailCraft."
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/ews_setup.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Uitare"
@@ -4957,6 +5270,11 @@ msgstr[1] "Redirecționat către {n} persoane"
 msgstr[2] "Redirecționat către {n} de persoane"
 
 #. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Forwarding metadata is incomplete"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Forward…"
@@ -5002,7 +5320,7 @@ msgid "Friday"
 msgstr "vineri"
 
 #. interface, name
-#: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/meeting_dialogs/share.rs
+#: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/reading/appearance.rs
 #, fuzzy
 msgid "From"
 msgstr "De la"
@@ -5018,6 +5336,11 @@ msgstr "De la expeditor"
 #, fuzzy
 msgid "From contains"
 msgstr "De la conține"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "From contains any of"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -5048,6 +5371,11 @@ msgstr "Toate detaliile: inclusiv locul și notele"
 #, fuzzy
 msgid "Full messages: {done} of {total}"
 msgstr "Mesaje integrale: {done} din {total}"
+
+#. interface, name
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Full row"
+msgstr ""
 
 #. interface, name
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
@@ -5429,6 +5757,11 @@ msgstr "HTML"
 msgid "HTML Signature"
 msgstr "Semnătură HTML"
 
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "HTML source"
+msgstr ""
+
 #. name
 #: crates/engine/src/session.rs
 #, fuzzy
@@ -5452,6 +5785,11 @@ msgstr "Răspunsurile să fie trimise la"
 #, fuzzy
 msgid "Have replies sent to other addresses"
 msgstr "Răspunsurile să fie trimise la alte adrese"
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Header-reported identity"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading.rs
@@ -5626,6 +5964,11 @@ msgstr "Felul în care se repetă îl stabilește organizatorul."
 #, fuzzy
 msgid "How many messages each folder holds and the space they take"
 msgstr "Câte mesaje are fiecare dosar și cât spațiu ocupă"
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "How rows of combined views show their account or alias color"
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -5981,11 +6324,21 @@ msgstr "În {folder}"
 msgid "In {place}"
 msgstr "În {place}"
 
-#. name
-#: crates/model/src/mailbox.rs crates/model/src/sync/progress.rs
+#. interface, name
+#: crates/model/src/mailbox.rs crates/model/src/sync/progress.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Inbox"
 msgstr "Mesaje primite"
+
+#. interface
+#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/mail_view.rs
+msgid "Inbox and unfiled"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/account.rs
+msgid "Inbox row color"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/calendar/share.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/format.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/ribbon.rs
@@ -6006,6 +6359,11 @@ msgid "Include the original message when replying"
 msgstr "Includeți mesajul original la răspuns"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Includes rules for other destination folders. Priority and Stop do not resolve competing destinations. Potential overlaps still require review; matching conflicts leave the message unmoved."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Incoming mail (IMAP)"
@@ -6018,10 +6376,25 @@ msgid "Increase Indent"
 msgstr "Mărire indent"
 
 #. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Index coverage is incomplete or unavailable. These matches may omit mail; open the results to inspect coverage details."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Indexed"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "Indexing mail: {percent}%"
 msgstr "Se indexează e-mailurile: {percent}%"
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Indexing retained messages and attachments. Unavailable sources remain visible in Search coverage."
+msgstr ""
 
 #. command label, interface, name, ribbon location
 #: crates/engine/src/cmd/account.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
@@ -6066,10 +6439,55 @@ msgid "Inside My Organization"
 msgstr "În cadrul organizației mele"
 
 #. command label
+#: crates/engine/src/cmd/mail.rs
+msgid "Inspect Filing State"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Inspect Message Identities"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/mail.rs
+msgid "Inspect Message Source"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Inspect Native Extraction Coverage"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Inspect Pending Classification"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Inspect SimpleLogin Aliases"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/view.rs
 #, fuzzy
 msgid "Inspect View"
 msgstr "Vizualizare inspecție"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Inspect coverage"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Inspecting the original search snapshot…"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Inspection failed. See the error above, then refresh when its cause is resolved."
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -6549,6 +6967,11 @@ msgid "Keychain"
 msgstr "Keychain"
 
 #. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Known matching messages"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Label"
@@ -6656,8 +7079,8 @@ msgstr "Vreau să-mi configurez contul manual"
 msgid "Let people know you're away or can't answer for a while: your mailbox replies by itself"
 msgstr "Anunțați-i pe ceilalți că sunteți plecat sau nu puteți răspunde o vreme: cutia poștală răspunde singură"
 
-#. name
-#: crates/ui-egui/src/theme.rs
+#. interface, name
+#: crates/ui-egui/src/reading/appearance.rs crates/ui-egui/src/theme.rs
 #, fuzzy
 msgid "Light"
 msgstr "Luminos"
@@ -6735,10 +7158,25 @@ msgid "List Notes"
 msgstr "Listare note"
 
 #. command label
+#: crates/engine/src/cmd/search_folders.rs
+msgid "List Search Folders"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/tasks.rs
 #, fuzzy
 msgid "List Tasks"
 msgstr "Listare sarcini"
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Load anyway"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Loading more…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/dialogs.rs
@@ -6843,7 +7281,7 @@ msgid "Made in another program or on the web, with parts MailCraft can't show"
 msgstr "Creat în alt program sau pe web, cu părți pe care MailCraft nu le poate afișa"
 
 #. command label, interface, name, ribbon location
-#: crates/engine/src/cmd/compose.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/view.rs crates/engine/src/session.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+#: crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/filing.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/view.rs crates/engine/src/session.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Mail"
 msgstr "E-mail"
@@ -7327,10 +7765,30 @@ msgid "Mark as verified"
 msgstr "Marcare ca verificată"
 
 #. interface
-#: crates/ui-egui/src/find_replace.rs
+#: crates/ui-egui/src/find_replace.rs crates/ui-egui/src/search_options.rs
 #, fuzzy
 msgid "Match case"
 msgstr "Potrivire litere mari și mici"
+
+#. interface
+#: crates/ui-egui/src/search_options.rs
+msgid "Match whole word"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Matching received messages"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/window_chrome.rs
+msgid "Maximize"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Maximize or Restore"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -7403,14 +7861,44 @@ msgstr ""
 "Previzualizare\n"
 "mesaj"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Message Appearance"
+msgstr ""
+
 #. command label, ribbon
 #: crates/engine/src/cmd/view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Message Preview"
 msgstr "Previzualizare mesaj"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Message Source"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Message appearance"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Message source"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Message {id}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Message {message}, after {completed} actions: {why}"
+msgstr ""
+
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Messages"
 msgstr "Mesaje"
@@ -7481,6 +7969,11 @@ msgstr "Mesaje pe fundal deschis"
 msgid "Messages to download per folder"
 msgstr "Mesaje de descărcat per dosar"
 
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Messages: {discovered} discovered, {downloaded} downloaded"
+msgstr ""
+
 #. name
 #: crates/model/src/mailbox.rs
 #, fuzzy
@@ -7504,6 +7997,39 @@ msgstr "E-mailul Microsoft 365 se adaugă drept cont Microsoft: vă conectați p
 #, fuzzy
 msgid "Microsoft Application ID"
 msgstr "ID aplicație Microsoft"
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Microsoft Defender flagged an attachment. The file is kept unchanged."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Microsoft Defender flagged {files}. The file is kept unchanged. Save it only if you are sure it is safe."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_open.rs
+msgid "Microsoft Defender flagged {name}: {threats}. The file is kept unchanged. Open it only if you are sure it is safe."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Microsoft Defender flagged {n} attachment of this message. It is kept unchanged."
+msgid_plural "Microsoft Defender flagged {n} attachments of this message. They are kept unchanged."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Microsoft To Do"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Microsoft To Do: off (connect manually)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -7595,11 +8121,26 @@ msgstr "Serverul Microsoft nu a putut fi contactat. Clic pentru a reîncerca."
 msgid "Middle name"
 msgstr "Al doilea prenume"
 
-#. interface
-#: crates/ui-egui/src/menubar.rs
+#. command label, interface
+#: crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs crates/ui-egui/src/window_chrome.rs
 #, fuzzy
 msgid "Minimize"
 msgstr "Minimizare"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Missing content"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Missing, duplicate or invalid forwarding headers are not assigned to an alias."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Missing, duplicate or invalid forwarding headers are preserved as gaps. No address is guessed from the reverse alias."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -7738,6 +8279,16 @@ msgid "Move Up"
 msgstr "Mutare în sus"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move after {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Move before {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Move the Appointments Only"
@@ -7760,6 +8311,11 @@ msgstr "Mutați această regulă mai jos: rulează mai târziu"
 #, fuzzy
 msgid "Move this rule up: it runs earlier"
 msgstr "Mutați această regulă mai sus: rulează mai devreme"
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Move this selection once; leave future sender rules alone"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
@@ -7840,7 +8396,7 @@ msgid "My organisation has to approve MailCraft first: what to do"
 msgstr "Organizația mea trebuie întâi să aprobe MailCraft: ce trebuie făcut"
 
 #. interface, name
-#: crates/engine/src/session.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs
+#: crates/engine/src/session.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/search_folders.rs
 #, fuzzy
 msgid "Name"
 msgstr "Nume"
@@ -7899,6 +8455,11 @@ msgstr "Necesită Verificare versiuni noi."
 msgid "Needs Google sign-in"
 msgstr "Necesită conectare Google"
 
+#. interface
+#: crates/ui-egui/src/forms/rules/advanced.rs
+msgid "Nested exceptions cannot be edited here. The original rule was preserved."
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/junk.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -7912,7 +8473,7 @@ msgid "Never Block Sender's Domain"
 msgstr "Nu blocați niciodată domeniul expeditorului"
 
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/search_folders.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "New"
 msgstr "Nou"
@@ -8041,6 +8602,18 @@ msgstr "Cutie poștală nouă"
 msgid "New Meeting"
 msgstr "Întâlnire nouă"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid ""
+"New Search\n"
+"Folder"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_folders.rs
+msgid "New Search Folder"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/tasks.rs crates/ui-egui/src/forms.rs
 #, fuzzy
@@ -8072,6 +8645,11 @@ msgid "New mail Gmail puts in Social, Promotions, Updates or Forums arrives with
 msgstr "E-mailurile noi pe care Gmail le pune în Rețele sociale, Promoții, Actualizări sau Forumuri sosesc fără alertă."
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "New mail from"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/alerts.rs crates/ui-egui/src/compose.rs
 #, fuzzy
 msgid "New message"
@@ -8090,13 +8668,23 @@ msgid "New rule"
 msgstr "Regulă nouă"
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "New search folder"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "New search folder…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Newest on top"
 msgstr "Cele mai noi deasupra"
 
 #. interface
-#: crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/security.rs
+#: crates/ui-egui/src/filing.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/security.rs
 #, fuzzy
 msgid "Next"
 msgstr "Următorul"
@@ -8326,6 +8914,11 @@ msgstr "Fără dată scadentă"
 #, fuzzy
 msgid "No end date"
 msgstr "Fără dată de sfârșit"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "No entries on this page."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms/junk.rs
@@ -8868,6 +9461,11 @@ msgid "On this device only: no mail server"
 msgstr "Doar pe acest dispozitiv: fără server de e-mail"
 
 #. interface
+#: crates/ui-egui/src/reading/remote.rs
+msgid "On: pictures are downloaded in all mail except Junk E-mail, and tracking pictures are always left out. Off: pictures are downloaded only for the messages, senders and domains you say."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
@@ -8891,6 +9489,11 @@ msgstr "După ce un administrator a aprobat, încercați din nou: conectarea va 
 msgid "Once it has worked, your system's credential store keeps it for next time. It is never written to the mailbox."
 msgstr "După ce a funcționat, depozitul de acreditări al sistemului o păstrează pentru data viitoare. Nu este scrisă niciodată în cutia poștală."
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One email address per line"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/meeting.rs
 #, fuzzy
@@ -8902,6 +9505,11 @@ msgstr "O apariție a unei serii nu poate fi în alt calendar decât restul seri
 #, fuzzy
 msgid "One of a series: {rule}"
 msgstr "Parte dintr-o serie: {rule}"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "One sender text per line"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -8982,6 +9590,11 @@ msgid "Only one part of this message was signed, and what's shown here holds mor
 msgstr "Doar o parte din acest mesaj a fost semnată, iar ce se afișează aici conține mai mult decât acea parte: ce e în afara ei poate spune orice."
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only rules assigned to this destination are shown. Order includes rules for other destinations; a rule can have additional actions."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Only send during this time range:"
@@ -8994,10 +9607,20 @@ msgid "Only the beginning of this message is here. The rest downloads with the n
 msgstr "Aici este doar începutul acestui mesaj. Restul se descarcă la următoarea Trimitere/primire."
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Only the first 100 failure details are shown; the total includes every failure."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
 #, fuzzy
 msgid "Only the meeting's organizer can change its time."
 msgstr "Doar organizatorul întâlnirii îi poate schimba ora."
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Only these sender alternatives are split. Other senders, rule actions and enabled states remain intact. A new ordinary filing rule covers these senders across accounts; future messages are included. Existing one-time exceptions are excluded from history."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -9105,6 +9728,11 @@ msgstr "Deschidere răspunsuri și redirecționări în fereastră nouă"
 msgid "Open Result from the Server"
 msgstr "Deschidere rezultat de pe server"
 
+#. command label
+#: crates/engine/src/cmd/search_folders.rs
+msgid "Open Search Folder"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/calendar_opened.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/open_shared.rs
 #, fuzzy
@@ -9122,6 +9750,11 @@ msgstr "Deschideți o cutie poștală a organizației la care vi s-a dat Acces d
 #, fuzzy
 msgid "Open a message you sent as a new one"
 msgstr "Deschideți ca mesaj nou un mesaj pe care l-ați trimis"
+
+#. interface
+#: crates/ui-egui/src/attachment_open.rs
+msgid "Open anyway"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
@@ -9280,6 +9913,11 @@ msgid "Or is it one of these?"
 msgstr "Sau este unul dintre acestea?"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Order {position}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "Organizer"
@@ -9296,6 +9934,26 @@ msgstr "Organizator: propriul calendar"
 #, fuzzy
 msgid "Organizer: {name}"
 msgstr "Organizator: {name}"
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Origin color in combined views"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Origin colors"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Origin row color"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
+msgid "Original sender unavailable"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/security.rs
@@ -9411,11 +10069,21 @@ msgstr "Restant"
 msgid "Overdue: was due {when}"
 msgstr "Restant: termenul era {when}"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Overlap"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/calendar_settings.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Overlay"
 msgstr "Suprapunere"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Overview"
+msgstr ""
 
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/password.rs
@@ -9484,6 +10152,11 @@ msgid "Part of your mailbox is damaged"
 msgstr "O parte din cutia poștală este deteriorată"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Partial"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Password"
@@ -9524,6 +10197,11 @@ msgstr "Lipiți sau scrieți codul HTML al semnăturii"
 #, fuzzy
 msgid "Pattern"
 msgstr "Model"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Pending"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
@@ -9692,6 +10370,11 @@ msgid "Plain Text"
 msgstr "Text simplu"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Plain-text source"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "Point at a link to see where it goes."
@@ -9737,6 +10420,11 @@ msgstr "Fereastră separată"
 msgid "Postal code"
 msgstr "Cod poștal"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Potential"
+msgstr ""
+
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/send_receive.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -9750,13 +10438,23 @@ msgid "Preparing attachment preview…"
 msgstr "Se pregătește previzualizarea atașamentului…"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Preparing complete message…"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Preparing source…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Press Send/Receive to download your mail."
 msgstr "Apăsați Trimitere/primire ca să descărcați e-mailurile."
 
 #. interface, name
-#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "Preview"
 msgstr "Previzualizare"
@@ -9766,6 +10464,21 @@ msgstr "Previzualizare"
 #, fuzzy
 msgid "Preview Attachment"
 msgstr "Previzualizare atașament"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Preview Message"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/rules.rs
+msgid "Preview Rules"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_folders.rs
+msgid "Preview Search Folder"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
@@ -9786,13 +10499,28 @@ msgid "Preview attachments with local PhotoCraft"
 msgstr "Previzualizare atașamente cu PhotoCraft local"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview folder"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Preview lines in the message list"
 msgstr "Rânduri de previzualizare în lista de mesaje"
 
 #. interface
-#: crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/security.rs
+#: crates/ui-egui/src/reading/appearance.rs
+msgid "Preview message"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Preview this rule without changing mail"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/security.rs
 #, fuzzy
 msgid "Previous"
 msgstr "Anterior"
@@ -9832,6 +10560,11 @@ msgstr "Principale, Rețele sociale, Promoții, Actualizări și Forumuri, așa 
 #, fuzzy
 msgid "Private"
 msgstr "Privat"
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Processed"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/nav.rs
@@ -9965,6 +10698,11 @@ msgstr "Puneți-le în calendarul contului, unde le au și Outlook, și celelalt
 msgid "Puts the days you choose of your calendar into the message, where the cursor is."
 msgstr "Pune în mesaj, la poziția cursorului, zilele din calendar pe care le alegeți."
 
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Query"
+msgstr ""
+
 #. ribbon location
 #: crates/engine/src/cmd/edit.rs
 #, fuzzy
@@ -9982,6 +10720,11 @@ msgstr "Ieșire din MailCraft"
 #, fuzzy
 msgid "Range"
 msgstr "Interval"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Re-read retained missing or failed content. Does not download or change mail."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/advanced_search.rs
@@ -10019,6 +10762,11 @@ msgstr "Citit cu conectarea lui {owner}, cât timp îl păstrați: persoana treb
 msgid "Read-only"
 msgstr "Doar citire"
 
+#. interface
+#: crates/ui-egui/src/reading/appearance.rs
+msgid "Read-only preview"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -10034,6 +10782,11 @@ msgstr ""
 #, fuzzy
 msgid "Reading Pane"
 msgstr "Panou de citire"
+
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "Reading pane"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -10064,6 +10817,11 @@ msgstr "Se citesc răspunsurile automate de pe server…"
 #, fuzzy
 msgid "Real name"
 msgstr "Nume real"
+
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Receiving alias contains"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/graph_down.rs
@@ -10154,7 +10912,7 @@ msgid "Redo {what}"
 msgstr "Refacere {what}"
 
 #. interface
-#: crates/ui-egui/src/security.rs
+#: crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/security.rs
 #, fuzzy
 msgid "Refresh"
 msgstr "Reîmprospătare"
@@ -10165,11 +10923,31 @@ msgstr "Reîmprospătare"
 msgid "Refresh Your Certificates and Keys"
 msgstr "Reîmprospătare certificate și chei"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Refresh review"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Regex"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Related"
 msgstr "Asociate"
+
+#. name
+#: crates/engine/src/session.rs
+msgid "Relevance"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Relevance {score} of 100"
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -10506,6 +11284,11 @@ msgid "Reply by Email"
 msgstr "Răspuns prin e-mail"
 
 #. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Reply through: {address}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/compose.rs
 #, fuzzy
 msgid "Reply to"
@@ -10539,6 +11322,21 @@ msgstr ""
 msgid "Report a Problem"
 msgstr "Raportare problemă"
 
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "Reported sender contains"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Reported via SimpleLogin: {alias}"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Request Microsoft Rules Permission"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
@@ -10552,10 +11350,20 @@ msgid "Request a Read Receipt"
 msgstr "Solicitare confirmare de citire"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Requested folder"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/reading/invitation.rs crates/ui-egui/src/scheduling.rs
 #, fuzzy
 msgid "Required"
 msgstr "Obligatoriu"
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Reroute these senders and move their matching received history"
+msgstr ""
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -10578,6 +11386,11 @@ msgstr ""
 #, fuzzy
 msgid "Reset View"
 msgstr "Resetare vizualizare"
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Reset color"
+msgstr ""
 
 #. command label, ribbon, ribbon location
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar/share.rs crates/engine/src/cmd/compose.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/ribbon.rs
@@ -10627,6 +11440,21 @@ msgstr "Repornire pentru actualizare"
 msgid "Restart to update is the owner's click."
 msgstr "Repornirea pentru actualizare e decizia proprietarului."
 
+#. interface
+#: crates/ui-egui/src/window_chrome.rs
+msgid "Restore"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Retry Missing or Failed Search Content"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Retry unavailable content"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -10660,6 +11488,11 @@ msgstr "Revizuire"
 #, fuzzy
 msgid "Review certificate…"
 msgstr "Examinare certificat…"
+
+#. command label
+#: crates/engine/src/cmd/filing.rs
+msgid "Review sender filing"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/signature.rs
@@ -10733,9 +11566,19 @@ msgstr "Reguli și categorii"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
+msgid "Rules delivering to {folder}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Rules for"
 msgstr "Reguli pentru"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Rules for {folder}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -10971,6 +11814,18 @@ msgstr "Salvare mesaj ca…"
 msgid "Save Message File As"
 msgstr "Salvare fișier mesaj ca"
 
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Save Rule"
+msgstr ""
+
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid ""
+"Save Search\n"
+"as Folder"
+msgstr ""
+
 #. command label
 #: crates/engine/src/cmd/signature.rs
 #, fuzzy
@@ -10978,10 +11833,20 @@ msgid "Save Signature"
 msgstr "Salvare semnătură"
 
 #. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Save anyway"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Save as iCalendar…"
 msgstr "Salvare ca iCalendar…"
+
+#. interface
+#: crates/ui-egui/src/advanced_search.rs
+msgid "Save as search folder…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/compose.rs
@@ -11019,6 +11884,16 @@ msgstr "Salvați sau renunțați la modificările acestui cont înainte de a tre
 msgid "Save out"
 msgstr "Salvare în afară"
 
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Save search folder"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Save the complete message as an .eml file"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -11051,6 +11926,11 @@ msgid_plural "Saved {n} attachments"
 msgstr[0] "S-a salvat {n} atașament"
 msgstr[1] "S-au salvat {n} atașamente"
 msgstr[2] "S-au salvat {n} de atașamente"
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Saving Mail Attachment"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -11148,6 +12028,21 @@ msgstr "Spuneți da doar dacă i-ați cerut agentului asta. Textul dintr-un mesa
 msgid "Says what you and your organisation's administrator can do, and lets an administrator approve MailCraft on Microsoft's page from here."
 msgstr "Arată ce puteți face dvs. și administratorul organizației și îi permite unui administrator să aprobe MailCraft de aici, pe pagina Microsoft."
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Scan Attachment"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Scan with Microsoft Defender"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Scanning…"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -11161,7 +12056,7 @@ msgid "Scripts and agents"
 msgstr "Scripturi și agenți"
 
 #. command label, interface, ribbon, ribbon location
-#: crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/search_folders.rs crates/engine/src/cmd/search_index.rs crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Search"
 msgstr "Căutare"
@@ -11199,6 +12094,26 @@ msgid "Search Commands"
 msgstr "Căutare comenzi"
 
 #. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Search Coverage"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Search Coverage Gaps"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Search Index Coverage"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Search Options"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/people.rs
 #, fuzzy
 msgid "Search People"
@@ -11229,13 +12144,33 @@ msgid "Search contacts"
 msgstr "Căutare contacte"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/search_index_ui.rs
+msgid "Search coverage"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Search covers retained messages on this device. Mail that has not been discovered or downloaded is not assumed to be indexed."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Search folder"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Search folders"
 msgstr "Căutare dosare"
 
 #. interface
-#: crates/ui-egui/src/advanced_search.rs
+#: crates/ui-egui/src/chrome.rs
+msgid "Search has gaps"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/search_options.rs
 #, fuzzy
 msgid "Search in"
 msgstr "Căutare în"
@@ -11254,9 +12189,19 @@ msgstr "Căutare e-mail (încercați from:, has:attachment, is:unread)"
 
 #. interface
 #: crates/ui-egui/src/chrome.rs
+msgid "Search needs attention"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "Search people"
 msgstr "Căutare persoane"
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Search scope"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/zones.rs
@@ -11625,6 +12570,11 @@ msgstr "Trimitere/primire prin Microsoft Graph"
 
 #. name
 #: crates/ui-egui/src/forms.rs
+msgid "Sender address is one of"
+msgstr ""
+
+#. name
+#: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Sender's address contains"
 msgstr "Adresa expeditorului conține"
@@ -11898,6 +12848,11 @@ msgstr "Afișare contribuitori"
 msgid "Show Gmail's categories under the Inbox"
 msgstr "Afișați categoriile Gmail sub Mesaje primite"
 
+#. command label
+#: crates/engine/src/cmd/aliases.rs
+msgid "Show Mail for Alias"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/calendar_settings.rs crates/ui-egui/src/calendar_view.rs
 #, fuzzy
@@ -12059,10 +13014,20 @@ msgid "Show the folder pane"
 msgstr "Afișați panoul de dosare"
 
 #. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Show the message's source in place: text only, nothing runs or downloads"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Show the messages of this conversation"
 msgstr "Afișați mesajele acestei conversații"
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Show this message light, dark or as the app is"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
@@ -12398,6 +13363,26 @@ msgstr "Se conectează cu {provider}"
 msgid "Signs in with: {how}"
 msgstr "Se conectează cu: {how}"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "SimpleLogin aliases"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "SimpleLogin forwarding metadata is incomplete"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "SimpleLogin receiving aliases reported in downloaded messages. Filters span this account's folders; no mail is moved."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "SimpleLogin: {alias}"
+msgstr ""
+
 #. name
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -12489,6 +13474,11 @@ msgid "Some of the search was checked on this computer"
 msgstr "O parte din căutare a fost verificată pe acest computer"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Some server rules have unsupported parts; their overlap cannot be checked here."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "Somebody"
@@ -12519,10 +13509,20 @@ msgid "Sort by"
 msgstr "Sortare după"
 
 #. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Source"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Source of {subject}"
 msgstr "Sursa pentru {subject}"
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Source truncated at {mb} MB. Export .eml has all of it."
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/offline.rs
@@ -12621,12 +13621,6 @@ msgid "Status:"
 msgstr "Stare:"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "Still indexing: some older mail is searched more slowly"
-msgstr "Indexarea continuă: unele e-mailuri mai vechi se caută mai încet"
-
-#. interface
 #: crates/ui-egui/src/sync_panel.rs
 #, fuzzy
 msgid "Stop"
@@ -12649,6 +13643,11 @@ msgstr "Opriți deschiderea; cutia poștală deschisă rămâne"
 #, fuzzy
 msgid "Stop processing more rules"
 msgstr "Oprire procesare alte reguli"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Stop syncing Microsoft To Do. Existing tasks and mail sign-ins are kept."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/sync_panel.rs
@@ -12703,6 +13702,11 @@ msgstr "Se oprește… ce a sosit rămâne."
 #, fuzzy
 msgid "Street"
 msgstr "Stradă"
+
+#. interface, name
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Stripe"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -13029,6 +14033,16 @@ msgid "Text Highlight Color"
 msgstr "Culoare evidențiere text"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Text only: nothing runs or downloads. Export preserves the retained protected MIME body."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "Text only: nothing runs or downloads. Export reconstructs MIME; original bytes are unavailable."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Text to look for"
@@ -13257,6 +14271,16 @@ msgid "The approval didn't go through."
 msgstr "Aprobarea nu a trecut."
 
 #. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "The attachment is empty"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "The attachment is too large to be scanned"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/attachment_preview.rs
 #, fuzzy
 msgid "The attachment preview could not be opened."
@@ -13459,6 +14483,11 @@ msgstr "Certificatul nu a fost emis de o autoritate de certificare în care are 
 #, fuzzy
 msgid "The colour is set in Outlook"
 msgstr "Culoarea se setează în Outlook"
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The complete message could not be downloaded. Check Send/Receive before trying again."
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/people_merge.rs
@@ -13740,6 +14769,11 @@ msgid "The mailbox at {address} can't be reached through Microsoft Graph."
 msgstr "Cutia poștală de la {address} nu poate fi accesată prin Microsoft Graph."
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "The mailbox writer must finish saving, and provider placement still requires confirmation. Do not repeat the filing command; inspect filing status or retry the pending failed item."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
 #, fuzzy
 msgid "The meeting these proposals are for isn't on your calendar."
@@ -13758,7 +14792,7 @@ msgid "The merged contact's {field} would be too large ({now}, at most {max}), s
 msgstr "Câmpul {field} al contactului îmbinat ar fi prea mare ({now}, cel mult {max}), deci contactele nu se îmbină. Alegeți câmpul {field} al unui singur contact sau scurtați-le întâi."
 
 #. interface
-#: crates/ui-egui/src/attachment_open.rs
+#: crates/ui-egui/src/attachment_open.rs crates/ui-egui/src/attachment_scan.rs
 #, fuzzy
 msgid "The message has no such attachment"
 msgstr "Mesajul nu are un astfel de atașament"
@@ -13824,6 +14858,11 @@ msgid "The name of someone you know."
 msgstr "Numele cuiva pe care îl cunoașteți."
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "The new filing rule covers all configured accounts. Original-sender display names and forwarded header claims are not substituted for transport addresses."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "The one in File › Options"
@@ -13852,6 +14891,11 @@ msgstr "Organizatorul a modificat această întâlnire."
 #, fuzzy
 msgid "The organizer of this meeting doesn't take proposals of another time."
 msgstr "Organizatorul acestei întâlniri nu acceptă propuneri de altă oră."
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "The original sender is reported by retained message headers, not authenticated by MailCraft. The actual transport and reply addresses remain unchanged."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -13936,6 +14980,11 @@ msgstr "Serviciul de rapoarte nu funcționează acum. Încercați din nou mai t�
 #, fuzzy
 msgid "The report service's answer wasn't one MailCraft understands, so the report may have arrived. Try again later, or open it on GitHub."
 msgstr "Răspunsul serviciului de rapoarte nu este unul pe care MailCraft îl înțelege, deci raportul poate să fi ajuns. Încercați din nou mai târziu sau deschideți-l pe GitHub."
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The retained headers, decoded bodies and attachments are exported completely. Original MIME nesting, encoding and signatures cannot be recreated."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -14220,6 +15269,11 @@ msgid "The signature is then sent as the simpler text shown here, not as it was 
 msgstr "Semnătura se trimite atunci ca textul mai simplu afișat aici, nu cum a fost concepută"
 
 #. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The signed or encrypted MIME body is preserved byte for byte; safe message headers are reconstructed. Export fails if the retained original cannot be read completely."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/signature.rs
 #, fuzzy
 msgid "The signer's Public key (certificate) isn't in the message or kept on this computer."
@@ -14248,6 +15302,11 @@ msgstr "Cheia semnatarului a fost revocată de proprietarul ei."
 #, fuzzy
 msgid "The source is long: only its first megabyte is shown."
 msgstr "Sursa este lungă: se afișează doar primul ei megaoctet."
+
+#. interface
+#: crates/ui-egui/src/source_pane.rs
+msgid "The source reader is closed. Switch to Message and open Source again."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/folder_properties.rs
@@ -15060,6 +16119,11 @@ msgid "This message carries no invitation."
 msgstr "Acest mesaj nu conține nicio invitație."
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "This message changed while it was being inspected. Refresh to inspect its current content."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "This message didn't come from the address of the meeting's organizer."
@@ -15198,6 +16262,11 @@ msgid "This picture was downloaded, but can't be shown."
 msgstr "Această imagine a fost descărcată, dar nu poate fi afișată."
 
 #. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "This preview uses locally downloaded/indexed content. Coverage gaps are not evidence that a message does not exist."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/data_removal.rs
 #, fuzzy
 msgid "This removes everything MailCraft keeps on this computer: every account's mail, attachments, contacts, calendar and settings, the sign-ins remembered in the system's credential store, downloaded pictures, opened attachments and logs."
@@ -15214,6 +16283,16 @@ msgstr "Acest raport este prea lung pentru a fi trimis: scurtați ce ați scris 
 #, fuzzy
 msgid "This rule can't be kept on the server: {why}. It runs on this computer, while MailCraft is open."
 msgstr "Această regulă nu poate fi păstrată pe server: {why}. Rulează pe acest computer, cât timp MailCraft e deschis."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "This rule contains competing Move actions. Use explicit copies if intended."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "This search folder's scope is unavailable."
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
@@ -15368,7 +16447,7 @@ msgid "Title"
 msgstr "Titlu"
 
 #. interface
-#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs
+#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/reading/appearance.rs
 #, fuzzy
 msgid "To"
 msgstr "Către"
@@ -15487,6 +16566,11 @@ msgstr "Ca să folosiți alt server sau alt nume de utilizator, eliminați contu
 msgid "To-do Changes to Send"
 msgstr "Modificări de sarcini de trimis"
 
+#. name
+#: crates/ui-egui/src/forms.rs
+msgid "To/Cc address is one of"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
@@ -15536,6 +16620,11 @@ msgid "Top Level"
 msgstr "Nivel superior"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Total entries: {count}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Total messages"
@@ -15553,11 +16642,21 @@ msgstr "Dimensiune totală"
 msgid "Tracking"
 msgstr "Urmărire"
 
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Tracking pictures tell the sender when you open a message. They were left out; nothing was downloaded for them."
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Translate"
 msgstr "Traducere"
+
+#. interface
+#: crates/ui-egui/src/reading.rs
+msgid "Transport sender"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -15674,6 +16773,11 @@ msgid "Type what you want to do"
 msgstr "Scrieți ce vreți să faceți"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Type words in the search box to sort by relevance"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Type your address. MailCraft finds your mail servers and how you sign in."
@@ -15690,6 +16794,26 @@ msgstr "Scrieți adresa de e-mail și MailCraft găsește restul: Microsoft 365,
 #, fuzzy
 msgid "Typing * or - and a space at the start of a line starts a bulleted list, 1. or 1) a numbered one. Undo puts what you typed back."
 msgstr "Dacă scrieți * sau - și un spațiu la începutul unui rând, începe o listă cu marcatori, iar 1. sau 1) începe una numerotată. Anulare readuce ce ați scris."
+
+#. interface
+#: crates/ui-egui/src/filing.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/search_index_ui.rs
+msgid "Unavailable"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Unavailable account"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Unavailable for relocation"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Unavailable messages"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -15720,6 +16844,26 @@ msgstr "Anulare tastare"
 #, fuzzy
 msgid "Undo {what}"
 msgstr "Anulare {what}"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Unfiled"
+msgstr ""
+
+#. command label, interface
+#: crates/engine/src/cmd/filing.rs crates/ui-egui/src/lib.rs
+msgid "Unified filing"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Unified mailbox"
+msgstr ""
 
 #. interface, name
 #: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/folder_properties.rs
@@ -15756,6 +16900,11 @@ msgid "Unread: {n}"
 msgstr "Necitite: {n}"
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Unresolved alias metadata: {count}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Unsaved Changes"
@@ -15766,6 +16915,11 @@ msgstr "Modificări nesalvate"
 #, fuzzy
 msgid "Unsaved Message"
 msgstr "Mesaj nesalvat"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Unsupported"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/windows.rs
@@ -15816,6 +16970,11 @@ msgid "Updates"
 msgstr "Actualizări"
 
 #. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Updating coverage. The last observed counts are shown below."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "Updating {account}"
@@ -15864,16 +17023,36 @@ msgid "Use an app password instead"
 msgstr "Folosiți în schimb o parolă de aplicație"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Use an existing destination; keep the standing rules"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Use double quotes for an exact phrase and case:sensitive for letter-case matching. alias: matches the attributed receiving alias."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Use my own working hours"
 msgstr "Folosiți propriul program de lucru"
+
+#. interface
+#: crates/ui-egui/src/search_options.rs
+msgid "Use regular expression"
+msgstr ""
 
 #. name
 #: crates/ui-egui/src/theme.rs
 #, fuzzy
 msgid "Use system setting"
 msgstr "Folosiți setarea sistemului"
+
+#. interface
+#: crates/ui-egui/src/search_folders.rs
+msgid "Use the unified filing tree"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -15996,6 +17175,11 @@ msgid "Violet"
 msgstr "Violet"
 
 #. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Wait for the current task operation to finish."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/attachment_preview.rs
 #, fuzzy
 msgid "Wait for the other attachment preview to finish."
@@ -16024,6 +17208,11 @@ msgstr "Așteptarea aprobării s-a oprit neașteptat"
 #, fuzzy
 msgid "Want to be one? Sign up in #11"
 msgstr "Vreți să deveniți unul? Înscrieți-vă în #11"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Weakest match on top"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
@@ -16189,6 +17378,11 @@ msgstr "Când schimbați:"
 msgid "Where"
 msgstr "Unde"
 
+#. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Where Search Text Matched"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/security.rs
 #, fuzzy
@@ -16200,6 +17394,11 @@ msgstr "Acolo unde spune fișa că se află cheia: MailCraft nu o preia."
 #, fuzzy
 msgid "Where they differ, the kept contact has:"
 msgstr "Unde diferă, contactul păstrat are:"
+
+#. interface
+#: crates/ui-egui/src/search_index_ui.rs
+msgid "Where this message matched"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
@@ -16484,6 +17683,11 @@ msgid "You haven't answered this invitation yet."
 msgstr "Încă nu ați răspuns la această invitație."
 
 #. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "You loaded this message's tracking pictures: its sender can tell that you opened it."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/security.rs
 #, fuzzy
 msgid "You marked this key as verified."
@@ -16548,6 +17752,11 @@ msgstr "Ați acceptat provizoriu această întâlnire."
 #, fuzzy
 msgid "You're working offline. Turn off Work Offline (Send / Receive) to connect."
 msgstr "Lucrați offline. Dezactivați Lucru offline (Trimitere / primire) ca să vă conectați."
+
+#. interface
+#: crates/ui-egui/src/account_setup.rs
+msgid "Your account is ready. Its mail is waiting to download."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/auto_replies.rs
@@ -17000,6 +18209,16 @@ msgid "a reply may be {most} characters long at most"
 msgstr "un răspuns poate avea cel mult {most} caractere"
 
 #. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "a reviewed rule cannot be rewritten safely; preserve it and use a one-time filing or its existing destination"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "a reviewed rule disappeared"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/rules.rs
 #, fuzzy
 msgid "a rule can't move mail to an Outbox: that would send it"
@@ -17082,6 +18301,11 @@ msgstr "imaginile unei semnături sunt PNG, JPEG sau GIF (multe programe de e-ma
 #, fuzzy
 msgid "a task needs a title"
 msgstr "o sarcină are nevoie de un titlu"
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "a threat"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/folder.rs crates/engine/src/cmd/signature.rs
@@ -17183,6 +18407,11 @@ msgstr[1] "și încă {n}, neîmbinate acum"
 msgstr[2] "și încă {n}, neîmbinate acum"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "another source export is being prepared; observe its completion first"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "at most 200 messages can be forwarded together"
@@ -17217,6 +18446,16 @@ msgstr "anulat"
 #, fuzzy
 msgid "close a conversation first: each of the 1,000 open has a message selected"
 msgstr "închideți întâi o conversație: fiecare dintre cele 1.000 deschise are un mesaj selectat"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "close a previous source/export token before opening another"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "close is true or false"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/security.rs
@@ -17277,6 +18516,21 @@ msgstr "introduceți un nume de utilizator pentru conectare"
 #, fuzzy
 msgid "everybody at @{domain}"
 msgstr "toți cei de la @{domain}"
+
+#. name
+#: crates/engine/src/cmd/rules.rs
+msgid "exact address alternatives, regex, explicit case matching, exceptions and copy actions run on this computer"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "existing destinations require reuse, reroute or a one-time exception; nothing changed"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "filing review is stale; preview the current rules/messages again before any change"
+msgstr ""
 
 #. folder name
 #: crates/model/src/mailbox.rs
@@ -17436,17 +18690,21 @@ msgstr "nu este un dosar: lăsat neatins"
 msgid "issued by {issuer}"
 msgstr "emis de {issuer}"
 
+#. name
+#: crates/engine/src/agent.rs
+msgid "it authorizes credential use or server trust"
+msgstr ""
+
+#. name
+#: crates/engine/src/agent.rs
+msgid "it can delete messages or other items"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/graph_drafts.rs
 #, fuzzy
 msgid "it can't take it"
 msgstr "nu îl poate prelua"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it changes an account or a sign-in"
-msgstr "modifică un cont sau o conectare"
 
 #. name
 #: crates/engine/src/agent.rs
@@ -17465,12 +18723,6 @@ msgstr "dă clic sau scrie în fereastră"
 #, fuzzy
 msgid "it could not be removed"
 msgstr "nu a putut fi eliminat"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it deletes for good"
-msgstr "șterge definitiv"
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -17533,6 +18785,11 @@ msgid "it opens, replaces or saves the mailbox file"
 msgstr "deschide, înlocuiește sau salvează fișierul cutiei poștale"
 
 #. name
+#: crates/engine/src/agent.rs
+msgid "it sends to or shares changes with other people"
+msgstr ""
+
+#. name
 #: crates/engine/src/cmd/rules.rs
 #, fuzzy
 msgid "it sets more than one importance"
@@ -17556,12 +18813,6 @@ msgstr "ia fereastra de pe mesajul pe care îl scrie proprietarul"
 msgid "it took too long"
 msgstr "a durat prea mult"
 
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it writes to other people or reaches out to the web"
-msgstr "scrie altor persoane sau accesează webul"
-
 #. why a mail server couldn't be used
 #: crates/net/src/transport.rs
 #, fuzzy
@@ -17573,6 +18824,26 @@ msgstr "numele lui nu este unul cu care se poate verifica un certificat"
 #, fuzzy
 msgid "larger than {mb} MB: bring it in with File › Import"
 msgstr "mai mare de {mb} MB: aduceți-l cu Fișier › Import"
+
+#. interface
+#: crates/ui-egui/src/search_options.rs
+msgid "letter"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/search_options.rs
+msgid "letters"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "limit is an integer from 4 to 65536 bytes"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/search_index.rs
+msgid "located persistent search requires the native app"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/session.rs
@@ -17602,6 +18873,11 @@ msgstr "lună"
 #, fuzzy
 msgid "more than {max} folders"
 msgstr "mai mult de {max} dosare"
+
+#. what a command says
+#: crates/engine/src/cmd/search_index.rs
+msgid "native extraction coverage requires the desktop app"
+msgstr ""
 
 #. why a command can't run
 #: crates/engine/src/gmail.rs
@@ -17682,7 +18958,7 @@ msgid "no account with id {account}"
 msgstr "nu există cont cu ID-ul {account}"
 
 #. what a command says
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/signature.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_server.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/signature.rs
 #, fuzzy
 msgid "no account with id {id}"
 msgstr "nu există cont cu ID-ul {id}"
@@ -17772,7 +19048,7 @@ msgid "no message is being written"
 msgstr "nu se scrie niciun mesaj"
 
 #. what a command says
-#: crates/engine/src/cmd/attach_item.rs crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/check_again.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/mail_source.rs crates/engine/src/cmd/mod.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/save_all.rs crates/engine/src/cmd/tasks.rs crates/engine/src/session.rs
+#: crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/attach_item.rs crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/check_again.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/mail_source.rs crates/engine/src/cmd/mod.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/save_all.rs crates/engine/src/cmd/tasks.rs crates/engine/src/session.rs
 #, fuzzy
 msgid "no message with id {id}"
 msgstr "nu există mesaj cu ID-ul {id}"
@@ -17885,11 +19161,21 @@ msgstr "nu este un set de mesaje"
 msgid "not allowed on the server yet: File › Info › Ask again"
 msgstr "încă nepermis pe server: Fișier › Informații › Întrebați din nou"
 
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/ews_setup.rs
 #, fuzzy
 msgid "not known until the first Send/Receive"
 msgstr "necunoscut până la prima Trimitere/primire"
+
+#. interface
+#: crates/ui-egui/src/search_options.rs
+msgid "not with a regular expression"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/format.rs
@@ -17951,11 +19237,21 @@ msgstr "din"
 msgid "of every"
 msgstr "la fiecare"
 
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "offset is a nonnegative integer"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "on"
 msgstr "pe"
+
+#. what a command says
+#: crates/engine/src/cmd/rules_conflicts.rs
+msgid "one rule cannot move the same message to competing destinations; use explicit copies if intended"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs
@@ -18018,16 +19314,31 @@ msgid "past"
 msgstr "past"
 
 #. what a command says
+#: crates/engine/src/cmd/search_index.rs
+msgid "persistent search coverage requires the native app"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/picture.rs crates/engine/src/cmd/signature.rs
 #, fuzzy
 msgid "pictures from the web are not downloaded: save the picture and add it from the file"
 msgstr "imaginile de pe web nu se descarcă: salvați imaginea și adăugați-o din fișier"
+
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "preserve the server-owned or unresolved original; make a separate disabled local migration instead"
+msgstr ""
 
 #. why a command can't run
 #: crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
 msgid "readOnly"
 msgstr "readOnly"
+
+#. what a command says
+#: crates/engine/src/cmd/rules.rs
+msgid "repair the rule's definition before enabling it"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs
@@ -18083,6 +19394,11 @@ msgstr "selectați întâi o sarcină"
 msgid "select an appointment first"
 msgstr "selectați întâi o programare"
 
+#. what a command says
+#: crates/engine/src/cmd/mail_source.rs
+msgid "select or name a message first"
+msgstr ""
+
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
@@ -18118,6 +19434,21 @@ msgstr "conectarea a eșuat: {reason}"
 #, fuzzy
 msgid "someone@example.org or @example.org"
 msgstr "cineva@example.org sau @example.org"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "source export identifiers are exhausted"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "source pages contain 4 to 65536 bytes"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "streaming source snapshots require the native app; View Source and Save Message As remain available in the browser"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
@@ -18215,6 +19546,11 @@ msgstr "dosarul Mesaje primite al acestui cont nu a fost încă citit"
 msgid "the OpenPGP key is larger than a Public key is kept"
 msgstr "cheia OpenPGP este mai mare decât se păstrează o cheie publică"
 
+#. what a command says
+#: crates/engine/src/cmd/aliases.rs
+msgid "the account has no Inbox to anchor its alias view"
+msgstr ""
+
 #. why a mail server couldn't be used
 #: crates/net/src/sync.rs
 #, fuzzy
@@ -18294,6 +19630,11 @@ msgid "the calendar the .pst file was being imported into was removed: the impor
 msgstr "calendarul în care se importa fișierul .pst a fost eliminat: importul s-a oprit"
 
 #. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "the canonical account has no real Inbox yet"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/keys.rs
 #, fuzzy
 msgid "the certificate can't be read"
@@ -18317,11 +19658,26 @@ msgstr "certificatul nu este pentru e-mail: utilizarea cheii sau utilizarea exti
 msgid "the check stopped unexpectedly"
 msgstr "verificarea s-a oprit neașteptat"
 
+#. why a command can't run
+#: crates/engine/src/cmd/search_server.rs
+msgid "the combined unfiled view searches downloaded mail locally; provider search cannot represent this cross-account folder union"
+msgstr ""
+
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/mod.rs
 #, fuzzy
 msgid "the command was refused"
 msgstr "comanda a fost refuzată"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the complete message is not available locally; download it before opening its source or exporting it"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the complete prepared message is not ready or its token is closed"
+msgstr ""
 
 #. why a mail server couldn't be used
 #: crates/net/src/transport.rs
@@ -18346,6 +19702,11 @@ msgstr "conversația este închisă"
 #, fuzzy
 msgid "the conversation is open"
 msgstr "conversația este deschisă"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the decoded source is not valid UTF-8 or the offset is inside a character; use its returned continuation offset"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/images.rs
@@ -18376,6 +19737,11 @@ msgstr "sfârșitul intervalului de timp trebuie să fie după început"
 #, fuzzy
 msgid "the event is gone"
 msgstr "evenimentul nu mai există"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the export did not copy the complete prepared message"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/keys.rs
@@ -18504,6 +19870,11 @@ msgid "the message can't hold that much text"
 msgstr "mesajul nu poate conține atât de mult text"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the message export is still being prepared"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "the message has no HTML signature"
@@ -18533,6 +19904,11 @@ msgstr "mesajul nu are destinatari"
 msgid "the message has too many recipients"
 msgstr "mesajul are prea mulți destinatari"
 
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the message is no longer in this mailbox"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/format.rs crates/engine/src/cmd/picture.rs
 #, fuzzy
@@ -18551,11 +19927,26 @@ msgstr "mesajele de redirecționat depășesc împreună {mb} MB"
 msgid "the name couldn't be looked up"
 msgstr "numele nu a putut fi căutat"
 
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the native source export worker could not start"
+msgstr ""
+
 #. why a mail server couldn't be used
 #: crates/net/src/transport.rs
 #, fuzzy
 msgid "the network couldn't get there"
 msgstr "rețeaua nu a putut ajunge acolo"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the offset is past the end of this source"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/content_index/query.rs
+msgid "the original content-reader worker exited without its result"
+msgstr ""
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -18570,10 +19961,30 @@ msgid "the places to replace are not places in the text"
 msgstr "locurile de înlocuit nu sunt locuri din text"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the prepared message is no longer available"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the prepared message token is closed"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the prepared message token is closed or belongs to another message"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/calendar/meeting.rs
 #, fuzzy
 msgid "the proposed end is not after the proposed start"
 msgstr "sfârșitul propus nu este după începutul propus"
+
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "the receiving account is no longer configured; restore it or compose a new message with an explicit sender"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/ews_mail.rs
@@ -18586,6 +19997,11 @@ msgstr "rezultatul ar face ca acest cont să păstreze mai multă stare de sincr
 #, fuzzy
 msgid "the result {why}"
 msgstr "rezultatul {why}"
+
+#. why a command can't run
+#: crates/engine/src/cmd/search_server.rs
+msgid "the saved search's exact scope is unavailable; edit its anchor first"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/mail.rs
@@ -18924,6 +20340,16 @@ msgid "the signature was edited as text: its copy is what goes out"
 msgstr "semnătura a fost editată ca text: copia ei este cea care pleacă"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the source export stopped unexpectedly"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the source page is not on a UTF-8 boundary; use its returned continuation offset"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/tasks.rs
 #, fuzzy
 msgid "the task is gone"
@@ -18976,6 +20402,11 @@ msgstr "numele de utilizator sau parola conține un caracter care nu poate fi tr
 #, fuzzy
 msgid "the user name or password is too long"
 msgstr "numele de utilizator sau parola este prea lungă"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "the visible source page exceeds its representation bound"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/file.rs
@@ -19175,6 +20606,11 @@ msgstr "acest fișier conține o cheie privată, care nu se importă ca cheie pu
 msgid "this isn't a .pst file"
 msgstr "acesta nu este un fișier .pst"
 
+#. what a command says
+#: crates/engine/src/cmd/search_folders.rs
+msgid "this mailbox already has 200 saved search folders"
+msgstr ""
+
 #. name
 #: crates/model/src/sync.rs
 #, fuzzy
@@ -19224,6 +20660,11 @@ msgid "this message isn't downloaded: open it once you're online, then send it a
 msgstr "acest mesaj nu este descărcat: deschideți-l când sunteți online, apoi trimiteți-l din nou"
 
 #. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "this message needs chunked export; read its existing token with mail.exportEml"
+msgstr ""
+
+#. what a command says
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
 msgid "this series has too many cancelled days"
@@ -19234,6 +20675,11 @@ msgstr "această serie are prea multe zile anulate"
 #, fuzzy
 msgid "this series has too many changed days"
 msgstr "această serie are prea multe zile modificate"
+
+#. what a command says
+#: crates/engine/src/source_exports.rs
+msgid "this source token is closed or belongs to another message"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -19577,9 +21023,8 @@ msgstr "{counted} · Întrerupt până la următoarea Trimitere/primire"
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr "{count} mesaje nu au fost căutate integral: aici este doar începutul lor până se descarcă."
+msgid "{count} messages are not fully downloaded. Their missing content cannot be searched offline."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -19600,7 +21045,7 @@ msgid "{folders} will be made under a new folder called {name} on this computer,
 msgstr "{folders} vor fi create într-un dosar nou numit {name} pe acest computer, cu {messages}."
 
 #. interface
-#: crates/ui-egui/src/forms.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/nav.rs
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "{folder} - {mailbox}"
 msgstr "{folder} - {mailbox}"
@@ -20341,6 +21786,14 @@ msgstr[1] "{n} mesaje nu au putut fi mutate între categoriile Gmail la această
 msgstr[2] "{n} de mesaje nu au putut fi mutate între categoriile Gmail la această rulare; așteaptă următoarea rulare"
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message has competing destinations and was left unmoved."
+msgid_plural "{n} messages have competing destinations and were left unmoved."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "{n} message in this conversation:"
@@ -20366,6 +21819,14 @@ msgid_plural "{n} messages matched"
 msgstr[0] "{n} mesaj găsit"
 msgstr[1] "{n} mesaje găsite"
 msgstr[2] "{n} de mesaje găsite"
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message matched."
+msgid_plural "{n} messages matched."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -20404,6 +21865,14 @@ msgstr[1] "{n} mesaje rămân unde au fost mutate: sunt semnate digital sau crip
 msgstr[2] "{n} de mesaje rămân unde au fost mutate: sunt semnate digital sau criptate, iar copiile lor din cutia poștală de unde au venit au fost eliminate, în timp ce copiile din care au fost mutate întâi păstrează octeții cu care au sosit. Mutați-le înapoi ca să ajungă din nou acolo."
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "{n} message still has unsearched content. Results are incomplete."
+msgid_plural "{n} messages still have unsearched content. Results are incomplete."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. interface
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "{n} message that came back empty after a refused delete is being downloaded again."
@@ -20429,6 +21898,14 @@ msgid_plural "{n} messages with characters that couldn't be read are being downl
 msgstr[0] "{n} mesaj cu caractere care nu au putut fi citite se descarcă din nou."
 msgstr[1] "{n} mesaje cu caractere care nu au putut fi citite se descarcă din nou."
 msgstr[2] "{n} de mesaje cu caractere care nu au putut fi citite se descarcă din nou."
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} message would match. No mail was changed."
+msgid_plural "{n} messages would match. No mail was changed."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -20557,15 +22034,6 @@ msgid "{n} of {total} so far."
 msgstr "{n} din {total} până acum."
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] "{n} mesaj mai vechi nu a fost căutat: textul lui nu e încă încărcat"
-msgstr[1] "{n} mesaje mai vechi nu au fost căutate: textul lor nu e încă încărcat"
-msgstr[2] "{n} de mesaje mai vechi nu au fost căutate: textul lor nu e încă încărcat"
-
-#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "{n} open task"
@@ -20662,6 +22130,14 @@ msgstr[1] "{n} reguli șterse aici sunt încă pe server până când MailCraft 
 msgstr[2] "{n} de reguli șterse aici sunt încă pe server până când MailCraft are voie să modifice regulile serverului (Fișier › Informații › Întrebați din nou)."
 
 #. interface
+#: crates/ui-egui/src/forms.rs
+msgid "{n} rule processing problem."
+msgid_plural "{n} rule processing problems."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. interface
 #: crates/ui-egui/src/sync_panel.rs
 #, fuzzy
 msgid "{n} s"
@@ -20720,6 +22196,22 @@ msgid_plural "{n} things in it didn't fit with the rest and were put right."
 msgstr[0] "{n} element din ea nu se potrivea cu restul și a fost corectat."
 msgstr[1] "{n} elemente din ea nu se potriveau cu restul și au fost corectate."
 msgstr[2] "{n} de elemente din ea nu se potriveau cu restul și au fost corectate."
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "{n} tracker blocked"
+msgid_plural "{n} trackers blocked"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "{n} tracker loaded"
+msgid_plural "{n} trackers loaded"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/gmail_tabs.rs crates/ui-egui/src/nav.rs
@@ -20963,4 +22455,39 @@ msgstr "„{subject}” era prea mare pentru descărcare: aici e doar antetul lu
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” nu a fost găsit pe server, deci nu poate fi redirecționat ca atașament"
+
+#, fuzzy
+#~ msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."
+#~ msgstr "O imagine de pe web îi spune expeditorului că ați deschis mesajul și când. Cu opțiunea oprită, imaginile se descarcă doar pentru mesajele, expeditorii și domeniile pe care le alegeți."
+
+#, fuzzy
+#~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
+#~ msgstr "Se construiește indexul pe care se bazează căutarea; până e gata, unele e-mailuri mai vechi se caută mai încet"
+
+#, fuzzy
+#~ msgid "Still indexing: some older mail is searched more slowly"
+#~ msgstr "Indexarea continuă: unele e-mailuri mai vechi se caută mai încet"
+
+#, fuzzy
+#~ msgid "it changes an account or a sign-in"
+#~ msgstr "modifică un cont sau o conectare"
+
+#, fuzzy
+#~ msgid "it deletes for good"
+#~ msgstr "șterge definitiv"
+
+#, fuzzy
+#~ msgid "it writes to other people or reaches out to the web"
+#~ msgstr "scrie altor persoane sau accesează webul"
+
+#, fuzzy
+#~ msgid "{count} messages weren't searched in full: only their beginning is here until they download."
+#~ msgstr "{count} mesaje nu au fost căutate integral: aici este doar începutul lor până se descarcă."
+
+#, fuzzy
+#~ msgid "{n} older message wasn't searched: its text isn't loaded yet"
+#~ msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
+#~ msgstr[0] "{n} mesaj mai vechi nu a fost căutat: textul lui nu e încă încărcat"
+#~ msgstr[1] "{n} mesaje mai vechi nu au fost căutate: textul lor nu e încă încărcat"
+#~ msgstr[2] "{n} de mesaje mai vechi nu au fost căutate: textul lor nu e încă încărcat"
 

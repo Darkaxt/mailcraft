@@ -214,6 +214,7 @@ fn edits_removal_and_account_scopes_cannot_reuse_stale_hits() {
     session.mailbox_changed();
     assert!(search(&mut session, "OtherAccountQuartz").is_empty());
     assert_eq!(search(&mut session, "ReplacementJasper"), [other]);
+    assert_eq!(search(&mut session, "Replacement"), [other], "a new word is found by its beginning at once");
     session.mailbox.remove_account(second).unwrap();
     session.mailbox_changed();
     assert!(search(&mut session, "ReplacementJasper").is_empty());

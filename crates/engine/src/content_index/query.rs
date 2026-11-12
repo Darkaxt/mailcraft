@@ -21,8 +21,11 @@ use super::db::{Database, MatchFrame};
 use super::matcher::{EXPANSION_CAP, Matcher, group, pieces};
 use crate::SearchOptions;
 
-/// While the index is still building, a cached vocabulary is reused this long
-/// before it is read again.
+/// A cached vocabulary is reused this long across index generations before it
+/// is read again (reading it takes seconds on a large mailbox, and new mail
+/// changes the generation often). While it is from an older generation, every
+/// piece also matches the words starting with it, so new words are still found
+/// by their beginning.
 const VOCABULARY_AGE: Duration = Duration::from_secs(30);
 
 pub struct Answer {
@@ -36,7 +39,7 @@ pub struct Answer {
 }
 
 pub enum Request {
-    Search { query: Query, options: SearchOptions, generation: u64, building: bool, cancelled: Arc<AtomicBool> },
+    Search { query: Query, options: SearchOptions, generation: u64, cancelled: Arc<AtomicBool> },
     Coverage { generation: u64, cancelled: Arc<AtomicBool> },
     Detail { token: u64, request: DetailRequest, generation: u64, cancelled: Arc<AtomicBool> },
 }
@@ -94,6 +97,7 @@ fn expression(
     source: &str,
     regex: bool,
     vocabulary: &[(Box<str>, u32)],
+    older: bool,
     expansions: &mut HashMap<String, (Vec<String>, bool)>,
     notes: &mut Vec<String>,
     cancelled: &AtomicBool,
@@ -125,7 +129,7 @@ fn expression(
         if *too_broad {
             notes.push(format!("\"{piece}\" is very common: matched through its {EXPANSION_CAP} most frequent words and words starting with it"));
         }
-        match group(&piece, tokens, *too_broad) {
+        match group(&piece, tokens, *too_broad || older) {
             Some(group) => groups.push(group),
             None => return Ok(Err(())),
         }
@@ -168,9 +172,7 @@ impl Reader {
                         continue;
                     }
                     let (generation, cancelled, query) = match request {
-                        Request::Search { query, options, generation, building, cancelled } => {
-                            (generation, cancelled, Some((query, options, building)))
-                        }
+                        Request::Search { query, options, generation, cancelled } => (generation, cancelled, Some((query, options))),
                         Request::Coverage { generation, cancelled } => (generation, cancelled, None),
                         Request::Detail { .. } => continue,
                     };
@@ -178,7 +180,7 @@ impl Reader {
                         let mut database = Database::reader(&path)?;
                         database.cancellation(cancelled.clone())?;
                         database.begin_read()?;
-                        let result = if let Some((query, options, building)) = query {
+                        let result = if let Some((query, options)) = query {
                             if let Some(why) = query.error() {
                                 return Err(why.into());
                             }
@@ -186,7 +188,7 @@ impl Reader {
                             progress.1.store(0, Ordering::Relaxed);
                             let stale = match &vocabulary {
                                 None => true,
-                                Some(known) => known.generation != generation && (!building || known.loaded.elapsed() >= VOCABULARY_AGE),
+                                Some(known) => known.generation != generation && known.loaded.elapsed() >= VOCABULARY_AGE,
                             };
                             if stale {
                                 vocabulary = None;
@@ -194,6 +196,7 @@ impl Reader {
                                 vocabulary = Some(Vocabulary { generation, loaded: Instant::now(), tokens });
                             }
                             let tokens: &[(Box<str>, u32)] = vocabulary.as_ref().map_or(&[][..], |known| known.tokens.as_slice());
+                            let older = vocabulary.as_ref().is_some_and(|known| known.generation != generation);
                             let mut frames = database.frames()?;
                             let mut expansions = HashMap::new();
                             let mut notes = Vec::new();
@@ -210,7 +213,8 @@ impl Reader {
                                     .checked_shl(u32::try_from(index).map_err(|why| why.to_string())?)
                                     .ok_or("query exceeds its term-bit allowance")?;
                                 let matcher = Matcher::new(&term.source, term.case_sensitive, &options)?;
-                                let Ok(candidates) = expression(&term.source, options.regex, tokens, &mut expansions, &mut notes, &cancelled)? else {
+                                let Ok(candidates) = expression(&term.source, options.regex, tokens, older, &mut expansions, &mut notes, &cancelled)?
+                                else {
                                     continue;
                                 };
                                 if candidates.is_none() {
@@ -245,13 +249,13 @@ impl Reader {
         Ok(Self { sender: Some(sender), events: received, worker: Some(worker), active: false, cancellation: None, completed: None, progress })
     }
 
-    pub fn request(&mut self, query: Option<(Query, SearchOptions)>, generation: u64, building: bool) -> Result<(), String> {
+    pub fn request(&mut self, query: Option<(Query, SearchOptions)>, generation: u64) -> Result<(), String> {
         if self.active {
             return Err("the original content query is still running".into());
         }
         let cancelled = Arc::new(AtomicBool::new(false));
         let request = match query {
-            Some((query, options)) => Request::Search { query, options, generation, building, cancelled: cancelled.clone() },
+            Some((query, options)) => Request::Search { query, options, generation, cancelled: cancelled.clone() },
             None => Request::Coverage { generation, cancelled: cancelled.clone() },
         };
         self.sender.as_ref().ok_or("the content reader is closed")?.send(request).map_err(|why| why.to_string())?;
