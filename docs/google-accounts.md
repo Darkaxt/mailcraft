@@ -1,6 +1,6 @@
 # Gmail and Google Workspace on the desktop
 
-> **Status:** desktop implementation; official MailCraft registration and public Google verification remain release requirements · **Written:** 2026-11-03 · **Last updated:** 2026-11-08 · **Change:** minor
+> **Status:** desktop implementation; official MailCraft registration and public Google verification remain release requirements · **Written:** 2026-11-03 · **Last updated:** 2026-11-09 · **Change:** minor
 
 MailCraft offers **Sign in with Google** first for new Google accounts when its Desktop OAuth
 registration is configured. **Use an app password instead** is a separate alternative. An

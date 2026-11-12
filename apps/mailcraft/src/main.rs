@@ -26,6 +26,7 @@ mod alerts;
 mod apple_events;
 #[cfg(test)]
 mod approval_flow;
+mod attachment_render;
 mod attachment_scan;
 mod block_on;
 mod browser;
@@ -1756,6 +1757,7 @@ fn services(
     let ask_ctx = ctx.clone();
     let scan_ctx = ctx.clone();
     let (keys_ctx, keys_store) = (ctx.clone(), secrets::store());
+    let attachment_preview = attachment_render::service(&ctx);
     let (sync_ctx, sign_in_ctx, graph_ctx, mx_ctx, test_ctx) = (ctx.clone(), ctx.clone(), ctx.clone(), ctx.clone(), ctx);
     let sync_cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let cancel = sync_cancel.clone();
@@ -1902,6 +1904,7 @@ fn services(
                 background(&scan_ctx, "attachment scan", move || attachment_scan::scan(&base, &scanner, request))
             }) as Box<dyn Fn(ScanRequest) -> std::sync::mpsc::Receiver<ScanOutcome>>
         }),
+        attachment_preview,
         secrets: secrets::store(),
         // File › Options › Security (#30 R13): the owner's own certificates and keys listed,
         // GnuPG's valid keys read, and a key file imported, each on a thread of its own.

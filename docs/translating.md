@@ -1,6 +1,6 @@
 # Translating MailCraft
 
-> **Last reviewed:** 2026-10-29 · **Last updated:** 2026-10-29 · **Change:** minor
+> **Last reviewed:** 2026-10-29 · **Last updated:** 2026-11-10 · **Change:** minor
 
 MailCraft's interface comes in English and, as preview languages, French, German, Spanish,
 Italian and Dutch. A preview language has every text translated, but no native speaker has reviewed it yet:

@@ -10,7 +10,7 @@ name: CI
 on:
   push:
     branches: [main]
-    paths: ['**', '!docs/**', '!**/*.md', '!.github/**', 'ATTRIBUTION.md', '.github/workflows/**']
+    paths: ['**', '!docs/**', '!**/*.md', '!.github/**', 'ATTRIBUTION.md', '.github/workflows/**', '.github/scripts/**']
   pull_request:
   workflow_dispatch:
 
