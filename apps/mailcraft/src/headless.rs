@@ -80,7 +80,7 @@ pub(crate) fn run(
     let prefs = startup.prefs.clone();
     let initial_options = prefs.as_ref().map_or_else(|| mailcraft_ui_egui::UiState::default().options, |ui| ui.options.clone());
     let prefs_path = crate::prefs_path();
-    let build = startup.builder(ctx.clone(), None);
+    let build = startup.builder(ctx.clone(), None, false);
     let mut app = MailApp::opening(mailcraft_ui_egui::opening::Opening::new(arriving, progress, build), prefs, crate::system_locale::system_locale());
     app.start_headless();
     let (requests, key_file) = control_server::start(port, ctx.clone(), mailcraft_control_key::settings_dir().as_deref(), true)

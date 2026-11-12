@@ -18,7 +18,8 @@ pub(crate) struct Startup {
 }
 
 impl Startup {
-    pub fn builder(self, ctx: egui::Context, file_dialog: Option<file_dialogs::Hook>) -> mailcraft_ui_egui::opening::Build {
+    /// `software`: the window draws with a software rasteriser (#software-render).
+    pub fn builder(self, ctx: egui::Context, file_dialog: Option<file_dialogs::Hook>, software: bool) -> mailcraft_ui_egui::opening::Build {
         let anchors = trust_anchors();
         Box::new(move |arrival| {
             let (mailbox, path, unavailable, unchecked, damaged) =
@@ -72,6 +73,7 @@ impl Startup {
                 None => app.fresh_prefs(),
             }
             app.settings_unread = self.settings_unread;
+            app.software_drawing = software;
             app.ui.window = self.restored;
             app.integrated_titlebar = cfg!(target_os = "macos");
             app.windows_titlebar = cfg!(target_os = "windows");

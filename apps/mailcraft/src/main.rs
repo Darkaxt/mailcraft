@@ -42,6 +42,8 @@ mod desktop_icons;
 mod desktop_theme;
 mod diagnostics;
 #[cfg(test)]
+mod diagnostics_problem_tests;
+#[cfg(test)]
 mod ews_mail_flow;
 mod ews_runner;
 mod ews_setup;
@@ -1178,7 +1180,7 @@ fn graph_sending_with(mut request: GraphRequest, zone: &str, now: i64, renew: Re
                 if graph::send_unsure(&e) {
                     out.unsure.push(message.id);
                 }
-                out.errors.push(format!("Couldn't send \"{}\" through Microsoft: {e}", message.subject.trim()));
+                out.errors.push(format!("Couldn't send \"{}\" through Microsoft: {e}", message.subject.trim().replace(['"', '\\'], "'")));
             }
         }
     }
@@ -1257,7 +1259,8 @@ fn graph_sending_with(mut request: GraphRequest, zone: &str, now: i64, renew: Re
         out.uploaded = Some(uploaded);
     }
     // The wide stretch with the contacts, every quarter of an hour; otherwise the days on screen.
-    let stretch = if request.directory { Some((now - CALENDAR_BEHIND, now + CALENDAR_AHEAD)) } else { request.calendar };
+    // (The window counts the wide stretch from its own clock and says it in `calendar`.)
+    let stretch = if request.directory { request.calendar.or(Some((now - CALENDAR_BEHIND, now + CALENDAR_AHEAD))) } else { request.calendar };
     // A shared mailbox's calendars (#70): asked for and written at its own address, and only
     // those that are ticked are asked for (the window says which, in the asks); no contacts,
     // categories or settings of it.
@@ -2274,6 +2277,13 @@ fn main() -> eframe::Result {
             // The mailbox is read on a thread of its own, so that the window is there at once
             // (#519): it shows the opening screen meanwhile, and is made as it always was once
             // the mailbox is there (`build`).
+            // Drawing by the processor (a software rasteriser) is said once and slows the window's
+            // own repaints down (#software-render); the adapter is known now.
+            let software = cc.wgpu_render_state.as_ref().is_some_and(|s| s.adapter.get_info().device_type == eframe::wgpu::DeviceType::Cpu);
+            if software {
+                log::warn!("graphics: drawing with a software rasteriser, expect high processor use");
+            }
+            mailcraft_ui_egui::software::set_software(software);
             let progress = std::sync::Arc::new(mailcraft_engine::io::OpenProgress::default());
             let reading = progress.clone();
             let wake = cc.egui_ctx.clone();
@@ -2281,7 +2291,7 @@ fn main() -> eframe::Result {
             let (file_dialog, dialogs) = file_dialogs::hook(&cc.egui_ctx);
             let ctx = cc.egui_ctx.clone();
             let first_prefs = startup.prefs.clone();
-            let build = startup.builder(ctx, Some(file_dialog));
+            let build = startup.builder(ctx, Some(file_dialog), software);
             let mut app =
                 MailApp::opening(mailcraft_ui_egui::opening::Opening::new(arriving, progress, build), first_prefs, system_locale::system_locale());
             app.ui.window = restored;

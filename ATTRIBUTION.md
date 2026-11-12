@@ -50,6 +50,7 @@ Generated-in-code art is original and has no file to list: the UI icon set (`cra
 | `assets/fonts/Inter-SemiBold.ttf` | Rasmus Andersson / The Inter Project Authors | https://github.com/rsms/inter | OFL-1.1 (`assets/fonts/OFL-Inter.txt`) | Interface font (carried over from WordCraft) |
 | `assets/fonts/SourceSans3-Regular.ttf` | Paul D. Hunt, Adobe (released as open source) | https://github.com/adobe-fonts/source-sans | OFL-1.1 (`assets/fonts/OFL-SourceSans3.txt`) | Interface fallback font (carried over from WordCraft) |
 | `assets/fonts/JetBrainsMono-Regular.ttf` | The JetBrains Mono Project Authors | https://github.com/JetBrains/JetBrainsMono | OFL-1.1 (`assets/fonts/OFL-JetBrainsMono.txt`) | Monospace font for code and preformatted text (carried over from WordCraft) |
+| `assets/fonts/NotoSansGeorgian-Regular.ttf` | The Noto Project Authors (notofonts) | https://github.com/notofonts/georgian (release NotoSansGeorgian-v2.005, `unhinted/ttf`, unchanged) | OFL-1.1 (`assets/fonts/OFL-NotoSansGeorgian.txt`; no Reserved Font Name) | Georgian (Mkhedruli and Mtavruli) for the browser build, where no system faces exist: fetched only when the interface language is Georgian |
 | `assets/fonts/OFL-Inter.txt` | (licence text) | upstream project | — |  |
 | `assets/fonts/OFL-SourceSans3.txt` | (licence text) | upstream project | — |  |
 | `assets/fonts/OFL-JetBrainsMono.txt` | (licence text) | upstream project | — |  |
@@ -61,6 +62,7 @@ Generated-in-code art is original and has no file to list: the UI icon set (`cra
 | `vendor/winit/examples/data/cross2.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example |
 | `vendor/winit/examples/data/gradient.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example |
 | `vendor/winit/examples/data/icon.png` | The winit contributors | https://github.com/UCS-Care-Group/winit/tree/951b6c131897a80d27a925af7c5da22ea522eb0d/examples/data | Apache-2.0 (`vendor/winit/LICENSE`) | Retained dependency example, not MailCraft's icon |
+| `assets/fonts/OFL-NotoSansGeorgian.txt` | (licence text) | upstream project | — |  |
 | `crates/smime/testdata/ca.rsa.der` | IETF LAMPS working group (D. K. Gillmor) | RFC 9216 §3.1, "Sample LAMPS RSA Certification Authority", in DER | BSD-3-Clause (IETF Trust Legal Provisions, Code Components) | Test vector: the trust anchor of the S/MIME checks (#30) |
 | `crates/smime/testdata/alice.sign.der` | IETF LAMPS working group (D. K. Gillmor) | RFC 9216 §4.1, Alice's signature verification certificate (`alice@smime.example`), in DER | BSD-3-Clause (IETF Trust Legal Provisions, Code Components) | Test vector (#30) |
 | `crates/smime/testdata/detached.eml` | MailCraft contributors | signed with RFC 9216's example key for Alice by `openssl cms -sign` (SHA-256, detached), invented text | MIT OR Apache-2.0 (the certificate in it: as above) | Test vector (#30); no private key is in the repository |
