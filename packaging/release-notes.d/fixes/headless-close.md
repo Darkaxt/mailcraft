@@ -1,1 +1,0 @@
-- Headless MailCraft can close normally after an agent opened and sent or closed a draft.

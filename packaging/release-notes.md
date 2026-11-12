@@ -1,11 +1,13 @@
-**MailCraft 0.11.5 in short** — smaller on disk, and agents can ask you from headless
-- Mail bodies and attachments are kept compressed on disk; existing ones are compressed in the background, and each is still checked against its SHA-256 when read.
-- Headless MailCraft asks you in a small always-on-top window when an agent wants to send or permanently delete; No is the default, and Escape, closing or the timeout answer no.
-- More open-tracking pictures blocked (Krux, Alibaba analytics, MoEngage).
-- Upstream fixes through November 10 are included; this fork delivers Windows only.
-- Note: earlier versions can't read the compressed files, so going back to 0.11.4 needs the pre-update checkpoint.
+**MailCraft 0.11.6 in short** — Defender checks what you read; agents' questions wait for you
+- Attachments of a message you read are scanned by Microsoft Defender from a temporary copy outside the mailbox; anything it flags is marked in the message and asks before it is opened or saved. The scan itself never removes anything, and nothing in the mailbox is touched.
+- "Scan with Microsoft Defender" in an attachment's menu scans it on demand.
+- Headless, an agent's question (send, permanent delete) now waits for you for up to a day instead of two minutes.
+- Headless MailCraft can close normally after an agent's draft.
+- Mail bodies and attachments stay compressed on disk as in 0.11.5; going back to 0.11.4 still needs the pre-update checkpoint.
 
 **What's new**
+- Attachments of a message you read are scanned by Microsoft Defender from a temporary copy, never in the mailbox; one it flags is marked in the message and asks before it is opened or saved, and nothing is deleted.
+- Headless, an agent's question waits for you for up to a day instead of two minutes; the agent is told at once and reads the outcome with `agent.answer`.
 - Headless MailCraft asks the owner about what an agent wants (sending, permanent deletion and the like) in a small always-on-top window instead of refusing; the answer is no unless the owner clicks yes.
 - A mailbox's bodies and attachments take much less space on disk: content that shrinks (text and HTML mail, most PDFs) is kept compressed in its folder beside the mailbox file, and what was written before is compressed in the background a little at a time; every file is still checked against its SHA-256 when it is read, and the mailbox file itself doesn't change.
 - **Unified mailbox.** A root at the top of the folder pane holds every Inbox together, the filing account's real folder tree (its Inbox shown as Unfiled) and the saved search folders; the + beside it makes a new search folder, and its menu picks the filing account and how origin colours are drawn.
@@ -50,6 +52,7 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- Headless MailCraft can close normally after an agent opened and sent or closed a draft.
 - The reading pane also recognises the open-tracking pictures of Salesforce Audience Studio (Krux), Alibaba (AliExpress) analytics and MoEngage, and blocks them with the other trackers.
 - Week numbers in the calendar line up: in the Month view and in the date navigator every digit has a place of one width, where a number such as 20 used to start left of the others ([#1009](https://github.com/GITHUB_REPOSITORY/issues/1009)).
 - HTML newsletters keep headings up to 48 pixels, inline line height, image spacing, and the width of centered tables that size to their contents. CSS table rows and cells use the same layout as HTML table tags ([#1021](https://github.com/GITHUB_REPOSITORY/issues/1021)).
