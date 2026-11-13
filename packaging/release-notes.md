@@ -1,4 +1,5 @@
-**MailCraft 0.12.2 in short** — see what you approve, and replies to your own accounts
+**MailCraft 0.12.3 in short** — see what you approve, and replies to your own accounts
+- Fix: the window that asks you about an agent's request (headless MailCraft) keeps its Send and Don't Send buttons in a row at the bottom; in 0.12.2 they grew over the window a second after it opened and hid the question and the message.
 - When an agent asks to send, the question window shows the message exactly as it will go: sender, recipients (Cc and Bcc), subject, body and the files attached, with the answer buttons always in sight.
 - Reply and Reply All treat only the replying account, its shared mailboxes and its alias as you; mail from your other accounts is answered like anyone's, so Reply All keeps every recipient.
 - Search answers quickly after new mail arrives instead of waiting while its word list is read again.
@@ -54,6 +55,7 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- The window that asks you about an agent's request when MailCraft runs without its main window keeps its answers in a row at the bottom, so the question and the message to be sent stay in sight.
 - On any computer where MailCraft draws without the graphics card (Linux, or Windows when only the software renderer is there), MailCraft now tells you once, above the status bar, and redraws less often (its own animations, progress indicators and spinners about four times a second at most), so it keeps the processor less busy; typing and clicking still redraw at once. ([#1229](https://github.com/UCS-Care-Group/mailcraft/pull/1229))
 - Phone app packages (`.apk`, `.apks`, `.xapk`, `.aab`, `.ipa`) attached to a message are now saved and never opened from mail, on every platform ([#1228](https://github.com/GITHUB_REPOSITORY/issues/1228)).
 - Help › Copy Diagnostics now shows why IMAP and SMTP problems happened (the server's refusal, with names and addresses hidden); problems of other kinds (Microsoft 365, calendar, tasks, rules) are only counted in the log. ([#1205](https://github.com/UCS-Care-Group/mailcraft/pull/1205))
