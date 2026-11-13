@@ -71,6 +71,7 @@ Agreement](../CLA.md).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-12 | minor | #1135: Romanian as a preview language (`ro.po`), with its three plural forms |
 | 2026-11-10 | patch | #978: English writes dates the day first outside the US, Canada and the Philippines, with the region's clock and first day of the week |
 | 2026-11-08 | minor | #912: a heading and its reason are separate entries, joined by the `{heading}: {reason}` pattern, which each language punctuates its own way |
 | 2026-10-29 | minor | Dutch as a preview language (`nl.po`); File › Options names it Nederlands (voorbeeld) |

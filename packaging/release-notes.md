@@ -1,12 +1,12 @@
-**MailCraft 0.12.1 in short** — upstream MailCraft 0.12.0 merged into the Windows fork
-- S/MIME and OpenPGP signatures are checked in the reading pane; your certificates and keys, and other people's Public keys, are managed in File › Options › Security.
-- Import a .pst File brings in calendar items, tasks, notes, journal entries and large distribution lists.
-- Gmail's categories (Primary, Social, Promotions, Updates, Forums) as folders or tabs.
-- Optional attachment previews (off by default) with local PdfCraft or PhotoCraft; an attachment Microsoft Defender flagged is never previewed.
-- Empty Folder on a huge folder takes about a second; Delete, Archive and Junk of many messages scale with their number.
-- Everything from 0.11.6 stays: Defender scans of what you read, agents' questions that wait for you, the unified mailbox and its rules.
+**MailCraft 0.12.2 in short** — see what you approve, and replies to your own accounts
+- When an agent asks to send, the question window shows the message exactly as it will go: sender, recipients (Cc and Bcc), subject, body and the files attached, with the answer buttons always in sight.
+- Reply and Reply All treat only the replying account, its shared mailboxes and its alias as you; mail from your other accounts is answered like anyone's, so Reply All keeps every recipient.
+- Search answers quickly after new mail arrives instead of waiting while its word list is read again.
+- Upstream MailCraft merged: Romanian as a preview language, the software-render notice, IMAP and SMTP problems explained in Copy Diagnostics, phone app packages never opened from mail.
+- Everything from 0.12.1 stays.
 
 **What's new**
+- **Romanian.** MailCraft's window now comes in Romanian as a preview language: every text is translated, not yet reviewed line by line by a native speaker, and File › Options names it Română (previzualizare). Dates read day first with a 24-hour clock and weeks from Monday, and counts take Romanian's three plural forms ([#1135](https://github.com/GITHUB_REPOSITORY/issues/1135)).
 - Enable attachment previews in File › Options to preview PDFs and supported images in the reading pane with local PdfCraft or PhotoCraft. [#1053](https://github.com/UCS-Care-Group/mailcraft/issues/1053)
 - Attachments of a message you read are scanned by Microsoft Defender from a temporary copy, never in the mailbox; one it flags is marked in the message and asks before it is opened or saved, and nothing is deleted.
 - Headless, an agent's question waits for you for up to a day instead of two minutes; the agent is told at once and reads the outcome with `agent.answer`.
@@ -54,6 +54,11 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- On any computer where MailCraft draws without the graphics card (Linux, or Windows when only the software renderer is there), MailCraft now tells you once, above the status bar, and redraws less often (its own animations, progress indicators and spinners about four times a second at most), so it keeps the processor less busy; typing and clicking still redraw at once. ([#1229](https://github.com/UCS-Care-Group/mailcraft/pull/1229))
+- Phone app packages (`.apk`, `.apks`, `.xapk`, `.aab`, `.ipa`) attached to a message are now saved and never opened from mail, on every platform ([#1228](https://github.com/GITHUB_REPOSITORY/issues/1228)).
+- Help › Copy Diagnostics now shows why IMAP and SMTP problems happened (the server's refusal, with names and addresses hidden); problems of other kinds (Microsoft 365, calendar, tasks, rules) are only counted in the log. ([#1205](https://github.com/UCS-Care-Group/mailcraft/pull/1205))
+- On an IMAP server that doesn't say where it put a moved message (no UIDPLUS), moving it on again or deleting it for good right after the first move could leave a second copy in the first folder, with the second move or deletion never reaching the server; it now goes there once the server's copy is found, and an undo of it keeps the server's copy. If the copy can't be found for certain, the message is shown again. ([#1206](https://github.com/UCS-Care-Group/mailcraft/pull/1206))
+- Italian: Add Account is in Italian throughout, its Google sign-in pages and the Exchange server setup with its certificate questions included; 107 of its texts were shown in English ([#1060](https://github.com/GITHUB_REPOSITORY/issues/1060)).
 - Headless MailCraft can close normally after an agent opened and sent or closed a draft.
 - The reading pane also recognises the open-tracking pictures of Salesforce Audience Studio (Krux), Alibaba (AliExpress) analytics and MoEngage, and blocks them with the other trackers.
 - Week numbers in the calendar line up: in the Month view and in the date navigator every digit has a place of one width, where a number such as 20 used to start left of the others ([#1009](https://github.com/GITHUB_REPOSITORY/issues/1009)).

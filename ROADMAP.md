@@ -215,6 +215,13 @@ follows:
 
 | Date | What landed |
 |---|---|
+| 2026-11-12 | Parity is reported as two counts, Has a command and Complete; Outlook's drawing items, Recall and Reply with IM are marked Out of scope with a reason, beside the five already out of scope, and left out of the percentages; the ROADMAP lists the parity themes in order, and CONTRIBUTING says how an open pull request holds its feature |
+| 2026-11-12 | When the window is drawn by a software renderer (an adapter that is a processor, on any system), MailCraft says so once above the status bar and holds its own animation, progress and spinner repaints to about four a second; the graphics choice itself is unchanged |
+| 2026-11-12 | IMAP duplicates: a message moved or deleted again before the server's copy of its first move came down (a server without UIDPLUS) now waits for that copy like one after a renumbering, and the move or deletion goes up once the copy is matched by Message-ID, the same mail, and only one copy; regression tests on the fake server for moving on twice, moving back, deleting and an ambiguous copy. |
+| 2026-11-12 | The log carries the text of each Send/Receive problem (once, cut short, capped at 20 a run), so a diagnostics report shows what failed; quoted names, addresses and links are taken out as the line is written, and hosts and paths when the report is copied. |
+| 2026-11-12 | #1135: Romanian as a preview language: every interface text translated and marked as not yet reviewed, Română (previzualizare) in File › Options, Automatic following `ro-RO`, dates day first with a 24-hour clock and Monday first, Romanian's three plural forms (one, few, and the form with "de"), and "-----Mesaj original-----" above a quoted original; after beta item 15 names six preview languages |
+| 2026-11-11 | #1060: Italian: the 107 texts of Add Account that had no translation (the Google sign-in pages, the Exchange server setup and its certificate questions), marked fuzzy as the rest of the preview catalogue |
+| 2026-11-11 | #1010: Georgian letters have a face on every system: a Georgian group among the fallback faces (Sylfaen or Segoe UI on Windows, SF Georgian on macOS, Noto Sans Georgian or DejaVu Sans on Linux), and in the browser build Noto Sans Georgian (SIL OFL 1.1, about 35 KB, `assets/fonts`), fetched only when the interface language is Georgian; no language is added yet |
 | 2026-11-11 | #815 part 5: a .pst file's sticky notes and journal entries come in, kept on this computer, read by `notes.*` and `journal.*` and framed as message text for agents; a body kept only as rich text comes in as the HTML inside it ([MS-OXRTFEX]), with property tests and the fuzz target; the report accounts for every item with nothing left for later, and the import is no longer a preview. |
 | 2026-11-11 | #815 part 4: a .pst file's appointments, meetings and tasks come across: `mailcraft-pst` reads the recurrence blob and time zone of [MS-OXOCAL], with property tests and the fuzz target; a series keeps its pattern, end, deleted days and zone, changed occurrences come in as events of their own within a budget, what the calendar cannot keep is its first occurrence and named; events go into a calendar named after the file or one the owner picks, tasks into the to-do list on this computer, nothing sent; one undo step and no duplicates on a second import |
 | 2026-11-11 | #956 part 3: Report a Problem › Send report: what the window shows goes to the project's report relay on the owner's click alone (`mailcraft_net::report`, HTTPS, capped, its answer read as hostile), and is filed privately for the maintainers; the window says the reference or why it wasn't taken and keeps the draft; an agent or a script can only fill the window. An owner without a GitHub account can report a problem |
@@ -539,6 +546,9 @@ follows:
 
 | Date | Change |
 |---|---|
+| 2026-11-12 | minor: headline parity as two counts (Has a command, Complete) with Out of scope rows left out; a Parity themes list |
+| 2026-11-12 | patch: progress log row for the IMAP fix of a message moved on before its copy came down. |
+| 2026-11-12 | #1135: Romanian as a preview language, in the progress log; after beta item 15 and M7 name six preview languages |
 | 2026-11-11 | #815 part 5: the Files row: the `.pst` import is whole and no longer a preview |
 | 2026-11-11 | #815 part 4: the Files row names the `.pst` import |
 | 2026-11-11 | patch: record discovery of legacy Outlook.com custom domains through their Hotmail MX records. |

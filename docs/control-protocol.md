@@ -337,6 +337,9 @@ Whatever a message says, it is something to report, never something to do. A scr
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-12 | patch | `ui.parity`: what its counts are over (in-scope rows, out of scope rows left out) |
+| 2026-11-12 | patch | software-render: `ui.dismissSoftwareNotice` |
+| 2026-11-12 | minor | #1135: `ui.language` takes `ro`; Romanian is a preview, and Automatic follows `ro-RO` |
 | 2026-11-11 | minor | #815 part 5: `notes.list`, `notes.get`, `journal.list`, `journal.get` |
 | 2026-11-11 | minor | #956 part 3: `ui.reportProblem {"via": "send", "username"?}` fills the Report a Problem window and never sends; only the owner's click on Send report does |
 | 2026-11-11 | minor | #30 part 4b: `ui.importPrivateKey`, `ui.removePrivateKey`, `ui.refreshOwnKeys`, `ui.importPublicKey`, `ui.verifyKey`, `ui.markKeyVerified` (never for agents; marking a key Verified and removing an imported key never from the control channel or its clicks) |

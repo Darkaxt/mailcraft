@@ -116,6 +116,8 @@ new performance measurements for this index or proof of undiscovered mail.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-12 | patch | Gap 17: the parity count is in-scope features only; 17 catalog rows are out of scope |
+| 2026-11-12 | minor | Gap 14: Romanian as a preview language; Automatic follows `ro-RO`; a Romanian reply keeps `RE:` and `FW:`, which already thread |
 | 2026-11-11 | minor | #815 part 5: gap 12: a `.pst` file's notes and journal entries import, HTML kept in rich text comes in as HTML, and the import is no longer a preview |
 | 2026-11-11 | minor | #815 part 4: gap 12: a `.pst` file's calendar items and tasks import; notes and journal left for a later part |
 | 2026-11-11 | patch | #956 part 3: rough edges: Send report is in the desktop app only, carries no screenshot or file, and answers come only on GitHub |

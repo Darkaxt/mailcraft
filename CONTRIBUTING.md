@@ -119,6 +119,7 @@ issue the maintainers read. Don't press it to try the window out: build with
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-12 | minor | An open pull request holds its feature while its author answers a review within 7 days; after that the feature is free to be built afresh |
 | 2026-11-11 | patch | #956 part 3: Send report goes to the real report relay: build with `MAILCRAFT_REPORT_URL=` to try the window out |
 | 2026-11-07 | minor | Security fixes: a fix for a security finding comes with a test that covers every site of its root cause |
 | 2026-11-04 | minor | A row of a document's revision history or of the progress log is a fragment, `docs/log.d/…`, joined in at release like a release-notes line |

@@ -97,6 +97,7 @@ be shown when they can't.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-12 | minor | #1135: Romanian as a preview language: Română (previzualizare) in File › Options, a 24-hour clock, Monday first, day-month-year |
 | 2026-11-11 | minor | #956 part 3: Report a Problem › Send report (to the MailCraft team privately, the reference or why not said, Try again), with an optional GitHub username; Open on GitHub stays |
 | 2026-11-11 | minor | #30 part 4b: File › Options › Security; Verify… on the reading pane's bar; Certificates on a contact's card |
 | 2026-11-10 | patch | #956: Report a Problem opens a GitHub issue only; Send by Email is gone |
