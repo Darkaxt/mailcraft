@@ -3,10 +3,13 @@
 //! Headless MailCraft asks the owner about what an agent wants in a small window of its own
 //! (`mailcraft_ui_egui::Services::ask_owner`): a separate, short-lived copy of this program,
 //! started with [`ARG`], that reads the question from its standard input, shows it on top of
-//! everything and ends with exit code 0 only when the owner clicked the yes button. Closing it,
-//! Escape, Enter on the default button (no), its time running out, and anything going wrong are
-//! a no. That copy opens no mailbox, takes no single-instance lock, starts no control port,
-//! writes no settings and logs nothing: it is started before any of that in `main`.
+//! everything and ends with exit code 0 only when the owner clicked the yes button. Clicking no,
+//! closing it, its time running out, and anything going wrong are a no. It takes no keyboard
+//! focus when it comes up and no key answers it: what the owner was typing elsewhere when it
+//! appeared never answers for them. Its time is counted from its first frame on the screen, not
+//! from its start. It says on its standard output how it ended, for the host's log. That copy
+//! opens no mailbox, takes no single-instance lock, starts no control port, writes no settings
+//! and logs nothing: it is started before any of that in `main`.
 
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
@@ -28,6 +31,13 @@ const MOST_BYTES: u64 = 32 << 20;
 /// Most seconds a question window stays up, whatever it is told: a day, so that an owner who is
 /// away still finds it (`agent_gate::HEADLESS_WAIT_MS`).
 const MOST_SECONDS: u64 = 86_400;
+
+/// Fewest seconds a question window stays up, whatever it is told: a minute to read and decide.
+const LEAST_SECONDS: u64 = 60;
+
+/// How long the host waits for the window past its time before ending it: the window's time only
+/// starts once it is on the screen, and starting it (graphics, fonts, the message) takes a while.
+const STARTUP_SLACK_SECONDS: u64 = 120;
 
 /// Below this many seconds left, the window shows how long it has.
 const COUNTDOWN_SECONDS: u64 = 600;
@@ -57,7 +67,7 @@ fn ask(question: &OwnerQuestion) -> bool {
         log::warn!("the owner question window couldn't be started: this program's path is unknown");
         return false;
     };
-    let mut child = match Command::new(exe).arg(ARG).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).spawn() {
+    let mut child = match Command::new(exe).arg(ARG).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn() {
         Ok(child) => child,
         Err(why) => {
             log::warn!("the owner question window couldn't be started: {why}");
@@ -65,6 +75,12 @@ fn ask(question: &OwnerQuestion) -> bool {
         }
     };
     let seconds = question.seconds.min(MOST_SECONDS);
+    if seconds == 0 {
+        log::info!("owner question: no time was left to ask; it is a no");
+        let _ = child.kill();
+        let _ = child.wait();
+        return false;
+    }
     let body = json!({
         "title": question.title,
         "text": question.text,
@@ -81,12 +97,25 @@ fn ask(question: &OwnerQuestion) -> bool {
         let _ = child.wait();
         return false;
     }
-    // The window closes itself when its time is up; a little longer, then it is ended.
-    let deadline = Instant::now() + Duration::from_secs(seconds + 5);
+    // The window closes itself when its time is up, counted from when it was first on the screen;
+    // past that and the time it may take to start, it is ended.
+    let deadline = Instant::now() + Duration::from_secs(seconds.max(LEAST_SECONDS) + STARTUP_SLACK_SECONDS);
     loop {
         match child.try_wait() {
-            Ok(Some(status)) => return status.success(),
+            Ok(Some(status)) => {
+                // How it ended, as the window said it (a few words, never what was asked).
+                let mut said = String::new();
+                if let Some(out) = child.stdout.take() {
+                    let _ = out.take(256).read_to_string(&mut said);
+                }
+                let said: String = said.chars().filter(|c| c.is_ascii_alphanumeric() || *c == ' ').take(64).collect();
+                let said = if said.trim().is_empty() { "nothing said" } else { said.trim() };
+                log::info!("owner question window: {said} ({status})");
+                return status.success();
+            }
             Ok(None) if question.cancel.load(Ordering::Relaxed) || Instant::now() >= deadline => {
+                let why = if question.cancel.load(Ordering::Relaxed) { "the question went" } else { "it didn't close in time" };
+                log::info!("owner question window ended by the host: {why}");
                 let _ = child.kill();
                 let _ = child.wait();
                 return false;
@@ -109,7 +138,37 @@ struct Shown {
     note: String,
     yes: String,
     no: String,
-    until: Instant,
+    /// How long it stays up, from its first frame on the screen.
+    seconds: u64,
+}
+
+/// How long a question window is told to stay up, within a minute and a day; 0 when it wasn't
+/// told (that is a no, never a window).
+fn seconds_of(v: &Value) -> u64 {
+    match v.get("seconds").and_then(Value::as_u64).unwrap_or(0) {
+        0 => 0,
+        n => n.clamp(LEAST_SECONDS, MOST_SECONDS),
+    }
+}
+
+/// How the window ended, for the host's log.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Said {
+    Yes,
+    No,
+    Closed,
+    TimedOut,
+}
+
+impl Said {
+    fn word(self) -> &'static str {
+        match self {
+            Said::Yes => "yes",
+            Said::No => "no clicked",
+            Said::Closed => "closed",
+            Said::TimedOut => "timed out",
+        }
+    }
 }
 
 /// The window process: the exit code, 0 only for the owner's yes.
@@ -120,12 +179,12 @@ pub fn window() -> i32 {
     }
     let Ok(v) = serde_json::from_slice::<Value>(&input) else { return 1 };
     let text = |k: &str| -> String { v.get(k).and_then(Value::as_str).unwrap_or("").chars().filter(|c| !c.is_control()).collect() };
-    let seconds = v.get("seconds").and_then(Value::as_u64).unwrap_or(0).min(MOST_SECONDS);
+    let seconds = seconds_of(&v);
     let (yes, no) = (text("yes"), text("no"));
     if seconds == 0 || yes.is_empty() || no.is_empty() {
         return 1;
     }
-    let shown = Shown { title: text("title"), text: text("text"), note: text("note"), yes, no, until: Instant::now() + Duration::from_secs(seconds) };
+    let shown = Shown { title: text("title"), text: text("text"), note: text("note"), yes, no, seconds };
     // A send's message, as it will go: shown under the question. One that can't be read is a no,
     // never a question without it.
     let preview = match v.get("preview") {
@@ -136,7 +195,7 @@ pub fn window() -> i32 {
         },
     };
     let size = if preview.is_some() { [780.0, 720.0] } else { [440.0, 220.0] };
-    let said = Arc::new(Mutex::new(false));
+    let said = Arc::new(Mutex::new(Said::Closed));
     let answer = said.clone();
     #[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
     let mut options = eframe::NativeOptions {
@@ -145,7 +204,8 @@ pub fn window() -> i32 {
             .with_inner_size(size)
             .with_resizable(preview.is_some())
             .with_always_on_top()
-            .with_active(true)
+            // Not given the keyboard: what is being typed elsewhere stays there.
+            .with_active(false)
             .with_minimize_button(false)
             .with_maximize_button(false),
         ..Default::default()
@@ -157,17 +217,25 @@ pub fn window() -> i32 {
         options,
         Box::new(move |cc| {
             let preview = preview.map(|p| PreviewWindow::new(&cc.egui_ctx, p));
-            Ok(Box::new(Window { shown, said: answer, focused: false, preview }) as Box<dyn eframe::App>)
+            Ok(Box::new(Window { shown, said: answer, until: None, preview }) as Box<dyn eframe::App>)
         }),
     );
-    let yes = started.is_ok() && *said.lock().unwrap_or_else(|e| e.into_inner());
-    if yes { 0 } else { 1 }
+    let said = *said.lock().unwrap_or_else(|e| e.into_inner());
+    let word = match &started {
+        Ok(()) => said.word().to_string(),
+        Err(why) => format!("not shown {}", why.to_string().chars().filter(|c| c.is_ascii_alphanumeric() || *c == ' ').take(40).collect::<String>()),
+    };
+    let mut out = std::io::stdout().lock();
+    let _ = writeln!(out, "{word}");
+    let _ = out.flush();
+    if started.is_ok() && said == Said::Yes { 0 } else { 1 }
 }
 
 struct Window {
     shown: Shown,
-    said: Arc<Mutex<bool>>,
-    focused: bool,
+    said: Arc<Mutex<Said>>,
+    /// When its time is up: set at its first frame, so starting the window takes none of it.
+    until: Option<Instant>,
     /// A send's message ([`SendPreview`]).
     preview: Option<PreviewWindow>,
 }
@@ -183,9 +251,12 @@ impl Window {
     /// can see they keep their room.
     fn show(&mut self, ui: &mut egui::Ui) -> egui::Rect {
         let ctx = ui.ctx().clone();
-        let left = self.shown.until.saturating_duration_since(Instant::now());
-        // Escape, or the time running out: no (closing the window is a no by itself).
-        if left.is_zero() || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        let seconds = self.shown.seconds;
+        let until = *self.until.get_or_insert_with(|| Instant::now() + Duration::from_secs(seconds));
+        let left = until.saturating_duration_since(Instant::now());
+        // The time running out: no (closing the window is a no by itself). No key answers.
+        if left.is_zero() {
+            *self.said.lock().unwrap_or_else(|e| e.into_inner()) = Said::TimedOut;
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return egui::Rect::NOTHING;
         }
@@ -203,16 +274,24 @@ impl Window {
             }
             let row = egui::vec2(ui.available_width(), 30.0);
             ui.allocate_ui_with_layout(row, egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Answered with the pointer only: neither button keeps the keyboard's focus, so
+                // Enter or Space typed for something else can't press one.
                 let no = ui.add(egui::Button::new(self.shown.no.as_str()).min_size(egui::vec2(88.0, 26.0)));
                 let yes = ui.add(egui::Button::new(self.shown.yes.as_str()).min_size(egui::vec2(72.0, 26.0)));
-                if !self.focused {
-                    no.request_focus();
-                    self.focused = true;
+                for button in [&no, &yes] {
+                    if button.has_focus() {
+                        button.surrender_focus();
+                    }
                 }
-                if yes.clicked() {
-                    *self.said.lock().unwrap_or_else(|e| e.into_inner()) = true;
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                } else if no.clicked() {
+                let said = if yes.clicked_by(egui::PointerButton::Primary) {
+                    Some(Said::Yes)
+                } else if no.clicked_by(egui::PointerButton::Primary) {
+                    Some(Said::No)
+                } else {
+                    None
+                };
+                if let Some(said) = said {
+                    *self.said.lock().unwrap_or_else(|e| e.into_inner()) = said;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             });
