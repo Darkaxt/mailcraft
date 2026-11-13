@@ -174,23 +174,35 @@ struct Window {
 
 impl eframe::App for Window {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.show(ui);
+    }
+}
+
+impl Window {
+    /// The window's one frame. Returns where the question and the message were shown, so a test
+    /// can see they keep their room.
+    fn show(&mut self, ui: &mut egui::Ui) -> egui::Rect {
         let ctx = ui.ctx().clone();
         let left = self.shown.until.saturating_duration_since(Instant::now());
         // Escape, or the time running out: no (closing the window is a no by itself).
         if left.is_zero() || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-            return;
+            return egui::Rect::NOTHING;
         }
         // The note, the time left and the answers are kept at the bottom, always in sight however
-        // long the message shown above them is.
-        egui::Panel::bottom("answer").show_separator_line(false).show(ui, |ui| {
+        // long the message shown above them is. The panel is as high as what is in it and no
+        // higher: not resizable (a resizable panel keeps the most it was ever given), and the
+        // buttons in a row of their own height (a layout centred across the panel's whole height
+        // would grow it every frame until it filled the window and hid the question).
+        egui::Panel::bottom("answer").resizable(false).show_separator_line(false).show(ui, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
             ui.add_space(4.0);
             ui.label(egui::RichText::new(self.shown.note.as_str()).weak());
             if left.as_secs() < COUNTDOWN_SECONDS {
                 ui.label(egui::RichText::new(format!("{} s", left.as_secs())).weak());
             }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let row = egui::vec2(ui.available_width(), 30.0);
+            ui.allocate_ui_with_layout(row, egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let no = ui.add(egui::Button::new(self.shown.no.as_str()).min_size(egui::vec2(88.0, 26.0)));
                 let yes = ui.add(egui::Button::new(self.shown.yes.as_str()).min_size(egui::vec2(72.0, 26.0)));
                 if !self.focused {
@@ -206,7 +218,7 @@ impl eframe::App for Window {
             });
             ui.add_space(4.0);
         });
-        egui::CentralPanel::default().show(ui, |ui| {
+        let shown = egui::CentralPanel::default().show(ui, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
             // Plain text only: what an agent asked about is never markup or a link here.
             ui.label(egui::RichText::new(self.shown.title.as_str()).strong());
@@ -218,5 +230,10 @@ impl eframe::App for Window {
             }
         });
         ctx.request_repaint_after(Duration::from_millis(250));
+        shown.response.rect
     }
 }
+
+#[cfg(test)]
+#[path = "owner_question_tests.rs"]
+mod owner_question_tests;
