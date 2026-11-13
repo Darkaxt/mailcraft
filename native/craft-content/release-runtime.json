@@ -13,10 +13,10 @@
   },
   "releaseInput": {
     "repository": "Darkaxt/mailcraft",
-    "tag": "v0.12.4",
-    "releaseId": 444220217,
-    "assetId": 743630915,
-    "name": "mailcraft-0.12.4-windows-x64-content-runtime.zip",
+    "tag": "v0.12.5",
+    "releaseId": 444813574,
+    "assetId": 745456675,
+    "name": "mailcraft-0.12.5-windows-x64-content-runtime.zip",
     "bytes": 235535253,
     "sha256": "6fb499b56f4f243824f9e7dd0e9e8fc3914cf732bb9865e44a5a875adff33a03"
   },
