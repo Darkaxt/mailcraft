@@ -130,6 +130,9 @@ impl MailApp {
         status["closeBlocker"] = json!(blocker);
         status["interactionRequired"] = json!(!self.asking.is_empty() || self.dialog.is_some() || self.windows.asks());
         status["permissionsNeeded"] = json!(self.rules_permissions_needed());
+        // Accounts whose mail can't be sent or received until the owner signs in again: what
+        // waits in their Outbox stays there till then ([`crate::sign_in_notice`]).
+        status["signInNeeded"] = self.sign_in_needed_status();
         status["interaction"] = match &self.dialog {
             Some(crate::dialogs::Dialog::Confirm { command, ask, .. }) => json!({"kind": "confirm", "command": command, "title": ask.title}),
             Some(dialog) => json!({"kind": dialog.name()}),

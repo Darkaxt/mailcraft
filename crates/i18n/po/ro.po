@@ -663,6 +663,11 @@ msgstr ""
 "Setări\n"
 "cont"
 
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Account Problems"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/account.rs crates/ui-egui/src/account_setup.rs
 #, fuzzy
@@ -6670,6 +6675,11 @@ msgid "It uses an algorithm that's no longer safe."
 msgstr "Folosește un algoritm care nu mai este sigur."
 
 #. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "It waits in the Outbox: {account} needs you to sign in again before anything is sent."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "It waits on this computer until To Do is allowed for this account"
@@ -7020,7 +7030,7 @@ msgid "Last name"
 msgstr "Nume"
 
 #. interface, name
-#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/tasks_view.rs
+#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "Later"
 msgstr "Mai târziu"
@@ -9797,6 +9807,11 @@ msgstr "Open source sub licența MIT sau licența Apache 2.0, la alegere."
 #, fuzzy
 msgid "Open source under the MIT License or the Apache License 2.0, at your option. The interface fonts are Inter, Source Sans 3 and JetBrains Mono (SIL Open Font License). Every icon is drawn in code."
 msgstr "Open source sub licența MIT sau licența Apache 2.0, la alegere. Fonturile interfeței sunt Inter, Source Sans 3 și JetBrains Mono (SIL Open Font License). Fiecare pictogramă este desenată din cod."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Open the Page Again"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/data_removal.rs
@@ -12843,6 +12858,11 @@ msgid "Show Contributors"
 msgstr "Afișare contribuitori"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Show Details"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Show Gmail's categories under the Inbox"
@@ -13112,7 +13132,7 @@ msgid "Side-by-Side"
 msgstr "Unul lângă altul"
 
 #. interface
-#: crates/ui-egui/src/dialogs.rs
+#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/sign_in_notice.rs
 #, fuzzy
 msgid "Sign In"
 msgstr "Conectare"
@@ -13128,6 +13148,16 @@ msgstr "Conectare din nou"
 #, fuzzy
 msgid "Sign In Again for Automatic Replies"
 msgstr "Conectare din nou pentru răspunsuri automate"
+
+#. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "Sign In Needed"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "Sign In opens the sign-in page in your browser."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -13164,12 +13194,6 @@ msgstr "Conectați-vă din nou, după ce un administrator a aprobat"
 #, fuzzy
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
 msgstr "Conectați-vă din nou: pagina Microsoft se deschide în browser. Între timp, e-mailul și calendarul funcționează ca până acum."
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Sign in on the page that opened in your browser…"
-msgstr "Conectați-vă pe pagina deschisă în browser…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -13224,6 +13248,11 @@ msgstr "Conectați-vă din nou la Microsoft ca să primiți e-mailurile lui {acc
 #, fuzzy
 msgid "Sign in to your account"
 msgstr "Conectați-vă la cont"
+
+#. interface
+#: crates/ui-egui/src/lib.rs
+msgid "Sign in to {account} on the page that opened in your browser…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -13495,6 +13524,11 @@ msgstr "Altcineva"
 #, fuzzy
 msgid "Somebody else organizes this meeting: it stays in the calendar its invitation came to."
 msgstr "Altcineva organizează această întâlnire: rămâne în calendarul în care a sosit invitația."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Something about your accounts needs you. Click to see what."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/calendar_sync.rs
@@ -14713,6 +14747,11 @@ msgstr "Cheia care a creat-o nu are voie să semneze."
 #, fuzzy
 msgid "The key was removed from this computer."
 msgstr "Cheia a fost eliminată de pe acest computer."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "The last Send/Receive had problems."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/favorites_sync.rs
@@ -17204,6 +17243,11 @@ msgid "Waiting for the approval stopped unexpectedly"
 msgstr "Așteptarea aprobării s-a oprit neașteptat"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Waiting for you to sign in on the page that opened in your browser."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 #, fuzzy
 msgid "Want to be one? Sign up in #11"
@@ -17698,6 +17742,11 @@ msgstr "Ați marcat această cheie ca verificată."
 #, fuzzy
 msgid "You may be asked to sign in with Microsoft again, to let MailCraft read and change your mail there."
 msgstr "Vi se poate cere să vă conectați din nou cu Microsoft, ca MailCraft să vă poată citi și modifica e-mailurile acolo."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "You need to sign in again. Until you do, its mail isn't sent or received."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
@@ -20881,6 +20930,11 @@ msgid "{account} is switching to Microsoft Graph, but MailCraft can't reach its 
 msgstr "{account} trece la Microsoft Graph, dar MailCraft nu poate contacta serverul IMAP pentru a trimite întâi ce așteaptă acolo."
 
 #. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "{account} needs you to sign in again. Until you do, its mail isn't sent or received."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/graph_switch.rs
 #, fuzzy
 msgid "{account} now uses Microsoft Graph, and its mail is downloading again. A copy of your mailbox from before the switch is in {backup}."
@@ -20906,6 +20960,11 @@ msgstr "{account} rămâne deocamdată pe IMAP. Ca să schimbați mai târziu, c
 #, fuzzy
 msgid "{account} · No access"
 msgstr "{account} · Fără acces"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "{account} · Sign in needed"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -22455,6 +22514,10 @@ msgstr "„{subject}” era prea mare pentru descărcare: aici e doar antetul lu
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” nu a fost găsit pe server, deci nu poate fi redirecționat ca atașament"
+
+#, fuzzy
+#~ msgid "Sign in on the page that opened in your browser…"
+#~ msgstr "Conectați-vă pe pagina deschisă în browser…"
 
 #, fuzzy
 #~ msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."

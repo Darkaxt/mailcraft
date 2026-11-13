@@ -103,11 +103,27 @@ fn sign_in_request(cancel: &Arc<AtomicBool>) -> SignInRequest {
         tasks: false,
         rules: false,
         replies: false,
+        owner_clicked: false,
     }
 }
 
 fn approval_request(tenant: &str, cancel: &Arc<AtomicBool>) -> AdminConsentRequest {
     AdminConsentRequest { account: 0, oauth: settings(), tenant: tenant.into(), cancel: cancel.clone() }
+}
+
+/// Headless, a sign-in nobody asked for never opens a page; the one the owner asked for by
+/// clicking Sign In in the window that said the account needs it does (0.12.5).
+#[test]
+fn headless_opens_the_page_only_for_the_owners_click() {
+    let opened = Opened::default();
+    let cancel = Arc::new(AtomicBool::new(false));
+    let declined = page("error=access_denied", &opened);
+    let quiet = super::sign_in_for_runtime(SignInRequest { account: 42, ..sign_in_request(&cancel) }, true, &declined);
+    assert!(quiet.is_err());
+    assert!(opened.lock().unwrap().is_empty(), "no page for a sign-in nobody asked for");
+    let clicked = super::sign_in_for_runtime(SignInRequest { account: 42, owner_clicked: true, ..sign_in_request(&cancel) }, true, &declined);
+    assert!(clicked.is_err());
+    assert_eq!(opened.lock().unwrap().len(), 1, "the owner's click opens the page");
 }
 
 #[test]

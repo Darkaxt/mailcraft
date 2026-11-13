@@ -632,6 +632,12 @@ msgstr ""
 "Configuración\n"
 "de la cuenta"
 
+#. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "Account Problems"
+msgstr "Problemas de cuentas"
+
 #. command label, interface
 #: crates/engine/src/cmd/account.rs crates/ui-egui/src/account_setup.rs
 #, fuzzy
@@ -6283,6 +6289,12 @@ msgid "It uses an algorithm that's no longer safe."
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+#, fuzzy
+msgid "It waits in the Outbox: {account} needs you to sign in again before anything is sent."
+msgstr "Espera en la Bandeja de salida: {account} necesita que vuelva a iniciar sesión antes de enviar nada."
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "It waits on this computer until To Do is allowed for this account"
@@ -6617,7 +6629,7 @@ msgid "Last name"
 msgstr "Apellidos"
 
 #. interface, name
-#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/tasks_view.rs
+#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "Later"
 msgstr "Más tarde"
@@ -9272,6 +9284,12 @@ msgstr "Código abierto con la licencia MIT o la licencia Apache 2.0, a su elecc
 #, fuzzy
 msgid "Open source under the MIT License or the Apache License 2.0, at your option. The interface fonts are Inter, Source Sans 3 and JetBrains Mono (SIL Open Font License). Every icon is drawn in code."
 msgstr "Código abierto con la licencia MIT o la licencia Apache 2.0, a su elección. Las fuentes de la interfaz son Inter, Source Sans 3 y JetBrains Mono (SIL Open Font License). Todos los iconos se dibujan con código."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "Open the Page Again"
+msgstr "Abrir la página otra vez"
 
 #. interface
 #: crates/ui-egui/src/data_removal.rs
@@ -12149,6 +12167,12 @@ msgid "Show Contributors"
 msgstr "Mostrar colaboradores"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "Show Details"
+msgstr "Mostrar detalles"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Show Gmail's categories under the Inbox"
 msgstr ""
@@ -12404,7 +12428,7 @@ msgid "Side-by-Side"
 msgstr "En paralelo"
 
 #. interface
-#: crates/ui-egui/src/dialogs.rs
+#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/sign_in_notice.rs
 #, fuzzy
 msgid "Sign In"
 msgstr "Iniciar sesión"
@@ -12418,6 +12442,18 @@ msgstr ""
 #: crates/ui-egui/src/lib.rs
 msgid "Sign In Again for Automatic Replies"
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+#, fuzzy
+msgid "Sign In Needed"
+msgstr "Hay que iniciar sesión"
+
+#. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+#, fuzzy
+msgid "Sign In opens the sign-in page in your browser."
+msgstr "Iniciar sesión abre la página de inicio de sesión en su navegador."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -12452,12 +12488,6 @@ msgstr "Volver a iniciar sesión cuando un administrador lo haya aprobado"
 #: crates/ui-egui/src/backstage.rs
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
 msgstr ""
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Sign in on the page that opened in your browser…"
-msgstr "Inicie sesión en la página que se abrió en su navegador…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -12511,6 +12541,12 @@ msgstr "Vuelva a iniciar sesión en Microsoft para obtener el correo de {account
 #, fuzzy
 msgid "Sign in to your account"
 msgstr "Inicie sesión en su cuenta"
+
+#. interface
+#: crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Sign in to {account} on the page that opened in your browser…"
+msgstr "Inicie sesión en {account} en la página que se abrió en su navegador…"
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -12771,6 +12807,12 @@ msgstr "Otra persona"
 #, fuzzy
 msgid "Somebody else organizes this meeting: it stays in the calendar its invitation came to."
 msgstr "Esta reunión la organiza otra persona: se queda en el calendario al que llegó su invitación."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "Something about your accounts needs you. Click to see what."
+msgstr "Algo en sus cuentas necesita su atención. Haga clic para ver qué."
 
 #. interface
 #: crates/ui-egui/src/calendar_sync.rs
@@ -13879,6 +13921,12 @@ msgstr ""
 #: crates/ui-egui/src/security.rs
 msgid "The key was removed from this computer."
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "The last Send/Receive had problems."
+msgstr "El último Enviar y recibir tuvo problemas."
 
 #. interface
 #: crates/ui-egui/src/favorites_sync.rs
@@ -16194,6 +16242,12 @@ msgid "Waiting for the approval stopped unexpectedly"
 msgstr "La espera de la aprobación se detuvo de forma inesperada"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "Waiting for you to sign in on the page that opened in your browser."
+msgstr "Esperando a que inicie sesión en la página que se abrió en su navegador."
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 #, fuzzy
 msgid "Want to be one? Sign up in #11"
@@ -16656,6 +16710,12 @@ msgstr ""
 #, fuzzy
 msgid "You may be asked to sign in with Microsoft again, to let MailCraft read and change your mail there."
 msgstr "Es posible que se le pida volver a iniciar sesión con Microsoft para permitir que MailCraft lea y cambie su correo allí."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+#, fuzzy
+msgid "You need to sign in again. Until you do, its mail isn't sent or received."
+msgstr "Tiene que volver a iniciar sesión. Hasta entonces, su correo no se envía ni se recibe."
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
@@ -19674,6 +19734,12 @@ msgid "{account} is switching to Microsoft Graph, but MailCraft can't reach its 
 msgstr "{account} está pasando a Microsoft Graph, pero MailCraft no puede conectar con su servidor IMAP para enviar primero lo que espera allí."
 
 #. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+#, fuzzy
+msgid "{account} needs you to sign in again. Until you do, its mail isn't sent or received."
+msgstr "{account} necesita que vuelva a iniciar sesión. Hasta entonces, su correo no se envía ni se recibe."
+
+#. interface
 #: crates/ui-egui/src/graph_switch.rs
 #, fuzzy
 msgid "{account} now uses Microsoft Graph, and its mail is downloading again. A copy of your mailbox from before the switch is in {backup}."
@@ -19698,6 +19764,12 @@ msgstr "{account} sigue en IMAP por ahora. Para cambiar más adelante, busque el
 #, fuzzy
 msgid "{account} · No access"
 msgstr "{account} · Sin acceso"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "{account} · Sign in needed"
+msgstr "{account} · Hay que iniciar sesión"
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -21093,6 +21165,10 @@ msgstr "«{subject}» era demasiado grande para descargarlo: solo está aquí su
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "«{subject}» no se encontró en su servidor, así que no se puede reenviar como datos adjuntos"
+
+#, fuzzy
+#~ msgid "Sign in on the page that opened in your browser…"
+#~ msgstr "Inicie sesión en la página que se abrió en su navegador…"
 
 #, fuzzy
 #~ msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."

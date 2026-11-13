@@ -42,6 +42,79 @@ fn report_pill(ui: &mut Ui, app: &mut MailApp, h: f32, compact: bool) {
     pill(ui, app, h, "report", tl!("Report a Problem"), tip, "ui.reportProblem", compact);
 }
 
+/// The shield of account problems, left of Report a Problem, as Outlook's yellow one (owner,
+/// 0.12.5): there only while an account needs the owner (a sign-in waiting in the browser, one
+/// that has run out, a Send/Receive that went wrong), and a click lists each with its way out.
+fn account_shield(ui: &mut Ui, app: &mut MailApp, h: f32, compact: bool) {
+    let troubles = app.account_troubles();
+    if troubles.is_empty() {
+        return;
+    }
+    ui.add_space(4.0);
+    let t = Tokens::get(ui.ctx());
+    let label = tl!("Account Problems");
+    let font = medium(11.5);
+    let w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(label.to_string(), font.clone(), t.text).size().x);
+    let (r, resp) = ui.allocate_exact_size(vec2(if compact { 28.0 } else { w + 34.0 }, h), Sense::click());
+    let fill = if resp.is_pointer_button_down_on() {
+        t.pressed
+    } else if resp.hovered() {
+        t.hover
+    } else {
+        t.title_bar
+    };
+    ui.painter().rect(r, h / 2.0, fill, Stroke::new(1.0, t.icon_yellow), egui::StrokeKind::Inside);
+    let icon_center = if compact { r.center() } else { pos2(r.min.x + 15.0, r.center().y) };
+    icons::paint(ui.painter(), Rect::from_center_size(icon_center, vec2(16.0, 16.0)), "accountAlert", t.icon, t.accent);
+    if !compact {
+        ui.painter().text(pos2(r.min.x + 26.0, r.center().y), Align2::LEFT_CENTER, label, font, t.text);
+    }
+    app.hit.add("accountShield", 0, r);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    let resp = resp.on_hover_text(tl!("Something about your accounts needs you. Click to see what."));
+    egui::Popup::menu(&resp).close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside).show(|ui| {
+        ui.set_min_width(340.0);
+        ui.set_max_width(420.0);
+        ui.label(egui::RichText::new(label).font(semibold(13.0)).color(t.text));
+        for (account, name, trouble) in troubles {
+            ui.separator();
+            ui.label(egui::RichText::new(&name).font(semibold(12.0)).color(t.text));
+            let said = match trouble {
+                crate::sign_in_notice::Trouble::Waiting => tl!("Waiting for you to sign in on the page that opened in your browser."),
+                crate::sign_in_notice::Trouble::SignIn => tl!("You need to sign in again. Until you do, its mail isn't sent or received."),
+                crate::sign_in_notice::Trouble::Problems => tl!("The last Send/Receive had problems."),
+            };
+            ui.add(egui::Label::new(egui::RichText::new(said).font(regular(12.0)).color(t.text_dim)).wrap());
+            ui.horizontal(|ui| match trouble {
+                crate::sign_in_notice::Trouble::Waiting => {
+                    // The page's tab may be gone: a new sign-in brings a new page.
+                    if ui.button(tl!("Open the Page Again")).clicked() {
+                        let _ = app.run("ui.cancelSignIn", json!({}));
+                        let _ = app.run("ui.sync", json!({"account": account}));
+                        ui.close();
+                    }
+                    if ui.button(tl!("Cancel")).clicked() {
+                        let _ = app.run("ui.cancelSignIn", json!({}));
+                        ui.close();
+                    }
+                }
+                crate::sign_in_notice::Trouble::SignIn => {
+                    if ui.button(tl!("Sign In")).clicked() {
+                        let _ = app.run("ui.sync", json!({"account": account}));
+                        ui.close();
+                    }
+                }
+                crate::sign_in_notice::Trouble::Problems => {
+                    if ui.button(tl!("Show Details")).clicked() {
+                        let _ = app.run("ui.dialog", json!({"name": "syncProblems"}));
+                        ui.close();
+                    }
+                }
+            });
+        }
+    });
+}
+
 /// A rounded button of the title bar, with its icon and its label, that runs `id` by hand.
 fn pill(ui: &mut Ui, app: &mut MailApp, h: f32, icon: &str, label: &str, tip: &str, id: &str, compact: bool) {
     let t = Tokens::get(ui.ctx());
@@ -393,6 +466,7 @@ pub fn title_bar(app: &mut MailApp, ui: &mut Ui) {
                     diagnostics_pill(ui, app, avatar_h.min(26.0), compact);
                     ui.add_space(4.0);
                     report_pill(ui, app, avatar_h.min(26.0), compact);
+                    account_shield(ui, app, avatar_h.min(26.0), compact);
                     right_start = ui.min_rect().min.x;
                 });
             });

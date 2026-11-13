@@ -51,6 +51,13 @@ pub const GOOGLE_SIGN_IN_TIMED_OUT: &str = "Google sign-in did not complete";
 /// The refresh grant was confirmed revoked or expired. Remove this account's stored refresh
 /// credential so the next owner-initiated Send/Receive starts a clean browser sign-in.
 pub const GOOGLE_REAUTH_REQUIRED: &str = "Google sign-in expired or was revoked. Use Send/Receive to sign in again.";
+/// No sign-in of Google's is kept for the account, and nobody asked for a page: the owner has
+/// to sign in again ([`crate::sign_in_notice`]).
+pub const GOOGLE_NEEDS_SIGN_IN: &str = "Google needs a new sign-in. Use Send/Receive to reconnect.";
+/// How a kept sign-in that has run out is said, with the address between the two
+/// ("The sign-in for … has run out. …"): the owner has to sign in again.
+pub const SIGN_IN_RAN_OUT_START: &str = "The sign-in for ";
+pub const SIGN_IN_RAN_OUT_END: &str = " has run out. Use Send/Receive to sign in again.";
 /// A Google or Workspace policy prevented authorization, not Microsoft's approval flow.
 pub const GOOGLE_SIGN_IN_BLOCKED: &str = "Google blocked MailCraft sign-in for this account";
 /// No browser could be started for the page.

@@ -417,6 +417,20 @@ fn overlay_scroll_style(ui: &mut Ui, t: &Tokens) {
     (widgets.active.bg_fill, widgets.active.corner_radius) = (ink.lerp_to_gamma(t.text, 0.6), round);
 }
 
+/// The reading pane's scroll bar: there whenever there is more to read, not only while the
+/// pointer is over the message (owner, 0.12.5: no bar that hides and pops back), unless scroll bars
+/// float as a Mac's do ([`MailApp::overlay_scroll_bars`]). Its width and place are egui's, so
+/// what keeps clear of it (the reader's controls) still does.
+pub(crate) fn steady_scroll_bar(app: &MailApp, ui: &mut Ui) {
+    if app.overlay_scroll_bars {
+        return;
+    }
+    let scroll = &mut ui.style_mut().spacing.scroll;
+    scroll.floating_width = scroll.bar_width;
+    scroll.dormant_handle_opacity = scroll.active_handle_opacity;
+    scroll.dormant_background_opacity = scroll.active_background_opacity;
+}
+
 /// The list's scroll bar: a slim rounded handle that is always there while the list is longer
 /// than its pane. Its lane and arrows are painted by [`scroll_lane`] and [`scroll_arrows`].
 fn scroll_style(ui: &mut Ui, t: &Tokens) {
@@ -736,7 +750,7 @@ const FOLDER_W: f32 = TEXT_RIGHT - TIME_RIGHT;
 /// in `text_dim` (4.5:1 or more on every row's background, selected, flagged or under the
 /// pointer, in both palettes), ending at `end` and cut short with an ellipsis to the column's
 /// width. Where it starts.
-fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, t: &Tokens) -> f32 {
+fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Option<Color32>, t: &Tokens) -> f32 {
     const ICON: f32 = 12.0;
     const GAP: f32 = 3.0;
     let width = FOLDER_W - ICON - GAP;
@@ -753,7 +767,7 @@ fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, t: &Toke
     let x = end.x - size.x;
     p.galley(pos2(x, end.y - size.y / 2.0), galley, t.text_dim);
     let icon = x - GAP - ICON;
-    icons::paint(p, Rect::from_min_size(pos2(icon, end.y - ICON / 2.0), vec2(ICON, ICON)), "folder", t.text_dim, t.accent);
+    icons::paint(p, Rect::from_min_size(pos2(icon, end.y - ICON / 2.0), vec2(ICON, ICON)), "folder", ink.unwrap_or(t.text_dim), t.accent);
     icon
 }
 
@@ -1216,12 +1230,21 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
                 Some(alias) => format!("{account} · {alias}"),
                 None => account.to_owned(),
             };
-            crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", crate::nav::folder_name(folder)), ("mailbox", &origin)])
+            // In a unified filing folder every row is in a folder of that name: the tag says only
+            // whose it is, so the account isn't cut off behind a folder name the list already shows.
+            let same_folder = app.session.view.filing.is_some()
+                && app.session.mailbox.folder(app.session.view.folder).is_some_and(|f| crate::nav::folder_name(f) == crate::nav::folder_name(folder));
+            if same_folder {
+                origin
+            } else {
+                crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", crate::nav::folder_name(folder)), ("mailbox", &origin)])
+            }
         } else {
             crate::nav::result_folder_label(&app.session.mailbox, folder)
         };
         let end = sx;
-        sx = paint_result_folder(p, pos2(end, tail_y), &label, &t) - 6.0;
+        // Its folder icon in the stripe's colour: which account it is, said twice.
+        sx = paint_result_folder(p, pos2(end, tail_y), &label, origin_color.map(crate::theme::c32), &t) - 6.0;
         app.hit.add("messageFolder", row.id, Rect::from_min_max(pos2(sx + 6.0, tail_y - 7.0), pos2(end, tail_y + 7.0)));
     }
     for c in m.categories.iter().take(4) {

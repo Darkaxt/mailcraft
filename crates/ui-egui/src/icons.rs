@@ -709,6 +709,15 @@ pub fn paint(p: &Painter, r: Rect, name: &str, c: Color32, accent: Color32) {
                 _ => pen.line_c(&[(7.5, 8.0), (12.5, 8.0)], mark),
             }
         }
+        // Something about an account needs the owner (the title bar's shield, as Outlook's):
+        // a yellow shield with an exclamation mark in it.
+        "accountAlert" => {
+            let shield = [(10.0, 2.0), (16.5, 4.5), (16.5, 9.5), (14.5, 14.0), (10.0, 18.0), (5.5, 14.0), (3.5, 9.5), (3.5, 4.5)];
+            pen.fill(&shield, yellow);
+            let ink = Color32::from_rgb(46, 36, 0);
+            pen.line_c(&[(10.0, 6.0), (10.0, 10.75)], ink);
+            pen.fcircle(10.0, 13.5, 1.1, ink);
+        }
         // A sender warning: a triangle with an exclamation mark in it.
         "warning" => {
             pen.rounded(&[(10.0, 2.5), (18.0, 16.5), (2.0, 16.5)], true, 1.0, red);
@@ -1341,6 +1350,7 @@ pub const NAMES: &[&str] = &[
     "save",
     "saveDraft",
     "warning",
+    "accountAlert",
     "highImportance",
     "importanceHigh",
     "lowImportance",

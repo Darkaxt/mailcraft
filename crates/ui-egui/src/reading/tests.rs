@@ -1117,6 +1117,25 @@ fn a_light_page_scrolls_with_the_light_themes_bar() {
     );
 }
 
+/// The reading pane's bar stays in sight with the pointer elsewhere (owner, 0.12.5): no bar
+/// that fades out and pops back.
+#[test]
+fn the_reading_bar_stays_with_the_pointer_away() {
+    let (app, ids) = corpus_app(false);
+    let id = id_of(&ids, "one paragraph");
+    let mut harness = window(app, (1280.0, 800.0));
+    harness.state_mut().execute("ui.lightMessages", json!({"value": true})).unwrap();
+    harness.state_mut().execute("mail.select", json!({"id": id})).unwrap();
+    harness.run_steps(4);
+    let page = light_pages(&harness)[0];
+    harness.event(egui::Event::PointerMoved(egui::pos2(2.0, 2.0)));
+    harness.run_steps(60);
+    let scroll = harness.ctx.global_style().spacing.scroll;
+    let bar: Vec<_> =
+        rects(&harness).into_iter().filter(|r| page.contains_rect(r.rect) && r.rect.width() <= scroll.bar_width && r.fill.a() > 0).collect();
+    assert!(!bar.is_empty(), "no bar in sight with the pointer away");
+}
+
 /// Every rectangle painted in the last frame.
 fn rects(harness: &Window) -> Vec<egui::epaint::RectShape> {
     fn walk(shape: &egui::Shape, rects: &mut Vec<egui::epaint::RectShape>) {

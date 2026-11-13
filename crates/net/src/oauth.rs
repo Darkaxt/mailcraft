@@ -84,8 +84,20 @@ const REPLY_TIMEOUT: Duration = Duration::from_secs(2);
 const DRAIN_TIME: Duration = Duration::from_millis(150);
 /// Most connections from browsers looked after at once; more are turned away.
 const MAX_VISITORS: usize = 16;
-/// Tries at finding a port that is free on both loopback addresses.
-const MAX_PORT_TRIES: usize = 8;
+/// Tries at finding a port that is free on both loopback addresses and that a browser goes to.
+const MAX_PORT_TRIES: usize = 32;
+
+/// The ports from 1024 up that browsers refuse to open (the Fetch standard's "bad ports", which
+/// Chromium, Edge and Firefox block with ERR_UNSAFE_PORT or the like). Windows may hand any of
+/// them out as a free port where its dynamic range starts at 1024 rather than 49152, and the
+/// owner's sign-in would then come back to a page the browser won't show.
+const BROWSER_BLOCKED_PORTS: [u16; 19] =
+    [1719, 1720, 1723, 2049, 3659, 4045, 4190, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6679, 6697, 10080];
+
+/// Whether a browser goes to `port` on this computer.
+fn browser_opens(port: u16) -> bool {
+    !BROWSER_BLOCKED_PORTS.contains(&port)
+}
 /// Longest token or code taken or sent.
 const MAX_TOKEN: usize = 16 * 1024;
 /// How long the token endpoint has to be reached, and to answer.
@@ -1710,6 +1722,10 @@ impl Redirect {
         for attempt in 1..=MAX_PORT_TRIES {
             let v4 = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).map_err(|_| failed())?;
             let port = v4.local_addr().map_err(|_| failed())?.port();
+            // A port the browser refuses: the sign-in could never come back to it. Another one.
+            if !browser_opens(port) {
+                continue;
+            }
             let mut listeners = vec![v4];
             match TcpListener::bind((Ipv6Addr::LOCALHOST, port)) {
                 Ok(v6) => listeners.push(v6),

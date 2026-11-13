@@ -683,7 +683,9 @@ fn sign_in_for_runtime(mut request: SignInRequest, headless: bool, open_page: &d
         && !request.shared_send
         && !request.shared_calendars
         && !request.replies;
-    if headless && !explicit_rules {
+    // The owner clicked Sign In in the window that said the account needs it (headless,
+    // `mailcraft_ui_egui::sign_in_notice`): the page comes up, as it does on the desktop.
+    if headless && !explicit_rules && !request.owner_clicked {
         request.quiet = true;
         sign_in_with(request, &|_| false)
     } else {
@@ -703,8 +705,8 @@ fn sign_in_with(request: SignInRequest, open_page: &dyn Fn(&str) -> bool) -> Res
 
     use mailcraft_net::oauth::{Endpoints, Resource, SignInEnd};
     use mailcraft_ui_egui::approval::{
-        GOOGLE_REAUTH_REQUIRED, GOOGLE_SIGN_IN_BLOCKED, GOOGLE_SIGN_IN_DECLINED, GOOGLE_SIGN_IN_TIMED_OUT, NEEDS_APPROVAL, NO_BROWSER,
-        SIGN_IN_DECLINED, SIGN_IN_TIMED_OUT,
+        GOOGLE_NEEDS_SIGN_IN, GOOGLE_REAUTH_REQUIRED, GOOGLE_SIGN_IN_BLOCKED, GOOGLE_SIGN_IN_DECLINED, GOOGLE_SIGN_IN_TIMED_OUT, NEEDS_APPROVAL,
+        NO_BROWSER, SIGN_IN_DECLINED, SIGN_IN_RAN_OUT_END, SIGN_IN_RAN_OUT_START, SIGN_IN_TIMED_OUT,
     };
     // No browser could be started: nothing can come back, so the wait is called off at once,
     // and that is what is said.
@@ -833,9 +835,9 @@ fn sign_in_with(request: SignInRequest, open_page: &dyn Fn(&str) -> bool) -> Res
     // Nobody asked for this run: no page is put in front of the owner.
     if request.quiet {
         if request.oauth.provider == mailcraft_model::OAuthProvider::Google {
-            return Err("Google needs a new sign-in. Use Send/Receive to reconnect.".into());
+            return Err(GOOGLE_NEEDS_SIGN_IN.into());
         }
-        return Err(format!("The sign-in for {} has run out. Use Send/Receive to sign in again.", request.email));
+        return Err(format!("{SIGN_IN_RAN_OUT_START}{}{SIGN_IN_RAN_OUT_END}", request.email));
     }
     if request.mail_only {
         // Without the calendar and contacts along: for when the provider's page won't have both.

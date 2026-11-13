@@ -209,7 +209,7 @@ fn result_row(app: &mut MailApp, ui: &mut Ui, index: usize, rect: Rect) {
     let (mut sx, tail_y) = if lines > 0 { (time_end, preview_y) } else { (time_end - date_w - 8.0, line2) };
     if let Some(folder) = super::shows_folder(&app.session).then(|| app.session.mailbox.folder(r.folder)).flatten() {
         let label = crate::nav::result_folder_label(&app.session.mailbox, folder);
-        sx = super::paint_result_folder(p, pos2(sx, tail_y), &label, &t) - 6.0;
+        sx = super::paint_result_folder(p, pos2(sx, tail_y), &label, None, &t) - 6.0;
         app.hit.add("serverResultFolder", index as u64, Rect::from_min_max(pos2(sx + 6.0, tail_y - 7.0), pos2(time_end, tail_y + 7.0)));
     }
     for c in m.categories.iter().take(4) {

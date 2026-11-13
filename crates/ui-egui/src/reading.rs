@@ -128,6 +128,7 @@ pub fn show_file_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place
     let room = ui.available_rect_before_wrap().intersect(ui.clip_rect());
     ui.scope_builder(egui::UiBuilder::new().max_rect(room), |ui| {
         view::page(app, place, ui).show(ui, |ui| {
+            crate::mail_view::steady_scroll_bar(app, ui);
             egui::ScrollArea::both().auto_shrink([false, false]).id_salt(("body", place)).show(ui, |ui| {
                 egui::Frame::NONE.inner_margin(egui::Margin { left: 20, right: 20, top: 12, bottom: 24 }).show(ui, |ui| {
                     view::show(app, ui, m, place, access);
@@ -276,6 +277,7 @@ pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Pla
             return;
         }
         view::page(app, place, ui).show(ui, |ui| {
+            crate::mail_view::steady_scroll_bar(app, ui);
             // Sideways too: a data table is never squeezed below its words, so a wide one scrolls.
             egui::ScrollArea::both().auto_shrink([false, false]).id_salt(("body", m.id)).show(ui, |ui| {
                 egui::Frame::NONE.inner_margin(egui::Margin { left: 20, right: 20, top: 12, bottom: 24 }).show(ui, |ui| {

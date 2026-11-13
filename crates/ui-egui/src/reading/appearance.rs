@@ -163,6 +163,7 @@ pub(crate) fn compose_preview(app: &mut MailApp, ui: &mut Ui) -> bool {
     });
     let place = Place::DraftPreview(id);
     super::view::page(app, place, ui).show(ui, |ui| {
+        crate::mail_view::steady_scroll_bar(app, ui);
         egui::ScrollArea::both().auto_shrink([false, false]).id_salt(("draft-preview", id)).show(ui, |ui| {
             egui::Frame::NONE.inner_margin(16).show(ui, |ui| {
                 super::show_plain_view(app, ui, &message, place);

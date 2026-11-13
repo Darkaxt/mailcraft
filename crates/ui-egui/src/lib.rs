@@ -210,6 +210,9 @@ mod shared_calendars;
 #[cfg(test)]
 mod shared_calendars_tests;
 mod shared_mailboxes;
+pub mod sign_in_notice;
+#[cfg(test)]
+mod sign_in_notice_tests;
 mod signatures;
 #[cfg(test)]
 mod simple_login_ui_tests;
@@ -769,6 +772,9 @@ pub struct SignInRequest {
     /// its automatic replies, by itself, never with a sign-in of any other kind: a change found
     /// the sign-in doesn't cover it, and the owner said go ahead.
     pub replies: bool,
+    /// Headless: the owner clicked Sign In in the window that said this account needs it
+    /// ([`sign_in_notice`]), so the host opens the page as it would on the desktop.
+    pub owner_clicked: bool,
 }
 
 /// What the host needs to check an account's calendar connection ([`Services::check_calendar`]).
@@ -1846,6 +1852,14 @@ pub struct MailApp {
     pub(crate) asking: agent_gate::Questions,
     /// Headless: the host's window showing the first of `asking` ([`agent_gate::ask_owner_tick`]).
     pub(crate) owner_window: Option<agent_gate::OwnerWindow>,
+    /// Accounts that can't send or receive until the owner signs in again ([`sign_in_notice`]).
+    pub(crate) sign_in_needed: std::collections::BTreeSet<Id>,
+    /// Headless: those the owner was asked about already, until they are signed in again.
+    pub(crate) sign_in_asked: std::collections::BTreeSet<Id>,
+    /// Headless: the host's window asking about one of them.
+    pub(crate) sign_in_window: Option<sign_in_notice::Shown>,
+    /// Headless: the account the owner clicked Sign In for, until its Send/Receive asks for the page.
+    pub(crate) owner_sign_in: Option<Id>,
     styled: bool,
     /// The interface theme last installed in egui ([`theme::apply`]).
     applied_theme: Option<(egui::ThemePreference, theme::ThemeChoice)>,
@@ -2117,6 +2131,10 @@ impl MailApp {
             synthetic: Vec::new(),
             asking: Default::default(),
             owner_window: None,
+            sign_in_needed: Default::default(),
+            sign_in_asked: Default::default(),
+            sign_in_window: None,
+            owner_sign_in: None,
             styled: false,
             applied_theme: None,
             applied_language: None,
@@ -2545,6 +2563,8 @@ impl MailApp {
         let r = self.auto_replies_after(id, r);
         // What Microsoft Defender found in a message's attachments, for whoever reads it.
         let r = attachment_scan::annotate(self, id, r);
+        // Sent from an account that needs the owner to sign in again: it waits in the Outbox.
+        let r = self.note_waiting_send(id, r);
         // A calendar opened by address (#70), from the dialog or a script: read at once.
         if let (Ok(opened), "calendar.openShared") = (&r, id)
             && let Some(account) = opened.get("account").and_then(Value::as_u64)
@@ -3373,10 +3393,20 @@ impl MailApp {
         };
         let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let browser = refresh.is_empty();
-        let waiting = if browser { tl!("Sign in on the page that opened in your browser…") } else { tl!("Renewing the sign-in…") };
+        let waiting = if browser {
+            crate::i18n::fmt(tl!("Sign in to {account} on the page that opened in your browser…"), &[("account", email)])
+        } else {
+            tl!("Renewing the sign-in…").to_string()
+        };
         let google_client_secret =
             if oauth.provider == mailcraft_model::OAuthProvider::Google { self.google_client_secret().to_string() } else { String::new() };
+        // Headless, only the owner's Sign In in the host's window opens a page ([`sign_in_notice`]).
+        let owner_clicked = !quiet && self.is_headless() && self.owner_sign_in == Some(account);
+        if owner_clicked {
+            self.owner_sign_in = None;
+        }
         let request = SignInRequest {
+            owner_clicked,
             account,
             oauth: self.effective_oauth(oauth),
             email: email.to_string(),
@@ -3417,7 +3447,7 @@ impl MailApp {
             rx,
             cancel,
         });
-        self.session.sync_status = waiting.to_string();
+        self.session.sync_status = waiting;
         Ok(())
     }
 
@@ -3545,7 +3575,9 @@ impl MailApp {
         if !self.services.can_sync() {
             return Err(cant_connect());
         }
-        let quiet = self.is_headless() || p.get("quiet").and_then(Value::as_bool).unwrap_or(false);
+        // Headless every run is quiet, but the one the owner's Sign In started ([`sign_in_notice`]).
+        let owner_asked = self.is_headless() && self.owner_sign_in.is_some() && self.owner_sign_in == p.get("account").and_then(Value::as_u64);
+        let quiet = (self.is_headless() && !owner_asked) || p.get("quiet").and_then(Value::as_bool).unwrap_or(false);
         // Send/Receive the owner asked for is the time to ask the store again (it may have been
         // locked, or refused): the run goes on when it has answered ([`secret_read`]).
         if !quiet && self.hold_for_secrets(p) {
@@ -3728,6 +3760,7 @@ impl MailApp {
         if refresh.is_empty() {
             // Nobody asked for this run: no page is put in front of the owner.
             if quiet {
+                self.mark_sign_in_needed(account);
                 return Err(i18n::fmt(tl!("Use Send/Receive to sign in to {address}"), &[("address", &address)]));
             }
             self.begin_sign_in(account, oauth, &address, String::new(), false, true)?;
@@ -3914,7 +3947,11 @@ impl MailApp {
                 self.session.sync_status = tl!("Sending your changes…").to_string();
             }
         }
-        let busy = self.sync_rx.is_some() || self.graph_rx.is_some() || self.signing_in.is_some() || self.approving();
+        // A sign-in waiting for the owner on the provider's page (which may take as long as the
+        // owner likes, or never come back) holds up only its own account: the others' rounds
+        // and what waits in their Outboxes go on (owner, 0.12.5).
+        let on_the_page = self.signing_in.as_ref().filter(|s| !s.quiet).map(|s| s.account);
+        let busy = self.sync_rx.is_some() || self.graph_rx.is_some() || (self.signing_in.is_some() && on_the_page.is_none()) || self.approving();
         // (Working offline, nothing starts by itself either: mail waits in the Outbox.)
         if !self.services.can_sync() || busy || self.dialog.is_some() || self.offline() {
             return;
@@ -3928,8 +3965,13 @@ impl MailApp {
             return;
         }
         if let Some((account, quiet)) = self.sync_queue.pop_front() {
-            // An account that would have to ask, or can't start, is left out of the run.
-            let started = (!quiet || self.can_sync_quietly(account)) && self.start_sync(&json!({"account": account, "quiet": quiet})).is_ok();
+            // An account that would have to ask, or can't start, is left out of the run; so is
+            // the one being signed in on the page, and, while that waits, any that would need a
+            // sign-in of its own.
+            let started = on_the_page != Some(account)
+                && (on_the_page.is_none() || quiet)
+                && (!quiet || self.can_sync_quietly(account))
+                && self.start_sync(&json!({"account": account, "quiet": quiet})).is_ok();
             if !started {
                 self.session.sync_progress.leave_out(account);
             }
@@ -4381,6 +4423,7 @@ impl MailApp {
             }
             // Which kind of Microsoft account it is, as the sign-in says ([`favorites_sync`]).
             self.note_directory(account, &tokens.tenant);
+            self.note_signed_in(account);
         }
         if for_graph {
             // "Connect calendar and contacts": the token is Graph's; the next run uses it.
@@ -4469,6 +4512,7 @@ impl MailApp {
     /// dialog.
     fn sign_in_came_to_nothing(&mut self, account: Id, error: &str, asked_for: bool) {
         log::warn!("sign-in, account {account}: ended without signing in ({:?})", approval::SignInEnd::of(error));
+        self.note_sign_in_error(account, error);
         if approval::SignInEnd::of(error) == approval::SignInEnd::Approval && asked_for && self.dialog.is_none() {
             self.dialog = dialogs::Dialog::open("account", self, &json!({"id": account, "page": "approval"}));
         }
@@ -4995,6 +5039,7 @@ impl MailApp {
         // Headless: the owner answers agents' questions in the host's own small window.
         if self.is_headless() {
             agent_gate::ask_owner_tick(self, ctx);
+            sign_in_notice::tick(self, ctx);
         }
         // No new background job starts after an accepted idle close. The native
         // host's reply delivery and the existing saver govern progress, not time.

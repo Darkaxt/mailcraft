@@ -348,6 +348,20 @@ fn the_challenge_is_the_hash_of_the_verifier() {
     assert_ne!(one, other);
 }
 
+/// Browsers refuse some ports (Chromium's ERR_UNSAFE_PORT): the sign-in never comes back to one.
+#[test]
+fn the_port_is_never_one_a_browser_refuses() {
+    for port in [1720, 1719, 1723, 2049, 5060, 6000, 6667, 10080] {
+        assert!(!browser_opens(port), "{port}");
+    }
+    for port in [1024, 2485, 8080, 49152, 65535] {
+        assert!(browser_opens(port), "{port}");
+    }
+    for _ in 0..64 {
+        assert!(browser_opens(Redirect::listen().unwrap().port));
+    }
+}
+
 #[test]
 fn the_port_is_open_on_loopback_only() {
     let redirect = Redirect::listen().unwrap();

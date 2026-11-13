@@ -1,4 +1,10 @@
-**MailCraft 0.12.4 in short** — a question window you can trust to wait for you
+**MailCraft 0.12.5 in short** — account problems you can see
+- New: a yellow **Account Problems** shield at the top right of the window, as Outlook has, while an account needs you: a sign-in waiting in your browser, a sign-in that has run out, or a Send/Receive that went wrong. A click lists each account with its way out: Open the Page Again or Cancel, Sign In, Show Details. The account's name in the folder pane says "Sign in needed" too.
+- Headless MailCraft asks you once, in its own small window, when an account needs you to sign in again (Sign In or Later); Sign In opens the sign-in page. `status` lists those accounts as `signInNeeded`, and a message sent from one says it waits in the Outbox until you sign in.
+- Fix: while one account waits for you to sign in on its page, the others keep sending and receiving.
+- Fix: the sign-in page no longer comes back to an address your browser refuses to open (ERR_UNSAFE_PORT); on computers whose free ports start at 1024 a sign-in could fail that way.
+- The reading pane's scroll bar stays in sight instead of fading out and popping back.
+- In a unified filing folder, a message's tag names its account in full, and its folder icon wears the account's colour.
 - Fix: the window that asks you about an agent's request (headless MailCraft) no longer takes the keyboard when it appears and only a click answers it; a key you were typing elsewhere could press its No button and close it within seconds. It now stays up at least a minute, counted from when it is on the screen.
 - The window that asks you about an agent's request (headless MailCraft) keeps its Send and Don't Send buttons in a row at the bottom, below the question and the message.
 - When an agent asks to send, the question window shows the message exactly as it will go: sender, recipients (Cc and Bcc), subject, body and the files attached, with the answer buttons always in sight.
@@ -56,6 +62,9 @@
 - Background desktop use supports native hidden startup, observed visibility/focus through MCP, and explicit hide and idle-only normal-close tools that preserve open work and wait for acknowledgement and saving.
 
 **Fixes**
+- A sign-in that has run out no longer goes unnoticed: the account is marked as needing a sign-in until one succeeds, shown by the Account Problems shield at the top right and beside the account in the folder pane; headless MailCraft asks once in its own window, and `status` lists it as `signInNeeded`.
+- While a sign-in waits for you on its page in the browser, the other accounts keep sending and receiving; before, everything stopped until that page came back.
+- The sign-in page never comes back to a port browsers refuse (ERR_UNSAFE_PORT); Windows can hand those out where its free ports start at 1024.
 - The headless question window takes no keyboard focus when it appears and is answered only by clicking Yes or No: Enter, Space or Escape typed for another window no longer answer it. Its time starts once it is on the screen and is at least a minute, and MailCraft's log says how each question window ended.
 - The window that asks you about an agent's request when MailCraft runs without its main window keeps its answers in a row at the bottom, so the question and the message to be sent stay in sight.
 - On any computer where MailCraft draws without the graphics card (Linux, or Windows when only the software renderer is there), MailCraft now tells you once, above the status bar, and redraws less often (its own animations, progress indicators and spinners about four times a second at most), so it keeps the processor less busy; typing and clicking still redraw at once. ([#1229](https://github.com/UCS-Care-Group/mailcraft/pull/1229))

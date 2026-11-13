@@ -1245,7 +1245,13 @@ pub(crate) fn result_folder_label(mb: &Mailbox, f: &Folder) -> String {
 /// What an account's heading in the folder pane says: its name, and for a shared mailbox
 /// Microsoft won't open for the owner, No access (#70; the mail already here stays readable).
 pub(crate) fn heading_name(app: &MailApp, a: &mailcraft_model::Account) -> String {
-    if app.shared_refused.contains_key(&a.id) { crate::i18n::fmt(tl!("{account} · No access"), &[("account", &a.name)]) } else { a.name.clone() }
+    if app.shared_refused.contains_key(&a.id) {
+        crate::i18n::fmt(tl!("{account} · No access"), &[("account", &a.name)])
+    } else if app.sign_in_needed.contains(&a.id) {
+        crate::i18n::fmt(tl!("{account} · Sign in needed"), &[("account", &a.name)])
+    } else {
+        a.name.clone()
+    }
 }
 
 #[cfg(test)]

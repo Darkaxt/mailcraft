@@ -659,6 +659,11 @@ msgstr ""
 "Account\n"
 "instellingen"
 
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Account Problems"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/account.rs crates/ui-egui/src/account_setup.rs
 #, fuzzy
@@ -6603,6 +6608,11 @@ msgid "It uses an algorithm that's no longer safe."
 msgstr "Het gebruikt een algoritme dat niet meer veilig is."
 
 #. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "It waits in the Outbox: {account} needs you to sign in again before anything is sent."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "It waits on this computer until To Do is allowed for this account"
@@ -6946,7 +6956,7 @@ msgid "Last name"
 msgstr "Achternaam"
 
 #. interface, name
-#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/tasks_view.rs
+#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "Later"
 msgstr "Later"
@@ -9699,6 +9709,11 @@ msgstr "Open source onder de MIT License of de Apache License 2.0, naar uw keuze
 #, fuzzy
 msgid "Open source under the MIT License or the Apache License 2.0, at your option. The interface fonts are Inter, Source Sans 3 and JetBrains Mono (SIL Open Font License). Every icon is drawn in code."
 msgstr "Open source onder de MIT License of de Apache License 2.0, naar uw keuze. De lettertypen van de interface zijn Inter, Source Sans 3 en JetBrains Mono (SIL Open Font License). Elk pictogram wordt in code getekend."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Open the Page Again"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/data_removal.rs
@@ -12714,6 +12729,11 @@ msgid "Show Contributors"
 msgstr "Bijdragers weergeven"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Show Details"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Show Gmail's categories under the Inbox"
@@ -12983,7 +13003,7 @@ msgid "Side-by-Side"
 msgstr "Naast elkaar"
 
 #. interface
-#: crates/ui-egui/src/dialogs.rs
+#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/sign_in_notice.rs
 #, fuzzy
 msgid "Sign In"
 msgstr "Aanmelden"
@@ -12999,6 +13019,16 @@ msgstr "Opnieuw aanmelden"
 #, fuzzy
 msgid "Sign In Again for Automatic Replies"
 msgstr "Opnieuw aanmelden voor automatische antwoorden"
+
+#. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "Sign In Needed"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "Sign In opens the sign-in page in your browser."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -13035,12 +13065,6 @@ msgstr "Opnieuw aanmelden zodra een beheerder heeft goedgekeurd"
 #, fuzzy
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
 msgstr "Opnieuw aanmelden: de pagina van Microsoft opent in uw browser. E-mail en uw agenda werken intussen zoals ze zijn."
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Sign in on the page that opened in your browser…"
-msgstr "Meld u aan op de pagina die in uw browser is geopend…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -13095,6 +13119,11 @@ msgstr "Meld u opnieuw aan bij Microsoft om de e-mail van {account} op te halen:
 #, fuzzy
 msgid "Sign in to your account"
 msgstr "Aanmelden bij uw account"
+
+#. interface
+#: crates/ui-egui/src/lib.rs
+msgid "Sign in to {account} on the page that opened in your browser…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -13365,6 +13394,11 @@ msgstr "Iemand anders"
 #, fuzzy
 msgid "Somebody else organizes this meeting: it stays in the calendar its invitation came to."
 msgstr "Iemand anders organiseert deze vergadering: deze blijft in de agenda waar de uitnodiging naartoe is gekomen."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Something about your accounts needs you. Click to see what."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/calendar_sync.rs
@@ -14554,6 +14588,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/security.rs
 msgid "The key was removed from this computer."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "The last Send/Receive had problems."
 msgstr ""
 
 #. interface
@@ -17004,6 +17043,11 @@ msgid "Waiting for the approval stopped unexpectedly"
 msgstr "Het wachten op de goedkeuring is onverwacht gestopt"
 
 #. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "Waiting for you to sign in on the page that opened in your browser."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 #, fuzzy
 msgid "Want to be one? Sign up in #11"
@@ -17493,6 +17537,11 @@ msgstr ""
 #, fuzzy
 msgid "You may be asked to sign in with Microsoft again, to let MailCraft read and change your mail there."
 msgstr "U wordt mogelijk gevraagd zich opnieuw aan te melden bij Microsoft, zodat MailCraft uw e-mail daar kan lezen en wijzigen."
+
+#. interface
+#: crates/ui-egui/src/chrome.rs
+msgid "You need to sign in again. Until you do, its mail isn't sent or received."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
@@ -20639,6 +20688,11 @@ msgid "{account} is switching to Microsoft Graph, but MailCraft can't reach its 
 msgstr "{account} schakelt over naar Microsoft Graph, maar MailCraft kan de IMAP-server niet bereiken om eerst te verzenden wat daar wacht."
 
 #. interface
+#: crates/ui-egui/src/sign_in_notice.rs
+msgid "{account} needs you to sign in again. Until you do, its mail isn't sent or received."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/graph_switch.rs
 #, fuzzy
 msgid "{account} now uses Microsoft Graph, and its mail is downloading again. A copy of your mailbox from before the switch is in {backup}."
@@ -20663,6 +20717,11 @@ msgstr "{account} blijft voorlopig op IMAP. Om later over te schakelen, zoekt u 
 #, fuzzy
 msgid "{account} · No access"
 msgstr "{account} · Geen toegang"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "{account} · Sign in needed"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -22120,6 +22179,10 @@ msgstr "„{subject}” was te groot om te downloaden: alleen de koptekst is hie
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” is niet op de server gevonden, dus het kan niet als bijlage worden doorgestuurd"
+
+#, fuzzy
+#~ msgid "Sign in on the page that opened in your browser…"
+#~ msgstr "Meld u aan op de pagina die in uw browser is geopend…"
 
 #, fuzzy
 #~ msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."

@@ -141,6 +141,14 @@ pub(crate) struct OwnerWindow {
     cancel: Arc<AtomicBool>,
 }
 
+#[cfg(test)]
+impl OwnerWindow {
+    /// A window up for no question in particular, for other tests that wait for it to go.
+    pub(crate) fn for_tests(answer: Receiver<bool>, cancel: Arc<AtomicBool>) -> Self {
+        OwnerWindow { serial: u64::MAX, answer, cancel }
+    }
+}
+
 /// The questions waiting, the first one on screen.
 pub type Questions = VecDeque<Asking>;
 
