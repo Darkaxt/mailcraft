@@ -54,11 +54,53 @@ pub fn competing_moves(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
     a.iter().any(|a| b.iter().any(|b| a != b))
 }
 
+/// Which side of a message a rule picks it by: its sender, its recipients (or the alias it came
+/// through), or anything else. Exceptions don't pick, they leave out.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Side {
+    Sender,
+    Recipient,
+    Other,
+}
+
+fn side(condition: &Condition) -> Option<Side> {
+    Some(match condition {
+        Condition::FromContains(_) | Condition::FromAny(_) | Condition::FromAddresses(_) => Side::Sender,
+        Condition::ToAddresses(_) | Condition::ToContains(_) => Side::Recipient,
+        Condition::Text(text) => match text.field {
+            RuleField::From | RuleField::OriginalFrom => Side::Sender,
+            RuleField::To | RuleField::ReceivingAlias => Side::Recipient,
+            _ => Side::Other,
+        },
+        Condition::Unless(_) => return None,
+        _ => Side::Other,
+    })
+}
+
+/// The one side every condition of `rule` picks by, when there is one.
+fn only_side(rule: &Rule) -> Option<Side> {
+    let mut sides = rule.conditions.iter().filter_map(side);
+    let first = sides.next()?;
+    sides.all(|other| other == first).then_some(first)
+}
+
+/// One rule picks mail by its sender alone, the other by its recipients alone (owner, 0.12.5:
+/// filing itch.io's sender into a new folder was held up by every alias rule, "AUTO SENTTO",
+/// because a message from itch.io sent to another service's alias would match both). Each alias
+/// is given to one service, so such a message is not to be expected; should one come, it is
+/// caught as it arrives ([`Mailbox::conflicting_filing_rules`]) and held for the owner.
+pub fn picked_by_other_sides(left: &Rule, right: &Rule) -> bool {
+    matches!((only_side(left), only_side(right)), (Some(Side::Sender), Some(Side::Recipient)) | (Some(Side::Recipient), Some(Side::Sender)))
+}
+
 /// A bounded constructive proof, never a claim that unproved regex pairs are disjoint.
 /// Candidate strings come from literal conditions; the actual matchers verify the witness,
 /// including exceptions, case behavior and address-only semantics. Unexamined combinations
 /// remain potential overlaps. No email or native action is created by this analysis.
 pub fn proven_overlap(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
+    if picked_by_other_sides(left, right) {
+        return false;
+    }
     let mut message = Message::default();
     // Basic sender groups get complete exact-source intersection, including their last
     // alternative. The bounded constructive search below is for more complex definitions.

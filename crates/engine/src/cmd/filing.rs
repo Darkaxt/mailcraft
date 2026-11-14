@@ -152,8 +152,16 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
     }
     let draft = candidate(&senders, folder);
     draft.validation().map_err(bad)?;
-    let conflicts: Vec<_> =
-        s.mailbox.rules.iter().filter(|r| !r.known() || mailcraft_model::rule_conflicts::competing_moves(&s.mailbox, &draft, r)).cloned().collect();
+    // A disabled rule files nothing, so it competes with nothing (owner, 0.12.5); one the server
+    // still runs while its local disable waits counts as the server has it.
+    let enabled = |r: &Rule| r.enabled || r.server.as_ref().is_some_and(|server| !server.id.is_empty() && server.synced_enabled);
+    let conflicts: Vec<_> = s
+        .mailbox
+        .rules
+        .iter()
+        .filter(|r| enabled(r) && (!r.known() || mailcraft_model::rule_conflicts::competing_moves(&s.mailbox, &draft, r)))
+        .cloned()
+        .collect();
     // Literal disjoint sender groups are provably independent. More complex unmatched
     // predicates remain visible as potential conflicts, rather than silently assuming safety.
     let conflicts: Vec<_> = conflicts
@@ -161,6 +169,11 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
         .filter(|r| {
             if !r.known() {
                 return true;
+            }
+            // One that picks mail by its recipients alone (an alias's rule) doesn't compete
+            // with filing by sender.
+            if mailcraft_model::rule_conflicts::picked_by_other_sides(&draft, r) {
+                return false;
             }
             !r.conditions.iter().any(|condition| match condition {
                 Condition::FromAddresses(addresses) => !addresses.iter().any(|a| senders.iter().any(|b| a.eq_ignore_ascii_case(b))),

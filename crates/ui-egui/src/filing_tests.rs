@@ -67,7 +67,9 @@ fn real_tree_navigation_and_scrolling_review_use_existing_theme_and_keep_actions
             );
         h.run_steps(4);
         assert!(h.state().hit.rect("unifiedFiling", 0).is_some());
-        for key in ["filingApply", "filingRefresh", "filingCancel"] {
+        // Try Again shows only after something went wrong.
+        assert!(h.state().hit.rect("filingRefresh", 0).is_none());
+        for key in ["filingApply", "filingCancel"] {
             let rect = h.state().hit.rect(key, 0).unwrap();
             assert!(rect.top() >= 0.0 && rect.bottom() <= 700.0, "{key} remains reachable below scrolling content");
         }

@@ -281,6 +281,17 @@ fn two_google_accounts_refresh_independently() {
     assert_eq!(form(&second, 0)["refresh_token"], "r-two");
 }
 
+/// The log says why Google refused, without echoing anything a description could carry.
+#[test]
+fn a_refusal_is_logged_by_its_code_and_known_sentence_only() {
+    let expired = serde_json::json!({"error":"invalid_grant","error_description":"Token has been expired or revoked."});
+    assert_eq!(google::refusal_reason(&expired), "invalid_grant: Token has been expired or revoked.");
+    let echoed = serde_json::json!({"error":"invalid_grant <secret-1>","error_description":"Received secret-2"});
+    let said = google::refusal_reason(&echoed);
+    assert_eq!(said, "unknown code (description withheld)");
+    assert_eq!(google::refusal_reason(&serde_json::json!({"error":"invalid_client"})), "invalid_client");
+}
+
 #[test]
 fn google_refresh_invalid_grant_is_a_non_sensitive_revocation_notice() {
     let old = "synthetic-long-refresh-secret-to-erase";

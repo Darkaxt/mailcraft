@@ -116,6 +116,29 @@ pub fn refresh_google_at(endpoints: &Endpoints, oauth: &OAuth, client_secret: &s
     exchange(&endpoint, &fields, refresh_token, &[refresh_token, secret], false).map_err(|refused| refused.error)
 }
 
+/// What [`exchange`] logs of a refusal: the error code and the description, each only when it is
+/// one of the standard codes or Google's known fixed sentences; anything else is withheld.
+pub(crate) fn refusal_reason(data: &Value) -> String {
+    const CODES: [&str; 9] = [
+        "invalid_grant",
+        "invalid_client",
+        "invalid_request",
+        "unauthorized_client",
+        "unsupported_grant_type",
+        "invalid_scope",
+        "access_denied",
+        "org_internal",
+        "admin_policy_enforced",
+    ];
+    const SAID: [&str; 4] = ["Token has been expired or revoked.", "Bad Request", "Account has been deleted", "The OAuth client was not found."];
+    let code = data["error"].as_str().filter(|code| CODES.contains(code)).unwrap_or("unknown code");
+    match data["error_description"].as_str() {
+        Some(said) if SAID.contains(&said) => format!("{code}: {said}"),
+        Some(_) => format!("{code} (description withheld)"),
+        None => code.to_string(),
+    }
+}
+
 /// Token responses are hostile. An access token without the mail scope is useless, not success.
 /// On initial sign-in we require the identity token's email so that a browser choosing a
 /// different account cannot be silently treated as the requested one.
@@ -123,6 +146,12 @@ fn exchange(endpoint: &Url, fields: &[(&str, &str)], previous: &str, secrets: &[
     let answer =
         http::post_form(endpoint, fields, TOKEN_TIMEOUT).map_err(|error| secrets.iter().fold(error, |error, secret| error.without(secret)))?;
     let parsed = serde_json::from_slice::<Value>(&answer.body).ok();
+    // Why Google said no, for the log (0.12.5: a week-old sign-in ran out and the log said only
+    // "Other"). Its machine-readable code, and its description only when it is one of Google's
+    // known fixed sentences: any other text could echo a token or the client registration.
+    if let Some(data) = parsed.as_ref().filter(|data| data.get("error").is_some()) {
+        log::warn!("Google's token service refused: {}", refusal_reason(data));
+    }
     // An OAuth invalid_grant on refresh means the old credential is no longer usable.
     // Identify it from the machine-readable error code, not the untrusted provider
     // description, which could echo an old token, code or client registration value.

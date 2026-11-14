@@ -469,11 +469,6 @@ msgid "A part of this key is RSA (a subkey for encryption, perhaps), which MailC
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "A per-message exception survives reopening and repeated sync. It does not exempt future mail."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/reading/remote.rs
 #, fuzzy
 msgid "A picture couldn't be downloaded."
@@ -669,11 +664,6 @@ msgstr ""
 #, fuzzy
 msgid "Account Settings"
 msgstr "Accountinstellingen"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Account scope"
-msgstr ""
 
 #. interface, ribbon
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/ribbon.rs
@@ -992,7 +982,7 @@ msgid "All Mailboxes"
 msgstr "Alle postvakken"
 
 #. interface
-#: crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
 #, fuzzy
 msgid "All accounts"
 msgstr "Alle accounts"
@@ -1002,11 +992,6 @@ msgstr "Alle accounts"
 #, fuzzy
 msgid "All day"
 msgstr "Hele dag"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "All failed history items are retained with their rules-processing status."
-msgstr ""
 
 #. command label, interface
 #: crates/engine/src/cmd/view.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
@@ -1443,11 +1428,6 @@ msgstr "Verzonden regelwijzigingen toepassen"
 #, fuzzy
 msgid "Apply Sent To-do Changes"
 msgstr "Verzonden to-dowijzigingen toepassen"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Apply filing"
-msgstr ""
 
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/zones.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs
@@ -2660,11 +2640,6 @@ msgid "Choose a category"
 msgstr "Een categorie kiezen"
 
 #. interface
-#: crates/ui-egui/src/forms.rs
-msgid "Choose a filing destination"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Choose a first and a last day, at most a year apart."
@@ -3869,11 +3844,6 @@ msgid "Direct Replies To"
 msgstr "Antwoorden rechtstreeks naar"
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Disabled rules remain disabled. Only the selected messages move; their one-time placement is preserved."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Disabled until repaired: {why}"
 msgstr ""
@@ -4469,11 +4439,6 @@ msgid "Enable Rule"
 msgstr "Regel inschakelen"
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Enabled"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "End"
@@ -4605,11 +4570,6 @@ msgid "Everything the interface does is a command: {commands} of them, covering 
 msgstr "Alles wat de interface doet, is een opdracht: {commands} opdrachten, die {percent}% van de functiecatalogus dekken. De opdrachtregel, het besturingskanaal en de MCP-server voeren dezelfde opdrachten uit."
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Exact transport senders"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Except"
 msgstr ""
@@ -4648,11 +4608,6 @@ msgstr "Exchange-server {host}"
 #, fuzzy
 msgid "Exchange server · no usable server address"
 msgstr "Exchange-server · geen bruikbaar serveradres"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Existing rules use other destinations"
-msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/mail.rs
@@ -4838,11 +4793,6 @@ msgstr "Bestanden zoals deze kunnen macro's bevatten, die net als programma's wo
 #. interface
 #: crates/ui-egui/src/unified_inbox.rs
 msgid "Filing account"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Filing changes are queued"
 msgstr ""
 
 #. ribbon
@@ -6782,6 +6732,16 @@ msgid "Just This One"
 msgstr "Alleen deze"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Just move these messages to {folder}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Just move this message to {folder}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/open_shared.rs
 #, fuzzy
 msgid "Keep Both"
@@ -7261,6 +7221,11 @@ msgid "Mail from the shared mailbox waits: {error}"
 msgstr "E-mail uit het gedeelde postvak wacht: {error}"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Mail from {sender} usually goes to {folder}."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Mail in Junk E-mail still asks first. File › Options turns this off again."
@@ -7700,11 +7665,6 @@ msgid "Match whole word"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Matching received messages"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/window_chrome.rs
 msgid "Maximize"
 msgstr ""
@@ -8137,7 +8097,7 @@ msgid "Most of the sender's name is characters that aren't shown, and the messag
 msgstr "Het grootste deel van de naam van de afzender bestaat uit tekens die niet worden getoond, en het bericht kwam van {real}."
 
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/gmail_move.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/gmail_move.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Move"
 msgstr "Verplaatsen"
@@ -8206,8 +8166,18 @@ msgid "Move after {rule} in this account's complete rule order"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Move all mail from {sender} in {from} to {to}, now and from now on"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Move before {rule} in this account's complete rule order"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Move it to {folder} instead"
 msgstr ""
 
 #. interface
@@ -8223,6 +8193,11 @@ msgid "Move the message to a folder to open or save its attachments"
 msgstr "Verplaats het bericht naar een map om de bijlagen te openen of op te slaan"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Move them to {folder} instead"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Move this rule down: it runs later"
@@ -8233,11 +8208,6 @@ msgstr "Deze regel omlaag verplaatsen: hij wordt later uitgevoerd"
 #, fuzzy
 msgid "Move this rule up: it runs earlier"
 msgstr "Deze regel omhoog verplaatsen: hij wordt eerder uitgevoerd"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Move this selection once; leave future sender rules alone"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
@@ -9077,6 +9047,11 @@ msgid "Not available for this account"
 msgstr "Niet beschikbaar voor dit account"
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Not available: your mail server decides where this mail goes."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/widgets.rs
 #, fuzzy
 msgid "Not available: {reason}"
@@ -9531,11 +9506,6 @@ msgid "Only the meeting's organizer can change its time."
 msgstr "Alleen de organisator van de vergadering kan de tijd wijzigen."
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Only these sender alternatives are split. Other senders, rule actions and enabled states remain intact. A new ordinary filing rule covers these senders across accounts; future messages are included. Existing one-time exceptions are excluded from history."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "Only this certificate is trusted, and only for this account. If the server shows another one later, you are asked again."
@@ -9985,11 +9955,6 @@ msgstr "Achterstallig"
 #, fuzzy
 msgid "Overdue: was due {when}"
 msgstr "Achterstallig: moest klaar zijn op {when}"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Overlap"
-msgstr ""
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/calendar_settings.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/ribbon.rs
@@ -10473,11 +10438,6 @@ msgid "Private"
 msgstr "Persoonlijk"
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Processed"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Promotions"
@@ -10824,11 +10784,6 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Refresh Your Certificates and Keys"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Refresh review"
 msgstr ""
 
 #. interface
@@ -11249,20 +11204,10 @@ msgid "Request a Read Receipt"
 msgstr "Leesbevestiging aanvragen"
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Requested folder"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/reading/invitation.rs crates/ui-egui/src/scheduling.rs
 #, fuzzy
 msgid "Required"
 msgstr "Vereist"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Reroute these senders and move their matching received history"
-msgstr ""
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -13361,6 +13306,11 @@ msgid "Some characters in this message couldn't be read: the sender's program di
 msgstr "Sommige tekens in dit bericht konden niet worden gelezen: het programma van de afzender heeft niet goed aangegeven hoe ze zijn geschreven."
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Some messages couldn't be moved"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/data_removal.rs
 #, fuzzy
 msgid "Some of it is still there, as listed above. MailCraft quits when you close this."
@@ -14648,11 +14598,6 @@ msgid "The mailbox at {address} can't be reached through Microsoft Graph."
 msgstr "Het postvak op {address} kan niet worden bereikt via Microsoft Graph."
 
 #. interface
-#: crates/ui-egui/src/filing.rs
-msgid "The mailbox writer must finish saving, and provider placement still requires confirmation. Do not repeat the filing command; inspect filing status or retry the pending failed item."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
 #, fuzzy
 msgid "The meeting these proposals are for isn't on your calendar."
@@ -14735,11 +14680,6 @@ msgstr "De naam verbergt tekens."
 #, fuzzy
 msgid "The name of someone you know."
 msgstr "De naam van iemand die u kent."
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "The new filing rule covers all configured accounts. Original-sender display names and forwarded header claims are not substituted for transport addresses."
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -15997,6 +15937,11 @@ msgid "This message downloads once the messages being downloaded now are here."
 msgstr "Dit bericht wordt gedownload zodra de berichten die nu worden gedownload hier zijn."
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "This message from {sender} usually goes to {folder}."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/view.rs
 #, fuzzy
 msgid "This message has no text."
@@ -16528,6 +16473,11 @@ msgstr "Het certificaat van deze server vertrouwen?"
 msgid "Trusted certificate (SHA-256 fingerprint):"
 msgstr "Vertrouwd certificaat (SHA-256-vingerafdruk):"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "Try Again"
+msgstr ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -16640,18 +16590,13 @@ msgid "Typing * or - and a space at the start of a line starts a bulleted list, 
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/filing.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/search_index_ui.rs
+#: crates/ui-egui/src/search_folders.rs crates/ui-egui/src/search_index_ui.rs
 msgid "Unavailable"
 msgstr ""
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
 msgid "Unavailable account"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Unavailable for relocation"
 msgstr ""
 
 #. interface
@@ -16865,11 +16810,6 @@ msgstr "Gebruik een app-wachtwoord"
 #, fuzzy
 msgid "Use an app password instead"
 msgstr "Gebruik in plaats daarvan een app-wachtwoord"
-
-#. interface
-#: crates/ui-egui/src/filing.rs
-msgid "Use an existing destination; keep the standing rules"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -17154,6 +17094,11 @@ msgid "What was waiting for the form to be closed was called off: another downlo
 msgstr "Wat wachtte tot het formulier werd gesloten, is geannuleerd: een andere download heeft de plaats ingenomen."
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "What would you like to do?"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "What you change is changed in your calendar only. The organizer and the other people invited are not told and still have the meeting as it was, so you could miss it. An update from the organizer can replace your change."
@@ -17225,6 +17170,11 @@ msgstr "Waar"
 #. command label
 #: crates/engine/src/cmd/search_index.rs
 msgid "Where Search Text Matched"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs
+msgid "Where Should This Mail Go?"
 msgstr ""
 
 #. interface
@@ -19625,6 +19575,11 @@ msgstr "de map waar het .pst-bestand in werd geïmporteerd, werd verplaatst naar
 msgid "the folder this message is in isn't on this computer any more"
 msgstr "de map waarin dit bericht staat, is niet meer op deze computer"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "the folder you chose"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/import_pst.rs
 #, fuzzy
@@ -20564,6 +20519,11 @@ msgstr "{heading}: {reason}"
 msgid "what the server sent is not a picture"
 msgstr "wat de server stuurde, is geen afbeelding"
 
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "where it goes now"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
@@ -20843,6 +20803,11 @@ msgid "{count} messages are not fully downloaded. Their missing content cannot b
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/filing.rs
+msgid "{count} messages can't be moved right now."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "{days} (all day)"
@@ -20997,6 +20962,11 @@ msgstr "{month} {year}"
 #, fuzzy
 msgid "{month}/{day}/{year}"
 msgstr "{day}-{month}-{year}"
+
+#. interface
+#: crates/ui-egui/src/filing.rs
+msgid "{moved} moved, {left} not moved. Those are listed below."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/sync_panel.rs

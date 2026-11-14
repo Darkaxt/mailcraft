@@ -135,24 +135,27 @@ fn once_survives_native_reopen_and_repeated_rule_processing_without_exempting_fu
     assert_eq!(s.mailbox.message(future).unwrap().folder, old);
 }
 
+/// A disabled rule files nothing, so it doesn't hold up filing (owner, 0.12.5); it stays
+/// disabled, and turning it back on while the new rule files the same sender is refused.
 #[test]
-fn reuse_preserves_disabled_definitions_and_stale_review_cannot_mutate() {
+fn a_disabled_rule_doesnt_hold_up_filing_and_a_stale_review_cannot_mutate() {
     let (mut s, a, new, old) = setup();
     let rule = add_rule(&mut s, old, &["billing@example.org"]);
     s.run("rules.enable", &json!({"id":rule,"value":false})).unwrap();
     let id = mail(&mut s, a[1], "billing@example.org");
     let report = review(&mut s, &[id], new);
-    assert_eq!(report["conflicts"][0]["enabled"], false);
+    assert!(report["conflicts"].as_array().unwrap().is_empty(), "{}", report["conflicts"]);
     s.run("account.rowColor", &json!({"id":a[1],"color":"#EEDDF1"})).unwrap();
     let before = s.mailbox.clone();
-    assert!(s.run("filing.apply", &json!({"ids":[id],"folder":new,"review":report["review"],"choice":"once"})).is_err());
+    assert!(s.run("filing.apply", &json!({"ids":[id],"folder":new,"review":report["review"]})).is_err());
     assert_eq!(s.mailbox, before);
     let report = review(&mut s, &[id], new);
-    s.run("filing.apply", &json!({"ids":[id],"folder":new,"review":report["review"],"choice":"reuse","reuseFolder":old})).unwrap();
-    assert_eq!(s.mailbox.message(id).unwrap().folder, old);
+    s.run("filing.apply", &json!({"ids":[id],"folder":new,"review":report["review"]})).unwrap();
+    assert_eq!(s.mailbox.message(id).unwrap().folder, new);
+    assert!(!s.mailbox.rules.iter().find(|r| r.id == rule).unwrap().enabled);
+    assert!(s.run("rules.enable", &json!({"id":rule,"value":true})).is_err());
     assert!(!s.mailbox.rules.iter().find(|r| r.id == rule).unwrap().enabled);
     s.run("edit.undo", &json!({})).unwrap();
-    assert_eq!(s.mailbox.message(id).unwrap().filing_override, None);
     assert_eq!(s.mailbox.message(id).unwrap().account, a[1]);
 }
 

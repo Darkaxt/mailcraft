@@ -5,6 +5,9 @@
 - Fix: the sign-in page no longer comes back to an address your browser refuses to open (ERR_UNSAFE_PORT); on computers whose free ports start at 1024 a sign-in could fail that way.
 - The reading pane's scroll bar stays in sight instead of fading out and popping back.
 - In a unified filing folder, a message's tag names its account in full, and its folder icon wears the account's colour.
+- Fix: filing mail from a sender in a new folder no longer asks about rules that file mail sent to one of your addresses, or about rules that are turned off. A message that truly matches both is still caught when it arrives.
+- When filing does need you, the window is short and plain: where this mail usually goes, both folders in a small tree in their own colours, and three choices: move it there instead, move all of that sender's mail to the new folder from now on, or just move this message.
+- When Google refuses a sign-in, the log now says why in Google's standard words (for example "Token has been expired or revoked."), never anything that could carry a secret.
 - Fix: the window that asks you about an agent's request (headless MailCraft) no longer takes the keyboard when it appears and only a click answers it; a key you were typing elsewhere could press its No button and close it within seconds. It now stays up at least a minute, counted from when it is on the screen.
 - The window that asks you about an agent's request (headless MailCraft) keeps its Send and Don't Send buttons in a row at the bottom, below the question and the message.
 - When an agent asks to send, the question window shows the message exactly as it will go: sender, recipients (Cc and Bcc), subject, body and the files attached, with the answer buttons always in sight.

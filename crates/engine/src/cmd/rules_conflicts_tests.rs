@@ -210,3 +210,49 @@ fn conflicts_treat_delete_and_deleted_subtree_moves_as_one_competing_destination
     let report = fresh.0.run("rules.conflicts", &json!({"rule":draft(fresh.1, fresh.3)})).unwrap();
     assert!(report["confirmed"].as_u64().unwrap() >= 1);
 }
+
+/// Filing a sender into a new folder isn't held up by the aliases' rules nor by disabled ones
+/// (owner, 0.12.5: itch.io's sender asked about ControlD's and Epic's alias rules). A real message
+/// that both would file is still caught as it arrives.
+#[test]
+fn filing_a_sender_ignores_alias_rules_and_disabled_ones_but_a_real_clash_is_still_caught() {
+    let (mut s, account, inbox, archive) = fixture();
+    // Filing works in a Microsoft account's tree, as in the app.
+    s.mailbox.account_mut(account).unwrap().kind = mailcraft_model::AccountKind::Microsoft;
+    s.run("view.filing", &json!({"account":account})).unwrap();
+    s.run(
+        "rules.add",
+        &json!({"name":"Alias","account":account,"server":false,"stop":true,
+        "conditions":[{"type":"toAddresses","value":["controld@aliases.example"]}],"actions":[{"type":"moveTo","value":archive}]}),
+    )
+    .unwrap();
+    s.run(
+        "rules.add",
+        &json!({"name":"Old","account":account,"server":false,"enabled":false,
+        "conditions":[{"type":"fromAddresses","value":["shop@relay.example"]}],"actions":[{"type":"moveTo","value":archive}]}),
+    )
+    .unwrap();
+    let itch = s.mailbox.add_folder(account, Some(inbox), "Itch").unwrap();
+    let mail = |s: &mut Session, to: &str| {
+        s.mailbox
+            .add_message(Message {
+                account,
+                folder: inbox,
+                from: Address::new("Shop", "shop@relay.example"),
+                to: vec![Address::new("", to)],
+                ..Default::default()
+            })
+            .unwrap()
+    };
+    let one = mail(&mut s, "itch@aliases.example");
+    let preview = s.run("filing.preview", &json!({"ids":[one],"folder":itch})).unwrap();
+    assert!(preview["conflicts"].as_array().unwrap().is_empty(), "{}", preview["conflicts"]);
+    s.run("filing.apply", &json!({"ids":[one],"folder":itch,"review":preview["review"]})).unwrap();
+    assert_eq!(s.mailbox.message(one).unwrap().folder, itch);
+    assert!(s.mailbox.rules.iter().any(|r| r.enabled
+        && r.conditions.contains(&Condition::FromAddresses(vec!["shop@relay.example".into()]))
+        && r.actions.iter().any(|a| matches!(a, mailcraft_model::Action::MoveTo(f) if *f == itch))));
+    // The same sender writing to another service's alias: both rules would file it.
+    let clash = mail(&mut s, "controld@aliases.example");
+    assert_eq!(s.mailbox.conflicting_filing_rules(clash, true).len(), 2);
+}

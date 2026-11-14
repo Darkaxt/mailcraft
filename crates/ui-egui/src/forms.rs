@@ -83,7 +83,7 @@ impl Form {
             Form::Account(f) => f.title(),
             Form::Categories(_) => tl!("Categories").to_string(),
             Form::Rules(_) => tl!("Rules").to_string(),
-            Form::Filing(_) => tl!("Choose a filing destination").to_string(),
+            Form::Filing(_) => tl!("Where Should This Mail Go?").to_string(),
             Form::SearchFolder(_) => tl!("Search folder").to_string(),
             Form::Junk(_) => tl!("Junk E-mail Options").to_string(),
         }
