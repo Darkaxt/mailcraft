@@ -8,7 +8,7 @@ use std::sync::Arc;
 use mailcraft_model::{FlagStatus, FolderKind, Id, Pending, Queued, ThreadKey};
 use serde_json::{Value, json};
 
-use super::{bad, deliver, done, fail, message_json, message_summary, needs_message, needs_movable, select_after_removal, targets, targets_whole};
+use super::{bad, deliver, done, fail, message_json, message_summary, needs_message, select_after_removal, targets, targets_whole};
 use crate::list::{Row, listed, position, position_of};
 use crate::{CmdResult, CommandSpec, Session, p};
 
@@ -38,17 +38,17 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("mail.filingStatus", "Inspect Filing State", "Mail", filing_status).reads().params(
             r#"{"id": number} — read stored placement/source-removal state for exactly one message, without fetching content, running sync or changing selection. Recorded provider ids are the last native server observation, not a new server lookup; pending placement is not a confirmed remote copy."#,
         ),
-        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "Inbox/Projects", "query"?: string,"scope"?:"folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes", "matchCase"?: bool, "wholeWord"?: bool, "regex"?: bool, "searchIn"?: ["subject"|"people"|"body"|"attachments"]} — the search options apply to this call only (default: those of view.searchOptions). Rows of a search the index answered carry "score" (0-100) and "scoreDetail": [{"term","matched","extra","field"}]. inboxes is the virtual union of actual account inboxes; omit folder. Bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone."#),
-        CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_movable),
+        CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "sent" | "Inbox/Projects", "account"?: number, "query"?: string,"scope"?:"folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes", "matchCase"?: bool, "wholeWord"?: bool, "regex"?: bool, "searchIn"?: ["subject"|"people"|"body"|"attachments"]} — the search options apply to this call only (default: those of view.searchOptions). Rows of a search the index answered carry "score" (0-100) and "scoreDetail": [{"term","matched","extra","field"}]. inboxes is the virtual union of actual account inboxes; omit folder. Bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone. `folder` is an id, a standard folder's kind (inbox, drafts, sent, deleted, junk, archive, outbox) in any language of the mailbox, of `account` or else the account in view, or a path; digits that name no folder are an id. A kind comes before a folder of that name, which is still reached by its id or by a path with its parent. `account` says whose folder `folder` means and goes with it: it is an account that is there, what it names must be that account's, a path without it is looked for in the account in view before any other, and `account` without `folder` is refused rather than left unused"#),
+        CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_message),
         CommandSpec::new("mail.deletePermanently", "Delete Permanently", "Home › Delete", delete_permanently)
             .key("Shift+Delete")
             .params(IDS_WHOLE)
-            .selection(needs_movable),
-        CommandSpec::new("mail.archive", "Archive", "Home › Delete", archive).key("Backspace").params(IDS_WHOLE).selection(needs_movable),
+            .selection(needs_message),
+        CommandSpec::new("mail.archive", "Archive", "Home › Delete", archive).key("Backspace").params(IDS_WHOLE).selection(needs_message),
         CommandSpec::new("mail.move", "Move to Folder", "Home › Move", move_to)
             .key("Mod+Shift+V")
             .params(MOVE)
-            .selection(needs_movable),
+            .selection(needs_message),
         CommandSpec::new("mail.copy", "Copy to Folder", "Home › Move", copy_to)
             .key("Mod+Shift+Y")
             .params(MOVE)
@@ -75,8 +75,8 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("mail.dismissWarnings", "Dismiss Warnings", "Reading Pane", dismiss_warnings)
             .params(r#"{"ids"?: [number], "value"?: bool (default true; false shows the banner again)} — hides the sender-warning banner of a message (#508), until a new kind of warning appears. Never for an agent"#)
             .selection(needs_message),
-        CommandSpec::new("mail.junk", "Move to Junk", "Home › Delete", junk).params(IDS_WHOLE).selection(needs_movable),
-        CommandSpec::new("mail.notJunk", "Not Junk", "Home › Delete", not_junk).key("Mod+Alt+J").params(IDS_WHOLE).selection(needs_movable),
+        CommandSpec::new("mail.junk", "Move to Junk", "Home › Delete", junk).params(IDS_WHOLE).selection(needs_message),
+        CommandSpec::new("mail.notJunk", "Not Junk", "Home › Delete", not_junk).key("Mod+Alt+J").params(IDS_WHOLE).selection(needs_message),
         CommandSpec::new("mail.findRelated", "Find Related Messages", "Home › Find", find_related).pure().selection(needs_message),
         CommandSpec::new("mail.findFromSender", "Messages from Sender", "Home › Find", find_from_sender)
             .pure()
@@ -697,6 +697,17 @@ fn list(s: &mut Session, v: &Value) -> CmdResult {
 fn list_with(s: &mut Session, v: &Value) -> CmdResult {
     let limit = p::u64(v, "limit").unwrap_or(200).min(10_000) as usize;
     let offset = usize::try_from(p::u64(v, "offset").unwrap_or(0)).map_err(|_| bad("the list offset is too large for this platform"))?;
+    // Whose folder `folder` means (#1200), read before anything else is decided: an `account`
+    // that isn't an id is refused however the rest of the parameters look. Read inside the branch
+    // below instead, it would go unseen without `folder` and quietly become the account in view,
+    // and the answer says which folder it read but never which account.
+    let account = super::folder::account_named(s, v)?;
+    // `account` says whose folder `folder` means, so it wants one. On its own it would be read
+    // and then left unused, and the list would come from the account in view with nothing in the
+    // answer to say which account it is.
+    if account.is_some() && v.get("folder").is_none_or(Value::is_null) {
+        return Err(bad("`account` says whose folder `folder` means: name `folder` too, or leave `account` out"));
+    }
     // A named folder or a search is read from a view of its own: the owner's folder, search and
     // selection stay as they are (#620).
     let explicit_folder = v.get("folder").is_some_and(|f| !f.is_null());
@@ -714,15 +725,10 @@ fn list_with(s: &mut Session, v: &Value) -> CmdResult {
     if !looks_elsewhere {
         return list_in_view(s, limit, offset);
     }
+    // (An id, a standard folder's kind in any language of the mailbox, or a path, #1200.)
     let folder = match v.get("folder").filter(|f| !f.is_null()) {
         None => s.view.folder,
-        Some(f) => match f.as_u64() {
-            Some(id) => s.mailbox.folder(id).map(|f| f.id).ok_or_else(|| failed!("no folder with id {id}", id))?,
-            None => {
-                let path = f.as_str().unwrap_or("");
-                super::folder::by_path(s, None, path).ok_or_else(|| failed!("no folder \"{path}\"", path))?
-            }
-        },
+        Some(f) => super::folder::named(s, f, account)?,
     };
     let query = match v.get("query") {
         None | Some(Value::Null) => String::new(),

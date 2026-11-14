@@ -11,7 +11,7 @@ use std::fs::File;
 use std::io::{self, ErrorKind, Read, Write};
 use std::os::fd::{AsRawFd, OwnedFd};
 use std::sync::{Arc, Mutex, Weak};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tracing::warn;
 
@@ -30,7 +30,7 @@ use crate::platform_impl::wayland::state::WinitState;
 const TEXT_MIME_TYPES: [&str; 5] =
     ["text/plain;charset=utf-8", "UTF8_STRING", "text/plain", "TEXT", "STRING"];
 
-/// How long a paste waits for the source to send more data before giving up.
+/// How long a paste waits for the source to send all of its data before giving up.
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// The most bytes read from another client's selection.
@@ -216,6 +216,56 @@ impl ClipboardState {
         Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
     }
 
+    /// The first of `mimes` (in the caller's order of preference) that the other client's
+    /// selection offers, with its bytes, at most `max_bytes` of them. Our own selection is text
+    /// alone, so it never answers here: the caller asks for text with `load_text`.
+    pub fn load_mime(&self, mimes: &[&str], max_bytes: usize) -> io::Result<(String, Vec<u8>)> {
+        let inner = self.inner.lock().unwrap();
+        let offer = Self::active_device(&inner)
+            .and_then(|entry| entry.device.data::<DataDeviceData>())
+            .and_then(|data| data.selection_offer());
+        let Some(offer) = offer else {
+            return Err(io::Error::new(ErrorKind::NotFound, "the clipboard is empty"));
+        };
+
+        let types = offer.with_mime_types(|types| types.to_vec());
+        if types.iter().any(|mime| mime == &self.marker) {
+            return Err(io::Error::new(ErrorKind::NotFound, "the clipboard holds our own text"));
+        }
+        let Some(mime) = mimes.iter().find(|mime| types.iter().any(|t| t == **mime)) else {
+            return Err(io::Error::new(
+                ErrorKind::NotFound,
+                "the clipboard holds none of those types",
+            ));
+        };
+
+        let pipe = offer.receive((*mime).to_string()).map_err(|error| match error {
+            sctk::data_device_manager::data_offer::DataOfferError::Io(error) => error,
+            other => io::Error::new(ErrorKind::Other, other.to_string()),
+        })?;
+        drop(inner);
+        self.connection.flush().map_err(|error| io::Error::new(ErrorKind::Other, error))?;
+
+        let bytes =
+            read_with_timeout(File::from(OwnedFd::from(pipe)), max_bytes.min(MAX_CLIPBOARD_BYTES))?;
+        Ok(((*mime).to_string(), bytes))
+    }
+
+    /// Whether the other client's selection offers any of `mimes`. Nothing is requested from the
+    /// source: only the types the compositor announced are looked at.
+    pub fn offers(&self, mimes: &[&str]) -> bool {
+        let inner = self.inner.lock().unwrap();
+        let offer = Self::active_device(&inner)
+            .and_then(|entry| entry.device.data::<DataDeviceData>())
+            .and_then(|data| data.selection_offer());
+        let Some(offer) = offer else { return false };
+        let types = offer.with_mime_types(|types| types.to_vec());
+        if types.iter().any(|mime| mime == &self.marker) {
+            return false;
+        }
+        mimes.iter().any(|mime| types.iter().any(|t| t == *mime))
+    }
+
     pub fn store_text(&self, text: String) -> io::Result<()> {
         let Some(manager) = &self.manager else {
             return Err(io::Error::new(ErrorKind::Unsupported, "no data device manager"));
@@ -251,8 +301,13 @@ impl Drop for ClipboardState {
     }
 }
 
-/// Reads a pipe to its end, giving up if the writer stays silent for [`READ_TIMEOUT`].
-fn read_with_timeout(mut file: File, max_bytes: usize) -> io::Result<Vec<u8>> {
+/// Reads a pipe to its end, giving up if it isn't all there within [`READ_TIMEOUT`] of the start.
+fn read_with_timeout(file: File, max_bytes: usize) -> io::Result<Vec<u8>> {
+    read_within(file, max_bytes, READ_TIMEOUT)
+}
+
+fn read_within(mut file: File, max_bytes: usize, limit: Duration) -> io::Result<Vec<u8>> {
+    let deadline = Instant::now() + limit;
     let fd = file.as_raw_fd();
     // SAFETY: `fd` is a valid descriptor owned by `file`.
     unsafe {
@@ -278,9 +333,17 @@ fn read_with_timeout(mut file: File, max_bytes: usize) -> io::Result<Vec<u8>> {
             },
             Err(error) if error.kind() == ErrorKind::Interrupted => {},
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                let left = deadline.saturating_duration_since(Instant::now());
+                if left.is_zero() {
+                    return Err(io::Error::new(
+                        ErrorKind::TimedOut,
+                        "the clipboard's owner did not send it in time",
+                    ));
+                }
                 let mut poll = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
+                let millis = left.as_millis().min(i32::MAX as u128).max(1) as i32;
                 // SAFETY: `poll` points to one valid `pollfd`.
-                let ready = unsafe { libc::poll(&mut poll, 1, READ_TIMEOUT.as_millis() as i32) };
+                let ready = unsafe { libc::poll(&mut poll, 1, millis) };
                 if ready == 0 {
                     return Err(io::Error::new(
                         ErrorKind::TimedOut,
@@ -317,6 +380,33 @@ mod tests {
         };
         write.write_all(bytes).unwrap();
         read
+    }
+
+    #[test]
+    fn a_slow_trickle_still_ends_at_the_deadline() {
+        let mut fds = [0; 2];
+        // SAFETY: `fds` has room for the two descriptors `pipe` writes.
+        assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0);
+        // SAFETY: both descriptors are fresh and owned here.
+        let (mut write, read) = unsafe {
+            (
+                <File as std::os::fd::FromRawFd>::from_raw_fd(fds[1]),
+                <File as std::os::fd::FromRawFd>::from_raw_fd(fds[0]),
+            )
+        };
+        let writer = std::thread::spawn(move || {
+            for _ in 0..40 {
+                if write.write_all(b"x").is_err() {
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(25));
+            }
+        });
+        let start = Instant::now();
+        let error = read_within(read, 1 << 20, Duration::from_millis(300)).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::TimedOut);
+        assert!(start.elapsed() < Duration::from_millis(900));
+        let _ = writer.join();
     }
 
     #[test]

@@ -153,6 +153,7 @@ impl Gpgconf {
         Gpgconf { program, prefix: Vec::new(), timeout: GPGCONF_TIMEOUT }
     }
 
+    /// A stand-in run by a shell (the tests' `script`, which runs where there is `/bin/sh`).
     #[cfg(all(test, unix))]
     pub(crate) fn script(shell: PathBuf, script: PathBuf, timeout: Duration) -> Gpgconf {
         Gpgconf { program: shell, prefix: vec![script.into_os_string()], timeout }

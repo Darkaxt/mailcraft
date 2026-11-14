@@ -33,7 +33,7 @@ impl eframe::App for Fixture {
             // successful MCP-action assertion or a forced process termination.
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
-        quit::on_frame(ctx, &mut self.app);
+        quit::on_frame(ctx, &mut self.app, false);
     }
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.app.ui(ui);

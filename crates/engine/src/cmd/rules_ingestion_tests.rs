@@ -131,7 +131,7 @@ fn a_protected_imap_refetch_completes_waiting_rules_before_filing() {
         Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; boundary=\"signed\"\r\n\r\n\
         --signed\r\nContent-Type: text/plain\r\n\r\nOnly in the full body.\r\n\
         --signed\r\nContent-Type: application/pkcs7-signature\r\n\r\nDummy signature\r\n--signed--\r\n";
-    let fetched = mailcraft_mime::parse_fetched(raw);
+    let fetched = mailcraft_mime_model::parse_fetched(raw);
     let original = fetched.original.clone();
     assert!(original.is_some());
     super::imap_again::take_again(&mut session.mailbox, id, fetched.clone());

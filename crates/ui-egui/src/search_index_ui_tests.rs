@@ -48,7 +48,7 @@ fn indexed_app() -> (MailApp, tempfile::TempDir, Id) {
     session.prefs.offline = true;
     let mut app = MailApp::new(session, Services::default());
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     app.execute("ui.dismissReminder", json!({"all":true})).unwrap();
     (app, scratch, selected.unwrap())
 }

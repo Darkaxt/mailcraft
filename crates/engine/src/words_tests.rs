@@ -604,6 +604,7 @@ mod background {
         let mut s = session(&path);
         assert_eq!(s.word_index(), WordIndex::Off, "nothing until the list is first shown");
         let _ = s.rows();
+        // Its total may not be counted yet on a slow machine (macOS CI): any progress will do here.
         assert!(matches!(s.word_index(), WordIndex::Building { .. } | WordIndex::Complete), "{:?}", s.word_index());
         s.wait_for_word_index();
         assert_eq!(s.word_index(), WordIndex::Complete);

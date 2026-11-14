@@ -53,7 +53,7 @@ pub fn texts_with<'a>(m: &'a Message, body: &'a str, hidden: &'a str, mut f: imp
         || (!hidden.is_empty() && f(BODY, hidden))
         || m.attachments.iter().any(|a| f(ATTACHMENT, &a.name))
         || m.bcc.iter().any(|a| f(HEADERS, &a.name) || f(HEADERS, &a.email))
-        || m.headers.iter().any(|(name, value)| f(HEADERS, name) || f(HEADERS, value))
+        || m.working_headers().any(|(name, value)| f(HEADERS, name) || f(HEADERS, value))
 }
 
 /// Whether `c` is a combining mark (an accent written after its letter): dropped from a word.

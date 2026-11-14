@@ -105,13 +105,14 @@ fn complete_eml_chunks_reopen_all_known_headers_bodies_and_attachments() {
         offset = value["nextOffset"].as_u64().unwrap();
     };
     assert_eq!(digest, store::Digest::of(&bytes).hex());
-    let reopened = mailcraft_mime::parse(&bytes);
+    let reopened = mailcraft_mime_model::parse(&bytes);
     assert_eq!(reopened.subject, original.subject);
     assert_eq!(reopened.from, original.from);
     assert!(reopened.bcc.is_empty());
     assert_eq!(reopened.reply_to, original.reply_to);
     assert_eq!(reopened.body, original.body);
-    assert!(reopened.headers.contains(&("X-Receipt-Id".into(), "receipt-123".into())));
+    // Read back, a line nothing reads by name is in the header block (HS).
+    assert!(reopened.all_headers().contains(&("X-Receipt-Id".into(), "receipt-123".into())));
     assert_eq!(reopened.attachments[0].name, "receipt.pdf");
     assert_eq!(reopened.attachments[0].data, original.attachments[0].data);
     close(&mut session, "mail.exportEml", id, token);
@@ -126,7 +127,7 @@ fn source_eml_snapshots_preserve_bcc_only_for_drafts_like_save_message_as() {
         let answer = session.run("mail.exportEml", &json!({"id":id,"token":token})).unwrap();
         assert_eq!(answer["eof"], true);
         let bytes = crate::cmd::base64_decode(answer["data"].as_str().unwrap()).unwrap();
-        let reopened = mailcraft_mime::parse(&bytes);
+        let reopened = mailcraft_mime_model::parse(&bytes);
         assert_eq!(!reopened.bcc.is_empty(), draft);
         assert_eq!(String::from_utf8_lossy(&bytes).contains("blind@example.org"), draft);
         close(&mut session, "mail.exportEml", id, token);
@@ -195,7 +196,7 @@ fn protected_mime_exports_from_retained_bytes_with_truthful_provenance() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("protected.mailcraft");
     let (mut session, id) = fixture();
-    let protected = mailcraft_mime::parse_fetched(include_bytes!("../../smime/testdata/detached.eml"));
+    let protected = mailcraft_mime_model::parse_fetched(include_bytes!("../../smime/testdata/detached.eml"));
     let original = protected.original.as_ref().unwrap().data.clone();
     let reference = store::stash(&path, &store::Digest::of(&original), &original).unwrap();
     let old = session.mailbox.message(id).unwrap();
@@ -212,7 +213,7 @@ fn protected_mime_exports_from_retained_bytes_with_truthful_provenance() {
     assert_eq!(answer["originalMimeAvailable"], true);
     assert_eq!(answer["headersReconstructed"], true);
     let bytes = crate::cmd::base64_decode(answer["data"].as_str().unwrap()).unwrap();
-    assert_eq!(mailcraft_mime::parse_fetched(&bytes).original, Some(mailcraft_model::Original::new(bytes.clone()).unwrap()));
+    assert_eq!(mailcraft_mime_model::parse_fetched(&bytes).original, Some(mailcraft_model::Original::new(bytes.clone()).unwrap()));
     assert!(mailcraft_mime::protection(&bytes).is_some());
     assert_eq!(session.mailbox.messages.get(&id).unwrap(), &before);
     let destination = directory.path().join("protected.eml");
@@ -265,7 +266,7 @@ fn prepared_export_and_atomic_replacement_preserve_whole_file_or_prior_file() {
     let result = session.run("file.exportMessage", &json!({"id":id,"token":token,"path":path.to_string_lossy()})).unwrap();
     let bytes = std::fs::read(&path).unwrap();
     assert_eq!(result["sha256"], store::Digest::of(&bytes).hex());
-    assert_eq!(mailcraft_mime::parse(&bytes).subject, "A retained café receipt");
+    assert_eq!(mailcraft_mime_model::parse(&bytes).subject, "A retained café receipt");
     #[cfg(windows)]
     assert_eq!(std::fs::read(crate::mark::zone_stream(&path)).unwrap(), crate::mark::ZONE_IDENTIFIER);
     assert!(session.run("mail.exportEml", &json!({"id":id,"token":token})).is_err());

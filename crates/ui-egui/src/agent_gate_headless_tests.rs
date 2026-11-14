@@ -36,7 +36,7 @@ fn headless(host: bool) -> (MailApp, Shown) {
     }
     let mut app = MailApp::new(Session::at(mailcraft_engine::sample::mailbox(NOW, 0), NOW, 0), services);
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     app.start_headless();
     (app, shown)
 }

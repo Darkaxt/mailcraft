@@ -115,6 +115,36 @@ pub fn failed(database: &mut Database, id: u64, fingerprint: String, why: &str) 
     Ok(Completion { id, fingerprint, needs_attachments: false })
 }
 
+/// The message's header lines with its header block back in place, read from where it is kept
+/// when it isn't in memory. A block that can't be read leaves the lines that stay on the message,
+/// with a line in the log.
+fn all_headers(input: &Input) -> Vec<(String, String)> {
+    let message = &input.message;
+    if message.header_block.is_loaded() {
+        return message.all_headers();
+    }
+    let mut bytes = Vec::new();
+    let read = input.open(Part::Headers).and_then(|reader| {
+        std::io::Read::read_to_end(&mut std::io::Read::take(reader, mailcraft_model::headers::MAX_HEADER_BLOCK as u64 + 1), &mut bytes)
+            .map_err(|why| why.to_string())
+    });
+    match read.map(|_| mailcraft_model::HeaderBlock::read(&bytes)) {
+        Ok(Some(block)) => {
+            let mut all = mailcraft_model::headers::merge(&message.headers, &block.lines());
+            all.retain(|(name, _)| !name.is_empty());
+            all
+        }
+        Ok(None) => {
+            log::warn!("message {}: its header lines are damaged; only the lines kept on it are indexed", message.id);
+            message.all_headers()
+        }
+        Err(why) => {
+            log::warn!("message {}: its header lines couldn't be read ({why}); only the lines kept on it are indexed", message.id);
+            message.all_headers()
+        }
+    }
+}
+
 fn headers(database: &mut Database, input: &Input, scratch: &Path, cancelled: &AtomicBool) -> Result<u8> {
     let message = &input.message;
     let groups = [
@@ -157,7 +187,7 @@ fn headers(database: &mut Database, input: &Input, scratch: &Path, cancelled: &A
         ("Date".into(), mailcraft_time::format_iso_utc(message.date)),
     ];
     let modeled = text.len();
-    text.extend(message.headers.iter().cloned());
+    text.extend(all_headers(input));
     let key = cache_key("headers", &serde_json::to_vec(&text).map_err(|why| why.to_string())?);
     if stored(database, input, &key, words::HEADERS, json!({"field":"headers"}), scratch, cancelled, |spool| {
         for (index, (name, value)) in text.iter().enumerate() {

@@ -5,11 +5,13 @@
 use std::io::{self, Cursor, Read, Write};
 use std::sync::Arc;
 
-use mailcraft_model::{Address, Attachment, Body, ContentRef, Message};
-
-use crate::{ContentPart, WriteOptions, parse, write_to};
+use crate::{Address, Attachment, Body, ContentPart, Kept, Message, WriteOptions, parse, write_to};
 
 const NONCE: &str = "0123456789abcdef0123456789abcdef";
+
+fn file(name: &str, mime: &str, data: Vec<u8>) -> Attachment {
+    Attachment { name: name.into(), mime: mime.into(), data: Arc::new(data), ..Default::default() }
+}
 
 fn open(message: &Message, part: ContentPart) -> io::Result<Box<dyn Read + '_>> {
     let bytes = match part {
@@ -37,14 +39,13 @@ fn streamed_complete_mime_reopens_with_bodies_headers_inline_ids_and_files() {
                 inline: true,
                 content_id: "receipt".into(),
                 data: Arc::new(vec![0, 1, 2, 255]),
-                ..Default::default()
             },
-            Attachment::new("receipt.pdf", "application/pdf", b"%PDF-synthetic".to_vec()),
+            file("receipt.pdf", "application/pdf", b"%PDF-synthetic".to_vec()),
         ],
         ..Default::default()
     };
     let mut bytes = Vec::new();
-    write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
+    write_to(&message, Kept::default(), &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
     let source = String::from_utf8_lossy(&bytes);
     for kind in ["multipart/mixed", "multipart/alternative", "multipart/related"] {
         assert!(source.contains(kind));
@@ -74,7 +75,7 @@ fn a_protected_export_keeps_the_original_signed_body_and_safe_current_headers() 
     message.body.text = "A display-only copy".into();
     message.attachments.clear();
     let mut bytes = Vec::new();
-    write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
+    write_to(&message, Kept::default(), &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
     assert_eq!(crate::header::split(&bytes, true).1, original_body);
     let reopened = parse(&bytes);
     assert_eq!(reopened.subject, "Filed receipt");
@@ -89,15 +90,14 @@ fn a_large_retained_protected_body_streams_without_opening_decoded_parts() {
     let size = 20u64 << 20;
     let header = b"Content-Type: application/pkcs7-mime; smime-type=enveloped-data\r\nContent-Transfer-Encoding: binary\r\n\r\n";
     let message = Message {
-        original: Some(mailcraft_model::Original {
-            data: Arc::new(Vec::new()),
-            kept: Some(ContentRef { sha256: [0; 32], len: size + header.len() as u64 }),
-        }),
+        // Kept outside memory: nothing of it is in the message.
+        original: None,
         ..Default::default()
     };
     let mut output = Count(0);
     write_to(
         &message,
+        Kept { original: true, ..Kept::default() },
         &WriteOptions::default(),
         NONCE,
         &mut |part| {
@@ -108,18 +108,18 @@ fn a_large_retained_protected_body_streams_without_opening_decoded_parts() {
     )
     .unwrap();
     assert!(output.0 >= size);
-    assert!(message.original.as_ref().unwrap().data.is_empty());
+    assert!(message.original.is_none());
 }
 
 #[test]
 fn a_broken_original_never_falls_back_to_a_reconstructed_message() {
     let message = Message {
-        original: mailcraft_model::Original::new(b"Not a MIME header\r\n\r\nUntrusted body".to_vec()),
+        original: Some(Arc::new(b"Not a MIME header\r\n\r\nUntrusted body".to_vec())),
         body: Body { text: "Decoded fallback must not be published".into(), html: None },
         ..Default::default()
     };
     let mut output = Vec::new();
-    assert!(write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut output).is_err());
+    assert!(write_to(&message, Kept::default(), &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut output).is_err());
     assert!(output.is_empty());
 }
 
@@ -140,17 +140,13 @@ fn a_large_external_attachment_is_streamed_without_loading_it_into_the_message()
     let size = 20 << 20;
     let message = Message {
         body: Body { text: "A large file".into(), html: None },
-        attachments: vec![Attachment {
-            name: "large.bin".into(),
-            mime: "application/octet-stream".into(),
-            kept: Some(ContentRef { len: size, sha256: [0; 32] }),
-            ..Default::default()
-        }],
+        attachments: vec![Attachment { name: "large.bin".into(), mime: "application/octet-stream".into(), ..Default::default() }],
         ..Default::default()
     };
     let mut out = Count(0);
     write_to(
         &message,
+        Kept::default(),
         &WriteOptions::default(),
         NONCE,
         &mut |part| {
@@ -166,16 +162,26 @@ fn a_large_external_attachment_is_streamed_without_loading_it_into_the_message()
 #[test]
 fn reader_failure_and_raw_message_boundary_conflict_never_return_success() {
     let attached = format!("From: a@example.org\r\n\r\n--=_mc_{NONCE}_0\r\n");
-    let message = Message { attachments: vec![Attachment::new("letter.eml", "message/rfc822", attached.into_bytes())], ..Default::default() };
-    assert!(write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut Count(0)).is_err());
-    assert!(write_to(&message, &WriteOptions::default(), NONCE, &mut |_| Err(io::Error::other("missing retained content")), &mut Count(0)).is_err());
+    let message = Message { attachments: vec![file("letter.eml", "message/rfc822", attached.into_bytes())], ..Default::default() };
+    assert!(write_to(&message, Kept::default(), &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut Count(0)).is_err());
+    assert!(
+        write_to(
+            &message,
+            Kept::default(),
+            &WriteOptions::default(),
+            NONCE,
+            &mut |_| Err(io::Error::other("missing retained content")),
+            &mut Count(0)
+        )
+        .is_err()
+    );
 }
 
 #[test]
 fn text_line_end_canonicalization_handles_cr_lf_crlf_and_consecutive_cr() {
     let message = Message { body: Body { text: "one\rtwo\nthree\r\nfour\r\rfive\r".into(), html: None }, ..Default::default() };
     let mut bytes = Vec::new();
-    write_to(&message, &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
+    write_to(&message, Kept::default(), &WriteOptions::default(), NONCE, &mut |part| open(&message, part), &mut bytes).unwrap();
     assert_eq!(parse(&bytes).body.text, "one\ntwo\nthree\nfour\n\nfive\n");
 }
 
@@ -193,13 +199,14 @@ fn delivery_status_and_attached_messages_keep_legal_encoding_and_exact_bytes() {
     let attached = b"From: sender@example.org\r\nTo: owner@example.org\r\n\r\nBinary body: \xff\0\r\n";
     let message = Message {
         attachments: vec![
-            Attachment::new("delivery.txt", "message/delivery-status", report.to_vec()),
-            Attachment::new("original.eml", "message/rfc822", attached.to_vec()),
+            file("delivery.txt", "message/delivery-status", report.to_vec()),
+            file("original.eml", "message/rfc822", attached.to_vec()),
         ],
         ..Default::default()
     };
     let mut bytes = Vec::new();
-    write_to(&message, &WriteOptions::default(), NONCE, &mut |part| Ok(Box::new(ShortRead(open(&message, part)?))), &mut bytes).unwrap();
+    write_to(&message, Kept::default(), &WriteOptions::default(), NONCE, &mut |part| Ok(Box::new(ShortRead(open(&message, part)?))), &mut bytes)
+        .unwrap();
     let wire = String::from_utf8_lossy(&bytes);
     assert!(wire.contains("Content-Transfer-Encoding: 7bit\r\nContent-Disposition: attachment; filename=\"delivery.txt\""));
     assert!(wire.contains("Content-Transfer-Encoding: binary\r\nContent-Disposition: attachment; filename=\"original.eml\""));
@@ -222,9 +229,16 @@ fn invalid_delivery_status_content_cannot_be_published_as_valid_7bit() {
         b"Bad: final\r".to_vec(),
         vec![b'x'; 999],
     ] {
-        let message = Message { attachments: vec![Attachment::new("delivery.txt", "message/delivery-status", data)], ..Default::default() };
-        let error = write_to(&message, &WriteOptions::default(), NONCE, &mut |part| Ok(Box::new(ShortRead(open(&message, part)?))), &mut Count(0))
-            .unwrap_err();
+        let message = Message { attachments: vec![file("delivery.txt", "message/delivery-status", data)], ..Default::default() };
+        let error = write_to(
+            &message,
+            Kept::default(),
+            &WriteOptions::default(),
+            NONCE,
+            &mut |part| Ok(Box::new(ShortRead(open(&message, part)?))),
+            &mut Count(0),
+        )
+        .unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);
     }
 }

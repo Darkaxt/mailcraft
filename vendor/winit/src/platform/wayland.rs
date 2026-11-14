@@ -61,7 +61,7 @@ impl ActiveEventLoopExtWayland for ActiveEventLoop {
 /// Hyprland, send the selection and drags to only one data device of a client.
 ///
 /// It can be used from any thread. Reading another client's selection waits for that client to
-/// send it, without dispatching the event loop, and gives up after two seconds of silence.
+/// send it, without dispatching the event loop, and gives up if it isn't all there two seconds after the start.
 /// Reading our own selection returns it directly. A clipboard outliving its event loop reports
 /// errors.
 #[derive(Clone)]
@@ -80,6 +80,21 @@ impl Clipboard {
     /// The text on the clipboard of the seat the application last received input from.
     pub fn load_text(&self) -> io::Result<String> {
         self.state()?.load_text()
+    }
+
+    /// The first of `mimes`, in order of preference, that the clipboard of the seat the
+    /// application last received input from offers, as `(type, bytes)`: for HTML and pictures,
+    /// which [`Clipboard::load_text`] doesn't carry. Reads at most `max_bytes` (and never more
+    /// than 64 MiB), and gives up if it isn't all there two seconds after the start, like `load_text`. An error of
+    /// kind [`io::ErrorKind::NotFound`] means the clipboard offers none of them.
+    pub fn load_mime(&self, mimes: &[&str], max_bytes: usize) -> io::Result<(String, Vec<u8>)> {
+        self.state()?.load_mime(mimes, max_bytes)
+    }
+
+    /// Whether the clipboard of the seat the application last received input from offers any of
+    /// `mimes`. Only the offered types are checked: nothing is read from the source.
+    pub fn offers(&self, mimes: &[&str]) -> bool {
+        self.state().map(|state| state.offers(mimes)).unwrap_or(false)
     }
 
     /// Puts `text` on the clipboard of the seat the application last received input from.

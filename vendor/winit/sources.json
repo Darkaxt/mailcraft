@@ -1,7 +1,7 @@
 {
   "upstream": "https://github.com/UCS-Care-Group/winit",
-  "revision": "951b6c131897a80d27a925af7c5da22ea522eb0d",
-  "baseline": "existing locked MailCraft dependency, including activation-token and shared Wayland data-device patches",
+  "revision": "1477b126a8c3d3d2add446c93492454ba833074d",
+  "baseline": "existing locked MailCraft dependency, including activation-token and shared Wayland data-device patches; advanced to the revision upstream MailCraft pins for #1217 (Wayland Clipboard::load_mime and Clipboard::offers: reading HTML and pictures from dropped or pasted data), applied as the exact upstream diff 951b6c13..1477b126",
   "import_transform": "Preserve source bytes and add accurate Apache-2.0 SPDX attribution to Rust files. Native-caption patch is reviewed separately in Git.",
   "files": [
     {
@@ -16,8 +16,8 @@
     },
     {
       "path": "src/changelog/unreleased.md",
-      "upstream_sha256": "33c4f0f793e2255a93ca10f7de1ad1a2de54e3335db106d68555691f6bc7d656",
-      "imported_sha256": "33c4f0f793e2255a93ca10f7de1ad1a2de54e3335db106d68555691f6bc7d656"
+      "upstream_sha256": "46de1653c7f5deaca7fd46db31f44a3e7f4607593fb92e8abc70eb0c9dcbafc2",
+      "imported_sha256": "46de1653c7f5deaca7fd46db31f44a3e7f4607593fb92e8abc70eb0c9dcbafc2"
     },
     {
       "path": "src/changelog/v0.10.md",
@@ -226,8 +226,8 @@
     },
     {
       "path": "src/platform/wayland.rs",
-      "upstream_sha256": "72c8420de4192eb1e36a2b7653cb7fb75ec0982134f43e7ca19ea20618c03371",
-      "imported_sha256": "3254cf816fb94c72a39ab7d02c0518fefe58d0ac090b4171e3b24258fd608570"
+      "upstream_sha256": "5cc95d10528b0488181650ecae73347bf58096c92ba983383dd55effb39a0098",
+      "imported_sha256": "3e724688af45b77c2f1be7d8d79f97483f1d829916f82f7b959c4d9c420a00a1"
     },
     {
       "path": "src/platform/web.rs",
@@ -326,8 +326,8 @@
     },
     {
       "path": "src/platform_impl/linux/wayland/clipboard.rs",
-      "upstream_sha256": "bdc8354e6b0facd3883c1f4c6d88f7cfc0d35daf54900a403c39af2101427099",
-      "imported_sha256": "a05aa9dd58f93c5d59fb5f52b3e6700d65da346b8d71607e574115f39fa49a9f"
+      "upstream_sha256": "a9cc4a20e4a4e2ed88de50c6e42a509d113453600f4266cbf36950f88f10cf84",
+      "imported_sha256": "a14061b1bddbd563592258c9f488e9123fda9fbd553a4865c392f73f9e5beb29"
     },
     {
       "path": "src/platform_impl/linux/wayland/event_loop/mod.rs",

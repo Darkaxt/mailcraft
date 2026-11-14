@@ -191,7 +191,7 @@ fn native_index_acceptance_through_headless_mcp_and_reopen() {
             checked.unwrap().unwrap()
         });
         let mut app = MailApp::new(session, Services::default()).with_control(requests);
-        app.auto_sync = false;
+        app.session.driver.set_auto_sync(false);
         app.autosave = false;
         app.start_headless();
         super::pump(&mut app, &ctx, wake, None, None);

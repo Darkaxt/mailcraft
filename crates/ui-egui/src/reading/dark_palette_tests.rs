@@ -149,7 +149,7 @@ fn cached_body_rebuilds_when_high_contrast_or_accent_changes_without_reopening_m
     let id = mailbox.add_message(m).unwrap();
     let mut app = MailApp::new(mailcraft_engine::Session::new(mailbox), Services::default());
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     app.ui.theme = Appearance::Dark;
     app.execute("mail.select", serde_json::json!({"id":id})).unwrap();
     let original = app.session.mailbox.message(id).unwrap().clone();

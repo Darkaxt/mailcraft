@@ -74,6 +74,7 @@ fn parts(message: &Message, part: Part) -> Result<(Option<ContentRef>, &[u8])> {
             let original = message.original.as_ref().filter(|original| original.is_there()).ok_or("the message keeps no original")?;
             (original.kept.filter(|_| original.data.is_empty()), original.data.as_slice())
         }
+        Part::Headers => (message.header_block.kept.filter(|_| message.header_block.data.is_empty()), message.header_block.data.as_slice()),
     })
 }
 
@@ -94,6 +95,7 @@ pub fn metadata(session: &Session, message: &Message, extraction_revision: &str)
     let text = reference(message, Part::Text)?;
     let html = reference(message, Part::Html)?;
     let hidden = reference(message, Part::Hidden)?;
+    let header_block = reference(message, Part::Headers)?;
     let attachments = message
         .attachments
         .iter()
@@ -108,7 +110,7 @@ pub fn metadata(session: &Session, message: &Message, extraction_revision: &str)
         "from":message.from,"to":message.to,"cc":message.cc,"bcc":message.bcc,"replyTo":message.reply_to,
         "messageId":message.message_id,"inReplyTo":message.in_reply_to,"references":message.references,
         "date":message.date,"headers":message.headers,"text":hex(&text.sha256),"html":hex(&html.sha256),
-        "hidden":hex(&hidden.sha256),"attachments":attachments,"unfetched":message.unfetched,
+        "hidden":hex(&hidden.sha256),"headerBlock":hex(&header_block.sha256),"attachments":attachments,"unfetched":message.unfetched,
         "incomplete":message.incomplete,"notDownloaded":message.not_downloaded,"failed":message.kept.as_ref().is_some_and(|kept| kept.failed)}))?;
     let downloaded = !message.unfetched && !message.incomplete && message.not_downloaded == 0;
     let row = json!({"id":message.id,"account":message.account,"folder":message.folder,

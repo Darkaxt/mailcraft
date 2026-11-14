@@ -4,7 +4,7 @@
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 
-use mailcraft_model::Message;
+use crate::Message;
 
 use crate::{WriteOptions, header::write_field, media, transfer, write};
 
@@ -16,6 +16,16 @@ pub enum ContentPart {
     Attachment(usize),
     /// The complete canonical signed/encrypted MIME retained when it arrived.
     Original,
+}
+
+/// What of a message is kept outside memory: parts that `open` reads although the message holds
+/// none of their bytes (an original, an HTML or a text body kept elsewhere).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Kept {
+    pub original: bool,
+    pub html: bool,
+    /// A non-empty text body.
+    pub text: bool,
 }
 
 type Fields = Vec<(&'static str, String)>;
@@ -52,6 +62,7 @@ impl Body {
 /// leaves an incomplete output which the caller must not publish as a full file.
 pub fn write_to<'a>(
     message: &Message,
+    kept: Kept,
     opts: &WriteOptions,
     nonce: &str,
     open: &mut dyn FnMut(ContentPart) -> io::Result<Box<dyn Read + 'a>>,
@@ -60,13 +71,13 @@ pub fn write_to<'a>(
     if nonce.len() != 32 || !nonce.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "a fresh 128-bit boundary nonce is required"));
     }
-    if message.original.is_some() && !message.draft {
+    if (message.original.is_some() || kept.original) && !message.draft {
         return write_original(message, opts, open, out);
     }
     let mut counter = 0u32;
     let calendar = calendar_form(message, open)?;
-    let has_html = message.body.html.is_some() || message.kept.as_ref().is_some_and(|kept| kept.html.is_some());
-    let has_text = !message.body.text.is_empty() || message.kept.as_ref().and_then(|kept| kept.text).is_some_and(|part| part.len > 0);
+    let has_html = message.body.html.is_some() || kept.html;
+    let has_text = !message.body.text.is_empty() || kept.text;
     let text = |kind, part| Body::Leaf {
         fields: vec![("Content-Type", format!("text/{kind}; charset=utf-8")), ("Content-Transfer-Encoding", "base64".into())],
         part,
@@ -157,7 +168,7 @@ fn write_original<'a>(
     const MAX_HEADERS: usize = 4 << 20;
     const CHUNK: usize = 64 << 10;
     let original = open(ContentPart::Original)?;
-    let mut original = BufReader::with_capacity(CHUNK, original.take(mailcraft_model::MAX_ORIGINAL as u64 + 1));
+    let mut original = BufReader::with_capacity(CHUNK, original.take(crate::MAX_ORIGINAL as u64 + 1));
     let mut headers = Vec::new();
     loop {
         let start = headers.len();
@@ -184,7 +195,7 @@ fn write_original<'a>(
     }
     out.write_all(b"\r\n")?;
     let body_bytes = io::copy(&mut original, out)?;
-    if (headers.len() as u64).saturating_add(body_bytes) > mailcraft_model::MAX_ORIGINAL as u64 {
+    if (headers.len() as u64).saturating_add(body_bytes) > crate::MAX_ORIGINAL as u64 {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "the retained original exceeds its allowed size"));
     }
     Ok(())

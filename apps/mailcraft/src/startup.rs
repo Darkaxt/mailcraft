@@ -15,11 +15,21 @@ pub(crate) struct Startup {
     pub claimer: Option<single_instance::Claimer>,
     pub hidden: bool,
     pub headless: bool,
+    /// Under Wayland the clipboard keys are handled by `mailcraft_ui_egui::paste_keys` (#1217).
+    #[cfg_attr(not(any(target_os = "linux", target_os = "freebsd")), allow(dead_code))]
+    pub clipboard_keys: bool,
 }
 
 impl Startup {
-    /// `software`: the window draws with a software rasteriser (#software-render).
-    pub fn builder(self, ctx: egui::Context, file_dialog: Option<file_dialogs::Hook>, software: bool) -> mailcraft_ui_egui::opening::Build {
+    /// `software`: the window draws with a software rasteriser (#software-render). `wayland_display`:
+    /// the window's own Wayland connection, which the clipboard goes through (#1217).
+    pub fn builder(
+        self,
+        ctx: egui::Context,
+        file_dialog: Option<file_dialogs::Hook>,
+        software: bool,
+        wayland_display: Option<std::ptr::NonNull<std::ffi::c_void>>,
+    ) -> mailcraft_ui_egui::opening::Build {
         let anchors = trust_anchors();
         Box::new(move |arrival| {
             let (mailbox, path, unavailable, unchecked, damaged) =
@@ -34,6 +44,14 @@ impl Startup {
                 services.window_identity =
                     Some(mailcraft_ui_egui::windows::WindowIdentity { icon: app_icon().map(std::sync::Arc::new), app_id: Some(APP_ID.into()) });
             }
+            // Under Wayland the clipboard goes through the window's own connection (#1217).
+            #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+            if !self.headless {
+                services.clipboard = clipboard::board(wayland_display);
+                services.clipboard_keys = self.clipboard_keys;
+            }
+            #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
+            let _ = wayland_display;
             services.update_start = self.update_start;
             services.claim_mailbox =
                 self.claimer.map(|c| Box::new(move |path: &std::path::Path| c.claim(path)) as Box<dyn Fn(&std::path::Path) -> bool>);

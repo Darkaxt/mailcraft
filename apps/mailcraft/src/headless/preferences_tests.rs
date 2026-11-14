@@ -32,7 +32,7 @@ impl Drop for Settings {
 
 fn app() -> MailApp {
     let mut app = MailApp::new(Session::new(mailcraft_model::Mailbox::with_local_account("Avery", "avery@example.org")), Services::default());
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     app.autosave = false;
     app.start_headless();
     app

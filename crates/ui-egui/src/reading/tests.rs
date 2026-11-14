@@ -360,7 +360,7 @@ fn corpus_app(large: bool) -> (MailApp, Vec<(&'static str, u64)>) {
     }
     let mut app = MailApp::new(Session::at(mailbox, NOW, 0), Services::default());
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     // These windows start from the owner's opt-out of pictures in all mail (on by default since
     // 0.11.4), so that what each other way of asking does can be seen on its own.
     app.ui.download_pictures = false;
@@ -1378,7 +1378,7 @@ pub(super) fn app_with(messages: Vec<Message>) -> (MailApp, Vec<u64>) {
     let ids = messages.into_iter().map(|m| mailbox.add_message(Message { folder: inbox, ..m }).unwrap()).collect();
     let mut app = MailApp::new(Session::at(mailbox, NOW, 0), Services::default());
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     // Pictures in all mail turned off, as for the windows above.
     app.ui.download_pictures = false;
     (app, ids)

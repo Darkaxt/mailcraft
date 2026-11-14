@@ -157,7 +157,7 @@ fn real_mcp_reads_and_normal_close_need_no_native_window() {
     });
     let mut app = MailApp::new(session, Services::default()).with_control(requests);
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     app.start_headless();
     let initial = app.session.prefs.clone();
     pump(&mut app, &ctx, wake, None, Some((&settings.0, &initial)));

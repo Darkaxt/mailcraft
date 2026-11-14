@@ -3369,8 +3369,8 @@ mod event {
         fn run(&mut self, app: &mut MailApp, command: &'static str, params: Value, after: After) -> Verdict {
             // The command says itself which of a series is meant: what the main window noted of
             // that when the item was opened is used up, and is not applied to anything later.
-            if self.scope.is_some() && app.calendar.opened.is_some_and(|(event, _)| Some(event) == self.id) {
-                app.calendar.opened = None;
+            if self.scope.is_some() && app.session.driver.calendar.opened.is_some_and(|(event, _)| Some(event) == self.id) {
+                app.session.driver.calendar.opened = None;
             }
             let seq = app.ran.0;
             let asks = crate::dialogs::confirmation(app, command, &params).is_some();
@@ -5049,7 +5049,7 @@ pub(crate) mod rules {
             let on_server = mb.keeps_rules(account);
             // The listed rules and their marks are worked out once per change to the mailbox, the
             // account shown or a permission, not at every frame (QA v0.11.3).
-            let mut perm: Vec<(Id, crate::rule_sync::Permission)> = app.rules.perm.iter().map(|(id, p)| (*id, p.clone())).collect();
+            let mut perm: Vec<(Id, crate::rule_sync::Permission)> = app.session.driver.rules.perm.iter().map(|(id, p)| (*id, p.clone())).collect();
             perm.sort_by_key(|(id, _)| *id);
             let key = ListedKey { rev: app.session.rev(), rules: mb.rules.len(), account, destination: self.destination, perm };
             let listed = match self.listed.as_ref().filter(|(at, _)| *at == key) {

@@ -26,7 +26,7 @@ fn app() -> (MailApp, u64) {
         .unwrap();
     let mut app = MailApp::new(Session::new(mailbox), Services::default());
     app.autosave = false;
-    app.auto_sync = false;
+    app.session.driver.set_auto_sync(false);
     app.execute("mail.select", json!({"id":id})).unwrap();
     (app, id)
 }
@@ -106,7 +106,7 @@ fn unsaved_preview_uses_the_real_builder_without_saving_sending_or_changing_draf
     let original = app.session.compose.clone();
     let revision = app.session.rev();
     let messages = app.session.mailbox.messages.len();
-    let offline = app.fetching.offline;
+    let offline = app.session.driver.fetch.offline;
     let preview = mailcraft_engine::cmd::compose::preview(&app.session).unwrap();
     assert_eq!(preview.subject, "Preview only");
     assert!(preview.body.text.contains("Unsent preview text"));
@@ -141,7 +141,7 @@ fn unsaved_preview_uses_the_real_builder_without_saving_sending_or_changing_draf
         }
         assert_eq!(h.state().session.compose, original);
         assert_eq!(h.state().session.mailbox.messages.len(), messages);
-        assert_eq!(h.state().fetching.offline, offline, "preview does not change connectivity");
+        assert_eq!(h.state().session.driver.fetch.offline, offline, "preview does not change connectivity");
     }
     h.state_mut().execute("ui.composePreview", json!({"on":false})).unwrap();
     h.run_steps(3);

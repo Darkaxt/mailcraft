@@ -128,7 +128,7 @@ mod native {
     };
     use std::thread::JoinHandle;
 
-    use mailcraft_mime::ContentPart;
+    use mailcraft_mime_model::ContentPart;
     use mailcraft_model::Message;
     use ring::rand::SecureRandom;
     use serde_json::{Value, json};
@@ -171,6 +171,8 @@ mod native {
     impl Input {
         pub(super) fn new(session: &Session, id: u64, kind: Kind) -> Result<Self, CmdError> {
             let message = session.mailbox.messages.get(&id).cloned().ok_or_else(|| fail("the message is no longer in this mailbox"))?;
+            // Every header line is written, the block's too (HS).
+            let message = session.with_header_block(message);
             let preserved_mime = kind == Kind::Eml && !message.draft && message.original.is_some();
             if !preserved_mime
                 && (message.unfetched || message.incomplete || message.not_downloaded != 0 || message.kept.as_ref().is_some_and(|part| part.failed))
@@ -214,8 +216,8 @@ mod native {
             ring::rand::SystemRandom::new().fill(&mut nonce).map_err(|_| io::Error::other("the export boundary could not be generated"))?;
             let nonce = nonce.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
             // Preserve Save Message As's established draft-only Bcc contract.
-            let options = mailcraft_mime::WriteOptions { include_bcc: self.message.draft, offset_minutes: self.offset_minutes };
-            mailcraft_mime::write_to(&self.message, &options, &nonce, &mut |part| self.open(part), output)
+            let options = mailcraft_mime_model::WriteOptions { include_bcc: self.message.draft, offset_minutes: self.offset_minutes };
+            mailcraft_mime_model::write_to(&self.message, &options, &nonce, &mut |part| self.open(part), output)
         }
 
         pub(super) fn produce(&self, cancelled: Arc<AtomicBool>) -> io::Result<Snapshot> {
