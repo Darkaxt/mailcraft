@@ -16,7 +16,7 @@
 //! index entry of that same store, so that "remove all my data" can find every one.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -211,6 +211,10 @@ struct Inner {
     notice_checked: bool,
     /// The app's own number for the next notification that counts mail.
     next_key: u64,
+    /// Keeping the mailbox within the phone's limits (MB3.16).
+    trim: crate::limits::Trimming,
+    /// How many rounds have ended: the round under way is known by the count before it ends.
+    finished_rounds: u64,
 }
 
 pub(crate) struct SyncHost {
@@ -226,6 +230,9 @@ pub(crate) struct SyncHost {
     notify_mail: AtomicBool,
     pub(crate) tick_queued: AtomicBool,
     pub(crate) pacer: Pacer,
+    /// A round to call off at the next wake (its `finished_rounds` plus one; 0 for none): a
+    /// `background_sync` dropped while it waits asks for it, never blocking where it is dropped.
+    stop_asked: AtomicU64,
     /// The tests' own refusal of every sign-in handed over (never set outside a test: nothing does).
     #[cfg(test)]
     pub(crate) refuse_adopt: AtomicBool,
@@ -249,6 +256,7 @@ impl SyncHost {
             notify_mail: AtomicBool::new(true),
             tick_queued: AtomicBool::new(false),
             pacer: Pacer::default(),
+            stop_asked: AtomicU64::new(0),
             #[cfg(test)]
             refuse_adopt: AtomicBool::new(false),
         }
@@ -581,14 +589,43 @@ impl SyncHost {
         if !inner.active && inner.run_mark.is_none() {
             return inner.last_summary.clone().unwrap_or(SyncSummary { finished: true, ..Default::default() });
         }
+        self.stop_locked(&mut inner, session)
+    }
+
+    fn stop_locked(&self, inner: &mut Inner, session: &mut Session) -> SyncSummary {
         inner.sr.stop(session);
         session.driver.round.queue.clear();
-        self.finish_round(&mut inner, session, false)
+        let summary = self.finish_round(inner, session, false);
+        // Pages the run brought before the stop stay: keep the mailbox within the limits.
+        inner.trim.due = true;
+        self.pacer.poke();
+        summary
+    }
+
+    /// The round under way (or the next, when none is): what [`SyncHost::stop_later`] is given.
+    pub(crate) fn round(&self) -> u64 {
+        self.lock().finished_rounds
+    }
+
+    /// Call `round` off at the next wake of the driver, if it is still under way then (a round
+    /// that has ended, and any after it, are left alone). Never waits: for a `Drop`. A request for
+    /// an older round never replaces one for a newer that is still waiting (the newer is the one
+    /// that may still be under way).
+    pub(crate) fn stop_later(&self, round: u64) {
+        self.stop_asked.fetch_max(round.saturating_add(1), Ordering::AcqRel);
+        self.pacer.poke();
     }
 
     /// One wake of the driver, on the session's thread.
     pub(crate) fn tick(&self, session: &mut Session) {
         let mut inner = self.lock();
+        if let Some(round) = self.stop_asked.swap(0, Ordering::AcqRel).checked_sub(1)
+            && round == inner.finished_rounds
+            && (inner.active || inner.run_mark.is_some())
+        {
+            self.stop_locked(&mut inner, session);
+            return;
+        }
         self.tick_locked(&mut inner, session);
     }
 
@@ -623,9 +660,23 @@ impl SyncHost {
         self.busy.store(working, Ordering::Relaxed);
         if working {
             self.progress(inner, session);
-        } else if inner.active || inner.run_mark.is_some() {
-            self.finish_round(inner, session, true);
+        } else {
+            if inner.active || inner.run_mark.is_some() {
+                self.finish_round(inner, session, true);
+                // What a round brought may take the mailbox past the phone's limits.
+                inner.trim.due = true;
+            }
+            // Between runs, never during one: a run's pages name the messages they change.
+            if inner.trim.step(session) {
+                self.pacer.poke();
+            }
         }
+    }
+
+    /// Keep the mailbox within the phone's limits at the next wake (they were changed).
+    pub(crate) fn trim_soon(&self) {
+        self.lock().trim.due = true;
+        self.pacer.poke();
     }
 
     fn took(&self, inner: &mut Inner, taken: Taken) {
@@ -713,6 +764,7 @@ impl SyncHost {
         };
         inner.active = false;
         inner.ran = false;
+        inner.finished_rounds = inner.finished_rounds.wrapping_add(1);
         inner.idle_mark = None;
         inner.last_progress = None;
         inner.last_summary = Some(summary.clone());
