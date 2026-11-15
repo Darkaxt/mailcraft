@@ -24,7 +24,7 @@ jobs:
         with:
           persist-credentials: false
           path: elsewhere/second
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: 1.98.1
       - name: Linux build dependencies
