@@ -15,7 +15,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("filing.preview", "Review sender filing", "Mail", preview).reads().params(
             r#"{"ids":[number],"folder":number,"unavailableOffset"?:number} — read-only exact-transport-sender filing review, including disabled/unsupported definitions, old/new real destinations, account scope, exact historical/unavailable totals and 200 unavailable details per page. Retain review unchanged for filing.apply. Header-reported originals never replace transport addresses."#),
         CommandSpec::new("filing.apply", "File and learn senders", "Mail", apply).params(
-            r#"{"ids":[number],"folder":number,"review":string,"choice"?:"auto"|"reuse"|"reroute"|"once","reuseFolder"?:number} — recheck the unchanged preview before any mutation. auto creates/extends compatible exact-sender rules only without conflicts; reuse files into an existing reviewed destination and preserves rules; reroute splits only these sender alternatives and relocates matching received history; once files only the selection with durable per-message exceptions. Refuses protected/deleting/unsupported rule rewrites and unsafe destinations. One native undo/save transaction; provider placement remains pending until confirmed. Never replay an uncertain apply: inspect mail.filingStatus first."#),
+            r#"{"ids":[number],"folder":number,"review":string,"choice"?:"auto"|"reuse"|"reroute"|"once","reuseFolder"?:number} — recheck the unchanged preview before any mutation. auto creates/extends compatible exact-sender rules only without conflicts and also moves those senders' received mail out of every Inbox (inboxMessages in the preview); reuse files into an existing reviewed destination and preserves rules; reroute splits only these sender alternatives and relocates matching received history; once files only the selection with durable per-message exceptions. Refuses protected/deleting/unsupported rule rewrites and unsafe destinations. One native undo/save transaction; provider placement remains pending until confirmed. Never replay an uncertain apply: inspect mail.filingStatus first."#),
     ]
 }
 
@@ -32,6 +32,11 @@ pub(crate) fn receiving_folder(s: &Session, id: Id) -> bool {
         }
     }
     false
+}
+
+/// Whether message `id` is in an account's Inbox itself (not a folder under it).
+fn in_an_inbox(mailbox: &Mailbox, id: Id) -> bool {
+    mailbox.message(id).and_then(|m| mailbox.folder(m.folder)).is_some_and(|f| f.kind == FolderKind::Inbox)
 }
 
 pub fn unfiled_folders(s: &Session, account: Id) -> std::collections::HashSet<Id> {
@@ -229,7 +234,8 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
     let page = unavailable.get(offset..end).unwrap_or_default();
     let report = json!({"review":stamp,"destination":location(s,folder),"selected":ids.len(),"senders":senders,
         "sourceAccounts":"all configured accounts; exact transport From only","conflicts":rules,
-        "historicalMessages":history.len(),"historicalScope":scope,"unavailable":page,
+        "historicalMessages":history.len(),"historicalScope":scope,
+        "inboxMessages":history.iter().filter(|id| !ids.contains(*id) && in_an_inbox(&s.mailbox, **id)).count(),"unavailable":page,
         "unavailableTotal":unavailable.len(),"unavailableOffset":offset,"nextUnavailableOffset":(end<unavailable.len()).then_some(end),
         "selectedUnavailable":selected_unavailable,"rerouteAllowed":conflicts.iter().all(|r|blocked(s,r).is_none()),
         "oneTimeExceptionsExcluded":true,"mutated":false});
@@ -362,8 +368,14 @@ fn apply(s: &mut Session, v: &Value) -> CmdResult {
     }
     let mut moved = plan.ids.clone();
     let mut unavailable = Vec::new();
-    if choice == "reroute" {
-        let history: Vec<Id> = plan.history.iter().copied().filter(|id| !plan.ids.contains(id)).collect();
+    let history: Vec<Id> = match choice {
+        "reroute" => plan.history.iter().copied().filter(|id| !plan.ids.contains(id)).collect(),
+        // Filing a sender also clears its mail out of every Inbox (owner, 0.12.6: "As a way to
+        // clean the Inbox"); what was put in another folder stays where it is.
+        "auto" => plan.history.iter().copied().filter(|id| !plan.ids.contains(id) && in_an_inbox(&s.mailbox, *id)).collect(),
+        _ => Vec::new(),
+    };
+    if !history.is_empty() {
         // Session::run still restores the whole mailbox if anything below fails.
         let failures = move_each(&mut s.mailbox, &history, folder)?;
         let failed: BTreeSet<Id> = failures.iter().map(|(id, _)| *id).collect();

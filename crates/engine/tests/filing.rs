@@ -86,6 +86,32 @@ fn auto_files_multiple_accounts_and_consolidates_future_senders_without_copying_
 }
 
 #[test]
+fn auto_clears_the_senders_mail_out_of_every_inbox_and_leaves_what_was_put_elsewhere() {
+    let (mut s, a, new, old) = setup();
+    let selected = mail(&mut s, a[1], "billing@example.org");
+    let waiting = mail(&mut s, a[2], "billing@example.org");
+    let in_owner_inbox = mail(&mut s, a[0], "billing@example.org");
+    let put_elsewhere = mail(&mut s, a[0], "billing@example.org");
+    s.mailbox.move_message(put_elsewhere, old).unwrap();
+    let unrelated = mail(&mut s, a[1], "other@example.org");
+    let report = review(&mut s, &[selected], new);
+    assert_eq!(report["conflicts"], json!([]));
+    assert_eq!(report["inboxMessages"], 2);
+    let answer = apply(&mut s, &[selected], new, &report, "auto");
+    assert_eq!(answer["processed"], 3);
+    for id in [selected, waiting, in_owner_inbox] {
+        assert_eq!(s.mailbox.message(id).unwrap().folder, new);
+    }
+    assert_eq!(s.mailbox.message(put_elsewhere).unwrap().folder, old);
+    assert_ne!(s.mailbox.message(unrelated).unwrap().folder, new);
+    assert_eq!(s.mailbox.rules.len(), 1);
+    // One undo step puts all of it back.
+    s.run("edit.undo", &json!({})).unwrap();
+    assert_ne!(s.mailbox.message(waiting).unwrap().folder, new);
+    assert!(s.mailbox.rules.is_empty());
+}
+
+#[test]
 fn reroute_splits_only_selected_alternatives_and_received_history_preserving_other_actions() {
     let (mut s, a, new, old) = setup();
     let rule = add_rule(&mut s, old, &["billing@example.org", "other@example.org"]);

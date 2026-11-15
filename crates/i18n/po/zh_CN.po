@@ -452,6 +452,11 @@ msgid "A meeting that repeats and skips some days can't be put on the server's c
 msgstr "无法从这里将跳过部分日期的重复会议放到服务器日历中：所有受邀者都会收到每个跳过日期的取消通知。请将其保存在此计算机的日历中，或重新创建不跳过日期的会议。"
 
 #. interface
+#: crates/ui-egui/src/files.rs
+msgid "A new message was asked for, but the one you are writing couldn't be saved first: {why}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
@@ -14976,6 +14981,11 @@ msgstr "邮件未移入文件夹"
 #, fuzzy
 msgid "The message you are writing has changes that aren't saved."
 msgstr "您正在撰写的邮件有未保存的更改。"
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "The message you were writing was saved to Drafts"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/files.rs

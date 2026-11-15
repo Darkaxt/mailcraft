@@ -509,6 +509,21 @@ pub(crate) fn remember_recent(app: &mut MailApp, path: &str) {
     app.ui.recent.truncate(10);
 }
 
+/// What MailCraft can be started with to make a new item (the Tasks of its taskbar button and
+/// Start menu entry, as Outlook lists them), and the command each runs: those of Home › New Items.
+pub const START_TASKS: &[(&str, &str)] = &[
+    ("mailcraft:new-mail", "mail.new"),
+    ("mailcraft:new-appointment", "calendar.new"),
+    ("mailcraft:new-meeting", "calendar.newMeeting"),
+    ("mailcraft:new-contact", "people.new"),
+    ("mailcraft:new-task", "tasks.new"),
+];
+
+/// The command a start task names ([`START_TASKS`]), or `None` when `what` is none of them.
+pub fn start_task(what: &str) -> Option<&'static str> {
+    START_TASKS.iter().find(|(task, _)| task.eq_ignore_ascii_case(what.trim())).map(|(_, command)| *command)
+}
+
 /// A file dropped on the window, or something the program was started with: a file, a file
 /// named the way desktops name one (`file://`), or a `mailto:` link, which starts a new message.
 pub(crate) fn dropped_path(app: &mut MailApp, path: &str) {
@@ -541,6 +556,25 @@ const MOST_WAITING: usize = 32;
 /// [`MailApp::open_from_system`].
 pub(crate) fn from_system(app: &mut MailApp, what: &str) {
     use mailcraft_engine::io::Format;
+    if let Some(command) = start_task(what) {
+        // One of the Tasks the taskbar button and the Start menu list: as Home › New Items does it.
+        // A message being written is saved to Drafts first, as for a link.
+        app.ui.backstage = false;
+        let saved = command == "mail.new" && app.session.compose.as_ref().is_some_and(|c| c.dirty);
+        if saved && let Err(e) = app.run("compose.saveDraft", json!({})) {
+            app.status(crate::i18n::fmt(
+                tl!("A new message was asked for, but the one you are writing couldn't be saved first: {why}"),
+                &[("why", &e)],
+            ));
+            return;
+        }
+        if let Err(e) = app.run(command, json!({})) {
+            app.status(e);
+        } else if saved {
+            app.status(tl!("The message you were writing was saved to Drafts"));
+        }
+        return;
+    }
     if is_mailto_link(what) {
         return dropped_path(app, what);
     }

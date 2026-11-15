@@ -431,6 +431,11 @@ msgid "A meeting that repeats and skips some days can't be put on the server's c
 msgstr "Eine Besprechungsserie mit ausgelassenen Tagen kann von hier aus nicht in den Kalender des Servers übernommen werden: Alle Eingeladenen würden für jeden ausgelassenen Tag eine Absage erhalten. Behalten Sie sie in einem Kalender auf diesem Computer, oder legen Sie sie ohne die ausgelassenen Tage neu an."
 
 #. interface
+#: crates/ui-egui/src/files.rs
+msgid "A new message was asked for, but the one you are writing couldn't be saved first: {why}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
@@ -14179,6 +14184,11 @@ msgstr ""
 #, fuzzy
 msgid "The message you are writing has changes that aren't saved."
 msgstr "Die Nachricht, die Sie schreiben, enthält nicht gespeicherte Änderungen."
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "The message you were writing was saved to Drafts"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/files.rs

@@ -52,6 +52,12 @@ fn the_second_start_hands_over_to_the_first_and_the_next_first_starts_afresh() {
     let file = Path::new(got.open.get(1).unwrap());
     assert!(file.is_absolute() && file.ends_with("note.eml"), "{file:?}");
     assert_eq!(got.refused, 0);
+    // The taskbar's Tasks: each of them, as it is named; nothing else in that scheme.
+    let tasks = ["mailcraft:new-mail", "MailCraft:New-Meeting", "mailcraft:rm", "mailcraft:new-mail?to=x@evil.example"].map(String::from);
+    assert!(matches!(start(&mailbox, &tasks), Start::Handed));
+    let got = first.handed_over().unwrap();
+    assert_eq!(got.open, ["mailcraft:new-mail", "mailcraft:new-meeting"]);
+    assert_eq!(got.refused, 2);
     // A later start with nothing still asks for the window.
     assert!(matches!(start(&mailbox, &[]), Start::Handed));
     assert_eq!(first.handed_over(), Some(Handed::default()));

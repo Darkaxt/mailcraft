@@ -16,7 +16,8 @@
 //! The hand-over is a trust boundary (`docs/threat-model.md`): only `127.0.0.1`, one line of
 //! JSON of at most [`MAX_LINE`] bytes that must carry the key (compared in constant time), at most
 //! [`MAX_ARGS`] things of at most [`MAX_ARG`] bytes each, and each of them checked as anything
-//! from outside is ([`checked`]): a `mailto:` link, or a file of a kind MailCraft opens (a
+//! from outside is ([`checked`]): a `mailto:` link, a new item from the taskbar's Tasks
+//! (`mailcraft:new-mail` and the others of `files::START_TASKS`), or a file of a kind MailCraft opens (a
 //! message, a calendar or contact file, a folder of mail, a MailCraft mailbox) named by its whole
 //! path, that is there, is a file and can be read. Everything else is dropped and counted.
 //!
@@ -401,6 +402,10 @@ pub(crate) fn checked(arg: &str) -> Option<String> {
     if arg.get(..7).is_some_and(|scheme| scheme.eq_ignore_ascii_case("mailto:")) {
         return Some(arg.to_string());
     }
+    // A new item from the taskbar's Tasks: only those named, as they are named.
+    if mailcraft_ui_egui::files::start_task(arg).is_some() {
+        return Some(arg.trim().to_ascii_lowercase());
+    }
     let path = mailcraft_ui_egui::files::local_path(arg);
     if path.chars().any(char::is_control) || !Path::new(&path).is_absolute() {
         return None;
@@ -421,7 +426,10 @@ pub(crate) fn checked(arg: &str) -> Option<String> {
 /// A file named on the command line is named from where this start was run: the first instance
 /// runs somewhere else, so it gets the whole path. Links are left as they are.
 fn whole(arg: &str) -> String {
-    if arg.contains("://") || arg.get(..7).is_some_and(|scheme| scheme.eq_ignore_ascii_case("mailto:")) {
+    if arg.contains("://")
+        || arg.get(..7).is_some_and(|scheme| scheme.eq_ignore_ascii_case("mailto:"))
+        || mailcraft_ui_egui::files::start_task(arg).is_some()
+    {
         return arg.to_string();
     }
     std::path::absolute(arg).map(|p| p.to_string_lossy().into_owned()).unwrap_or_else(|_| arg.to_string())

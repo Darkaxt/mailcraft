@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! MailCraft desktop app.
 //!
-//! Usage: `mailcraft [--control <port> [--control-agents-only]] [--sample] [--mailbox <file>] [files or mailto: links…]`
+//! Usage: `mailcraft [--control <port> [--control-agents-only]] [--sample] [--mailbox <file>] [files, mailto: links or mailcraft:new-mail and the other new-item tasks…]`
 //!
 //! The mailbox lives in `<settings>/mailbox.mailcraft` (or the file `--mailbox` names) and is saved
 //! as you go. `--sample` opens the sample mailbox instead and keeps nothing. On the command line

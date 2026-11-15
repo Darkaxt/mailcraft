@@ -452,6 +452,11 @@ msgid "A meeting that repeats and skips some days can't be put on the server's c
 msgstr "O întâlnire care se repetă și sare peste unele zile nu poate fi pusă de aici în calendarul serverului: fiecare invitat ar primi câte o anulare pentru fiecare zi sărită. Păstrați-o într-un calendar de pe acest computer sau creați-o din nou fără zilele sărite."
 
 #. interface
+#: crates/ui-egui/src/files.rs
+msgid "A new message was asked for, but the one you are writing couldn't be saved first: {why}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
@@ -15029,6 +15034,11 @@ msgstr "Mesajul nu a fost clasat"
 #, fuzzy
 msgid "The message you are writing has changes that aren't saved."
 msgstr "Mesajul pe care îl scrieți are modificări nesalvate."
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "The message you were writing was saved to Drafts"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/files.rs

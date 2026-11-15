@@ -369,7 +369,7 @@ msgstr "Un buzón grande tarda un rato. {account} pasará a Microsoft Graph en c
 #. interface
 #: crates/ui-egui/src/files.rs
 msgid "A link asked for a new message, but the one you are writing couldn't be saved first: {why}"
-msgstr ""
+msgstr "Un enlace pidió un mensaje nuevo, pero antes no se pudo guardar el que está escribiendo: {why}"
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -429,6 +429,11 @@ msgstr ""
 #, fuzzy
 msgid "A meeting that repeats and skips some days can't be put on the server's calendar from here: everyone invited would get a cancellation for each skipped day. Keep it in a calendar on this computer, or make it again without the skipped days."
 msgstr "Una reunión periódica que omite algunos días no se puede poner en el calendario del servidor desde aquí: todos los invitados recibirían una cancelación por cada día omitido. Guárdela en un calendario de este equipo o vuelva a crearla sin los días omitidos."
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "A new message was asked for, but the one you are writing couldn't be saved first: {why}"
+msgstr "Se pidió un mensaje nuevo, pero antes no se pudo guardar el que está escribiendo: {why}"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -14212,8 +14217,13 @@ msgstr "El mensaje que está escribiendo tiene cambios sin guardar."
 
 #. interface
 #: crates/ui-egui/src/files.rs
+msgid "The message you were writing was saved to Drafts"
+msgstr "El mensaje que estaba escribiendo se guardó en Borradores"
+
+#. interface
+#: crates/ui-egui/src/files.rs
 msgid "The message you were writing was saved to Drafts; a link opened a new one"
-msgstr ""
+msgstr "El mensaje que estaba escribiendo se guardó en Borradores; un enlace abrió uno nuevo"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
