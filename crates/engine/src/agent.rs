@@ -189,6 +189,8 @@ const SAFE: &[&str] = &[
     "mail.toggleRead",
     "mail.markAllRead",
     "mail.flag",
+    // How a message can be unsubscribed from ("send": true is asked about, `classify`).
+    "mail.unsubscribe",
     "mail.clearFlag",
     "mail.complete",
     "mail.toggleFlag",
@@ -445,6 +447,7 @@ const SAFE: &[&str] = &[
     "ui.highContrast",
     "ui.animations",
     "ui.accent",
+    "ui.darkStyle",
     "ui.lightMessages",
     "ui.messageTheme",
     "ui.composePreview",
@@ -489,6 +492,8 @@ const SEND: &[&str] = &[
     "mail.sendAgain",
     "calendar.propose",
     "calendar.forward",
+    // Unsubscribes from a list: one click reaches its server, by mail writes to it.
+    "ui.unsubscribe",
     "ui.reportProblem",
 ];
 
@@ -497,6 +502,9 @@ const DELETE: &[&str] = &[
     "mail.removeAttachment",
     "folder.delete",
     "folder.empty",
+    // Copies only this computer has, of mail its server has (#1401): undo brings them back, but
+    // they are gone from the mailbox. A preview only counts.
+    "mail.removeImportedDuplicates",
     "calendar.removeCalendar",
     // Local contacts, tasks, events and categories have no Deleted Items to come back from, and
     // undo is short-lived (what a server has been told of events and tasks clears it).
@@ -846,6 +854,7 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
         "sync.offline" if !p::bool(params, "value").unwrap_or(!s.prefs.offline) && crate::cmd::send_receive::outbox(s) > 0 => {
             return Access::Owner(Class::Send);
         }
+        "mail.removeImportedDuplicates" if p::bool(params, "preview") == Some(true) => return Access::Safe,
         _ => {}
     }
     if base != Access::Safe {
@@ -873,6 +882,7 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
             if ids.iter().any(|m| deletes_for_good(&s.mailbox, *m)) { Access::Owner(Class::Delete) } else { Access::Safe }
         }
         "ui.sync" if params.get("password").is_some_and(|v| !v.is_null()) => Access::Owner(Class::Accounts),
+        "mail.unsubscribe" if sends => Access::Owner(Class::Send),
         // A command that closes the message being written, or puts another in its place, saves
         // what isn't saved of it first (#442). Letting that go instead (`discard`) is throwing it
         // away. When the owner wrote in it, the window asks them every time either way, saved or
@@ -1501,8 +1511,9 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
                 Some(f) if !is_outbox(&s.mailbox, f.id) => {
                     format!("{verb} {} onto the server of {}, into {}", messages_text(s, &ids), account(f.account), quoted(&f.name))
                 }
-                // An IMAP account's holds what is put there (#607).
-                Some(f) if s.mailbox.is_imap_outbox(f.id) => {
+                // An IMAP account's holds what is put there (#607), and so does a JMAP account's
+                // what is moved there (#1074).
+                Some(f) if s.mailbox.holds_what_is_moved_in(f.id) => {
                     format!("{verb} {} into the Outbox of {}, held there unsent until Send Again", messages_text(s, &ids), account(f.account))
                 }
                 _ => format!("put {} in the Outbox, which sends them", messages_text(s, &ids)),
@@ -1522,6 +1533,16 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
             let verb = if id == "folder.empty" { "permanently empty" } else { "permanently delete the folder" };
             format!("{verb} {name} and the {} in it", plural(n, "{n} message", "{n} messages"))
         }
+        // (#1401) Counted now: a different count on the yes is another question.
+        "mail.removeImportedDuplicates" => {
+            let folder = p::id_strict(params, "folder").ok().flatten();
+            let n = crate::cmd::imported_dupes::twins(&s.mailbox, folder).remove.len();
+            let where_ = folder.and_then(|f| s.mailbox.folder(f)).map_or_else(|| "every folder".to_string(), |f| quoted(&f.name));
+            format!(
+                "remove {} that only this computer has, beside the same mail from its server in {where_} (the server's copies are not touched, and nothing is sent)",
+                plural(n, "{n} message", "{n} messages")
+            )
+        }
         "account.setAutomaticReplies" => {
             let account = p::id(params, "account")
                 .and_then(|a| s.mailbox.account(a))
@@ -1539,6 +1560,13 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
         "calendar.forward" => format!("forward {} to {}", event_title(s, id, params), some(&addresses(params.get("to")), 12)),
         "calendar.propose" => format!("propose another time for {} to its organizer", event_title(s, id, params)),
         "calendar.respond" => format!("answer {} ({}) and tell its organizer", event_title(s, id, params), clip(st("response"), 20)),
+        "mail.unsubscribe" | "ui.unsubscribe" => {
+            // Each by the key its command reads: what is approved is what is done.
+            let key = if id == "ui.unsubscribe" { "message" } else { "id" };
+            let from = p::id(params, key).or_else(|| if id == "ui.unsubscribe" { s.sel.focus() } else { s.sel.messages.last().copied() });
+            let sender = from.and_then(|m| s.mailbox.message(m)).map_or_else(|| "the selected message".to_string(), |m| clip(&m.from.email, 80));
+            format!("unsubscribe from the mail of {sender}, which reaches the list by its server or by mail")
+        }
         _ if id.starts_with("calendar.") && p::bool(params, "send") == Some(true) => {
             let who = invitees(s, params);
             let to = if who.is_empty() {

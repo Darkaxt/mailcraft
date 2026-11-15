@@ -75,6 +75,9 @@ mod hidden_selection_tests;
 pub mod imap_again;
 #[cfg(test)]
 mod imap_outbox_tests;
+pub mod imported_dupes;
+#[cfg(test)]
+mod imported_dupes_tests;
 mod jmap_down;
 pub mod jmap_mail;
 #[cfg(test)]
@@ -168,6 +171,9 @@ mod tasks_remote_tests;
 #[cfg(test)]
 mod tasks_tests;
 mod thread_ids;
+pub mod unsubscribe;
+#[cfg(test)]
+mod unsubscribe_tests;
 pub mod view;
 #[cfg(test)]
 mod wipe_tests;
@@ -212,11 +218,13 @@ pub fn registry() -> Registry {
     v.extend(zones::specs());
     v.extend(people::specs());
     v.extend(people_merge::specs());
+    v.extend(imported_dupes::specs());
     v.extend(tasks::specs());
     v.extend(notes::specs());
     v.extend(rules::specs());
     v.extend(rules_remote::specs());
     v.extend(junk::specs());
+    v.extend(unsubscribe::specs());
     v.extend(keys::specs());
     v.extend(category::specs());
     v.extend(account::specs());
@@ -381,6 +389,9 @@ pub(crate) fn select_after_removal(s: &mut Session, before: &[Row], removed: &[I
 /// A message as agents see it in lists. For a message of a Gmail account's Inbox, its
 /// `gmailCategory` too (#911): one of five words this program wrote, not message text, so it isn't
 /// framed as such.
+/// For a message of a Gmail account, its `gmailLabels` (#1153) when it has any: names the server
+/// gave, Gmail's own with their backslash (`\Inbox`); text from outside, which MCP frames as
+/// message data, never instructions.
 pub fn message_summary(s: &Session, m: &Message) -> Value {
     if let Some(mut row) = s.indexed_row(m) {
         if let Some(snippet) = row.get("snippet").and_then(Value::as_str) {
@@ -416,6 +427,9 @@ pub fn message_summary(s: &Session, m: &Message) -> Value {
     });
     if let (Some(category), Some(o)) = (m.gmail_category, v.as_object_mut()) {
         o.insert("gmailCategory".into(), json!(category.code()));
+    }
+    if let (false, Some(o)) = (m.gmail_labels.is_empty(), v.as_object_mut()) {
+        o.insert("gmailLabels".into(), json!(m.gmail_labels));
     }
     v
 }

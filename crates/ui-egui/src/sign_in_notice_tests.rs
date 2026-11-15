@@ -189,8 +189,8 @@ fn other_accounts_keep_syncing_while_the_owner_signs_in() {
     assert_ne!(first.id, added);
     app.begin_sign_in(first.id, Default::default(), &first.email, String::new(), false, false).unwrap();
     assert_eq!(app.account_troubles()[0].2, Trouble::Waiting);
-    app.sync_queue.push_back((first.id, true));
-    app.sync_queue.push_back((added, true));
+    app.session.driver.round.queue.push_back((first.id, true));
+    app.session.driver.round.queue.push_back((added, true));
     app.auto_sync();
     assert_eq!(runs.load(Ordering::SeqCst), 0, "not the account on the page");
     app.auto_sync();

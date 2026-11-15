@@ -80,6 +80,8 @@ fn fixture() -> Fixture {
                 ("Delivered-To".into(), "hostile@aliases.example.org".into()),
                 ("Received".into(), "from mail-200.simplelogin.co (mail-200.simplelogin.co [192.0.2.10]) by mx.example.org".into()),
             ],
+            // A Gmail account's labels of it (#1153), names a server gave.
+            gmail_labels: vec![marked("gmailLabel")],
             ..Default::default()
         })
         .unwrap();

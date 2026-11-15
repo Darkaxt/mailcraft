@@ -139,7 +139,7 @@ impl MailApp {
         self.sync_rx.is_some()
             || self.graph_rx.is_some()
             || self.signing_in.is_some()
-            || !self.sync_queue.is_empty()
+            || !self.session.driver.round.queue.is_empty()
             || self.calendar_job_for(account)
     }
 }

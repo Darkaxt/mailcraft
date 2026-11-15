@@ -1247,8 +1247,8 @@ fn the_reading_pane_names_nothing_that_could_fetch() {
         checked += 1;
     }
     assert_eq!(
-        checked, 26,
-        "reading.rs and its complete local helper/test inventory, including appearance/preview, semantic dark colours, signature inspection, the floating controls and tracker blocking"
+        checked, 28,
+        "reading.rs and its complete local helper/test inventory, including appearance/preview, semantic dark colours, signature inspection, the floating controls, tracker blocking and unsubscribe (and its tests)"
     );
 }
 
@@ -4074,6 +4074,7 @@ fn the_selection_commands_take_anything_and_never_panic() {
 mod inline_blocks;
 mod invitation;
 mod primary;
+mod remote_bar_why;
 mod remote_server;
 mod responsive;
 mod written_pictures;

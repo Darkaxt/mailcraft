@@ -114,7 +114,12 @@ impl PreviewWindow {
     /// For the question window's context: its fonts and theme are installed here.
     pub fn new(ctx: &egui::Context, preview: SendPreview) -> PreviewWindow {
         theme::install_fonts(ctx);
-        let choice = theme::ThemeChoice { appearance: theme::Appearance::default(), accent: theme::Accent::default(), high_contrast: false };
+        let choice = theme::ThemeChoice {
+            appearance: theme::Appearance::default(),
+            accent: theme::Accent::default(),
+            high_contrast: false,
+            dark_style: Default::default(),
+        };
         theme::apply(ctx, choice.appearance.preference(theme::main_system_theme(ctx)), &choice);
         let session = mailcraft_engine::Session::at(Mailbox::default(), mailcraft_time::now(), 0);
         let mut app = MailApp::new(session, crate::Services::default());

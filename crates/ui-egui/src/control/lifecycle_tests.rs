@@ -112,10 +112,10 @@ fn a_failed_reply_keeps_the_app_open_and_no_close_can_bypass_the_receipt() {
 #[test]
 fn a_queued_sync_blocks_close_without_cancelling_it() {
     let mut app = app();
-    app.sync_queue.push_back((123, false));
+    app.session.driver.round.queue.push_back((123, false));
     let result = call(&mut app, &egui::Context::default(), "close");
     assert_eq!(result["ok"], false);
-    assert_eq!(app.sync_queue.front(), Some(&(123, false)));
+    assert_eq!(app.session.driver.round.queue.front(), Some(&(123, false)));
     assert!(!app.quit_requested);
 }
 

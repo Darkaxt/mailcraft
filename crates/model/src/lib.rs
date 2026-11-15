@@ -11,6 +11,7 @@
 mod address;
 pub mod auth_results;
 pub mod auto_replies;
+pub mod brands;
 mod calendar;
 pub mod confusables;
 mod contact;
@@ -55,6 +56,7 @@ mod simple_login_tests;
 pub mod sync;
 mod task;
 pub mod thread_index;
+pub mod unsubscribe;
 pub mod update;
 pub mod words;
 pub mod zoned;
@@ -76,9 +78,9 @@ pub use load_limit::{MIN_ITEM_BYTES, from_json};
 pub use mailbox::{
     ACCOUNT_ROW_COLORS, Account, AccountKind, AsWritten, BETWEEN_MAILBOXES, COPY_INTO_OUTBOX, Category, Directory, DownloadInFull,
     FOLDERS_NOT_DELETED_YET, FOLDERS_STAY_YET, Folder, FolderCounts, FolderKind, GREY_CATEGORY, GraphSwitch, IMPORTED, INTO_OUTBOX, ImapStatus,
-    MAX_FOLDER_DEPTH, MAX_FOLDERS, MAX_RULES, MAX_SHARED, MAX_SNOOZE_AHEAD, MAX_SNOOZE_REFUSALS, MOVED_INTO_OUTBOX, MailIdentity, Mailbox,
-    NOT_SENDING_YET, OAuth, OAuthProvider, ONLY_SERVER_FOLDERS, PALETTE, Pending, Queued, Security, Server, ServerFavorites, ServerFolder, Settled,
-    Snooze, preset_category_color,
+    MAX_FOLDER_DEPTH, MAX_FOLDERS, MAX_RULES, MAX_SHARED, MAX_SNOOZE_AHEAD, MAX_SNOOZE_REFUSALS, MOVED_INTO_OUTBOX, MailIdentity, Mailbox, OAuth,
+    OAuthProvider, ONLY_SERVER_FOLDERS, PALETTE, Pending, Queued, Security, Server, ServerFavorites, ServerFolder, Settled, Snooze,
+    preset_category_color,
 };
 pub use mailcraft_time as time;
 pub use message::{
@@ -182,6 +184,8 @@ mod calendar_rights_tests;
 #[cfg(test)]
 mod contact_key_tests;
 #[cfg(test)]
+mod gmail_labels_tests;
+#[cfg(test)]
 mod gmail_tests;
 #[cfg(test)]
 mod headers_tests;
@@ -223,6 +227,8 @@ mod sender_warnings_tests;
 mod shown_tests;
 #[cfg(test)]
 mod snooze_tests;
+#[cfg(test)]
+mod unsubscribe_tests;
 #[cfg(test)]
 mod well_known_folder_tests;
 

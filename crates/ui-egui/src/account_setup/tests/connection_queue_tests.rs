@@ -32,7 +32,7 @@ fn onboarding_waits_for_the_current_download_then_runs_the_new_account_once() {
     wizard.finish(&mut app, second);
 
     assert_eq!(wizard.outcome, Outcome::Queued);
-    assert_eq!(app.sync_queue.iter().copied().collect::<Vec<_>>(), vec![(second, false)]);
+    assert_eq!(app.session.driver.round.queue.iter().copied().collect::<Vec<_>>(), vec![(second, false)]);
     assert!(!app.services.sync_cancel.load(Ordering::Relaxed));
     assert_eq!(requests.lock().unwrap().len(), 1, "the first download is still the sole native job");
     let progress = &app.session.sync_progress.accounts;
@@ -41,7 +41,7 @@ fn onboarding_waits_for_the_current_download_then_runs_the_new_account_once() {
 
     // Repeated completion notification retains one queue entry and the same job.
     wizard.finish(&mut app, second);
-    assert_eq!(app.sync_queue.len(), 1);
+    assert_eq!(app.session.driver.round.queue.len(), 1);
     requests.lock().unwrap()[0].1.send(SyncResult { account: first, ..Default::default() }).unwrap();
     app.poll_sync();
     // The current job can finish while setup is still open. A third account
@@ -49,14 +49,14 @@ fn onboarding_waits_for_the_current_download_then_runs_the_new_account_once() {
     let third = connected(&mut app, "third@example.org");
     let mut next = AccountSetup::new(&app, &json!({"email": "third@example.org"}));
     next.finish(&mut app, third);
-    assert_eq!(app.sync_queue.iter().copied().collect::<Vec<_>>(), vec![(second, false), (third, false)]);
+    assert_eq!(app.session.driver.round.queue.iter().copied().collect::<Vec<_>>(), vec![(second, false), (third, false)]);
     app.auto_sync();
     assert_eq!(requests.lock().unwrap().iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![first, second]);
     requests.lock().unwrap()[1].1.send(SyncResult { account: second, ..Default::default() }).unwrap();
     app.poll_sync();
     app.auto_sync();
     assert_eq!(requests.lock().unwrap().iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![first, second, third]);
-    assert!(app.sync_queue.is_empty());
+    assert!(app.session.driver.round.queue.is_empty());
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn onboarding_during_a_graph_job_keeps_the_existing_progress_and_queues_the_acco
     assert_eq!(wizard.outcome, Outcome::Queued);
     assert_eq!(app.session.sync_progress.accounts[0], original);
     assert_eq!(app.session.sync_progress.accounts[1].state, RunState::Waiting);
-    assert_eq!(app.sync_queue.pop_front(), Some((second, false)));
+    assert_eq!(app.session.driver.round.queue.pop_front(), Some((second, false)));
     assert!(app.graph_rx.is_some());
 }
 
@@ -107,7 +107,7 @@ fn renewed_google_sign_in_keeps_its_download_queued_behind_another_account() {
         assert!(!app.signing_in());
         assert!(app.tokens.contains_key(&second));
         assert_eq!(requested.lock().unwrap().len(), 1);
-        assert_eq!(app.sync_queue.iter().copied().collect::<Vec<_>>(), vec![(second, quiet)]);
+        assert_eq!(app.session.driver.round.queue.iter().copied().collect::<Vec<_>>(), vec![(second, quiet)]);
         assert!(!app.services.sync_cancel.load(Ordering::Relaxed));
     }
 }
@@ -134,6 +134,6 @@ fn queued_google_setup_uses_the_existing_completion_page_in_both_themes() {
         assert!(!says(&h, "Your mail is downloading now"), "{theme}");
         assert_eq!(requests.lock().unwrap().len(), 1);
         let second = h.state().session.mailbox.accounts.iter().find(|a| a.email == "second@example.org").unwrap().id;
-        assert_eq!(h.state().sync_queue.iter().copied().collect::<Vec<_>>(), vec![(second, false)]);
+        assert_eq!(h.state().session.driver.round.queue.iter().copied().collect::<Vec<_>>(), vec![(second, false)]);
     }
 }

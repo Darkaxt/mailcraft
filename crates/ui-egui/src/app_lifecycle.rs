@@ -193,8 +193,8 @@ impl MailApp {
             || self.sync_rx.is_some()
             || self.graph_rx.is_some()
             || self.graph_pieces.is_some()
-            || !self.sync_queue.is_empty()
-            || !self.inbox_queue.is_empty()
+            || !self.session.driver.round.queue.is_empty()
+            || !self.session.driver.round.inbox_queue.is_empty()
             || !self.sync_after_secrets.is_empty()
             || self.fetching.busy()
             || self.server_searching.busy()
@@ -247,6 +247,7 @@ impl MailApp {
                 }
                 let receipt = receipt.ok_or("the native host cannot acknowledge a close; no close was requested")?;
                 self.lifecycle.pending_close = Some(receipt.clone());
+                // wasm-clock: only the native control host hands out a close receipt; the browser stops above
                 self.lifecycle.pending_since = Some(Instant::now());
                 self.lifecycle.blocked = None;
                 Ok(json!({"requested": "close", "pending": "bridgeRelease", "forced": false}))
@@ -260,8 +261,9 @@ impl MailApp {
     pub(crate) fn lifecycle_close_tick(&mut self, ctx: &Context) -> bool {
         if let Some(receipt) = &self.lifecycle.pending_close {
             let Some(delivered) = receipt.outcome() else {
+                // wasm-clock: a pending close needs the native host's receipt, which the browser never has
                 let since = *self.lifecycle.pending_since.get_or_insert_with(Instant::now);
-                let waited = since.elapsed();
+                let waited = since.elapsed(); // wasm-clock: the same native-only pending close
                 if waited < BRIDGE_RELEASE_WAIT {
                     ctx.request_repaint_after(BRIDGE_RELEASE_WAIT - waited);
                     return true;
