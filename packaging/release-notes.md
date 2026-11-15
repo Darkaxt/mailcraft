@@ -1,4 +1,7 @@
-**MailCraft 0.12.5 in short** — account problems you can see
+**MailCraft 0.12.6 in short** — filing mail cleans the Inbox
+- New: when you drag a sender's message into a folder, that sender's other mail leaves every Inbox for the same folder too. Mail you had put somewhere else stays where it is, and one Undo puts it all back.
+- New: right-click MailCraft on the taskbar or in the Start menu for New Email, New Appointment, New Meeting, New Contact and New Task, as Outlook has. A message you are writing is saved to Drafts first.
+- Brings in the latest MailCraft changes from upstream, among them snooze, close to the notification area, folder kinds and a switch between modules.
 - New: a yellow **Account Problems** shield at the top right of the window, as Outlook has, while an account needs you: a sign-in waiting in your browser, a sign-in that has run out, or a Send/Receive that went wrong. A click lists each account with its way out: Open the Page Again or Cancel, Sign In, Show Details. The account's name in the folder pane says "Sign in needed" too.
 - Headless MailCraft asks you once, in its own small window, when an account needs you to sign in again (Sign In or Later); Sign In opens the sign-in page. `status` lists those accounts as `signInNeeded`, and a message sent from one says it waits in the Outbox until you sign in.
 - Fix: while one account waits for you to sign in on its page, the others keep sending and receiving.
@@ -17,6 +20,8 @@
 - Everything from 0.12.1 stays.
 
 **What's new**
+- Filing a sender into a folder also moves that sender's received mail out of every account's Inbox; mail already filed elsewhere stays, and one Undo restores it.
+- MailCraft can be started with `mailcraft:new-mail`, `mailcraft:new-appointment`, `mailcraft:new-meeting`, `mailcraft:new-contact` or `mailcraft:new-task`, the Tasks of its taskbar button and Start menu entry; each opens the new item, also in a MailCraft that is already open.
 - **Romanian.** MailCraft's window now comes in Romanian as a preview language: every text is translated, not yet reviewed line by line by a native speaker, and File › Options names it Română (previzualizare). Dates read day first with a 24-hour clock and weeks from Monday, and counts take Romanian's three plural forms ([#1135](https://github.com/GITHUB_REPOSITORY/issues/1135)).
 - Enable attachment previews in File › Options to preview PDFs and supported images in the reading pane with local PdfCraft or PhotoCraft. [#1053](https://github.com/UCS-Care-Group/mailcraft/issues/1053)
 - Attachments of a message you read are scanned by Microsoft Defender from a temporary copy, never in the mailbox; one it flags is marked in the message and asks before it is opened or saved, and nothing is deleted.
