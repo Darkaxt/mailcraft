@@ -500,7 +500,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     let name = if key == "fav" {
         result_folder_label(&app.session.mailbox, f)
     } else if unified && f.kind == FolderKind::Inbox {
-        tl!("Unfiled").to_string()
+        tl!("Folders").to_string()
     } else {
         folder_name(f).to_string()
     };
@@ -525,10 +525,11 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     if has_children {
         let tr = Rect::from_min_max(pos2(x + HIGHLIGHT_LEFT, r.min.y), pos2(x + NAME_LEFT, r.max.y));
         let tresp = ui.interact(tr, ui.scope_id().with((key, "twisty", f.id)), Sense::click());
-        let open = !app.ui.collapsed_folders.contains(&f.id);
+        let folded = if unified { &app.ui.collapsed_unified } else { &app.ui.collapsed_folders };
+        let open = !folded.contains(&f.id);
         chevron(ui.painter(), pos2(x + CHEVRON_X, r.center().y), ROW_CHEVRON, open, if tresp.hovered() { t.accent_text } else { t.text });
         if tresp.clicked() {
-            let _ = app.execute("ui.toggleFolder", json!({"id": f.id}));
+            let _ = app.execute("ui.toggleFolder", json!({"id": f.id, "unified": unified}));
         }
     }
     let y = r.center().y;
@@ -685,7 +686,7 @@ fn unified_heading(app: &mut MailApp, ui: &mut Ui, accounts: &[(Id, String)], cu
         let _ = app.run("ui.dialog", json!({"name":"searchFolder"}));
     }
     let resp = resp.on_hover_text(tl!(
-        "Every account's Inbox, the filing account's real folder tree for all accounts (Unfiled lists what is not filed yet) and your search folders. Right-click to choose the filing account."
+        "Every account's Inbox, all your mail in one list, your folders for all accounts (Folders lists what is not filed yet) and your search folders. Right-click to choose the filing account."
     ));
     if resp.clicked() {
         let _ = app.execute("ui.toggleFolder", json!({"id": id}));
@@ -694,14 +695,20 @@ fn unified_heading(app: &mut MailApp, ui: &mut Ui, accounts: &[(Id, String)], cu
     open
 }
 
-/// The unified mailbox's Inbox: every account's Inbox together (`view.allInboxes`), with their
-/// unread mail counted.
-fn unified_inbox_row(app: &mut MailApp, ui: &mut Ui, unread: usize, selected: bool) {
+/// The unified mailbox's Inbox (`allInboxes`: every account's Inbox together, `view.allInboxes`)
+/// or its All mail (`allMail`: every folder's mail together, newest first, `view.allMail`), with
+/// `unread` mail counted.
+fn unified_list_row(app: &mut MailApp, ui: &mut Ui, all_mail: bool, unread: usize, selected: bool) {
     let t = Tokens::get(ui.ctx());
+    let (key, command, name, hint) = if all_mail {
+        ("allMail", "view.allMail", tl!("All mail"), tl!("Every new email, whatever folder it went to"))
+    } else {
+        ("allInboxes", "view.allInboxes", tl!("Inbox"), tl!("All inboxes"))
+    };
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
-    let resp = ui.interact(r, ui.scope_id().with("unified_inbox"), Sense::click());
-    app.hit.add("allInboxes", 0, r);
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!("All inboxes")));
+    let resp = ui.interact(r, ui.scope_id().with(("unified_list", key)), Sense::click());
+    app.hit.add(key, 0, r);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, hint));
     let row = highlight(r);
     if selected {
         ui.painter().rect_filled(row, 6.0, t.accent_soft);
@@ -718,12 +725,12 @@ fn unified_inbox_row(app: &mut MailApp, ui: &mut Ui, unread: usize, selected: bo
         ui.painter(),
         pos2(r.min.x + NAME_LEFT, r.center().y),
         (name_end - r.min.x - NAME_LEFT).max(0.0),
-        tl!("Inbox"),
+        name,
         if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) },
         if selected { t.accent_soft_text } else { t.text },
     );
-    if resp.on_hover_text(tl!("All inboxes")).clicked() {
-        let _ = app.run("view.allInboxes", json!({}));
+    if resp.on_hover_text(hint).clicked() {
+        let _ = app.run(command, json!({}));
     }
 }
 
@@ -995,7 +1002,8 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             let filing_account = crate::unified_inbox::filing_account(app, &filing_accounts);
             if unified_heading(app, ui, &filing_accounts, filing_account) {
                 let view = &app.session.view;
-                let all_inboxes = view.scope == mailcraft_engine::Scope::Inboxes && view.search_folder.is_none() && view.filing.is_none();
+                let unified_list = view.scope == mailcraft_engine::Scope::Inboxes && view.search_folder.is_none() && view.filing.is_none();
+                let all_mail = view.all_mail;
                 let unread = app
                     .session
                     .mailbox
@@ -1003,7 +1011,10 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                     .iter()
                     .filter(|f| f.kind == FolderKind::Inbox)
                     .fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)));
-                unified_inbox_row(app, ui, unread, all_inboxes);
+                unified_list_row(app, ui, false, unread, unified_list && !all_mail);
+                // A ledger of what came in lately, wherever it went: no count, since filed mail is
+                // often left unread.
+                unified_list_row(app, ui, true, 0, unified_list && all_mail);
                 if let Some(account) = filing_account {
                     // Its Inbox counts what is not filed in its tree yet, from every account.
                     let (total, unread) = mailcraft_engine::cmd::filing::unfiled_folders(&app.session, account)
@@ -1012,7 +1023,8 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                             (total.saturating_add(counts.total(id)), unread.saturating_add(counts.unread(id)))
                         });
                     let mut tree = trees(&app.session.mailbox, |a| a == account);
-                    let rows = visible_in(tree.remove(&account).unwrap_or_default(), &folded);
+                    // (Folded apart from the account's own tree.)
+                    let rows = visible_in(tree.remove(&account).unwrap_or_default(), &app.ui.collapsed_unified.clone());
                     let in_view = app.session.view.filing.is_some() && app.session.view.search_folder.is_none();
                     for (f, depth, has_children) in &rows {
                         // (A row out of sight takes its place and is not drawn, as in an account's tree.)

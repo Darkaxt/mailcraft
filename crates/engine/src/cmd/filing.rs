@@ -19,7 +19,7 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-pub(crate) fn receiving_folder(s: &Session, id: Id) -> bool {
+pub fn receiving_folder(s: &Session, id: Id) -> bool {
     let mut next = Some(id);
     for _ in 0..s.mailbox.folders.len() {
         let Some(folder) = next.and_then(|id| s.mailbox.folder(id)) else { return false };

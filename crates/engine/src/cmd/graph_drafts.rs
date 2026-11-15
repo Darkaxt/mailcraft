@@ -68,9 +68,12 @@ pub fn draft_up(m: &Message) -> Option<DraftUp> {
         here: m.attachments.iter().map(AttachmentUp::of).collect(),
         synced: synced.map(|was| was.attachments.clone()).unwrap_or_default(),
     });
+    let from = Some(m.from.clone()).filter(|a| !a.email.trim().is_empty());
     Some(DraftUp {
         message: m.id,
         of: if id.is_empty() { sd.of.clone() } else { None },
+        // (Said when it is made; afterwards only as it is sent, by draft_up_whole.)
+        from: if id.is_empty() { from } else { None },
         id,
         marker: sd.marker.clone(),
         change_key: m.server.as_ref().filter(|s| !s.gone).map(|s| s.change_key.clone()).unwrap_or_default(),
@@ -103,6 +106,7 @@ pub fn draft_up_whole(m: &Message) -> Option<DraftUp> {
         cc: Some(m.cc.clone()),
         bcc: Some(m.bcc.clone()),
         reply_to: Some(m.reply_to.clone()),
+        from: Some(m.from.clone()).filter(|a| !a.email.trim().is_empty()),
         importance: Some(m.importance),
         read_receipt: Some(m.read_receipt),
         attachments: Some(up.attachments.unwrap_or_else(|| AttachmentsUp { here: m.attachments.iter().map(AttachmentUp::of).collect(), synced })),

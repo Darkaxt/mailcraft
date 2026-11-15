@@ -1077,6 +1077,11 @@ msgstr "Hele dag"
 msgid "All inboxes"
 msgstr ""
 
+#. command label, interface
+#: crates/engine/src/cmd/view.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
+msgid "All mail"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
@@ -4703,7 +4708,7 @@ msgstr "Elke"
 
 #. interface
 #: crates/ui-egui/src/nav.rs
-msgid "Every account's Inbox, the filing account's real folder tree for all accounts (Unfiled lists what is not filed yet) and your search folders. Right-click to choose the filing account."
+msgid "Every account's Inbox, all your mail in one list, your folders for all accounts (Folders lists what is not filed yet) and your search folders. Right-click to choose the filing account."
 msgstr ""
 
 #. interface
@@ -4735,6 +4740,11 @@ msgstr "Elk bericht met deze handtekening wordt zoveel groter."
 #, fuzzy
 msgid "Every minute"
 msgstr "Elke minuut"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Every new email, whatever folder it went to"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -5244,8 +5254,8 @@ msgstr "Mapnaam"
 msgid "Folder {folder} ({n} of {of})"
 msgstr "Map {folder} ({n} van {of})"
 
-#. name
-#: crates/model/src/sync/progress.rs
+#. interface, name
+#: crates/model/src/sync/progress.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Folders"
 msgstr "Mappen"
@@ -17546,13 +17556,8 @@ msgstr "{what} ongedaan maken"
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/nav.rs
-msgid "Unfiled"
-msgstr ""
-
-#. command label, interface
-#: crates/engine/src/cmd/filing.rs crates/ui-egui/src/lib.rs
+#. command label
+#: crates/engine/src/cmd/filing.rs
 msgid "Unified filing"
 msgstr ""
 
@@ -23234,6 +23239,11 @@ msgstr "{time} geleden"
 #, fuzzy
 msgid "{title} (all day)"
 msgstr "{title} (hele dag)"
+
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "{wanted} is attached in parts: its next part comes first"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs

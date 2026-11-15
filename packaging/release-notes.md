@@ -1,4 +1,11 @@
-**MailCraft 0.12.6 in short** — filing mail cleans the Inbox
+**MailCraft 0.12.7 in short** — every new email in one list
+- New: **All mail** under Unified mailbox › Inbox lists every new email from every account, newest first, whatever folder it was filed to; each row names its folder. Handy while you wait for a sign-in code. Sent Items, Drafts, Deleted Items and Junk Email stay out.
+- The unified mailbox's folder tree is now called **Folders** (it was Unfiled).
+- Fix: a message written in an alias account (for example an @outlook.es address that is not the account's main one) is sent from that alias, not from the account's main address.
+- Fix: after a restart, search no longer spends minutes rewriting what it already knows about every message; it only catches up on what changed.
+- Agents can save and attach files larger than 1 MiB, in parts.
+- Folding a folder in the unified tree no longer folds it in its account's own tree, and the other way round.
+- Spanish: the newest texts are translated.
 - New: when you drag a sender's message into a folder, that sender's other mail leaves every Inbox for the same folder too. Mail you had put somewhere else stays where it is, and one Undo puts it all back.
 - New: right-click MailCraft on the taskbar or in the Start menu for New Email, New Appointment, New Meeting, New Contact and New Task, as Outlook has. A message you are writing is saved to Drafts first.
 - Brings in the latest MailCraft changes from upstream, among them snooze, close to the notification area, folder kinds and a switch between modules.
@@ -20,6 +27,7 @@
 - Everything from 0.12.1 stays.
 
 **What's new**
+- **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.
 - Filing a sender into a folder also moves that sender's received mail out of every account's Inbox; mail already filed elsewhere stays, and one Undo restores it.
 - MailCraft can be started with `mailcraft:new-mail`, `mailcraft:new-appointment`, `mailcraft:new-meeting`, `mailcraft:new-contact` or `mailcraft:new-task`, the Tasks of its taskbar button and Start menu entry; each opens the new item, also in a MailCraft that is already open.
 - **Romanian.** MailCraft's window now comes in Romanian as a preview language: every text is translated, not yet reviewed line by line by a native speaker, and File › Options names it Română (previzualizare). Dates read day first with a 24-hour clock and weeks from Monday, and counts take Romanian's three plural forms ([#1135](https://github.com/GITHUB_REPOSITORY/issues/1135)).

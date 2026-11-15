@@ -234,9 +234,21 @@ fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
             (false, of_account.map(|f| f.id).collect())
         }
         Scope::Everywhere => (true, hidden(None)),
-        Scope::Inboxes => (false, mb.folders.iter().filter(|f| f.kind == FolderKind::Inbox).map(|f| f.id).collect()),
+        Scope::Inboxes => (false, unified_folders(s)),
     };
     (everywhere, folders)
+}
+
+/// The folders the unified mailbox's list shows ([`Scope::Inboxes`]): every account's Inbox, or for
+/// All mail every folder mail arrives in or is filed to, which leaves out Sent Items, Drafts, the
+/// Outbox, Deleted Items, Junk Email and the folders under them.
+pub fn unified_folders(s: &Session) -> HashSet<Id> {
+    let mb = &s.mailbox;
+    if s.view.all_mail {
+        mb.folders.iter().filter(|f| crate::cmd::filing::receiving_folder(s, f.id)).map(|f| f.id).collect()
+    } else {
+        mb.folders.iter().filter(|f| f.kind == FolderKind::Inbox).map(|f| f.id).collect()
+    }
 }
 
 /// The messages the list looks at ([`in_view`]): those of the folders looked in, from the

@@ -161,6 +161,24 @@ fn persistent_full_sources_case_quotes_and_snippets_survive_reopen_without_body_
 }
 
 #[test]
+fn a_restart_rewrites_no_metadata_that_is_already_current() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (id, _, _) = fixture(&path);
+    let (mut session, _) = open(&path);
+    assert_eq!(search(&mut session, "HeaderOnlyAster"), [id]);
+    let written = |session: &Session| session.content_index_status()["metadataWritten"].as_u64().unwrap();
+    assert!(written(&session) > 0, "the first run writes every message");
+    drop(session);
+    let (mut session, opens) = open(&path);
+    assert_eq!(search(&mut session, "HeaderOnlyAster"), [id]);
+    let status = session.content_index_status();
+    assert_eq!(written(&session), 0, "unchanged messages are only checked after a restart: {status}");
+    assert_eq!(status["coverageCurrent"], true, "{status}");
+    assert_eq!(opens.load(Ordering::Relaxed), 0);
+}
+
+#[test]
 fn saved_header_and_attachment_queries_reopen_with_exact_native_scope_without_body_reads() {
     let scratch = tempfile::tempdir().unwrap();
     let path = scratch.path().join("mailbox.mailcraft");
@@ -393,8 +411,8 @@ fn junk_and_deleted_items_are_not_indexed_but_still_searched() {
     let (_, junk, deleted) = words_fixture(&path, &[("Inbox", "plain")], "JunkOnlyMarker", "DeletedOnlyMarker");
     let (mut session, _) = open(&path);
     search(&mut session, "plain");
-    let stored = super::db::Database::reader(&crate::store::content_index_file(&path)).unwrap().document_ids().unwrap();
-    assert!(!stored.contains(&junk) && !stored.contains(&deleted), "junk and deleted mail stay out of the sidecar");
+    let stored = super::db::Database::reader(&crate::store::content_index_file(&path)).unwrap().stored_versions().unwrap();
+    assert!(!stored.contains_key(&junk) && !stored.contains_key(&deleted), "junk and deleted mail stay out of the sidecar");
     // (All Mailboxes leaves those folders out: each is searched in the folder itself.)
     let in_folder = |session: &mut Session, id: u64, query: &str| {
         let folder = session.mailbox.message(id).unwrap().folder;

@@ -315,6 +315,23 @@ fn attachments_come_and_go() {
 }
 
 #[test]
+fn a_large_file_is_attached_and_read_back_in_parts() {
+    let mut s = session();
+    run(&mut s, "mail.new", json!({"to": "maya@lumen.example"}));
+    let first = run(&mut s, "compose.attach", json!({"name": "big.bin", "data": "aGVs", "more": true}));
+    assert_eq!((first["received"].as_u64(), first["more"].as_bool()), (Some(3), Some(true)));
+    assert!(s.compose.as_ref().unwrap().attachments.is_empty(), "nothing is attached until the last part");
+    assert!(s.run("compose.attach", &json!({"name": "other.bin", "data": "aGVsbG8="})).is_err(), "another file waits");
+    let last = run(&mut s, "compose.attach", json!({"name": "big.bin", "data": "bG8="}));
+    assert_eq!((last["size"].as_u64(), last["attachments"].as_u64()), (Some(5), Some(1)));
+    let id = run(&mut s, "compose.send", json!({}))["id"].as_u64().unwrap();
+    let part = run(&mut s, "mail.saveAttachment", json!({"id": id, "index": 0, "offset": 0, "length": 3}));
+    assert_eq!((part["data"].as_str(), part["bytes"].as_u64(), part["more"].as_bool()), (Some("aGVs"), Some(5), Some(true)));
+    let rest = run(&mut s, "mail.saveAttachment", json!({"id": id, "index": 0, "offset": 3, "length": 10}));
+    assert_eq!((rest["data"].as_str(), rest["length"].as_u64(), rest["more"].as_bool()), (Some("bG8="), Some(2), Some(false)));
+}
+
+#[test]
 fn saved_attachments_and_exports_are_named_safely() {
     let mut s = session();
     let id = first(&mut s);

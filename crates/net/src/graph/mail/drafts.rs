@@ -316,6 +316,10 @@ fn fields(d: &DraftUp) -> Map<String, Value> {
             out.insert(name.into(), recipients(list));
         }
     }
+    // The address chosen here, not the account's main alias.
+    if let Some(from) = d.from.as_ref().and_then(|from| recipients(std::slice::from_ref(from)).as_array().and_then(|one| one.first().cloned())) {
+        out.insert("from".into(), from);
+    }
     if let Some(importance) = d.importance {
         let level = match importance {
             Importance::Low => "low",

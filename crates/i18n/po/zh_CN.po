@@ -1082,6 +1082,11 @@ msgstr "全天"
 msgid "All inboxes"
 msgstr ""
 
+#. command label, interface
+#: crates/engine/src/cmd/view.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
+msgid "All mail"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
@@ -4723,7 +4728,7 @@ msgstr "每个"
 
 #. interface
 #: crates/ui-egui/src/nav.rs
-msgid "Every account's Inbox, the filing account's real folder tree for all accounts (Unfiled lists what is not filed yet) and your search folders. Right-click to choose the filing account."
+msgid "Every account's Inbox, all your mail in one list, your folders for all accounts (Folders lists what is not filed yet) and your search folders. Right-click to choose the filing account."
 msgstr ""
 
 #. interface
@@ -4755,6 +4760,11 @@ msgstr "使用此签名的每封邮件都会增加相同的大小。"
 #, fuzzy
 msgid "Every minute"
 msgstr "每分钟"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Every new email, whatever folder it went to"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -5267,8 +5277,8 @@ msgstr "文件夹名称"
 msgid "Folder {folder} ({n} of {of})"
 msgstr "文件夹 {folder}（{n}/{of}）"
 
-#. name
-#: crates/model/src/sync/progress.rs
+#. interface, name
+#: crates/model/src/sync/progress.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Folders"
 msgstr "文件夹"
@@ -17680,13 +17690,8 @@ msgstr "撤销 {what}"
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/nav.rs
-msgid "Unfiled"
-msgstr ""
-
-#. command label, interface
-#: crates/engine/src/cmd/filing.rs crates/ui-egui/src/lib.rs
+#. command label
+#: crates/engine/src/cmd/filing.rs
 msgid "Unified filing"
 msgstr ""
 
@@ -23322,6 +23327,11 @@ msgstr "{time} 前"
 #, fuzzy
 msgid "{title} (all day)"
 msgstr "{title}（全天）"
+
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "{wanted} is attached in parts: its next part comes first"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs

@@ -74,6 +74,6 @@ fn real_tree_navigation_and_scrolling_review_use_existing_theme_and_keep_actions
             assert!(rect.top() >= 0.0 && rect.bottom() <= 700.0, "{key} remains reachable below scrolling content");
         }
         assert_eq!(h.state().session.mailbox, before, "rendering a review cannot file or edit rules");
-        assert!(h.state().title_stem().starts_with(tl!("Unified filing")));
+        assert!(h.state().title_stem().starts_with(tl!("Folders")));
     }
 }

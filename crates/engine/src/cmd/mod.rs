@@ -499,7 +499,18 @@ pub(crate) fn deliver(v: &Value, name: &str, bytes: Vec<u8>) -> CmdResult {
                 Ok(json!({"name": path, "bytes": bytes.len(), "data": base64_encode(&bytes)}))
             }
         }
-        None => Ok(json!({"name": name, "bytes": bytes.len(), "data": base64_encode(&bytes)})),
+        None => {
+            // A file larger than one answer carries is read in parts: `offset` and `length` (in
+            // bytes) name one, and `more` says whether any follows. `bytes` is the whole file's size.
+            let (offset, length) = (p::u64(v, "offset"), p::u64(v, "length"));
+            if offset.is_none() && length.is_none() {
+                return Ok(json!({"name": name, "bytes": bytes.len(), "data": base64_encode(&bytes)}));
+            }
+            let start = usize::try_from(offset.unwrap_or(0)).unwrap_or(usize::MAX).min(bytes.len());
+            let end = length.map_or(bytes.len(), |length| start.saturating_add(usize::try_from(length).unwrap_or(usize::MAX)).min(bytes.len()));
+            Ok(json!({"name": name, "bytes": bytes.len(), "offset": start, "length": end - start,
+                "more": end < bytes.len(), "data": base64_encode(&bytes[start..end])}))
+        }
     }
 }
 

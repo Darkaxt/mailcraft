@@ -290,6 +290,7 @@ const SAFE: &[&str] = &[
     "view.reminders",
     "view.mail",
     "view.allInboxes",
+    "view.allMail",
     "view.calendar",
     "view.people",
     "view.tasks",

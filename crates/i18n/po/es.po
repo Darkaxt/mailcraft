@@ -107,7 +107,7 @@ msgstr "«{shown}» no es una dirección de correo electrónico"
 #. what a command says
 #: crates/engine/src/cmd/graph_send.rs
 msgid "'{subject}' may have been sent, even if its copy in Sent (or Drafts) is still marked as a draft. It is held in the Outbox."
-msgstr ""
+msgstr "'{subject}' puede que se haya enviado, aunque su copia en Enviados (o Borradores) siga marcada como borrador. Queda retenido en la Bandeja de salida."
 
 #. what a command says
 #: crates/engine/src/cmd/graph_send.rs
@@ -169,7 +169,7 @@ msgstr "(ninguna)"
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 msgid "(the server didn't confirm the sender)"
-msgstr ""
+msgstr "(el servidor no confirmó el remitente)"
 
 #. interface
 #: crates/ui-egui/src/folder_properties.rs
@@ -244,7 +244,7 @@ msgstr "1 semana"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "1. Copy the message below and send it to your organisation's administrator."
-msgstr ""
+msgstr "1. Copie el mensaje de abajo y envíelo al administrador de su organización."
 
 #. interface, name
 #: crates/model/src/offline.rs crates/ui-egui/src/keep_offline.rs
@@ -273,7 +273,7 @@ msgstr "2 años"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "2. When they have approved MailCraft, come back here and sign in again."
-msgstr ""
+msgstr "2. Cuando haya aprobado MailCraft, vuelva aquí e inicie sesión de nuevo."
 
 #. interface, name
 #: crates/model/src/offline.rs crates/ui-egui/src/keep_offline.rs
@@ -566,12 +566,12 @@ msgstr "Las reglas de un buzón compartido son suyas: esta versión no las crea"
 #. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "A shared mailbox, read with the sign-in of the account it is opened through"
-msgstr ""
+msgstr "Un buzón compartido, leído con el inicio de sesión de la cuenta desde la que se abre"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "A shared mailbox, read with the sign-in of {account}"
-msgstr ""
+msgstr "Un buzón compartido, leído con el inicio de sesión de {account}"
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -792,7 +792,7 @@ msgstr "Agregar buzón compartido…"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Add a Microsoft account to read your mail here."
-msgstr ""
+msgstr "Añada una cuenta de Microsoft para leer aquí su correo."
 
 #. interface
 #: crates/ui-egui/src/chrome.rs
@@ -863,7 +863,7 @@ msgstr "Agregar una tarea a {address} (espera aquí hasta que se permita To Do)"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AppDrawer.kt
 msgid "Add account"
-msgstr ""
+msgstr "Añadir cuenta"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -1045,6 +1045,11 @@ msgstr "Todo el día"
 msgid "All inboxes"
 msgstr ""
 
+#. command label, interface
+#: crates/engine/src/cmd/view.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
+msgid "All mail"
+msgstr "Todo el correo"
+
 #. interface
 #: crates/ui-egui/src/merge_contacts.rs
 msgid "All of them"
@@ -1141,7 +1146,7 @@ msgstr "Permitir enviar desde buzones compartidos"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Allowed"
-msgstr ""
+msgstr "Permitido"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -1236,7 +1241,7 @@ msgstr ""
 #. what a command says
 #: crates/mobile/src/sync.rs
 msgid "An account couldn't be sent and received."
-msgstr ""
+msgstr "No se pudo enviar y recibir en una cuenta."
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -1305,7 +1310,7 @@ msgstr[1] ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Android closed MailCraft while Microsoft's page was open, so that sign-in could not be finished. Nothing was added."
-msgstr ""
+msgstr "Android cerró MailCraft mientras la página de Microsoft estaba abierta, así que no se pudo terminar el inicio de sesión. No se añadió nada."
 
 #. command label, interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
@@ -2092,7 +2097,7 @@ msgstr ""
 #. name
 #: crates/ui-egui/src/theme/blue.rs
 msgid "Blue grey"
-msgstr ""
+msgstr "Gris azulado"
 
 #. interface
 #: crates/ui-egui/src/advanced_search.rs
@@ -2131,7 +2136,7 @@ msgstr "Incorporar"
 #. interface
 #: crates/ui-egui/src/recent_attachments.rs
 msgid "Browse…"
-msgstr ""
+msgstr "Examinar…"
 
 #. command label, ribbon
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
@@ -2453,7 +2458,7 @@ msgstr "Cambiar el color"
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Change the name the folder pane shows for this shared mailbox, and its colour"
-msgstr ""
+msgstr "Cambie el nombre y el color con que el panel de carpetas muestra este buzón compartido"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -3092,7 +3097,7 @@ msgstr "Los colaboradores eligen sus propios nombres; consulte docs/contributors
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Copied. Paste it into mail or chat for your administrator."
-msgstr ""
+msgstr "Copiado. Péguelo en un correo o chat para su administrador."
 
 #. name
 #: crates/engine/src/sync_driver/favorites.rs
@@ -3179,7 +3184,7 @@ msgstr "Copiar todo"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Copy message for an administrator"
-msgstr ""
+msgstr "Copiar mensaje para un administrador"
 
 #. interface
 #: crates/ui-egui/src/sync_panel.rs
@@ -3247,7 +3252,7 @@ msgstr "No se pudieron cambiar las marcas en «{name}»"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Couldn't check"
-msgstr ""
+msgstr "No se pudo comprobar"
 
 #. why a mail server couldn't be used
 #: crates/net/src/sync.rs
@@ -3502,12 +3507,12 @@ msgstr "Oscuro"
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Dark Theme Style"
-msgstr ""
+msgstr "Estilo del tema oscuro"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Dark theme"
-msgstr ""
+msgstr "Tema oscuro"
 
 #. interface
 #: crates/ui-egui/src/data_removal.rs
@@ -4426,7 +4431,7 @@ msgstr "Dirección de correo electrónico"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Email address (optional)"
-msgstr ""
+msgstr "Dirección de correo (opcional)"
 
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
@@ -4507,8 +4512,8 @@ msgstr "Cada"
 
 #. interface
 #: crates/ui-egui/src/nav.rs
-msgid "Every account's Inbox, the filing account's real folder tree for all accounts (Unfiled lists what is not filed yet) and your search folders. Right-click to choose the filing account."
-msgstr ""
+msgid "Every account's Inbox, all your mail in one list, your folders for all accounts (Folders lists what is not filed yet) and your search folders. Right-click to choose the filing account."
+msgstr "La Bandeja de entrada de cada cuenta, todo su correo en una lista, sus carpetas para todas las cuentas (Carpetas muestra lo que aún no está archivado) y sus carpetas de búsqueda. Haga clic con el botón derecho para elegir la cuenta de archivo."
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -4538,6 +4543,11 @@ msgstr "Cada mensaje con esta firma pesa eso mismo de más."
 #, fuzzy
 msgid "Every minute"
 msgstr "Cada minuto"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Every new email, whatever folder it went to"
+msgstr "Cada correo nuevo, vaya a la carpeta que vaya"
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -4897,7 +4907,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt
 msgid "Finish on Microsoft's page in your browser. MailCraft is waiting."
-msgstr ""
+msgstr "Termine en la página de Microsoft, en su navegador. MailCraft está esperando."
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/approval.rs crates/ui-egui/src/lib.rs
@@ -4908,7 +4918,7 @@ msgstr "Termine primero de iniciar sesión (su navegador está esperando)"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Finish signing in on Microsoft's page in your browser. MailCraft is waiting."
-msgstr ""
+msgstr "Termine de iniciar sesión en la página de Microsoft, en su navegador. MailCraft está esperando."
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -5025,8 +5035,8 @@ msgstr "Nombre de la carpeta"
 msgid "Folder {folder} ({n} of {of})"
 msgstr ""
 
-#. name
-#: crates/model/src/sync/progress.rs
+#. interface, name
+#: crates/model/src/sync/progress.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Folders"
 msgstr "Carpetas"
@@ -5440,7 +5450,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading.rs
 msgid "Gmail label: {label}"
-msgstr ""
+msgstr "Etiqueta de Gmail: {label}"
 
 #. what a command says
 #: crates/engine/src/cmd/account.rs
@@ -5725,6 +5735,15 @@ msgid ""
 "\n"
 "Thank you"
 msgstr ""
+"Hola:\n"
+"\n"
+"Me gustaría usar MailCraft con mi cuenta del trabajo. MailCraft es un programa de correo y calendario de código abierto que funciona en mi propio teléfono. En nuestra organización solo un administrador puede aprobar un programa nuevo, así que necesita su aprobación una vez, para toda la organización. La página de Microsoft para ello está aquí:\n"
+"\n"
+"{link}\n"
+"\n"
+"Después de aprobarlo, puede que su navegador muestre una página a la que no se puede acceder. Es normal: es una dirección de su propio equipo donde no hay nada escuchando, y para entonces la aprobación ya está hecha.\n"
+"\n"
+"Gracias"
 
 #. command label, interface, name, ribbon, ribbon location
 #: crates/engine/src/cmd/help.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs crates/ui-egui/src/ribbon.rs
@@ -5969,7 +5988,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/files.rs
 msgid "Import Mail"
-msgstr ""
+msgstr "Importar correo"
 
 #. command label
 #: crates/engine/src/cmd/keys.rs
@@ -6034,14 +6053,14 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/files.rs
 msgid "Import the messages in {name} into {folder}?"
-msgstr ""
+msgstr "¿Importar los mensajes de {name} en {folder}?"
 
 #. interface
 #: crates/ui-egui/src/files.rs
 msgid "Import {n} message from {name} into {folder}?"
 msgid_plural "Import {n} messages from {name} into {folder}?"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "¿Importar {n} mensaje de {name} en {folder}?"
+msgstr[1] "¿Importar {n} mensajes de {name} en {folder}?"
 
 #. interface, name
 #: crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/tasks_view.rs
@@ -6102,12 +6121,12 @@ msgstr "Importación de {what} en una carpeta local: para poner el correo en el 
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "Imported {what} into the local folder Imported, on this computer"
-msgstr ""
+msgstr "Se importó {what} en la carpeta local Importado, en este equipo"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "Imported {what} into the local folder Imported: move it into the account to put it on its server"
-msgstr ""
+msgstr "Se importó {what} en la carpeta local Importado: muévalo a la cuenta para ponerlo en su servidor"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -6594,7 +6613,7 @@ msgstr "Su correo se sincroniza mediante Microsoft Graph, sin servidores de corr
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt
 msgid "Its mail on this phone and its sign-in are removed. Nothing is deleted from Microsoft's servers, and you can add the account again later."
-msgstr ""
+msgstr "Se quitan su correo de este teléfono y su inicio de sesión. No se elimina nada de los servidores de Microsoft y puede volver a añadir la cuenta más tarde."
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -6779,7 +6798,7 @@ msgstr "Seguir esperando"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt
 msgid "Keep account"
-msgstr ""
+msgstr "Conservar cuenta"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -6824,7 +6843,7 @@ msgstr "Siga esperando y el cambio se hará solo en cuanto MailCraft pueda conec
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Keep your To Do tasks in step?"
-msgstr ""
+msgstr "¿Mantener sincronizadas sus tareas de To Do?"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -7082,7 +7101,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/InboxScreen.kt
 msgid "Loading…"
-msgstr ""
+msgstr "Cargando…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/dialogs.rs
@@ -7324,12 +7343,12 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "MailCraft couldn't open a browser for Microsoft's page."
-msgstr ""
+msgstr "MailCraft no pudo abrir un navegador para la página de Microsoft."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "MailCraft couldn't open a browser for Microsoft's page. Install or enable a browser, then try again."
-msgstr ""
+msgstr "MailCraft no pudo abrir un navegador para la página de Microsoft. Instale o active un navegador y vuelva a intentarlo."
 
 #. interface
 #: crates/ui-egui/src/approval.rs
@@ -7340,12 +7359,12 @@ msgstr "MailCraft no pudo abrir su navegador para la página de aprobación de M
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "MailCraft couldn't save your latest changes yet. It will try again; if the app closes first they may be lost."
-msgstr ""
+msgstr "MailCraft aún no pudo guardar sus últimos cambios. Lo volverá a intentar; si la aplicación se cierra antes, podrían perderse."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "MailCraft couldn't set aside the saved mailbox it couldn't read, so changes aren't saved this time. Free up space and restart the app."
-msgstr ""
+msgstr "MailCraft no pudo apartar el buzón guardado que no podía leer, así que esta vez no se guardan los cambios. Libere espacio y reinicie la aplicación."
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -7508,17 +7527,17 @@ msgstr "MailCraft creará una cita llamada «Comprobación de conexión de MailC
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "MailCraft will read and change the shared mailboxes you have access to. Microsoft's page opens in your browser to ask you."
-msgstr ""
+msgstr "MailCraft leerá y cambiará los buzones compartidos a los que tiene acceso. La página de Microsoft se abre en su navegador para preguntárselo."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "MailCraft will read and change your Microsoft To Do lists and tasks. Microsoft's page opens in your browser to ask you. Until you say yes, your tasks stay on this phone."
-msgstr ""
+msgstr "MailCraft leerá y cambiará sus listas y tareas de Microsoft To Do. La página de Microsoft se abre en su navegador para preguntárselo. Hasta que diga que sí, sus tareas se quedan en este teléfono."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "MailCraft will send mail from a shared mailbox, as it or on its behalf. Microsoft's page opens in your browser to ask you."
-msgstr ""
+msgstr "MailCraft enviará correo desde un buzón compartido, como él o en su nombre. La página de Microsoft se abre en su navegador para preguntárselo."
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -7621,7 +7640,7 @@ msgstr "Administrar tarea"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Many organisations let only an administrator approve a new program. Nothing is wrong with your account or your phone."
-msgstr ""
+msgstr "En muchas organizaciones solo un administrador puede aprobar un programa nuevo. Su cuenta y su teléfono están bien."
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -7748,7 +7767,7 @@ msgstr "Reunión"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt
 msgid "Menu"
-msgstr ""
+msgstr "Menú"
 
 #. interface
 #: crates/ui-egui/src/merge_contacts.rs
@@ -7851,7 +7870,7 @@ msgstr "Mensajes (.eml, .mbox), calendarios (.ics) y contactos (.vcf)"
 #. interface
 #: crates/ui-egui/src/files.rs
 msgid "Messages already in that folder are left out."
-msgstr ""
+msgstr "Los mensajes que ya están en esa carpeta se omiten."
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -7975,7 +7994,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Microsoft account"
-msgstr ""
+msgstr "Cuenta de Microsoft"
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -7992,7 +8011,7 @@ msgstr "Id. de aplicación de Microsoft"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Microsoft doesn't offer this for this kind of account."
-msgstr ""
+msgstr "Microsoft no ofrece esto para este tipo de cuenta."
 
 #. name
 #: crates/model/src/sync.rs
@@ -8050,12 +8069,12 @@ msgstr "La página de aprobación de Microsoft está abierta en su navegador…"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Microsoft's page came back without giving it. You can try again."
-msgstr ""
+msgstr "La página de Microsoft volvió sin darlo. Puede volver a intentarlo."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Microsoft's page came back without signing you in. You can try again."
-msgstr ""
+msgstr "La página de Microsoft volvió sin iniciar su sesión. Puede volver a intentarlo."
 
 #. interface
 #: crates/ui-egui/src/approval.rs
@@ -8461,7 +8480,7 @@ msgstr ""
 #. name
 #: crates/ui-egui/src/theme/blue.rs
 msgid "Neutral grey"
-msgstr ""
+msgstr "Gris neutro"
 
 #. command label, interface
 #: crates/engine/src/cmd/junk.rs crates/ui-egui/src/ribbon.rs
@@ -8803,7 +8822,7 @@ msgstr "Ninguna cuenta inicia sesión con Microsoft"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
 msgid "No account yet"
-msgstr ""
+msgstr "Aún no hay ninguna cuenta"
 
 #. interface
 #: crates/ui-egui/src/chrome.rs
@@ -8895,7 +8914,7 @@ msgstr "Esta copia no incluye los créditos de los colaboradores."
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "No copies on this computer of mail its server has were found"
-msgstr ""
+msgstr "No se encontraron copias en este equipo de correo que tenga su servidor"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -8982,7 +9001,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/recent_attachments.rs
 msgid "No recent files"
-msgstr ""
+msgstr "No hay archivos recientes"
 
 #. interface
 #: crates/ui-egui/src/ribbon/view_menus.rs
@@ -9142,7 +9161,7 @@ msgstr "No lo permite su organización"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Not allowed yet"
-msgstr ""
+msgstr "Aún no permitido"
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -9257,17 +9276,17 @@ msgstr "No llegó nada de la página de aprobación de Microsoft: se cerró o pa
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Nothing came back from Microsoft's page. You can try again."
-msgstr ""
+msgstr "No llegó nada de la página de Microsoft. Puede volver a intentarlo."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Nothing came back from Microsoft's sign-in page. It may have been closed, or left open too long. You can try again."
-msgstr ""
+msgstr "No llegó nada de la página de inicio de sesión de Microsoft. Puede que se cerrara o que estuviera abierta demasiado tiempo. Puede volver a intentarlo."
 
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "Nothing came back from the sign-in page in time."
-msgstr ""
+msgstr "La página de inicio de sesión no respondió a tiempo."
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -9334,7 +9353,7 @@ msgstr "No se encontró nada más en el servidor"
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "Nothing new imported: {already}"
-msgstr ""
+msgstr "No se importó nada nuevo: {already}"
 
 #. interface
 #: crates/ui-egui/src/tasks_view.rs
@@ -9360,7 +9379,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt
 msgid "Notifications"
-msgstr ""
+msgstr "Notificaciones"
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -9575,7 +9594,7 @@ msgstr "Reunión en línea"
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "Only a Microsoft account signs in on the phone for now."
-msgstr ""
+msgstr "Por ahora, en el teléfono solo se puede iniciar sesión con una cuenta de Microsoft."
 
 #. interface
 #: crates/ui-egui/src/windows.rs
@@ -9678,7 +9697,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Only used to fill in Microsoft's page for you."
-msgstr ""
+msgstr "Solo se usa para rellenarle la página de Microsoft."
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -9824,7 +9843,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Open shared mailboxes?"
-msgstr ""
+msgstr "¿Abrir buzones compartidos?"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -10088,7 +10107,7 @@ msgstr "Outlook.com"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Outlook.com, Hotmail, and Microsoft 365 work or school accounts. You sign in on Microsoft's own page in your browser, so MailCraft never sees your password."
-msgstr ""
+msgstr "Outlook.com, Hotmail y cuentas de Microsoft 365 del trabajo o centro educativo. Inicia sesión en la propia página de Microsoft, en su navegador, así que MailCraft nunca ve su contraseña."
 
 #. interface
 #: crates/ui-egui/src/auto_replies.rs
@@ -10844,7 +10863,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/recent_attachments.rs
 msgid "Recent files"
-msgstr ""
+msgstr "Archivos recientes"
 
 #. interface
 #: crates/ui-egui/src/people_view.rs
@@ -11013,7 +11032,7 @@ msgstr ""
 #. command label, interface
 #: crates/engine/src/cmd/imported_dupes.rs crates/ui-egui/src/dialogs.rs
 msgid "Remove Imported Duplicates"
-msgstr ""
+msgstr "Quitar duplicados importados"
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -11083,7 +11102,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Remove account"
-msgstr ""
+msgstr "Quitar cuenta"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -11127,7 +11146,7 @@ msgstr "Quitar esta cuenta y el correo guardado aquí para ella"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt
 msgid "Remove this account?"
-msgstr ""
+msgstr "¿Quitar esta cuenta?"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -11414,7 +11433,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Retry"
-msgstr ""
+msgstr "Reintentar"
 
 #. command label
 #: crates/engine/src/cmd/search_index.rs
@@ -11875,7 +11894,7 @@ msgstr "Guardado solo en este equipo: este elemento no está en su calendario de
 #. interface
 #: crates/ui-egui/src/files.rs
 msgid "Saved the message to {name}"
-msgstr ""
+msgstr "Mensaje guardado en {name}"
 
 #. interface
 #: crates/ui-egui/src/compose.rs
@@ -11900,8 +11919,8 @@ msgstr[1] ""
 #: crates/ui-egui/src/files.rs
 msgid "Saved {n} message to {name}"
 msgid_plural "Saved {n} messages to {name}"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} mensaje guardado en {name}"
+msgstr[1] "{n} mensajes guardados en {name}"
 
 #. interface
 #: crates/ui-egui/src/attachment_scan.rs
@@ -12370,7 +12389,7 @@ msgstr "Enviar desde un buzón compartido"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Send from shared mailboxes?"
-msgstr ""
+msgstr "¿Enviar desde buzones compartidos?"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs
@@ -12532,7 +12551,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt
 msgid "Sender images"
-msgstr ""
+msgstr "Imágenes de remitentes"
 
 #. name
 #: crates/ui-egui/src/forms.rs
@@ -12555,7 +12574,7 @@ msgstr "Enviando y recibiendo…"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Sending from a shared mailbox"
-msgstr ""
+msgstr "Envío desde un buzón compartido"
 
 #. interface
 #: crates/ui-egui/src/report_problem.rs
@@ -12735,7 +12754,7 @@ msgstr "Buzón compartido · la cuenta con la que se abrió ya no existe: quíte
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Shared mailboxes"
-msgstr ""
+msgstr "Buzones compartidos"
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -13032,7 +13051,7 @@ msgstr "Se muestra junto al nombre de la cuenta y en su correo donde se lista ju
 #. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Shown in the folder pane, such as Team or Support. Leave it empty to show the address. Kept on this computer only."
-msgstr ""
+msgstr "Se muestra en el panel de carpetas, como Equipo o Soporte. Déjelo vacío para mostrar la dirección. Solo se guarda en este equipo."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -13119,7 +13138,7 @@ msgstr "Vuelva a iniciar sesión y elija {typed} en la página de inicio de sesi
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Sign in again first"
-msgstr ""
+msgstr "Primero vuelva a iniciar sesión"
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -13211,7 +13230,7 @@ msgstr "Iniciar sesión con Google"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Sign in with Microsoft"
-msgstr ""
+msgstr "Iniciar sesión con Microsoft"
 
 #. interface
 #: crates/ui-egui/src/favorites_sync.rs crates/ui-egui/src/nav.rs
@@ -13789,7 +13808,7 @@ msgstr "Sistema"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
 msgid "System default"
-msgstr ""
+msgstr "Predeterminado del sistema"
 
 #. interface, ribbon
 #: crates/ui-egui/src/credits.rs crates/ui-egui/src/ribbon.rs
@@ -14010,7 +14029,7 @@ msgstr "Gracias, el jueves a las diez me va bien. Llevaré los planos."
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "That account is gone."
-msgstr ""
+msgstr "Esa cuenta ya no existe."
 
 #. what a command says
 #: crates/engine/src/cmd/calendar.rs
@@ -14038,7 +14057,7 @@ msgstr "Eso no se puede abrir en una ventana propia"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "That didn't go through."
-msgstr ""
+msgstr "No se pudo hacer."
 
 #. interface
 #: crates/ui-egui/src/files.rs
@@ -14102,7 +14121,7 @@ msgstr ""
 #. what a command says
 #: crates/mobile/src/sync.rs crates/mobile/src/sync_api.rs
 msgid "That sign-in is for somebody else's mailbox, not this account's. Nothing was kept."
-msgstr ""
+msgstr "Ese inicio de sesión es del buzón de otra persona, no de esta cuenta. No se guardó nada."
 
 #. interface
 #: crates/ui-egui/src/report_problem.rs
@@ -14144,7 +14163,7 @@ msgstr "Toda la serie"
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "The account can't be signed in now."
-msgstr ""
+msgstr "Ahora no se puede iniciar sesión en la cuenta."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -14154,7 +14173,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt
 msgid "The account could not be removed. It and its sign-in are still here. Try again."
-msgstr ""
+msgstr "No se pudo quitar la cuenta. Ella y su inicio de sesión siguen aquí. Vuelva a intentarlo."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs
@@ -14567,7 +14586,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "The greys the dark theme is drawn in: neutral, or tinted blue. The light theme stays as it is."
-msgstr ""
+msgstr "Los grises del tema oscuro: neutros o con un tono azul. El tema claro no cambia."
 
 #. interface
 #: crates/ui-egui/src/security.rs
@@ -14665,7 +14684,7 @@ msgstr "La lista de remitentes está llena: quite algunos en Archivo › Opcione
 #. what a command says
 #: crates/mobile/src/core.rs
 msgid "The list of sign-ins kept on this phone was damaged, so some older sign-ins may still be kept on it. Clearing MailCraft's storage in Android's Settings removes them."
-msgstr ""
+msgstr "La lista de inicios de sesión de este teléfono estaba dañada, así que puede que aún queden en él algunos antiguos. Borrar el almacenamiento de MailCraft en los Ajustes de Android los quita."
 
 #. interface
 #: crates/ui-egui/src/reading/unsubscribe.rs
@@ -14710,7 +14729,7 @@ msgstr "No se puede acceder al buzón de {address} a través de Microsoft Graph.
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Inbox.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MainActivity.kt
 msgid "The mailbox could not be read."
-msgstr ""
+msgstr "No se pudo leer el buzón."
 
 #. interface
 #: crates/ui-egui/src/meeting_dialogs.rs
@@ -14731,7 +14750,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "The message for your administrator could not be made."
-msgstr ""
+msgstr "No se pudo crear el mensaje para su administrador."
 
 #. interface
 #: crates/ui-egui/src/attachment_open.rs crates/ui-egui/src/attachment_scan.rs
@@ -15123,7 +15142,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "The server's copies stay as they are, and nothing is sent to the server. Undo brings them back until the next Send/Receive."
-msgstr ""
+msgstr "Las copias del servidor se quedan como están y no se envía nada al servidor. Deshacer las recupera hasta el próximo Enviar y recibir."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -15197,12 +15216,12 @@ msgstr "La dirección de correo electrónico del buzón compartido"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "The sign-in didn't go through."
-msgstr ""
+msgstr "No se pudo iniciar sesión."
 
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "The sign-in didn't work. Try again."
-msgstr ""
+msgstr "El inicio de sesión no funcionó. Vuelva a intentarlo."
 
 #. interface, what a command says
 #: crates/engine/src/sync_driver/calendar_plan.rs crates/ui-egui/src/shared_mailboxes.rs
@@ -15213,7 +15232,7 @@ msgstr "Se rechazó el inicio de sesión de la cuenta con la que se abre este bu
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "The sign-in page couldn't be opened."
-msgstr ""
+msgstr "No se pudo abrir la página de inicio de sesión."
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -15223,12 +15242,12 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "The sign-in was cancelled."
-msgstr ""
+msgstr "Se canceló el inicio de sesión."
 
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "The sign-in was declined."
-msgstr ""
+msgstr "Se rechazó el inicio de sesión."
 
 #. interface
 #: crates/ui-egui/src/compose.rs
@@ -15938,7 +15957,7 @@ msgstr ""
 #. what a command says
 #: crates/mobile/src/sync.rs
 msgid "This kind of account can't be sent and received on the phone yet."
-msgstr ""
+msgstr "Este tipo de cuenta aún no puede enviar y recibir en el teléfono."
 
 #. interface
 #: crates/ui-egui/src/reading/view.rs
@@ -16405,7 +16424,7 @@ msgstr "Para"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "To Do tasks"
-msgstr ""
+msgstr "Tareas de To Do"
 
 #. name
 #: crates/engine/src/session.rs
@@ -16775,13 +16794,8 @@ msgstr "Deshacer {what}"
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/nav.rs
-msgid "Unfiled"
-msgstr ""
-
-#. command label, interface
-#: crates/engine/src/cmd/filing.rs crates/ui-egui/src/lib.rs
+#. command label
+#: crates/engine/src/cmd/filing.rs
 msgid "Unified filing"
 msgstr ""
 
@@ -17067,7 +17081,7 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
 msgid "Version"
-msgstr ""
+msgstr "Versión"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/dialogs.rs
@@ -17736,7 +17750,7 @@ msgstr ""
 #. what a command says
 #: crates/mobile/src/sync.rs
 msgid "Your mail couldn't be saved first, so nothing was sent."
-msgstr ""
+msgstr "Primero no se pudo guardar su correo, así que no se envió nada."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -17757,7 +17771,7 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 msgid "Your mail server didn't confirm that this message came from {sender}, so MailCraft won't remember them: a sender's address can be faked."
-msgstr ""
+msgstr "Su servidor de correo no confirmó que este mensaje viniera de {sender}, así que MailCraft no lo recordará: la dirección de un remitente se puede falsificar."
 
 #. what a command says
 #: crates/engine/src/cmd/unsubscribe.rs
@@ -17844,7 +17858,7 @@ msgstr "Su organización ha aprobado MailCraft. Ahora inicie sesión con su prop
 #. what a command says
 #: crates/mobile/src/sync_api.rs
 msgid "Your organisation has to approve MailCraft before you can sign in. Ask an administrator."
-msgstr ""
+msgstr "Su organización tiene que aprobar MailCraft antes de que pueda iniciar sesión. Pregunte a un administrador."
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -17873,12 +17887,12 @@ msgstr "En su organización solo un administrador puede aprobar un programa nuev
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Your organisation needs an administrator to approve this first. Ask your administrator, then try again."
-msgstr ""
+msgstr "En su organización, primero tiene que aprobarlo un administrador. Pregúntele y vuelva a intentarlo."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Your organisation needs to approve MailCraft"
-msgstr ""
+msgstr "Su organización tiene que aprobar MailCraft"
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -17927,12 +17941,12 @@ msgstr "El administrador de su organización tiene que aprobarlo una vez"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Your organisation's rules (Conditional Access) don't allow MailCraft to sign you in on this phone. This is your organisation's policy, not a fault in MailCraft or in your phone. Ask the people who run your organisation's mail whether sign-in from this kind of app can be allowed."
-msgstr ""
+msgstr "Las reglas de su organización (acceso condicional) no permiten que MailCraft inicie su sesión en este teléfono. Es una política de su organización, no un fallo de MailCraft ni de su teléfono. Pregunte a quienes gestionan el correo de su organización si se puede permitir el inicio de sesión desde este tipo de aplicación."
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 msgid "Your organisation's rules don't allow this for your account. This is your organisation's policy, not a fault in MailCraft."
-msgstr ""
+msgstr "Las reglas de su organización no permiten esto para su cuenta. Es una política de su organización, no un fallo de MailCraft."
 
 #. interface
 #: crates/ui-egui/src/security.rs
@@ -18810,7 +18824,7 @@ msgstr "mes"
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/mod.rs
 msgid "more flags than one listing keeps"
-msgstr ""
+msgstr "más marcas de las que caben en una lista"
 
 #. what a command says
 #: crates/engine/src/import_pst.rs
@@ -20061,7 +20075,7 @@ msgstr "el servidor no respondió"
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 msgid "the server didn't end IDLE properly"
-msgstr ""
+msgstr "el servidor no terminó IDLE correctamente"
 
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/mod.rs
@@ -20125,7 +20139,7 @@ msgstr "el servidor saludó con un rechazo: {reason}"
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 msgid "the server isn't idling"
-msgstr ""
+msgstr "el servidor no está en IDLE"
 
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/folder.rs
@@ -20171,7 +20185,7 @@ msgstr "el servidor pidió más de una respuesta PLAIN"
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 msgid "the server said something that is no news while idle"
-msgstr ""
+msgstr "el servidor dijo algo que no es una novedad durante IDLE"
 
 #. why a mail server couldn't be used
 #: crates/proto/src/lib.rs
@@ -20200,7 +20214,7 @@ msgstr "el servidor envió datos antes de que empezara la conexión segura"
 #. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 msgid "the server sent data it has no reason to send while idle"
-msgstr ""
+msgstr "el servidor envió datos que no tiene por qué enviar durante IDLE"
 
 #. interface
 #: crates/ui-egui/src/reading/images.rs
@@ -21423,8 +21437,8 @@ msgstr[1] ""
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
 msgid "{n} account"
 msgid_plural "{n} accounts"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} cuenta"
+msgstr[1] "{n} cuentas"
 
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
@@ -21497,22 +21511,22 @@ msgstr[1] ""
 #: crates/ui-egui/src/lib.rs
 msgid "{n} copy on this computer of mail its server has removed"
 msgid_plural "{n} copies on this computer of mail its server has removed"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Se quitó {n} copia en este equipo de correo que tiene su servidor"
+msgstr[1] "Se quitaron {n} copias en este equipo de correo que tiene su servidor"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "{n} copy on this computer of mail its server has would be removed"
 msgid_plural "{n} copies on this computer of mail its server has would be removed"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Se quitaría {n} copia en este equipo de correo que tiene su servidor"
+msgstr[1] "Se quitarían {n} copias en este equipo de correo que tiene su servidor"
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "{n} copy you changed (its flag, categories, read mark or a to-do) is kept."
 msgid_plural "{n} copies you changed (their flag, categories, read mark or a to-do) are kept."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Se conserva {n} copia que usted cambió (su marca, categorías, leído o tarea)."
+msgstr[1] "Se conservan {n} copias que usted cambió (su marca, categorías, leído o tarea)."
 
 #. date and time, interface
 #: crates/i18n/src/date.rs crates/ui-egui/src/reminders.rs
@@ -21654,8 +21668,8 @@ msgstr[1] ""
 #: crates/ui-egui/src/lib.rs
 msgid "{n} kept because it differs"
 msgid_plural "{n} kept because they differ"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} conservado porque es distinto"
+msgstr[1] "{n} conservados porque son distintos"
 
 #. interface
 #: crates/ui-egui/src/import_tree.rs
@@ -21759,8 +21773,8 @@ msgstr[1] "{n} mensajes de tamaño desconocido"
 #: crates/ui-egui/src/dialogs.rs
 msgid "{n} message on this computer is a copy of mail its server has in the same folder, and will be removed."
 msgid_plural "{n} messages on this computer are copies of mail their server has in the same folder, and will be removed."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} mensaje de este equipo es una copia de correo que su servidor tiene en la misma carpeta, y se quitará."
+msgstr[1] "{n} mensajes de este equipo son copias de correo que su servidor tiene en la misma carpeta, y se quitarán."
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -21795,8 +21809,8 @@ msgstr[1] ""
 #: crates/ui-egui/src/lib.rs
 msgid "{n} message was already here"
 msgid_plural "{n} messages were already here"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} mensaje ya estaba aquí"
+msgstr[1] "{n} mensajes ya estaban aquí"
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -22093,8 +22107,8 @@ msgstr[1] "{n} no leídos"
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AppDrawer.kt
 msgid "{n} unread message"
 msgid_plural "{n} unread messages"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "{n} mensaje no leído"
+msgstr[1] "{n} mensajes no leídos"
 
 #. interface
 #: crates/ui-egui/src/folder_properties.rs
@@ -22191,7 +22205,7 @@ msgstr "{rule}, a partir del {day}"
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "{said}; {already}"
-msgstr ""
+msgstr "{said}; {already}"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -22247,6 +22261,11 @@ msgstr "hace {time}"
 msgid "{title} (all day)"
 msgstr "{title} (todo el día)"
 
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "{wanted} is attached in parts: its next part comes first"
+msgstr "{wanted} se adjunta por partes: primero debe llegar su siguiente parte"
+
 #. date and time
 #: crates/i18n/src/date.rs
 #, fuzzy
@@ -22280,7 +22299,7 @@ msgstr "{weekday}, {day} de {month} de {year}"
 #. interface
 #: crates/ui-egui/src/lib.rs
 msgid "{what} ({already})"
-msgstr ""
+msgstr "{what} ({already})"
 
 #. what a command says
 #: crates/engine/src/cmd/account.rs

@@ -35,6 +35,24 @@ fn combined_navigation_search_and_origin_color_controls_are_wired_in_both_themes
 }
 
 #[test]
+fn all_mail_sits_under_the_unified_inbox_and_lists_every_folder_with_its_name() {
+    let mut h = crate::people_view::testing::window("view.mail");
+    h.run_steps(3);
+    let inbox = h.state().hit.rect("allInboxes", 0).expect("the unified Inbox");
+    let all = h.state().hit.rect("allMail", 0).expect("All mail under it");
+    assert!(inbox.max.y <= all.min.y + 0.5);
+    h.state_mut().execute("view.allMail", json!({})).unwrap();
+    h.run_steps(3);
+    assert_eq!(h.state().title_stem(), tl!("All mail"));
+    let view = &h.state().session.view;
+    assert!(view.scope == Scope::Inboxes && view.all_mail);
+    h.state_mut().execute("view.allInboxes", json!({})).unwrap();
+    h.run_steps(2);
+    assert_eq!(h.state().title_stem(), tl!("All inboxes"));
+    assert!(!h.state().session.view.all_mail);
+}
+
+#[test]
 fn custom_color_text_is_kept_per_colour_in_effect() {
     let scope = egui::Id::unique("menu");
     let old = mailcraft_model::ACCOUNT_ROW_COLORS[0];
@@ -87,6 +105,26 @@ fn the_unified_mailbox_root_holds_inbox_filing_tree_and_search_folders_and_folds
     assert!(h.state().hit.rect("allInboxes", 0).is_none() && h.state().hit.rect("unifiedFolder", company).is_none());
     let restored: crate::UiState = serde_json::from_value(serde_json::to_value(h.state().prefs()).unwrap()).unwrap();
     assert!(restored.collapsed_folders.contains(&UNIFIED_ROOT));
+}
+
+#[test]
+fn a_folder_folded_in_the_unified_tree_stays_open_in_its_accounts_own_tree() {
+    let mut s = mailcraft_engine::Session::empty();
+    let account = s.run("account.add", &json!({"email":"owner@example.org"})).unwrap()["id"].as_u64().unwrap();
+    s.mailbox.account_mut(account).unwrap().kind = AccountKind::Microsoft;
+    let inbox = s.mailbox.folder_of_kind(account, mailcraft_model::FolderKind::Inbox).unwrap();
+    let company = s.mailbox.add_folder(account, Some(inbox), "Company").unwrap();
+    let team = s.mailbox.add_folder(account, Some(company), "Team").unwrap();
+    let mut h = crate::people_view::testing::window_on(s.mailbox, "view.mail");
+    h.run_steps(3);
+    assert!(h.state().hit.rect("unifiedFolder", team).is_some() && h.state().hit.rect("folder", team).is_some());
+    h.state_mut().execute("ui.toggleFolder", json!({"id": company, "unified": true})).unwrap();
+    h.run_steps(2);
+    assert!(h.state().hit.rect("unifiedFolder", team).is_none(), "folded in the unified tree");
+    assert!(h.state().hit.rect("folder", team).is_some(), "still open in the account's own tree");
+    assert!(!h.state().ui.collapsed_folders.contains(&company) && h.state().ui.collapsed_unified.contains(&company));
+    let restored: crate::UiState = serde_json::from_value(serde_json::to_value(h.state().prefs()).unwrap()).unwrap();
+    assert!(restored.collapsed_unified.contains(&company));
 }
 
 #[test]

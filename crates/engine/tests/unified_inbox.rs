@@ -67,6 +67,39 @@ fn union_tracks_real_inboxes_and_does_not_file_copy_or_merge_account_identities(
 }
 
 #[test]
+fn all_mail_lists_every_folder_mail_arrives_in_or_is_filed_to_newest_first() {
+    let (mut s, accounts) = three();
+    let inbox = message(&mut s, accounts[0], FolderKind::Inbox, "In the Inbox", false);
+    let filed = message(&mut s, accounts[1], FolderKind::Archive, "Filed away", true);
+    let sub = s.mailbox.add_folder(accounts[2], s.mailbox.folder_of_kind(accounts[2], FolderKind::Inbox), "Codes").unwrap();
+    let code = message(&mut s, accounts[2], FolderKind::Inbox, "Your code", false);
+    s.mailbox.message_mut(code).unwrap().folder = sub;
+    s.mailbox.message_mut(code).unwrap().received = 200;
+    s.mailbox.message_mut(code).unwrap().date = 200;
+    s.mailbox_changed();
+    for kind in [FolderKind::Sent, FolderKind::Drafts, FolderKind::Deleted, FolderKind::Junk, FolderKind::Outbox] {
+        message(&mut s, accounts[0], kind, &format!("{kind:?}"), true);
+    }
+    s.run("view.allInboxes", &json!({})).unwrap();
+    assert_eq!(ids(&s.run("mail.list", &json!({})).unwrap()), [inbox]);
+    let answer = s.run("view.allMail", &json!({})).unwrap();
+    assert_eq!((answer["allMail"].as_bool(), answer["unread"].as_u64()), (Some(true), Some(2)));
+    assert!(s.view.scope == Scope::Inboxes && s.view.all_mail);
+    let listed = ids(&s.run("mail.list", &json!({})).unwrap());
+    assert_eq!(listed.len(), 3);
+    assert_eq!(listed[0], code, "newest first");
+    assert!(listed.contains(&inbox) && listed.contains(&filed));
+    // A search there looks in the same folders; an agent's list of the Inboxes leaves the view as it is.
+    s.run("view.search", &json!({"query":"code"})).unwrap();
+    assert_eq!(ids(&s.run("mail.list", &json!({})).unwrap()), [code]);
+    s.run("view.clearSearch", &json!({})).unwrap();
+    assert_eq!(s.run("mail.list", &json!({"scope":"inboxes"})).unwrap()["total"], 1);
+    assert!(s.view.all_mail);
+    s.run("view.allInboxes", &json!({})).unwrap();
+    assert!(!s.view.all_mail);
+}
+
+#[test]
 fn exact_search_clear_and_read_only_listing_preserve_the_owner_view() {
     let (mut s, a) = three();
     let id = message(&mut s, a[1], FolderKind::Inbox, "Invoice A", false);

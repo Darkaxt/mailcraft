@@ -931,6 +931,9 @@ pub struct UiState {
     pub sync_panel_height: f32,
     /// Folders shown collapsed in the folder pane.
     pub collapsed_folders: Vec<Id>,
+    /// Folders shown collapsed in the Unified mailbox's filing tree: folded there apart from the
+    /// same folder in its account's own tree.
+    pub collapsed_unified: Vec<Id>,
     /// Accounts whose observed SimpleLogin alias filters are expanded.
     pub expanded_alias_accounts: Vec<Id>,
     /// The Microsoft account whose real folder tree the "Unified mailbox" root shows, as the owner
@@ -1043,6 +1046,7 @@ impl Default for UiState {
             sync_panel_width: sync_panel::WIDTH,
             sync_panel_height: 0.0,
             collapsed_folders: Vec::new(),
+            collapsed_unified: Vec::new(),
             expanded_alias_accounts: Vec::new(),
             unified_filing_account: None,
             origin_colors: Default::default(),
@@ -1384,7 +1388,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.open", "Open Mailbox", "File › Open & Export", "{}"),
     ("ui.import", "Import", "File › Open & Export", "{}"),
     ("ui.attach", "Attach File", "Message › Include", "{}"),
-    ("ui.toggleFolder", "Expand or Collapse Folder", "Folder", r#"{"id": number}"#),
+    ("ui.toggleFolder", "Expand or Collapse Folder", "Folder", r#"{"id": number, "unified"?: bool (in the Unified mailbox's tree)}"#),
     (
         "ui.source",
         "Message Source",
@@ -2165,6 +2169,7 @@ impl MailApp {
         self.ui.list_width = if self.ui.list_width.is_finite() { self.ui.list_width.clamp(240.0, 900.0) } else { 380.0 };
         (self.ui.sync_panel_width, self.ui.sync_panel_height) = sync_panel::sane_size(self.ui.sync_panel_width, self.ui.sync_panel_height);
         self.ui.collapsed_folders.truncate(10_000);
+        self.ui.collapsed_unified.truncate(10_000);
         self.ui.expanded_alias_accounts.truncate(1000);
         self.ui.recent.truncate(20);
         self.ui.confirmed_mailboxes.truncate(200);
@@ -2180,6 +2185,7 @@ impl MailApp {
             (saved.sort, saved.sort_descending, saved.conversations, saved.reading_pane, saved.folder_pane, saved.calendar, saved.task_filter);
         if saved.scope == mailcraft_engine::Scope::Inboxes {
             v.scope = mailcraft_engine::Scope::Inboxes;
+            v.all_mail = saved.all_mail;
         }
         // How People and Tasks are arranged, likewise.
         v.people_sort = saved.people_sort;
@@ -2981,13 +2987,15 @@ impl MailApp {
             })(),
             "ui.toggleFolder" => {
                 let Some(id) = p.get("id").and_then(Value::as_u64) else { return Some(Err("missing `id`".into())) };
-                match self.ui.collapsed_folders.iter().position(|x| *x == id) {
+                let unified = p.get("unified").and_then(Value::as_bool) == Some(true);
+                let folded = if unified { &mut self.ui.collapsed_unified } else { &mut self.ui.collapsed_folders };
+                match folded.iter().position(|x| *x == id) {
                     Some(i) => {
-                        self.ui.collapsed_folders.remove(i);
+                        folded.remove(i);
                     }
-                    None => self.ui.collapsed_folders.push(id),
+                    None => folded.push(id),
                 }
-                Ok(json!({"collapsed": self.ui.collapsed_folders.contains(&id)}))
+                Ok(json!({"collapsed": folded.contains(&id)}))
             }
             _ => {
                 return windows::ui_command(self, id, p)
@@ -4798,10 +4806,10 @@ impl MailApp {
                 }
                 if self.session.view.filing.is_some() {
                     let folder = self.session.mailbox.folder_path(self.session.view.folder);
-                    return format!("{} — {folder}", tl!("Unified filing"));
+                    return format!("{} — {folder}", tl!("Folders"));
                 }
                 if self.session.view.scope == mailcraft_engine::Scope::Inboxes {
-                    return tl!("All inboxes").to_owned();
+                    return if self.session.view.all_mail { tl!("All mail") } else { tl!("All inboxes") }.to_owned();
                 }
                 let folder = self.session.mailbox.folder(self.session.view.folder).map_or(tl!("Mail"), crate::nav::folder_name);
                 match account.filter(|a| !a.is_empty()) {

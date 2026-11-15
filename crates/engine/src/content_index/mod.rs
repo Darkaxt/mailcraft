@@ -57,12 +57,22 @@ enum Job {
 }
 
 enum Event {
-    Ready { revision: String, stored: HashSet<Id> },
-    Metadata { needed: Vec<(Id, documents::Phase)>, committed: Vec<Id> },
+    /// `stored`: each indexed message with its content and metadata fingerprints when nothing of
+    /// it waits (no body or attachment pass pending).
+    Ready {
+        revision: String,
+        stored: HashMap<Id, Option<(String, String)>>,
+    },
+    Metadata {
+        needed: Vec<(Id, documents::Phase)>,
+        committed: Vec<Id>,
+    },
     Documents(Vec<documents::Completion>),
     Removed,
     Pruned,
-    Maintained { more: bool },
+    Maintained {
+        more: bool,
+    },
     Retried(Vec<Id>),
     Failed(String),
 }
@@ -149,6 +159,11 @@ pub struct Index {
     removals: HashSet<Id>,
     dirty: HashSet<Id>,
     versions: HashMap<Id, (String, String)>,
+    /// What the index file already holds, settled, from the last run: a message whose metadata
+    /// still matches needs no write after a restart.
+    settled: HashMap<Id, (String, String)>,
+    /// Metadata rows sent to the writer this run (status only).
+    metadata_written: usize,
     generation: u64,
     presentation: u64,
     pruned: bool,
@@ -208,7 +223,7 @@ impl Index {
                         }
                     }
                     events
-                        .send(Event::Ready { revision: extractor.revision().into(), stored: database.document_ids()? })
+                        .send(Event::Ready { revision: extractor.revision().into(), stored: database.stored_versions()? })
                         .map_err(|why| why.to_string())?;
                     let temporary_root = std::env::temp_dir();
                     while let Ok(job) = jobs.recv() {
@@ -335,6 +350,8 @@ impl Index {
             removals: HashSet::new(),
             dirty: HashSet::new(),
             versions: HashMap::new(),
+            settled: HashMap::new(),
+            metadata_written: 0,
             generation: 0,
             presentation: 0,
             pruned: true,
@@ -410,8 +427,15 @@ impl Index {
                 self.initialized = true;
                 self.revision = revision;
                 // Gone messages, and ones now in Junk/Deleted Items, leave the index.
-                self.removals
-                    .extend(stored.into_iter().filter(|id| session.mailbox.messages.get(id).is_none_or(|message| excluded(session, message.folder))));
+                let mut settled = HashMap::new();
+                for (id, version) in stored {
+                    if session.mailbox.messages.get(&id).is_none_or(|message| excluded(session, message.folder)) {
+                        self.removals.insert(id);
+                    } else if let Some(version) = version {
+                        settled.insert(id, version);
+                    }
+                }
+                self.settled = settled;
                 match (query::Reader::new(self.path.clone()), db::Database::reader(&self.path)) {
                     (Ok(reader), Ok(rows)) => {
                         self.reader = Some(reader);
@@ -507,6 +531,7 @@ impl Index {
     fn remove(&mut self, id: Id) {
         self.messages.remove(&id);
         self.versions.remove(&id);
+        self.settled.remove(&id);
         self.dirty.remove(&id);
         self.metadata_set.remove(&id);
         self.body_set.remove(&id);
@@ -551,7 +576,10 @@ impl Index {
             } else if !self.metadata_set.is_empty() {
                 let mut rows = Vec::new();
                 let mut batch_bytes = 0usize;
-                while rows.len() < 64 {
+                // After a restart most messages are as the index file has them: those are only
+                // checked, a few milliseconds' worth per turn, and nothing is written for them.
+                let started = Instant::now();
+                while rows.len() < 64 && started.elapsed() < Duration::from_millis(8) {
                     let Some(id) = self.metadata.pop_front() else { break };
                     if !self.metadata_set.remove(&id) {
                         continue;
@@ -559,6 +587,12 @@ impl Index {
                     let Some(message) = session.mailbox.messages.get(&id) else { continue };
                     match input::metadata(session, message, &self.revision) {
                         Ok(row) => {
+                            let version = (row.content_fp.clone(), row.metadata_fp.clone());
+                            if self.settled.remove(&id).is_some_and(|stored| stored == version) {
+                                self.versions.insert(id, version);
+                                self.dirty.remove(&id);
+                                continue;
+                            }
                             let bytes = input::metadata_bytes(&row);
                             if !rows.is_empty() && batch_bytes.saturating_add(bytes) > 1024 * 1024 {
                                 self.metadata.push_front(id);
@@ -579,6 +613,7 @@ impl Index {
                     }
                 }
                 if !rows.is_empty() {
+                    self.metadata_written = self.metadata_written.saturating_add(rows.len());
                     self.send(Job::Metadata(rows))
                 }
             } else {
@@ -888,7 +923,7 @@ impl Index {
         json!({"engine":"SQLite FTS5","version":db::SCHEMA,
             "queryNotes":self.answers.front().map(|answer| answer.notes.clone()).unwrap_or_default(),
             "queryProgress":progress.filter(|(_, total)| *total > 0).map(|(read, total)| json!({"unitsRead":read,"unitsTotal":total})),"initialized":self.initialized,"building":self.building(),
-            "generation":self.generation,"metadataPending":self.metadata_set.len(),"bodiesPending":self.body_set.len(),
+            "generation":self.generation,"metadataPending":self.metadata_set.len(),"metadataWritten":self.metadata_written,"bodiesPending":self.body_set.len(),
             "attachmentsPending":self.attachment_set.len(),"activeWriter":self.active,
             "queryPending":self.reader.as_ref().is_some_and(|reader| reader.active),
             "coverageGeneration":self.coverage.as_ref().map(|(generation,_)| generation),

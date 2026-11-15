@@ -485,6 +485,7 @@ fn search_bar(app: &mut MailApp, ui: &mut Ui, found: usize) {
         tl!("Inbox and unfiled").to_string()
     } else {
         match app.session.view.scope {
+            mailcraft_engine::Scope::Inboxes if app.session.view.all_mail => tl!("All mail").to_string(),
             mailcraft_engine::Scope::Inboxes => tl!("All inboxes").to_string(),
             mailcraft_engine::Scope::Everywhere => tl!("All Mailboxes").to_string(),
             // The account in view, by the name the folder pane gives it (#493).

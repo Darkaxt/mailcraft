@@ -573,12 +573,9 @@ pub fn status_bar(app: &mut MailApp, ui: &mut Ui) {
                                 .into_iter()
                                 .fold(0usize, |total, id| total.saturating_add(counts.unread(id)))
                         } else if app.session.view.scope == Scope::Inboxes {
-                            app.session
-                                .mailbox
-                                .folders
-                                .iter()
-                                .filter(|f| f.kind == mailcraft_model::FolderKind::Inbox)
-                                .fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)))
+                            mailcraft_engine::list::unified_folders(&app.session)
+                                .into_iter()
+                                .fold(0usize, |total, f| total.saturating_add(counts.unread(f)))
                         } else if let Some(category) = mailcraft_engine::gmail::in_view(&app.session) {
                             counts.gmail(folder, category).unread
                         } else {

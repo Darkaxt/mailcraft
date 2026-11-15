@@ -90,6 +90,7 @@ pub(super) struct Written {
     pub cc: Option<Vec<String>>,
     pub bcc: Option<Vec<String>>,
     pub reply_to: Option<Vec<String>>,
+    pub from: Option<String>,
     pub read_receipt: Option<bool>,
 }
 
@@ -101,6 +102,7 @@ impl Written {
             || self.cc.is_some()
             || self.bcc.is_some()
             || self.reply_to.is_some()
+            || self.from.is_some()
             || self.read_receipt.is_some()
     }
 
@@ -116,6 +118,7 @@ impl Written {
             "ccRecipients" => self.cc = Some(recipients(value, name)?),
             "bccRecipients" => self.bcc = Some(recipients(value, name)?),
             "replyTo" => self.reply_to = Some(recipients(value, name)?),
+            "from" => self.from = recipients(&Value::Array(vec![value.clone()]), name)?.pop(),
             "isReadReceiptRequested" => {
                 self.read_receipt = Some(value.as_bool().ok_or_else(|| bad("'isReadReceiptRequested' is true or false."))?);
             }
@@ -143,6 +146,9 @@ impl Written {
         }
         if let Some(reply_to) = self.reply_to {
             m.reply_to = reply_to;
+        }
+        if let Some(from) = self.from {
+            m.from = from;
         }
         if let Some(read_receipt) = self.read_receipt {
             m.read_receipt = read_receipt;

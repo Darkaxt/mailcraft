@@ -248,6 +248,10 @@ pub struct DraftUp {
     /// Where replies go (`Reply-To`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reply_to: Option<Vec<Address>>,
+    /// The address it is written from, said when the draft is made and before it is sent: left
+    /// out, the server takes the account's main address, which may be another of its aliases.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<Address>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub importance: Option<Importance>,
     /// Whether it asks for a read receipt (Graph's `isReadReceiptRequested`, Exchange's

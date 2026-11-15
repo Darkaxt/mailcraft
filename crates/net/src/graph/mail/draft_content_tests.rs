@@ -105,6 +105,26 @@ fn a_forwarded_attachment_the_owner_kept_is_taken_as_it_is_not_sent_up_again() {
     assert!(matches!(kept.as_slice(), [SyncedAttachment { id, .. }] if id.ends_with("-att")), "{kept:?}");
 }
 
+#[test]
+fn a_draft_is_made_and_sent_from_the_address_chosen_here_not_the_accounts_main_alias() {
+    let server = StandIn::start().unwrap();
+    let alias = Address::new("Owner", "owner.alias@example.org");
+    let made = run(&server, vec![DraftUp { from: Some(alias.clone()), ..whole_draft("", "Hi", "Hello.", &[], Vec::new(), Vec::new()) }], Vec::new());
+    let done = made.drafts.first().cloned().unwrap();
+    assert!(!done.id.is_empty() && done.fields, "{:?}", made.errors);
+    assert_eq!(server.state().mailbox.messages.get(&done.id).map(|m| m.from.clone()).as_deref(), Some("owner.alias@example.org"));
+    // Back to the main address on the server (its change key kept, so no conflict), it is said again as it is sent.
+    server.state().mailbox.messages.get_mut(&done.id).unwrap().from = "owner@example.org".into();
+    let whole =
+        DraftUp { change_key: done.change_key.clone(), from: Some(alias), ..whole_draft(&done.id, "Hi", "Hello.", &[], Vec::new(), Vec::new()) };
+    let sent = run(&server, Vec::new(), vec![SendUp { message: 5, draft: Some(whole), mime: None }]);
+    assert!(matches!(sent.sent.as_slice(), [d] if d.outcome == SendOutcome::Sent), "{:?} {:?}", sent.sent, sent.errors);
+    let sent_items = server.state().well_known("sentitems");
+    let state = server.state();
+    let copy = state.mailbox.messages.values().find(|m| m.folder == sent_items);
+    assert_eq!(copy.map(|m| m.from.as_str()), Some("owner.alias@example.org"));
+}
+
 /// What the owner has of a saved draft, whole: every field and the attachments.
 fn whole_draft(id: &str, subject: &str, body: &str, bcc: &[&str], here: Vec<AttachmentUp>, synced: Vec<SyncedAttachment>) -> DraftUp {
     DraftUp {

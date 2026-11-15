@@ -90,7 +90,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .selection(needs_message),
         CommandSpec::new("mail.saveAttachment", "Save Attachment", "Attachments › Actions", save_attachment)
             .pure()
-            .params(r#"{"index": number, "id"?: number, "path"?: string} — without a path, answers the bytes as base64 `data`"#)
+            .params(r#"{"index": number, "id"?: number, "path"?: string, "offset"?: number, "length"?: number} — without a path, answers the bytes as base64 `data`: a large file in parts, `offset` and `length` in bytes, with `more` while some follows"#)
             .selection(needs_message),
         CommandSpec::new("mail.saveAllAttachments", "Save All Attachments", "Attachments › Actions", save_all::save_all)
             .pure()
@@ -750,6 +750,7 @@ fn list_with(s: &mut Session, v: &Value) -> CmdResult {
     if explicit_folder || requested_scope.is_some() {
         s.view.filing = None;
         s.view.gmail = None;
+        s.view.all_mail = false;
     }
     if explicit_folder || requested_scope.is_some() {
         s.view.search_folder = None;

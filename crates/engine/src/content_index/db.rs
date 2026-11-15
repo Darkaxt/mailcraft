@@ -6,7 +6,7 @@
 //! Schema 2 stores each text unit once (`raw`) behind an external-content
 //! FTS5 index (`detail=none`, no column sizes) and folds at query time.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -330,13 +330,20 @@ impl Database {
         transaction.commit().map_err(error)
     }
 
-    pub fn document_ids(&self) -> Result<HashSet<Id>> {
-        let mut statement = self.connection.prepare("SELECT id FROM metadata").map_err(error)?;
-        statement
-            .query_map([], |row| row.get::<_, String>(0))
-            .map_err(error)?
-            .map(|value| value.map_err(error)?.parse::<Id>().map_err(error))
-            .collect()
+    /// Every indexed message, with its fingerprints (content, metadata) when it is settled: no
+    /// body or attachment pass waits for it.
+    pub fn stored_versions(&self) -> Result<HashMap<Id, Option<(String, String)>>> {
+        let mut statement = self.connection.prepare("SELECT id,content_fp,metadata_fp,state FROM metadata").map_err(error)?;
+        let mut rows = statement.query([]).map_err(error)?;
+        let mut stored = HashMap::new();
+        while let Some(row) = rows.next().map_err(error)? {
+            let id = row.get::<_, String>(0).map_err(error)?.parse::<Id>().map_err(error)?;
+            let state: String = row.get(3).map_err(error)?;
+            let settled = !matches!(state.as_str(), "pending" | "pendingAttachments");
+            let version = if settled { Some((row.get(1).map_err(error)?, row.get(2).map_err(error)?)) } else { None };
+            stored.insert(id, version);
+        }
+        Ok(stored)
     }
 
     pub fn remove(&mut self, ids: impl IntoIterator<Item = Id>) -> Result<()> {

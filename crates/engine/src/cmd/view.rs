@@ -23,6 +23,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.mail", "Mail", "Navigation", mail).reads().key("Mod+1"),
         CommandSpec::new("view.allInboxes", "All inboxes", "Folder Pane", all_inboxes).reads()
             .params("{} — virtual union of each account's actual Inbox; preserves message and account identities without filing or copying mail"),
+        CommandSpec::new("view.allMail", "All mail", "Folder Pane", all_mail).reads().params(
+            "{} — every account's recent mail in one list, newest first, whatever folder it is in (each row names it); leaves out Sent Items, Drafts, the Outbox, Deleted Items and Junk Email",
+        ),
         CommandSpec::new("view.calendar", "Calendar", "Navigation", calendar).reads().key("Mod+2"),
         CommandSpec::new("view.people", "People", "Navigation", people).reads().key("Mod+3"),
         CommandSpec::new("view.tasks", "Tasks", "Navigation", tasks).reads().key("Mod+4"),
@@ -93,11 +96,22 @@ fn mail(s: &mut Session, _: &Value) -> CmdResult {
 }
 
 fn all_inboxes(s: &mut Session, _: &Value) -> CmdResult {
+    unified(s, false)
+}
+
+fn all_mail(s: &mut Session, _: &Value) -> CmdResult {
+    unified(s, true)
+}
+
+/// The unified mailbox's list: every Inbox, or with `all_mail` every folder mail arrives in or
+/// is filed to ([`crate::list::unified_folders`]).
+fn unified(s: &mut Session, all_mail: bool) -> CmdResult {
     s.view.gmail = None;
     s.view.search_folder = None;
     s.view.filing = None;
     s.view.module = Module::Mail;
     s.view.scope = Scope::Inboxes;
+    s.view.all_mail = all_mail;
     s.view.search.clear();
     s.view.open.clear();
     s.sel.messages.clear();
@@ -110,13 +124,8 @@ fn all_inboxes(s: &mut Session, _: &Value) -> CmdResult {
         .or_else(|| s.mailbox.folders.iter().find(|f| f.kind == mailcraft_model::FolderKind::Inbox).map(|f| f.id))
         .unwrap_or(0);
     let counts = s.folder_counts();
-    let unread = s
-        .mailbox
-        .folders
-        .iter()
-        .filter(|f| f.kind == mailcraft_model::FolderKind::Inbox)
-        .fold(0usize, |total, f| total.saturating_add(counts.unread(f.id)));
-    Ok(json!({"scope":"inboxes","unread":unread,"shown":crate::list::listed(&s.rows())}))
+    let unread = crate::list::unified_folders(s).into_iter().fold(0usize, |total, f| total.saturating_add(counts.unread(f)));
+    Ok(json!({"scope":"inboxes","allMail":all_mail,"unread":unread,"shown":crate::list::listed(&s.rows())}))
 }
 
 fn calendar(s: &mut Session, _: &Value) -> CmdResult {

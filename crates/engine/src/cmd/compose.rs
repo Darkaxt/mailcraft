@@ -50,7 +50,7 @@ pub fn specs() -> Vec<CommandSpec> {
             .when_writing(needs_compose),
         CommandSpec::new("compose.attach", "Attach File", "Message › Include", attach)
             .pure()
-            .params(r#"{"path": string} | {"name": string, "data": base64}, "mime"?: string"#)
+            .params(r#"{"path": string} | {"name": string, "data": base64, "more"?: bool}, "mime"?: string — a large file comes in parts, in order: each with the same name, `more: true` on every part but the last, each part's bytes in base64 of their own"#)
             .when_writing(needs_compose),
         CommandSpec::new("compose.attachItem", "Attach Item", "Insert › Include", attach_item::attach_item)
             .pure()
@@ -1088,21 +1088,39 @@ fn set(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn attach(s: &mut Session, v: &Value) -> CmdResult {
-    let (name, bytes) = match p::str(v, "data") {
+    let data = p::str(v, "data");
+    let (name, mut bytes) = match data {
         Some(data) => (p::req_str(v, "name")?.to_string(), base64_decode(data)?),
         None => source(v)?,
     };
-    if bytes.len() > MAX_ATTACHMENT {
-        return Err(failed!("{name} is larger than {mb} MB", name, mb = MAX_ATTACHMENT >> 20));
-    }
     // Only the file's own name travels, never the folders it was in.
     let name = name.rsplit(['/', '\\']).next().unwrap_or("").trim().to_string();
     let name = if name.is_empty() { "attachment".to_string() } else { name };
-    let mime = p::str(v, "mime").map(str::to_string).unwrap_or_else(|| mailcraft_mime::media_type_for(&name).to_string());
+    let more = data.is_some() && p::bool(v, "more") == Some(true);
     let c = compose_mut(s)?;
     if c.attachments.len() >= MAX_ATTACHMENTS {
         return Err(fail("this message already has as many attachments as it can carry"));
     }
+    // A file sent in parts: what came of it so far goes first.
+    if let Some(part) = c.attaching.take() {
+        if part.0 != name {
+            let wanted = part.0.clone();
+            c.attaching = Some(part);
+            return Err(failed!("{wanted} is attached in parts: its next part comes first", wanted));
+        }
+        let mut all = part.1;
+        all.append(&mut bytes);
+        bytes = all;
+    }
+    if bytes.len() > MAX_ATTACHMENT {
+        return Err(failed!("{name} is larger than {mb} MB", name, mb = MAX_ATTACHMENT >> 20));
+    }
+    if more {
+        let received = bytes.len();
+        c.attaching = Some((name.clone(), bytes));
+        return Ok(json!({"name": name, "received": received, "more": true}));
+    }
+    let mime = p::str(v, "mime").map(str::to_string).unwrap_or_else(|| mailcraft_mime::media_type_for(&name).to_string());
     let size = bytes.len();
     c.attachments.push(Attachment::new(name.clone(), mime, bytes));
     c.dirty = true;

@@ -401,6 +401,9 @@ pub struct ViewState {
     /// How the search's free text is compared ([`SearchOptions`], `view.searchOptions`).
     pub search_options: SearchOptions,
     pub scope: Scope,
+    /// With [`Scope::Inboxes`]: All mail, every folder mail arrives in or is filed to
+    /// ([`crate::list::unified_folders`]), not only the Inboxes (`view.allMail`).
+    pub all_mail: bool,
     /// Canonical real Outlook account for the unified filing tree; ordinary views have none.
     pub filing: Option<Id>,
     /// Selected saved virtual query. Typing a different search leaves its definition intact.
@@ -453,6 +456,7 @@ impl Default for ViewState {
             search: String::new(),
             search_options: SearchOptions::default(),
             scope: Scope::Folder,
+            all_mail: false,
             filing: None,
             search_folder: None,
             reading_pane: Pane::Right,
@@ -551,7 +555,7 @@ pub(crate) struct ListOf {
     filter: Filter,
     /// The Gmail category it shows, if any (#911).
     gmail: Option<(Id, mailcraft_model::GmailCategory)>,
-    virtual_view: (bool, Option<Id>),
+    virtual_view: (bool, bool, Option<Id>),
     search: Option<(mailcraft_model::search::Query, Scope)>,
     /// The day, the first day of the week and the zone, for a search with dates in it:
     /// `received:today` is other messages tomorrow (#329).
@@ -569,7 +573,7 @@ impl ListOf {
             folder: view.folder,
             filter: view.filter,
             gmail: view.gmail,
-            virtual_view: (view.scope == Scope::Inboxes, view.filing),
+            virtual_view: (view.scope == Scope::Inboxes, view.scope == Scope::Inboxes && view.all_mail, view.filing),
             search,
             when,
         }
@@ -825,6 +829,10 @@ pub struct Compose {
     /// (Don't Save) takes that copy out of Drafts again. A draft opened from Drafts never is.
     #[serde(skip)]
     pub autosaved: bool,
+    /// A file being attached in parts (`compose.attach` with `more`): its name and the bytes so
+    /// far. Never read from a file.
+    #[serde(skip)]
+    pub attaching: Option<(String, Vec<u8>)>,
     /// Which message being written this is, among those open at once (#286): given when it opens
     /// ([`Session::open_compose`]), never read from a file.
     #[serde(skip)]
