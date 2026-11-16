@@ -3118,6 +3118,17 @@ pub fn fetch(path: &Path, r: &ContentRef) -> Result<Arc<Vec<u8>>, String> {
     Ok(bytes)
 }
 
+/// [`fetch`], without keeping what was read in the cache: for a pass over every message (a
+/// backup, [`crate::backup`]) that must not push out the content the window is showing.
+pub fn fetch_uncached(path: &Path, r: &ContentRef) -> Result<Arc<Vec<u8>>, String> {
+    let r = Ref::from_model(r);
+    let dir = blob_dir(&resolve(path));
+    if let Some(bytes) = lock(cache()).get(&dir, &r) {
+        return Ok(bytes);
+    }
+    get(&dir, &r, &Folders::new()).map(Arc::new).ok_or_else(|| format!("the file that keeps it is missing from {} or damaged", dir.display()))
+}
+
 /// The content folder beside the mailbox file, as the engine's source of content that isn't in
 /// memory (`crate::io::ContentSource`): what a desktop host gives its session.
 #[derive(Clone, Copy, Debug, Default)]
@@ -3205,71 +3216,82 @@ pub fn load_all(path: &Path, mailbox: &mut Mailbox) -> Result<usize, String> {
         if m.is_loaded() && m.header_block.is_loaded() {
             continue;
         }
-        let mut m = Message::clone(m);
         let mut take = |r: &ContentRef| -> Result<Arc<Vec<u8>>, String> {
             if let Some(bytes) = got.get(r) {
                 return Ok(bytes.clone());
             }
-            let bytes = fetch(path, r).map_err(|e| format!("message {id}: {e}"))?;
+            let bytes = fetch(path, r)?;
             got.insert(*r, bytes.clone());
             Ok(bytes)
         };
-        if m.body_is_kept()
-            && let Some(kept) = m.kept.take()
-        {
-            if let Some(r) = kept.text.filter(|_| m.body.text.is_empty()) {
-                m.body.text = text_of_bytes(&take(&r)?);
-                n += 1;
-            }
-            if let Some(r) = kept.html.filter(|_| m.body.html.is_none()) {
-                m.body.html = Some(text_of_bytes(&take(&r)?));
-                n += 1;
-            }
-            if let Some(r) = kept.hidden.filter(|_| m.hidden_text.is_empty())
-                && let Ok(bytes) = take(&r)
-            {
-                m.hidden_text = text_of_bytes(&bytes);
-                n += 1;
-            }
-        }
-        for a in &mut m.attachments {
-            if let Some(r) = a.kept.filter(|_| a.data.is_empty()) {
-                a.data = take(&r)?;
-                n += 1;
-            }
-            a.kept = None;
-        }
-        // An original that can't be read leaves the copy without one (#30): the message is whole
-        // without it, and is written from its parts.
-        if let Some(o) = m.original.as_mut()
-            && let Some(r) = o.kept.filter(|_| o.data.is_empty())
-        {
-            match take(&r) {
-                Ok(bytes) => {
-                    (o.data, o.kept) = (bytes, None);
-                    n += 1;
-                }
-                Err(e) => {
-                    log::warn!("{e}: the bytes it came as are left out");
-                    m.original = None;
-                }
-            }
-        }
-        // A header block that can't be read is unavailable (HS): the message is whole without
-        // it, with the header lines it reads by name.
-        if let Some(r) = m.header_block.kept.filter(|_| m.header_block.data.is_empty()) {
-            match take(&r).map(|bytes| mailcraft_model::HeaderBlock::read(&bytes)) {
-                Ok(Some(block)) => {
-                    m.header_block = block;
-                    n += 1;
-                }
-                Ok(None) => log::warn!("message {id}: its header lines are damaged and are left out"),
-                Err(e) => log::warn!("{e}: its header lines are left out"),
-            }
-        }
+        let (m, parts) = load_whole(id, m, &mut take)?;
+        n += parts;
         mailbox.messages.insert(id, Arc::new(m));
     }
     Ok(n)
+}
+
+/// Message `id` with every kept part of it brought into memory through `take`, and how many
+/// parts were. A body or attachment that can't be had is an error naming the message; an
+/// original or a header block that can't be is left out, as [`load_all`] leaves them.
+pub fn load_whole(id: Id, m: &Message, take: &mut dyn FnMut(&ContentRef) -> Result<Arc<Vec<u8>>, String>) -> Result<(Message, usize), String> {
+    let mut m = Message::clone(m);
+    let mut n = 0;
+    let mut take = |r: &ContentRef| take(r).map_err(|e| format!("message {id}: {e}"));
+    if m.body_is_kept()
+        && let Some(kept) = m.kept.take()
+    {
+        if let Some(r) = kept.text.filter(|_| m.body.text.is_empty()) {
+            m.body.text = text_of_bytes(&take(&r)?);
+            n += 1;
+        }
+        if let Some(r) = kept.html.filter(|_| m.body.html.is_none()) {
+            m.body.html = Some(text_of_bytes(&take(&r)?));
+            n += 1;
+        }
+        if let Some(r) = kept.hidden.filter(|_| m.hidden_text.is_empty())
+            && let Ok(bytes) = take(&r)
+        {
+            m.hidden_text = text_of_bytes(&bytes);
+            n += 1;
+        }
+    }
+    for a in &mut m.attachments {
+        if let Some(r) = a.kept.filter(|_| a.data.is_empty()) {
+            a.data = take(&r)?;
+            n += 1;
+        }
+        a.kept = None;
+    }
+    // An original that can't be read leaves the copy without one (#30): the message is whole
+    // without it, and is written from its parts.
+    if let Some(o) = m.original.as_mut()
+        && let Some(r) = o.kept.filter(|_| o.data.is_empty())
+    {
+        match take(&r) {
+            Ok(bytes) => {
+                (o.data, o.kept) = (bytes, None);
+                n += 1;
+            }
+            Err(e) => {
+                log::warn!("{e}: the bytes it came as are left out");
+                m.original = None;
+            }
+        }
+    }
+    // A header block that can't be read is unavailable (HS): the message is whole without
+    // it, with the header lines it reads by name.
+    if let Some(r) = m.header_block.kept.filter(|_| m.header_block.data.is_empty()) {
+        match take(&r).map(|bytes| mailcraft_model::HeaderBlock::read(&bytes)) {
+            Ok(Some(block)) => {
+                m.header_block = block;
+                n += 1;
+            }
+            Ok(None) => log::warn!("message {id}: its header lines are damaged and are left out"),
+            Err(e) => log::warn!("{e}: its header lines are left out"),
+        }
+    }
+    Ok((m, n))
 }
 
 /// Message `m` (`id` in the mailbox kept at `path`) without the content of it that is in memory
@@ -3559,6 +3581,15 @@ fn prepare(
     if parts.attachments.iter().all(Option::is_none) {
         parts.attachments.clear();
     }
+    let lean = lean(m, &parts);
+    let json = serde_json::to_vec(&lean).map_err(|e| e.to_string())?;
+    let refs = if parts.is_empty() { Vec::new() } else { parts.json().into_bytes() };
+    let fp = index::put_fp((Coll::Message, id), &json, &refs).map_err(io_error)?;
+    Ok(Prepared { of: Arc::downgrade(m), fp, parts, json, refs })
+}
+
+/// Message `m` as its record keeps it: without the parts `parts` puts outside the mailbox file.
+fn lean(m: &Message, parts: &Parts) -> Message {
     let mut lean = Message::clone(m);
     if parts.text.is_some() {
         lean.body.text = String::new();
@@ -3583,10 +3614,27 @@ fn prepare(
     if parts.headers.is_some() {
         lean.header_block = mailcraft_model::HeaderBlock::default();
     }
-    let json = serde_json::to_vec(&lean).map_err(|e| e.to_string())?;
-    let refs = if parts.is_empty() { Vec::new() } else { parts.json().into_bytes() };
-    let fp = index::put_fp((Coll::Message, id), &json, &refs).map_err(io_error)?;
-    Ok(Prepared { of: Arc::downgrade(m), fp, parts, json, refs })
+    lean
+}
+
+/// A fingerprint of message `id` as a backup keeps it ([`crate::backup`]): what the mailbox file
+/// holds for it and the names of its content, the same whether that content is in memory or on
+/// disk, so that a message read (or let go of) since the last backup doesn't count as changed.
+pub fn backup_fingerprint(id: Id, m: &Arc<Message>) -> Result<Digest, String> {
+    let prepared = prepare(id, m, &mut HashMap::new(), None)?;
+    let mut lean = lean(m, &prepared.parts);
+    lean.kept = None;
+    for a in &mut lean.attachments {
+        a.kept = None;
+    }
+    if let Some(o) = lean.original.as_mut() {
+        o.kept = None;
+    }
+    lean.header_block.kept = None;
+    let mut bytes = serde_json::to_vec(&lean).map_err(|e| e.to_string())?;
+    bytes.extend_from_slice(&id.to_le_bytes());
+    bytes.extend_from_slice(&prepared.refs);
+    Ok(Digest::of(&bytes))
 }
 
 /// A mailbox file never names content that isn't beside it: a part whose bytes aren't in memory

@@ -670,6 +670,52 @@ fn accent_swatches(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     }
 }
 
+/// Options › Backups: on or off, where, Back Up Now, and what the last backup did.
+#[cfg(not(target_arch = "wasm32"))]
+fn backups(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
+    use crate::backup;
+    let mut on = app.ui.backups;
+    let switch = ui
+        .checkbox(&mut on, tl!("Back up every day"))
+        .on_hover_text(tl!("A compressed copy of your mail: one file per past year, one per month this year. Passwords are never in it."));
+    app.hit.add("optionBackups", 0, switch.rect);
+    if switch.changed() {
+        let _ = app.run("ui.backups", json!({"value": on}));
+    }
+    let folder = backup::folder(app).map(|f| f.display().to_string()).unwrap_or_default();
+    let mut change = egui::Rect::NOTHING;
+    row(ui, tl!("Backup folder"), |ui| {
+        ui.label(egui::RichText::new(&folder).color(t.text_dim));
+        let b = ui.button(tl!("Change…"));
+        change = b.rect;
+        if b.clicked() {
+            let _ = app.run("ui.backupFolder", json!({}));
+        }
+    });
+    app.hit.add("optionBackupFolder", 0, change);
+    ui.horizontal(|ui| {
+        let running = app.backups.running();
+        let now = ui.add_enabled(!running, egui::Button::new(tl!("Back Up Now")));
+        app.hit.add("optionBackupNow", 0, now.rect);
+        if now.clicked() {
+            let _ = app.run("ui.backupNow", json!({}));
+        }
+        let said = if running {
+            tl!("Backing up…").to_string()
+        } else if app.backups.error.is_some() {
+            tl!("The last backup failed.").to_string()
+        } else if let Some(last) = app.backups.last.as_ref().filter(|l| l.finished > 0) {
+            crate::i18n::fmt(tl!("Last backup: {when}, {size}"), &[("when", &backup::when(app, last.finished)), ("size", &backup::size(last.bytes))])
+        } else {
+            String::new()
+        };
+        let label = ui.label(egui::RichText::new(said).color(t.text_dim));
+        if let Some(e) = &app.backups.error {
+            label.on_hover_text(e.as_str());
+        }
+    });
+}
+
 fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     heading(ui, tl!("Options"), t);
     section(ui, tl!("General"), t);
@@ -873,6 +919,12 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     crate::reading::remote::options(app, ui, t);
     crate::sender_images::options(app, ui, t);
     crate::attachment_preview::options(app, ui);
+    // A copy of the mailbox once a day (v0.12.9), where the mailbox is a file.
+    #[cfg(not(target_arch = "wasm32"))]
+    if app.session.path.is_some() {
+        section(ui, tl!("Backups"), t);
+        backups(app, ui, t);
+    }
     section(ui, tl!("Accounts"), t);
     let mut remember = app.ui.remember_sign_in;
     if ui

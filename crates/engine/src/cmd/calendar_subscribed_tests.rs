@@ -376,9 +376,11 @@ fn the_subscription_survives_the_mailbox_file_without_its_address() {
 
 #[test]
 fn agents_need_the_owners_yes_to_subscribe_and_never_see_the_host_protocol() {
-    assert_eq!(access("calendar.subscribe"), Some(Access::Owner(Class::Accounts)));
-    assert_eq!(access("calendar.unsubscribe"), Some(Access::Owner(Class::Accounts)));
-    assert_eq!(access("calendar.subscriptionSettings"), Some(Access::Owner(Class::Accounts)));
+    // The fork asks only about what removes something (the owner's policy, 2026-11-10):
+    // subscribing and its settings are undone by unsubscribing; unsubscribing removes events.
+    assert_eq!(access("calendar.subscribe"), Some(Access::Safe));
+    assert_eq!(access("calendar.unsubscribe"), Some(Access::Owner(Class::Delete)));
+    assert_eq!(access("calendar.subscriptionSettings"), Some(Access::Safe));
     assert_eq!(access("calendar.refreshSubscribed"), Some(Access::Safe));
     assert_eq!(access("sync.subscriptionRequest"), Some(Access::Never));
     assert_eq!(access("sync.applySubscription"), Some(Access::Never));

@@ -1,11 +1,9 @@
-**MailCraft 0.12.8 in short** — folder tags, folder tabs, and questions you can't miss
-- New: give a folder a tag, an emoji or a short word (right-click it › Tag). It shows before the folder's name, its subfolders wear it too, and in the unified mailbox each message shows its folder's tag. A tag menu above the list shows only the mail of the folders with that tag.
-- New: the folder pane has tabs down its edge: Unified, Favorites and one per account (Outlook.es, Gmail 1, Gmail 2). Each tab shows just its part of the pane. Right-click an account's tab to rename it; File › Options › General turns the tabs off.
-- Fix: the question about an agent's request now always opens in its own small window on top of every other window, also while MailCraft's window is open, so a message window can no longer hide it. It waits for you as long as headless does.
-- Fix: search finds new mail at once, before the search index has read it.
-- Fix: a `->` in a search is an arrow, not "leave out".
-- Fix: moving all of a rule's senders to another folder replaces the rule, instead of leaving one behind that matches nothing.
-- Everything from 0.12.7 stays.
+**MailCraft 0.12.9 in short** — a daily backup of your mail
+- New: MailCraft backs up your mail once a day, compressed: one file for each past year and one for each month of this year. Only the files whose mail changed are written again, so a daily backup stays light. The last 7 days of your settings, accounts and folders are kept too. Passwords are never in a backup.
+- File › Options › Backups: turn it off, pick the folder (an external drive is a good place), or Back Up Now.
+- Each backup file opens as a mailbox of its own once unzipped (7-Zip opens it); `mailcraft-cli backup-restore <folder> <new mailbox>` puts the whole mailbox back together.
+- The latest changes from MailCraft upstream are included.
+- Everything from 0.12.8 stays.
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

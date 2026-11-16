@@ -464,8 +464,8 @@ impl Serialize for Messages {
     }
 }
 
-/// A message as [`Messages`] writes it.
-struct Whole<'a>(&'a Message);
+/// A message as [`Messages`] writes it (a backup writes its messages one at a time this way).
+pub struct Whole<'a>(pub &'a Message);
 
 impl Serialize for Whole<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

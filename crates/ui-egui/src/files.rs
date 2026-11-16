@@ -131,6 +131,11 @@ pub(crate) fn intercept(app: &mut MailApp, id: &str, params: &Value) -> Option<R
         app.services.file_dialog.as_ref()?;
         return Some(ask(app, FileDialogRequest::Folder, AfterPick::Export { command: id.to_string(), params: params.clone() }));
     }
+    // The backup folder: the owner picks it (desktop only).
+    if id == "ui.backupFolder" && params.get("path").is_none() {
+        app.services.file_dialog.as_ref()?;
+        return Some(ask(app, FileDialogRequest::Folder, AfterPick::Export { command: id.to_string(), params: params.clone() }));
+    }
     if params.get("path").is_some() || !app.enabled(id) {
         return None;
     }
@@ -306,6 +311,7 @@ pub(crate) fn saved_said(command: &str, v: &Value, name: &str) -> String {
             crate::i18n::fmt(&tln!(n, "Saved {n} message to {name}", "Saved {n} messages to {name}"), &[("name", name)])
         }
         "file.exportMessage" => crate::i18n::fmt(tl!("Saved the message to {name}"), &[("name", name)]),
+        "ui.backupFolder" => crate::i18n::fmt(tl!("Backups go to {name}"), &[("name", name)]),
         _ => crate::i18n::fmt(tl!("Saved {name}"), &[("name", name)]),
     }
 }

@@ -63,6 +63,8 @@ pub mod auto_replies;
 #[cfg(test)]
 mod auto_replies_tests;
 pub mod backstage;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod backup;
 mod calendar_sync;
 pub mod calendar_view;
 pub mod chrome;
@@ -894,6 +896,12 @@ pub struct UiState {
     /// Desktop: the close button hides the window while mail and reminders keep running.
     #[serde(deserialize_with = "theme::lenient_bool")]
     pub close_to_tray: bool,
+    /// Desktop: a compressed copy of the mailbox once a day (v0.12.9, [`backup`]); on unless
+    /// the owner turned it off.
+    #[serde(deserialize_with = "theme::lenient_bool")]
+    pub backups: bool,
+    /// Where backups go; `None`: `Backups` beside the mailbox file ([`backup::folder`]).
+    pub backup_folder: Option<String>,
     /// The owner has seen where the window goes on its first close to the tray (#544).
     #[serde(deserialize_with = "theme::lenient_bool")]
     pub close_to_tray_notice_seen: bool,
@@ -1050,6 +1058,8 @@ impl Default for UiState {
             high_contrast: false,
             animations: motion::Motion::default(),
             close_to_tray: false,
+            backups: true,
+            backup_folder: None,
             close_to_tray_notice_seen: false,
             accent: theme::Accent::default(),
             dark_style: theme::DarkStyle::default(),
@@ -1372,6 +1382,10 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.googleClientId", "Google Desktop Application ID", "File › Options", r#"{"value": string (empty: the build's own)}"#),
     ("ui.rememberSignIn", "Remember Passwords and Sign-Ins", "File › Options", r#"{"value"?: bool (default: toggle)}"#),
     ("ui.closeToTray", "Close to system tray", "File › Options › General", r#"{"value"?: bool (default: toggle)}"#),
+    ("ui.backups", "Back up every day", "File › Options › Backups", r#"{"value"?: bool (default: toggle)}"#),
+    ("ui.backupFolder", "Change Backup Folder", "File › Options › Backups", r#"{} — asks the owner to pick the folder backups go to"#),
+    ("ui.backupNow", "Back Up Now", "File › Options › Backups", r#"{} — a backup now, of what changed since the last one"#),
+    ("ui.backupStatus", "Backup Status", "File › Options › Backups", r#"{} — on or off, the folder, and what the last backup did"#),
     (
         "ui.folderTabs",
         "Folder pane tabs",
@@ -1930,6 +1944,9 @@ pub struct MailApp {
     pub(crate) ctx: Option<egui::Context>,
     /// The file dialog the host is showing, and what its answer is for ([`files`]).
     pub(crate) file_dialog: Option<files::PendingDialog>,
+    /// The daily backup ([`backup`]).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) backups: backup::Backups,
     /// Calendar and contact files the system asked MailCraft to open, each waiting to be asked
     /// about ([`files::ask_next`]).
     pub(crate) opened_waiting: std::collections::VecDeque<String>,
@@ -2147,6 +2164,8 @@ impl MailApp {
             running_after_save: false,
             ctx: None,
             file_dialog: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            backups: Default::default(),
             source_pane: Default::default(),
             search_index_pane: Default::default(),
             opened_waiting: Default::default(),
@@ -2676,6 +2695,10 @@ impl MailApp {
         let s = |k: &str| p.get(k).and_then(Value::as_str);
         let b = |k: &str| p.get(k).and_then(Value::as_bool);
         if let Some(r) = security::command(self, id, p) {
+            return Some(r);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(r) = backup::command(self, id, p) {
             return Some(r);
         }
         Some(match id {
@@ -5321,6 +5344,8 @@ impl MailApp {
         self.poll_graph_switch_copy();
         self.tick_graph_switch();
         let _ = files::poll(self);
+        #[cfg(not(target_arch = "wasm32"))]
+        backup::tick(self);
         files::drain_inbox(self);
         opening::poll_ahead(self, ctx);
         files::ask_next(self);

@@ -373,6 +373,11 @@ msgid "A colleague's calendar, by their address, with your work or school accoun
 msgstr "A kollégák naptára, a címük szerint, a munka vagy az iskolai fiókkal. Csak ezen a számítógépen maradt"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "A compressed copy of your mail: one file per past year, one per month this year. Passwords are never in it."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "A contact's card keeps at most 32 certificates and keys"
@@ -551,8 +556,8 @@ msgstr "Ennek a kulcsnak egy része az RSA (a titkosító kulcs talán alkulcsa)
 msgid "A picture couldn't be downloaded."
 msgstr "Egy képet nem lehetett letölteni."
 
-#. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt
 #, fuzzy
 msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."
 msgstr "Egy weben lévő kép elárulja a feladójának, hogy megnyitotta az üzenetet, és mikor. Kikapcsolva a képek csak azokhoz az üzenetekhez, feladókhoz és tartományokhoz töltődnek le, amelyeket Ön megad."
@@ -2270,6 +2275,11 @@ msgstr "Elérhető formátumok:"
 msgid "Back"
 msgstr "Vissza"
 
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Back Up Now"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/send_receive.rs
 #, fuzzy
@@ -2296,6 +2306,43 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/controls.rs
 msgid "Back to the message as it is meant to be read"
+msgstr ""
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Back up every day"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backed up; {n} message is missing some content"
+msgid_plural "Backed up; {n} messages are missing some content"
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Backing up…"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Backup Status"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Backup folder"
+msgstr ""
+
+#. interface, ribbon location
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "Backups go to {name}"
 msgstr ""
 
 #. interface
@@ -2410,12 +2457,6 @@ msgstr "Hozzátok be!"
 #, fuzzy
 msgid "Browse…"
 msgstr "Tallózás…"
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-#, fuzzy
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
-msgstr "Az index keresési válaszainak kiépítése; amíg ez be nem fejeződik, néhány régebbi levelet lassabban kutatnak át"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
@@ -2767,6 +2808,11 @@ msgstr "Nézetváltás"
 msgid "Change Automatic Replies"
 msgstr "Automatikus válasz módosítása"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Change Backup Folder"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -2846,7 +2892,7 @@ msgid "Changed: saved when you choose another signature or leave this page."
 msgstr "Az aláírás mentése automatikus, amikor másik aláírást választ, vagy elhagyja ezt az oldalt."
 
 #. interface
-#: crates/ui-egui/src/forms.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Change…"
 msgstr "Változás…"
@@ -3253,16 +3299,16 @@ msgstr "Aláírás bezárása"
 msgid "Close Window"
 msgstr "Ablak bezárása"
 
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Close the current dialog first."
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "Close and keep as draft"
 msgstr "Bezárás és megtartás piszkozatként"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Close the current dialog first."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -7928,6 +7974,11 @@ msgid "Last Week"
 msgstr "Múlt hét"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Last backup: {when}, {size}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Last name"
@@ -8927,6 +8978,18 @@ msgstr ""
 msgid "Message appearance"
 msgstr ""
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
+#, fuzzy
+msgid "Message queued. Sending from this phone is not available yet."
+msgstr "Az üzenet sorba került. Erről a telefonról még nem lehet küldeni."
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
+#, fuzzy
+msgid "Message sent."
+msgstr "Üzenet elküldve."
+
 #. interface
 #: crates/ui-egui/src/source_pane.rs
 msgid "Message source"
@@ -8941,18 +9004,6 @@ msgstr ""
 #: crates/ui-egui/src/forms.rs
 msgid "Message {message}, after {completed} actions: {why}"
 msgstr ""
-
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
-#, fuzzy
-msgid "Message queued. Sending from this phone is not available yet."
-msgstr "Az üzenet sorba került. Erről a telefonról még nem lehet küldeni."
-
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
-#, fuzzy
-msgid "Message sent."
-msgstr "Üzenet elküldve."
 
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
@@ -11468,16 +11519,16 @@ msgstr ""
 msgid "Origin row color"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
-msgid "Original sender unavailable"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "Original message"
 msgstr "Eredeti üzenet"
+
+#. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
+msgid "Original sender unavailable"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/security.rs
@@ -11741,7 +11792,7 @@ msgid "Pending"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Pending development"
 msgstr "Fejlesztés alatt"
@@ -13611,16 +13662,16 @@ msgid_plural "Saved {n} messages to {name}"
 msgstr[0] "{n} üzenet mentve ide: {name}"
 msgstr[1] "{n} üzenet mentve ide: {name}"
 
-#. interface
-#: crates/ui-egui/src/attachment_scan.rs
-msgid "Saving Mail Attachment"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
 #, fuzzy
 msgid "Saved."
 msgstr "Mentve."
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Saving Mail Attachment"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -14860,16 +14911,16 @@ msgstr "A beszélgetés üzeneteinek megjelenítése"
 msgid "Show the unified mailbox, Favorites and each account on tabs down the folder pane's edge."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/reading/controls.rs
-msgid "Show this message light, dark or as the app is"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "Show the whole original"
 msgstr "A teljes eredeti megjelenítése"
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Show this message light, dark or as the app is"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
@@ -15034,12 +15085,6 @@ msgstr "Írja be újra, amint az ügyvezető jóváhagyta"
 #, fuzzy
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
 msgstr "Újból jelentkezzen be: A Microsoft oldala megnyílik a böngészőjében. Eközben a posta és a naptár munkája is."
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Sign in on the page that opened in your browser…"
-msgstr "Jelentkezzen be a böngészőjében megnyitott oldalon…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -15417,16 +15462,16 @@ msgstr "Valami nem ment át, vagy nem érkezett meg, ahogy elküldték. Az aláb
 msgid "Sort by"
 msgstr "Rendezés"
 
-#. interface
-#: crates/ui-egui/src/reading/controls.rs
-msgid "Source"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt
 #, fuzzy
 msgid "Sound, vibration and lock screen, in the phone's settings"
 msgstr "Hang, rezgés és zárképernyő a telefon beállításaiban"
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Source"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -15540,12 +15585,6 @@ msgstr "Állapotsor · Fájl"
 #, fuzzy
 msgid "Status:"
 msgstr "Állapot:"
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "Still indexing: some older mail is searched more slowly"
-msgstr "Még mindig indexel: néhány régebbi levelet lassabban keresnek"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt crates/ui-egui/src/sync_panel.rs
@@ -16421,6 +16460,11 @@ msgid "The attachment preview timed out."
 msgstr "A csatoló előzetese időzített."
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "The backup failed. See File › Options › Backups."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/files.rs
 #, fuzzy
 msgid "The browser can't read files by path"
@@ -16922,6 +16966,11 @@ msgstr "A kulcsot eltávolították a számítógépről."
 #. interface
 #: crates/ui-egui/src/chrome.rs
 msgid "The last Send/Receive had problems."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The last backup failed."
 msgstr ""
 
 #. interface
@@ -18468,6 +18517,11 @@ msgid "This mailbox is on this device only"
 msgstr "Ez a postafiók csak ezen az eszközön található."
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "This mailbox isn't kept in a file, so there is nothing to back up."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/unconfirmed.rs
 #, fuzzy
 msgid "This mailbox was opened from a file. Its accounts connect to:"
@@ -19738,7 +19792,7 @@ msgid "Verify…"
 msgstr "Ellenőrzés…"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt
 #, fuzzy
 msgid "Version"
 msgstr "Verzió"
@@ -19791,11 +19845,6 @@ msgstr "Forrás megtekintése"
 msgid "Violet"
 msgstr "Ibolya"
 
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Wait for the current task operation to finish."
-msgstr ""
-
 #. command label
 #: crates/engine/src/cmd/send_later.rs
 #, fuzzy
@@ -19807,6 +19856,11 @@ msgstr "Várakozás küldés előtt"
 #, fuzzy
 msgid "Wait before sending"
 msgstr "Várakozás küldés előtt"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Wait for the current task operation to finish."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
@@ -21477,12 +21531,6 @@ msgstr "Nem bírja ki."
 #. name
 #: crates/engine/src/agent.rs
 #, fuzzy
-msgid "it changes an account or a sign-in"
-msgstr "fiókot vagy bejelentkezést módosít"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
 msgid "it changes options, signatures or rules"
 msgstr "a lehetőségek, aláírások vagy szabályok megváltoztatása"
 
@@ -21497,12 +21545,6 @@ msgstr "kattint vagy beírja az ablakba"
 #, fuzzy
 msgid "it could not be removed"
 msgstr "nem lehetett eltávolítani"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it deletes for good"
-msgstr "jóra töröl"
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -21598,12 +21640,6 @@ msgstr "leveszi az ablakot az üzenetről, amit a tulajdonos ír."
 #, fuzzy
 msgid "it took too long"
 msgstr "Túl sokáig tartott."
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it writes to other people or reaches out to the web"
-msgstr "ír másoknak, vagy kinyúl a webre"
 
 #. why a mail server couldn't be used
 #: crates/net/src/transport.rs
@@ -21978,16 +22014,16 @@ msgstr "nem egy üzenetsorozat"
 msgid "not allowed on the server yet: File › Info › Ask again"
 msgstr "még nem engedélyezett a kiszolgálón: Fájl › Info › Kérdezze újra"
 
-#. what a command says
-#: crates/engine/src/cmd/filing.rs
-msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "not an address that can be sent to"
 msgstr "nem olyan cím, amelyre küldeni lehet"
+
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/ews_setup.rs
@@ -24053,12 +24089,6 @@ msgid "{count} messages can't be moved right now."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr "A {count} üzenetet nem kutatták át teljesen: csak a kezdetük van itt, amíg le nem töltik."
-
-#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "{days} (all day)"
@@ -25206,14 +25236,6 @@ msgstr[0] "{n} régebbi üzenet visszaállítva a fejlécére"
 msgstr[1] "{n} régebbi üzenet visszaállítva a fejlécére"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] "A keresés {n} régebbi üzenetet kihagyott, mert a szövegük még nincs letöltve."
-msgstr[1] "A keresés {n} régebbi üzenetet kihagyott, mert a szövegük még nincs letöltve."
-
-#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "{n} open task"
@@ -25572,11 +25594,6 @@ msgstr "{time} ezelőtt"
 msgid "{title} (all day)"
 msgstr "{title} (egész nap)"
 
-#. what a command says
-#: crates/engine/src/cmd/compose.rs
-msgid "{wanted} is attached in parts: its next part comes first"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
 #, fuzzy
@@ -25584,6 +25601,11 @@ msgid "{used} of {cap} used by {n} message"
 msgid_plural "{used} of {cap} used by {n} messages"
 msgstr[0] "{used} / {cap} foglalt {n} üzenet által"
 msgstr[1] "{used} / {cap} foglalt {n} üzenet által"
+
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "{wanted} is attached in parts: its next part comes first"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -25670,6 +25692,40 @@ msgid "“{subject}” wasn't found on its server, so it can't be forwarded as a
 msgstr "~A {subject} ~ nem volt a szerveren, így nem lehet továbbítani, mint egy melléklet"
 
 #, fuzzy
+#~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
+#~ msgstr "Az index keresési válaszainak kiépítése; amíg ez be nem fejeződik, néhány régebbi levelet lassabban kutatnak át"
+
+#, fuzzy
+#~ msgid "Sign in on the page that opened in your browser…"
+#~ msgstr "Jelentkezzen be a böngészőjében megnyitott oldalon…"
+
+#, fuzzy
+#~ msgid "Still indexing: some older mail is searched more slowly"
+#~ msgstr "Még mindig indexel: néhány régebbi levelet lassabban keresnek"
+
+#, fuzzy
+#~ msgid "it changes an account or a sign-in"
+#~ msgstr "fiókot vagy bejelentkezést módosít"
+
+#, fuzzy
+#~ msgid "it deletes for good"
+#~ msgstr "jóra töröl"
+
+#, fuzzy
+#~ msgid "it writes to other people or reaches out to the web"
+#~ msgstr "ír másoknak, vagy kinyúl a webre"
+
+#, fuzzy
+#~ msgid "{count} messages weren't searched in full: only their beginning is here until they download."
+#~ msgstr "A {count} üzenetet nem kutatták át teljesen: csak a kezdetük van itt, amíg le nem töltik."
+
+#, fuzzy
+#~ msgid "{n} older message wasn't searched: its text isn't loaded yet"
+#~ msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
+#~ msgstr[0] "A keresés {n} régebbi üzenetet kihagyott, mert a szövegük még nincs letöltve."
+#~ msgstr[1] "A keresés {n} régebbi üzenetet kihagyott, mert a szövegük még nincs letöltve."
+
+#, fuzzy
 #~ msgid "Writing a message is not available in this version yet."
 #~ msgstr "Üzenet írása ebben a verzióban még nem érhető el."
 
@@ -25677,8 +25733,6 @@ msgstr "~A {subject} ~ nem volt a szerveren, így nem lehet továbbítani, mint 
 #~ msgid "The attachment is too large to open on the phone."
 #~ msgstr "A melléklet túl nagy ahhoz, hogy a telefonon megnyissa."
 
-#. what a command says
-#: crates/mobile/src/core.rs
 #, fuzzy
 #~ msgid "The list of sign-ins kept on this phone was damaged, so some older sign-ins may still be kept on it. Clearing MailCraft's storage in Android's Settings removes them."
 #~ msgstr "A telefonon tárolt beiratkozások listája megsérült, így néhány régebbi beiratkozás még mindig rajta lehet. MailCraft Android Beállításaiban lévő tárolójának törlése eltávolítja őket."
@@ -25695,14 +25749,10 @@ msgstr "~A {subject} ~ nem volt a szerveren, így nem lehet továbbítani, mint 
 #~ msgid "Primary or Focused only"
 #~ msgstr "Csak Elsődleges vagy Fókuszált"
 
-#. what a command says
-#: crates/engine/src/import_pst.rs
 #, fuzzy
 #~ msgid "a .pst file is imported into a calendar on this computer only, never an account on a server"
 #~ msgstr "a .pst fájlt csak a számítógépen lévő naptárba importálják, és soha nem egy kiszolgálón lévő fiókba."
 
-#. what a command says
-#: crates/model/src/mailbox.rs
 #, fuzzy
 #~ msgid "the mailbox has no calendar"
 #~ msgstr "a postafiókának nincs naptára"
@@ -25730,3 +25780,4 @@ msgstr "~A {subject} ~ nem volt a szerveren, így nem lehet továbbítani, mint 
 #, fuzzy
 #~ msgid "This build has no application id to sign in with."
 #~ msgstr "A MailCraft ezen verziójában nincs alkalmazásazonosító a bejelentkezéshez."
+

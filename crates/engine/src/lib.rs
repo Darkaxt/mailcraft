@@ -27,6 +27,11 @@ macro_rules! failed {
 pub mod agent;
 pub mod aliases;
 pub mod arrivals;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod backup;
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod backup_tests;
 pub mod catalog;
 pub mod cmd;
 pub mod composing;

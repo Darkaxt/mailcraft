@@ -506,6 +506,9 @@ const SAFE: &[&str] = &[
     "ui.checkForUpdates",
     "ui.toggleCalendarGroup",
     "ui.findInvitation",
+    // A backup into the folder the owner chose; what it said (v0.12.9).
+    "ui.backupNow",
+    "ui.backupStatus",
 ];
 
 const SEND: &[&str] = &[
@@ -636,6 +639,9 @@ const SETTINGS: &[&str] = &[
     "ui.senderImages",
     "ui.desktopAlerts",
     "ui.closeToTray",
+    // Backups off, or put somewhere else (v0.12.9).
+    "ui.backups",
+    "ui.backupFolder",
     "ui.repliesInWindow",
     "ui.updateCheck",
     "ui.updateInstall",
@@ -748,10 +754,13 @@ pub fn access(id: &str) -> Option<Access> {
             | "account.thinOffline"
             | "account.graphSwitch"
             | "calendar.removeShared"
+            // Removes the subscribed calendar and its events from this computer.
+            | "calendar.unsubscribe"
             | "ui.rememberSignIn" => Access::Owner(Class::Delete),
             // Trusting an imported mailbox's servers permits credential use;
             // this is an authorization boundary, not an options-page prompt.
-            "ui.confirmServers" => Access::Owner(Class::Accounts),
+            // A DAV server named for an account is where its password goes.
+            "ui.confirmServers" | "account.davSet" => Access::Owner(Class::Accounts),
             _ => Access::Safe,
         }
     } else if is(MAILBOX) || is(SETTINGS) {
@@ -803,6 +812,8 @@ pub const FILE_PARAMS: &[(&str, &str, FileUse)] = &[
     ("mail.saveAttachment", "path", FileUse::Writes { ext: "" }),
     ("mail.saveAllAttachments", "path", FileUse::Folder),
     ("ui.reportProblem", "path", FileUse::Writes { ext: "txt" }),
+    // Where backups go is the owner's to pick.
+    ("ui.backupFolder", "path", FileUse::Refused),
 ];
 
 /// The file param of `id`, if it has one.

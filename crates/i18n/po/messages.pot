@@ -309,6 +309,11 @@ msgid "A colleague's calendar, by their address, with your work or school accoun
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "A compressed copy of your mail: one file per past year, one per month this year. Passwords are never in it."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "A contact's card keeps at most 32 certificates and keys"
 msgstr ""
@@ -458,8 +463,8 @@ msgstr ""
 msgid "A picture couldn't be downloaded."
 msgstr ""
 
-#. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt
 msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."
 msgstr ""
 
@@ -1894,6 +1899,11 @@ msgstr ""
 msgid "Back"
 msgstr ""
 
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Back Up Now"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/send_receive.rs
 msgid "Back online"
@@ -1917,6 +1927,43 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/controls.rs
 msgid "Back to the message as it is meant to be read"
+msgstr ""
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Back up every day"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backed up; {n} message is missing some content"
+msgid_plural "Backed up; {n} messages are missing some content"
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Backing up…"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Backup Status"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Backup folder"
+msgstr ""
+
+#. interface, ribbon location
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "Backups go to {name}"
 msgstr ""
 
 #. interface
@@ -2012,11 +2059,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/recent_attachments.rs
 msgid "Browse…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
 msgstr ""
 
 #. android
@@ -2313,6 +2355,11 @@ msgstr ""
 msgid "Change Automatic Replies"
 msgstr ""
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Change Backup Folder"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "Change Recurring Item"
@@ -2379,7 +2426,7 @@ msgid "Changed: saved when you choose another signature or leave this page."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/forms.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/forms.rs
 msgid "Change…"
 msgstr ""
 
@@ -2720,14 +2767,14 @@ msgstr ""
 msgid "Close Window"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Close the current dialog first."
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 msgid "Close and keep as draft"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Close the current dialog first."
 msgstr ""
 
 #. interface
@@ -6653,6 +6700,11 @@ msgid "Last Week"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Last backup: {when}, {size}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 msgid "Last name"
 msgstr ""
@@ -7489,6 +7541,16 @@ msgstr ""
 msgid "Message appearance"
 msgstr ""
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
+msgid "Message queued. Sending from this phone is not available yet."
+msgstr ""
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
+msgid "Message sent."
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/source_pane.rs
 msgid "Message source"
@@ -7502,16 +7564,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Message {message}, after {completed} actions: {why}"
-msgstr ""
-
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
-msgid "Message queued. Sending from this phone is not available yet."
-msgstr ""
-
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
-msgid "Message sent."
 msgstr ""
 
 #. interface, ribbon, ribbon location
@@ -9630,14 +9682,14 @@ msgstr ""
 msgid "Origin row color"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
-msgid "Original sender unavailable"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 msgid "Original message"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
+msgid "Original sender unavailable"
 msgstr ""
 
 #. interface
@@ -9861,7 +9913,7 @@ msgid "Pending"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
 msgid "Pending development"
 msgstr ""
 
@@ -11436,14 +11488,14 @@ msgid_plural "Saved {n} messages to {name}"
 msgstr[0] ""
 msgstr[1] ""
 
-#. interface
-#: crates/ui-egui/src/attachment_scan.rs
-msgid "Saving Mail Attachment"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
 msgid "Saved."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Saving Mail Attachment"
 msgstr ""
 
 #. interface
@@ -12489,14 +12541,14 @@ msgstr ""
 msgid "Show the unified mailbox, Favorites and each account on tabs down the folder pane's edge."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/reading/controls.rs
-msgid "Show this message light, dark or as the app is"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 msgid "Show the whole original"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Show this message light, dark or as the app is"
 msgstr ""
 
 #. interface
@@ -12634,11 +12686,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-msgid "Sign in on the page that opened in your browser…"
 msgstr ""
 
 #. interface
@@ -12961,14 +13008,14 @@ msgstr ""
 msgid "Sort by"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/reading/controls.rs
-msgid "Source"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt
 msgid "Sound, vibration and lock screen, in the phone's settings"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Source"
 msgstr ""
 
 #. interface
@@ -13064,11 +13111,6 @@ msgstr ""
 #. what a command says
 #: crates/engine/src/cmd/tasks/status.rs
 msgid "Status:"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Still indexing: some older mail is searched more slowly"
 msgstr ""
 
 #. android, interface
@@ -13807,6 +13849,11 @@ msgid "The attachment preview timed out."
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "The backup failed. See File › Options › Backups."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/files.rs
 msgid "The browser can't read files by path"
 msgstr ""
@@ -14225,6 +14272,11 @@ msgid "The last Send/Receive had problems."
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The last backup failed."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/favorites_sync.rs
 msgid "The link is on the clipboard: send it to your organisation's administrator"
 msgstr ""
@@ -14242,11 +14294,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 msgid "The list of senders is full: remove some in File › Options"
-msgstr ""
-
-#. what a command says
-#: crates/mobile/src/core.rs
-msgid "The list of sign-ins kept on this phone was damaged, so some older sign-ins may still be kept on it. Clearing MailCraft's storage in Android's Settings removes them."
 msgstr ""
 
 #. what a command says
@@ -15522,6 +15569,11 @@ msgid "This mailbox is on this device only"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "This mailbox isn't kept in a file, so there is nothing to back up."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/unconfirmed.rs
 msgid "This mailbox was opened from a file. Its accounts connect to:"
 msgstr ""
@@ -16585,7 +16637,7 @@ msgid "Verify…"
 msgstr ""
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt
 msgid "Version"
 msgstr ""
 
@@ -16629,11 +16681,6 @@ msgstr ""
 msgid "Violet"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Wait for the current task operation to finish."
-msgstr ""
-
 #. command label
 #: crates/engine/src/cmd/send_later.rs
 msgid "Wait Before Sending"
@@ -16642,6 +16689,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Wait before sending"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Wait for the current task operation to finish."
 msgstr ""
 
 #. interface
@@ -17494,11 +17546,6 @@ msgstr ""
 
 #. what a command says
 #: crates/engine/src/import_pst.rs
-msgid "a .pst file is imported into a calendar on this computer only, never an account on a server"
-msgstr ""
-
-#. what a command says
-#: crates/engine/src/import_pst.rs
 msgid "a .pst file is imported into a calendar of your own on this computer only, never an account on a server or a subscribed calendar"
 msgstr ""
 
@@ -18058,11 +18105,6 @@ msgstr ""
 
 #. name
 #: crates/engine/src/agent.rs
-msgid "it changes an account or a sign-in"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
 msgid "it changes options, signatures or rules"
 msgstr ""
 
@@ -18074,11 +18116,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/data_removal.rs
 msgid "it could not be removed"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it deletes for good"
 msgstr ""
 
 #. interface
@@ -18159,11 +18196,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 msgid "it took too long"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it writes to other people or reaches out to the web"
 msgstr ""
 
 #. why a mail server couldn't be used
@@ -18481,14 +18513,14 @@ msgstr ""
 msgid "not allowed on the server yet: File › Info › Ask again"
 msgstr ""
 
-#. what a command says
-#: crates/engine/src/cmd/filing.rs
-msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 msgid "not an address that can be sent to"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
 msgstr ""
 
 #. interface
@@ -19149,11 +19181,6 @@ msgstr ""
 #. what a command says
 #: crates/engine/src/cmd/file.rs
 msgid "the mailbox couldn't be saved first, so it stays open ({e})"
-msgstr ""
-
-#. what a command says
-#: crates/model/src/mailbox.rs
-msgid "the mailbox has no calendar"
 msgstr ""
 
 #. what a command says
@@ -20251,11 +20278,6 @@ msgid "{count} messages can't be moved right now."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 msgid "{days} (all day)"
 msgstr ""
@@ -21244,13 +21266,6 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] ""
-msgstr[1] ""
-
-#. interface
 #: crates/ui-egui/src/chrome.rs
 msgid "{n} open task"
 msgid_plural "{n} open tasks"
@@ -21561,17 +21576,17 @@ msgstr ""
 msgid "{title} (all day)"
 msgstr ""
 
-#. what a command says
-#: crates/engine/src/cmd/compose.rs
-msgid "{wanted} is attached in parts: its next part comes first"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
 msgid "{used} of {cap} used by {n} message"
 msgid_plural "{used} of {cap} used by {n} messages"
 msgstr[0] ""
 msgstr[1] ""
+
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "{wanted} is attached in parts: its next part comes first"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -21642,3 +21657,4 @@ msgstr ""
 #: crates/engine/src/cmd/compose.rs
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr ""
+

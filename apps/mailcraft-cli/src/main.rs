@@ -62,6 +62,10 @@ USAGE:
                                                 takes; for a domain it doesn't know it asks the
                                                 DNS who takes the domain's mail (only the domain
                                                 is sent)
+  mailcraft-cli backup-restore <folder> <new mailbox>
+                                                put a mailbox backed up in <folder> back
+                                                together as a new mailbox file; nothing is
+                                                written over
   mailcraft-cli commands [--json]               list every command
   mailcraft-cli parity [--markdown]             feature-catalog parity
   mailcraft-cli mcp [--connect HOST:PORT | --file F | --sample] [--files DIR] [--allow CLASS,...] [--no-replay]
@@ -591,6 +595,19 @@ fn run(args: &[String]) -> Result<(), Failure> {
             s.run("file.save", &json!({"path": path}))?;
             print_json(&applied)?;
             if failed { Err(Failure::Error("sync: finished with errors".into())) } else { Ok(()) }
+        }
+        "backup-restore" => {
+            let pos = positionals("backup-restore", &rest, &[])?;
+            let [folder, target] = pos.as_slice() else {
+                return Err(Failure::Error(format!(
+                    "backup-restore: needs <folder> <new mailbox>
+
+{USAGE}"
+                )));
+            };
+            let restored = mailcraft_engine::backup::restore(std::path::Path::new(folder), std::path::Path::new(target))
+                .map_err(|e| format!("backup-restore: {e}"))?;
+            print_json(&json!(restored))
         }
         "commands" => {
             positionals("commands", &rest, &[flag("--json")])?;

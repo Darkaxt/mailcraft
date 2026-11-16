@@ -159,9 +159,9 @@ fn the_host_side_refuses_politely_until_it_is_built() {
 #[test]
 fn an_agent_may_not_choose_where_a_password_goes() {
     let (s, id) = session();
-    for command in ["account.davSet", "account.davOff"] {
-        assert_eq!(classify(&s, command, &json!({"id": id})), Access::Owner(Class::Accounts), "{command}");
-    }
+    assert_eq!(classify(&s, "account.davSet", &json!({"id": id})), Access::Owner(Class::Accounts));
+    // Turning DAV off sends nothing anywhere and is undone by turning it on (the fork's policy).
+    assert_eq!(classify(&s, "account.davOff", &json!({"id": id})), Access::Safe);
     for command in SYNC {
         assert_eq!(classify(&s, command, &json!({})), Access::Never, "{command}");
     }

@@ -370,6 +370,11 @@ msgid "A colleague's calendar, by their address, with your work or school accoun
 msgstr "使用工作或学校账户，通过同事的地址打开其日历。仅保存在此计算机上"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "A compressed copy of your mail: one file per past year, one per month this year. Passwords are never in it."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "A contact's card keeps at most 32 certificates and keys"
@@ -548,8 +553,8 @@ msgstr "此密钥的一部分是 RSA（可能是加密子密钥），MailCraft �
 msgid "A picture couldn't be downloaded."
 msgstr "图片无法下载。"
 
-#. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt
 #, fuzzy
 msgid "A picture on the web tells its sender that you opened the message, and when. Left off, pictures are downloaded only for the messages, senders and domains you say."
 msgstr "网络图片会告知发件人您打开了邮件以及打开时间。关闭此选项后，仅下载您指定的邮件、发件人和域的图片。"
@@ -2267,6 +2272,11 @@ msgstr "可用格式："
 msgid "Back"
 msgstr "返回"
 
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Back Up Now"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/send_receive.rs
 #, fuzzy
@@ -2293,6 +2303,42 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/controls.rs
 msgid "Back to the message as it is meant to be read"
+msgstr ""
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Back up every day"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backed up; {n} message is missing some content"
+msgid_plural "Backed up; {n} messages are missing some content"
+msgstr[0] ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Backing up…"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Backup Status"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Backup folder"
+msgstr ""
+
+#. interface, ribbon location
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/files.rs
+msgid "Backups go to {name}"
 msgstr ""
 
 #. interface
@@ -2407,12 +2453,6 @@ msgstr "导入"
 #, fuzzy
 msgid "Browse…"
 msgstr "浏览…"
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-#, fuzzy
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
-msgstr "正在建立用于搜索的索引；完成前，搜索部分较早的邮件会较慢"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
@@ -2766,6 +2806,11 @@ msgstr ""
 msgid "Change Automatic Replies"
 msgstr "更改自动回复"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Change Backup Folder"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -2845,7 +2890,7 @@ msgid "Changed: saved when you choose another signature or leave this page."
 msgstr "已更改：选择其他签名或离开此页面时会自动保存。"
 
 #. interface
-#: crates/ui-egui/src/forms.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Change…"
 msgstr "更改…"
@@ -3252,16 +3297,16 @@ msgstr "关闭签名"
 msgid "Close Window"
 msgstr "关闭窗口"
 
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Close the current dialog first."
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "Close and keep as draft"
 msgstr "关闭并保留为草稿"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Close the current dialog first."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -7927,6 +7972,11 @@ msgid "Last Week"
 msgstr "上周"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Last backup: {when}, {size}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Last name"
@@ -8924,6 +8974,18 @@ msgstr ""
 msgid "Message appearance"
 msgstr ""
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
+#, fuzzy
+msgid "Message queued. Sending from this phone is not available yet."
+msgstr "邮件已排队。尚不支持从此手机发送。"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
+#, fuzzy
+msgid "Message sent."
+msgstr "邮件已发送。"
+
 #. interface
 #: crates/ui-egui/src/source_pane.rs
 msgid "Message source"
@@ -8938,18 +9000,6 @@ msgstr ""
 #: crates/ui-egui/src/forms.rs
 msgid "Message {message}, after {completed} actions: {why}"
 msgstr ""
-
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
-#, fuzzy
-msgid "Message queued. Sending from this phone is not available yet."
-msgstr "邮件已排队。尚不支持从此手机发送。"
-
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
-#, fuzzy
-msgid "Message sent."
-msgstr "邮件已发送。"
 
 #. interface, ribbon, ribbon location
 #: crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
@@ -11466,16 +11516,16 @@ msgstr ""
 msgid "Origin row color"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
-msgid "Original sender unavailable"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "Original message"
 msgstr "原始邮件"
+
+#. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/reading.rs
+msgid "Original sender unavailable"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/security.rs
@@ -11739,7 +11789,7 @@ msgid "Pending"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Pending development"
 msgstr "待开发"
@@ -13611,16 +13661,16 @@ msgid "Saved {n} message to {name}"
 msgid_plural "Saved {n} messages to {name}"
 msgstr[0] "已将 {n} 封邮件保存到 {name}"
 
-#. interface
-#: crates/ui-egui/src/attachment_scan.rs
-msgid "Saving Mail Attachment"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
 #, fuzzy
 msgid "Saved."
 msgstr "已保存。"
+
+#. interface
+#: crates/ui-egui/src/attachment_scan.rs
+msgid "Saving Mail Attachment"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -14860,16 +14910,16 @@ msgstr "显示此会话中的邮件"
 msgid "Show the unified mailbox, Favorites and each account on tabs down the folder pane's edge."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/reading/controls.rs
-msgid "Show this message light, dark or as the app is"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "Show the whole original"
 msgstr "显示完整原文"
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Show this message light, dark or as the app is"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
@@ -15032,12 +15082,6 @@ msgstr "管理员批准后重新登录"
 #, fuzzy
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
 msgstr "请重新登录：Microsoft 页面将在浏览器中打开。期间邮件和日历仍可照常使用。"
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Sign in on the page that opened in your browser…"
-msgstr "请在浏览器打开的页面中登录…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -15415,16 +15459,16 @@ msgstr "某些操作未完成，或者收到的内容与发送的不一致。下
 msgid "Sort by"
 msgstr "排序依据"
 
-#. interface
-#: crates/ui-egui/src/reading/controls.rs
-msgid "Source"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt
 #, fuzzy
 msgid "Sound, vibration and lock screen, in the phone's settings"
 msgstr "声音、振动和锁屏，在手机设置中"
+
+#. interface
+#: crates/ui-egui/src/reading/controls.rs
+msgid "Source"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -15538,12 +15582,6 @@ msgstr "状态栏·文件"
 #, fuzzy
 msgid "Status:"
 msgstr "状态："
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "Still indexing: some older mail is searched more slowly"
-msgstr "仍在建立索引：某些较旧的邮件搜索速度较慢"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt crates/ui-egui/src/sync_panel.rs
@@ -16419,6 +16457,11 @@ msgid "The attachment preview timed out."
 msgstr "附件预览超时。"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "The backup failed. See File › Options › Backups."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/files.rs
 #, fuzzy
 msgid "The browser can't read files by path"
@@ -16919,6 +16962,11 @@ msgstr "密钥已从此计算机上移除。"
 #. interface
 #: crates/ui-egui/src/chrome.rs
 msgid "The last Send/Receive had problems."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The last backup failed."
 msgstr ""
 
 #. interface
@@ -18459,6 +18507,11 @@ msgid "This mailbox is on this device only"
 msgstr "该邮箱仅在此设备上"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "This mailbox isn't kept in a file, so there is nothing to back up."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/unconfirmed.rs
 #, fuzzy
 msgid "This mailbox was opened from a file. Its accounts connect to:"
@@ -19728,7 +19781,7 @@ msgid "Verify…"
 msgstr "验证…"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt
 #, fuzzy
 msgid "Version"
 msgstr "版本"
@@ -19781,11 +19834,6 @@ msgstr "查看源代码"
 msgid "Violet"
 msgstr "紫罗兰色"
 
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Wait for the current task operation to finish."
-msgstr ""
-
 #. command label
 #: crates/engine/src/cmd/send_later.rs
 #, fuzzy
@@ -19797,6 +19845,11 @@ msgstr "发送前等待"
 #, fuzzy
 msgid "Wait before sending"
 msgstr "发送前等待"
+
+#. interface
+#: crates/ui-egui/src/task_sync.rs
+msgid "Wait for the current task operation to finish."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
@@ -21470,12 +21523,6 @@ msgstr "无法接受此项"
 #. name
 #: crates/engine/src/agent.rs
 #, fuzzy
-msgid "it changes an account or a sign-in"
-msgstr "它会更改账户或登录信息"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
 msgid "it changes options, signatures or rules"
 msgstr "它会更改选项、签名或规则"
 
@@ -21490,12 +21537,6 @@ msgstr "它会在窗口中点击或键入"
 #, fuzzy
 msgid "it could not be removed"
 msgstr "无法删除"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it deletes for good"
-msgstr "它会永久删除"
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -21591,12 +21632,6 @@ msgstr "它会让窗口离开用户正在撰写的邮件"
 #, fuzzy
 msgid "it took too long"
 msgstr "操作超时"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it writes to other people or reaches out to the web"
-msgstr "它会给他人发信或访问网络"
 
 #. why a mail server couldn't be used
 #: crates/net/src/transport.rs
@@ -21971,16 +22006,16 @@ msgstr "不是一组邮件"
 msgid "not allowed on the server yet: File › Info › Ask again"
 msgstr "服务器尚不允许：文件 › 信息 › 再次询问"
 
-#. what a command says
-#: crates/engine/src/cmd/filing.rs
-msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
 #, fuzzy
 msgid "not an address that can be sent to"
 msgstr "不是可以发送的地址"
+
+#. what a command says
+#: crates/engine/src/cmd/filing.rs
+msgid "not enough rule capacity for a lossless sender split after consolidation; nothing changed"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/ews_setup.rs
@@ -24044,12 +24079,6 @@ msgid "{count} messages can't be moved right now."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr "未完整搜索 {count} 封邮件：下载完成前，此处只有邮件的开头部分。"
-
-#. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "{days} (all day)"
@@ -25113,13 +25142,6 @@ msgid_plural "{n} older messages taken back to its headers"
 msgstr[0] "{n} 封较早的邮件已退回只保留邮件头"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] "{n} 封较早的邮件未被搜索：其正文尚未加载"
-
-#. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
 msgid "{n} open task"
@@ -25450,17 +25472,17 @@ msgstr "{time} 前"
 msgid "{title} (all day)"
 msgstr "{title}（全天）"
 
-#. what a command says
-#: crates/engine/src/cmd/compose.rs
-msgid "{wanted} is attached in parts: its next part comes first"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
 #, fuzzy
 msgid "{used} of {cap} used by {n} message"
 msgid_plural "{used} of {cap} used by {n} messages"
 msgstr[0] "{n} 封邮件占用 {used}（上限 {cap}）"
+
+#. what a command says
+#: crates/engine/src/cmd/compose.rs
+msgid "{wanted} is attached in parts: its next part comes first"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -25547,6 +25569,39 @@ msgid "“{subject}” wasn't found on its server, so it can't be forwarded as a
 msgstr "在其服务器上找不到“{subject}”，因此无法将其作为附件转发"
 
 #, fuzzy
+#~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
+#~ msgstr "正在建立用于搜索的索引；完成前，搜索部分较早的邮件会较慢"
+
+#, fuzzy
+#~ msgid "Sign in on the page that opened in your browser…"
+#~ msgstr "请在浏览器打开的页面中登录…"
+
+#, fuzzy
+#~ msgid "Still indexing: some older mail is searched more slowly"
+#~ msgstr "仍在建立索引：某些较旧的邮件搜索速度较慢"
+
+#, fuzzy
+#~ msgid "it changes an account or a sign-in"
+#~ msgstr "它会更改账户或登录信息"
+
+#, fuzzy
+#~ msgid "it deletes for good"
+#~ msgstr "它会永久删除"
+
+#, fuzzy
+#~ msgid "it writes to other people or reaches out to the web"
+#~ msgstr "它会给他人发信或访问网络"
+
+#, fuzzy
+#~ msgid "{count} messages weren't searched in full: only their beginning is here until they download."
+#~ msgstr "未完整搜索 {count} 封邮件：下载完成前，此处只有邮件的开头部分。"
+
+#, fuzzy
+#~ msgid "{n} older message wasn't searched: its text isn't loaded yet"
+#~ msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
+#~ msgstr[0] "{n} 封较早的邮件未被搜索：其正文尚未加载"
+
+#, fuzzy
 #~ msgid "Writing a message is not available in this version yet."
 #~ msgstr "此版本暂不支持撰写邮件。"
 
@@ -25554,8 +25609,6 @@ msgstr "在其服务器上找不到“{subject}”，因此无法将其作为附
 #~ msgid "The attachment is too large to open on the phone."
 #~ msgstr "附件太大，无法在手机上打开。"
 
-#. what a command says
-#: crates/mobile/src/core.rs
 #, fuzzy
 #~ msgid "The list of sign-ins kept on this phone was damaged, so some older sign-ins may still be kept on it. Clearing MailCraft's storage in Android's Settings removes them."
 #~ msgstr "这部手机上保存的登录列表已损坏，因此一些较早的登录信息可能仍保留在手机上。在 Android 的“设置”中清除 MailCraft 的存储空间即可将其删除。"
@@ -25572,14 +25625,10 @@ msgstr "在其服务器上找不到“{subject}”，因此无法将其作为附
 #~ msgid "Primary or Focused only"
 #~ msgstr "仅限主要或重点邮件"
 
-#. what a command says
-#: crates/engine/src/import_pst.rs
 #, fuzzy
 #~ msgid "a .pst file is imported into a calendar on this computer only, never an account on a server"
 #~ msgstr ".pst 文件只能导入到此计算机上的日历，不能导入到服务器上的账户"
 
-#. what a command says
-#: crates/model/src/mailbox.rs
 #, fuzzy
 #~ msgid "the mailbox has no calendar"
 #~ msgstr "邮箱没有日历"
@@ -25607,3 +25656,4 @@ msgstr "在其服务器上找不到“{subject}”，因此无法将其作为附
 #, fuzzy
 #~ msgid "The draft stays in Drafts. {why}"
 #~ msgstr "草稿保留在“草稿”中。{why}"
+

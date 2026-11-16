@@ -95,7 +95,7 @@ pub use message::{
     NOT_DOWNLOADED_NOTE, ORIGINAL_PATIENCE, ORIGINAL_TRIES, Original, PREVIEW_CHARS, RETURNED_LISTINGS, RuleProcessing, normalize_subject,
     size_label, size_label_in, text_hash,
 };
-pub use messages::Messages;
+pub use messages::{Messages, Whole};
 pub use note::{JournalEntry, Note};
 pub use offline::{KeepOffline, OfflineWindow};
 pub use remote::{AccountChoice, Origin};
