@@ -316,6 +316,12 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
         let at = Rect::from_min_max(pos2(sr.min.x - 34.0, sr.min.y), pos2(sr.min.x - 4.0, sr.max.y));
         crate::unified_inbox::mode_dropdown(app, ui, at);
         controls_left = at.min.x;
+        // And beside it the tag filter (`view.tag`), once a folder has a tag.
+        if app.session.view.tag.is_some() || app.session.mailbox.folders.iter().any(|f| !f.tag.is_empty()) {
+            let at = Rect::from_min_max(pos2(controls_left - 40.0, sr.min.y), pos2(controls_left - 4.0, sr.max.y));
+            crate::unified_inbox::tag_dropdown(app, ui, at);
+            controls_left = at.min.x;
+        }
     }
 
     // The tabs. A filter that has none (Flagged, Has Attachments, To Me) shows as a third one
@@ -764,7 +770,9 @@ fn plan_tags(p: &egui::Painter, labels: &[&str], more: usize, room: f32) -> TagP
     }
 }
 
-fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Option<Color32>, t: &Tokens) -> f32 {
+/// A row's folder at its tail, ending at `end`: its name (`label`), and before it the folder's
+/// icon in the origin's colour (`ink`), or its tag (`folder.tag`) when it has one. Where it starts.
+fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Option<Color32>, tag: Option<&str>, t: &Tokens) -> f32 {
     const ICON: f32 = 12.0;
     const GAP: f32 = 3.0;
     let width = FOLDER_W - ICON - GAP;
@@ -780,6 +788,12 @@ fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Opt
     let size = galley.size();
     let x = end.x - size.x;
     p.galley(pos2(x, end.y - size.y / 2.0), galley, t.text_dim);
+    if let Some(tag) = tag {
+        let galley = p.layout_no_wrap(tag.to_string(), regular(LIST_TEXT), t.text);
+        let at = x - GAP - galley.size().x.min(3.0 * ICON);
+        p.galley(pos2(at, end.y - galley.size().y / 2.0), galley, t.text);
+        return at;
+    }
     let icon = x - GAP - ICON;
     icons::paint(p, Rect::from_min_size(pos2(icon, end.y - ICON / 2.0), vec2(ICON, ICON)), "folder", ink.unwrap_or(t.text_dim), t.accent);
     icon
@@ -1271,7 +1285,8 @@ fn message_row(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, drawn: &Dr
         };
         let end = sx;
         // Its folder icon in the stripe's colour: which account it is, said twice.
-        sx = paint_result_folder(p, pos2(end, tail_y), &label, origin_color.map(crate::theme::c32), &t) - 6.0;
+        let tag = app.session.mailbox.tag_of(folder.id).map(str::to_owned);
+        sx = paint_result_folder(p, pos2(end, tail_y), &label, origin_color.map(crate::theme::c32), tag.as_deref(), &t) - 6.0;
         app.hit.add("messageFolder", row.id, Rect::from_min_max(pos2(sx + 6.0, tail_y - 7.0), pos2(end, tail_y + 7.0)));
     }
     // The labels' tags: planned above in a single line; under the time, in what is left down to

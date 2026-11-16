@@ -276,6 +276,21 @@ fn preview(s: &mut Session, v: &Value) -> CmdResult {
     Ok(plan(s, v)?.report)
 }
 
+/// Whether every message `rule` can take is from one of `senders`: each of its conditions but
+/// its exceptions is a list of exact sender addresses, all of them among `senders`. Split off
+/// for them, what is left of it matches nothing ("from X and not from X").
+fn only_these_senders(rule: &Rule, senders: &[String]) -> bool {
+    let mut any = false;
+    rule.conditions.iter().all(|condition| match condition {
+        Condition::Unless(_) => true,
+        Condition::FromAddresses(addresses) => {
+            any = true;
+            addresses.iter().all(|a| senders.iter().any(|b| a.eq_ignore_ascii_case(b)))
+        }
+        _ => false,
+    }) && any
+}
+
 /// Exclude exactly these transport alternatives from an existing rule, preserving all its
 /// remaining conditions, exceptions, actions, scope and enabled/Stop state.
 fn except(rule: &mut Rule, senders: &[String]) -> Result<(), crate::CmdError> {
@@ -324,6 +339,17 @@ fn apply(s: &mut Session, v: &Value) -> CmdResult {
         if choice == "reroute" {
             for original in &plan.conflicts {
                 let index = s.mailbox.rules.iter().position(|r| r.id == original.id).ok_or_else(|| fail("a reviewed rule disappeared"))?;
+                // A rule for none but the selected senders leaves nothing behind: it goes, rather
+                // than staying as one that can never match, and when all it did was file, the new
+                // sender rule below takes its place whole.
+                if only_these_senders(original, &plan.senders) {
+                    let files_only = original.actions.iter().all(|action| matches!(action, Action::MoveTo(_)));
+                    if files_only {
+                        s.mailbox.rules.remove(index);
+                        continue;
+                    }
+                }
+                let spent = only_these_senders(original, &plan.senders);
                 let mut remainder = original.clone();
                 except(&mut remainder, &plan.senders)?;
                 let mut redirected = original.clone();
@@ -337,8 +363,12 @@ fn apply(s: &mut Session, v: &Value) -> CmdResult {
                 }
                 redirected.merged_from.clear();
                 redirected.validation().map_err(bad)?;
-                *s.mailbox.rules.get_mut(index).ok_or_else(|| fail("a reviewed rule disappeared"))? = remainder;
-                s.mailbox.rules.insert(index, redirected.clone());
+                if spent {
+                    *s.mailbox.rules.get_mut(index).ok_or_else(|| fail("a reviewed rule disappeared"))? = redirected.clone();
+                } else {
+                    *s.mailbox.rules.get_mut(index).ok_or_else(|| fail("a reviewed rule disappeared"))? = remainder;
+                    s.mailbox.rules.insert(index, redirected.clone());
+                }
                 new_rules.push(redirected.id);
             }
         }

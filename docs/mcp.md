@@ -26,6 +26,13 @@ matching, coverage, located attachment/OCR evidence and original inspection toke
 tool. They preserve transport/reply routing and distinguish reported headers
 from authenticated identities. Alias inventory is paged with complete totals.
 
+Folder tags and the folder pane's tabs work through `execute` without an owner
+prompt, since they stay on this computer and are undone as easily:
+`folder.tag {id, tag}` (an emoji or a short word; `""` removes it; subfolders
+without their own tag inherit it), `view.tag {tag?}` (the unified mailbox shows
+only mail from folders with that tag; no tag shows everything),
+`ui.folderTabs {value?}`, `ui.folderTab {tab}` and `ui.tabName {account, name}`.
+
 The [local rule guide](local-rules.md) describes destination-folder management,
 regex/case conditions, exceptions and previews. Listing, `rules.conflicts`,
 `rules.pending` and non-mutating previews work through read-only MCP access.

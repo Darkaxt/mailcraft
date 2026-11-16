@@ -4863,6 +4863,11 @@ msgstr ""
 msgid "Every other time that was proposed for this meeting."
 msgstr "为此会议提议的所有其他时间。"
 
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Every tag"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarMapping.kt
 msgid "Every week"
@@ -5207,6 +5212,11 @@ msgstr "筛选邮件"
 msgid "Filter Tasks"
 msgstr "筛选任务"
 
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Filter by Tag"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/search_folders.rs
 msgid "Filter folder paths"
@@ -5390,11 +5400,21 @@ msgstr "文件夹大小"
 msgid "Folder Size…"
 msgstr "文件夹大小…"
 
+#. command label
+#: crates/engine/src/cmd/folder.rs
+msgid "Folder Tag"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Folder name"
 msgstr "文件夹名称"
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Folder pane tabs"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -9396,6 +9416,11 @@ msgstr "尚未保存公钥。"
 msgid "No Send/Receive is running"
 msgstr "当前没有正在进行的发送/接收"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "No Tag"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
@@ -9552,6 +9577,11 @@ msgstr "尚无条目"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarSpeech.kt
 msgid "No events"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "No favorites yet."
 msgstr ""
 
 #. interface
@@ -10682,6 +10712,11 @@ msgstr "选项"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "或者是以下其中一项？"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Or type one, then Enter"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -12011,6 +12046,11 @@ msgstr "重命名文件夹"
 msgid "Rename Signature"
 msgstr "重命名签名"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Rename Tab"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -12366,6 +12406,11 @@ msgstr "富文本"
 #, fuzzy
 msgid "Right before or after: {items}"
 msgstr "紧接在之前或之后：{items}"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Right-click a folder to add it."
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/rules_remote.rs
@@ -13726,6 +13771,11 @@ msgstr "显示贡献者"
 msgid "Show Details"
 msgstr ""
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Show Folder Pane Tab"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
@@ -13855,6 +13905,11 @@ msgid "Show messages on a light background in the dark theme"
 msgstr "深色主题下以浅色背景显示邮件"
 
 #. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Show only the mail of folders with this tag"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/secret_field.rs
 #, fuzzy
 msgid "Show password"
@@ -13912,6 +13967,11 @@ msgstr ""
 #, fuzzy
 msgid "Show the messages of this conversation"
 msgstr "显示此会话中的邮件"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Show the unified mailbox, Favorites and each account on tabs down the folder pane's edge."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/controls.rs
@@ -14778,6 +14838,11 @@ msgstr "系统"
 msgid "System default"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Tab name"
+msgstr ""
+
 #. interface, ribbon
 #: crates/ui-egui/src/credits.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -14789,6 +14854,16 @@ msgstr "表"
 #, fuzzy
 msgid "Tables"
 msgstr "表格"
+
+#. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/unified_inbox.rs
+msgid "Tag"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Tag: {tag}"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/category.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/ribbon.rs
@@ -18048,6 +18123,11 @@ msgstr "撤销 {what}"
 #. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Unified"
 msgstr ""
 
 #. command label

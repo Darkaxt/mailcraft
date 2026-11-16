@@ -46,6 +46,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.filter", "Filter Email", "Home › Find", filter)
             .reads()
             .params(r#"{"value": "all"|"unread"|"flagged"|"attachments"|"toMe"}"#),
+        CommandSpec::new("view.tag", "Filter by Tag", "Home › Find", tag_filter).reads().params(
+            r#"{"tag"?: string | null (none or null: every tag)} — in the unified mailbox (its Inbox, All mail, its folders and search folders) only the mail of folders with that tag (`folder.tag`; a folder without one wears that of the nearest folder above it with one). Answers {"tag", "shown", "tags": [every tag a folder has]}"#,
+        ),
         CommandSpec::new("view.search", "Search", "Search", search)
             .reads()
             .key("Mod+E / F3")
@@ -192,6 +195,11 @@ fn reverse_sort(s: &mut Session, _: &Value) -> CmdResult {
 fn filter(s: &mut Session, v: &Value) -> CmdResult {
     s.view.filter = parse_enum::<Filter>(p::req_str(v, "value")?).ok_or_else(|| bad("`value` is all, unread, flagged, attachments or toMe"))?;
     Ok(json!({"value": s.view.filter, "shown": crate::list::listed(&s.rows())}))
+}
+
+fn tag_filter(s: &mut Session, v: &Value) -> CmdResult {
+    s.view.tag = p::str(v, "tag").map(str::trim).filter(|tag| !tag.is_empty()).map(str::to_string);
+    Ok(json!({"tag": s.view.tag, "shown": crate::list::listed(&s.rows()), "tags": crate::list::tags(s)}))
 }
 
 fn search(s: &mut Session, v: &Value) -> CmdResult {

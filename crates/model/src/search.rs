@@ -851,10 +851,11 @@ fn starts_with_keyword(token: &str) -> bool {
 
 /// How the token standing at `at` in `s` begins: with a `-` before any quote (it is left out),
 /// and with a quote after that. What is in quotes is text, even when it reads like a keyword or a
-/// `-`: `"is:unread"` looks for those words (#367).
+/// `-`: `"is:unread"` looks for those words (#367). A `-` before punctuation alone, as in
+/// `outlook -> gmail`, leaves nothing out: it is an arrow, not a word to leave out.
 fn opening(s: &str, at: &Range<usize>) -> (bool, bool) {
     let raw = s.get(at.clone()).unwrap_or_default();
-    let rest = raw.strip_prefix('-').filter(|rest| !rest.is_empty());
+    let rest = raw.strip_prefix('-').filter(|rest| rest.chars().any(|c| c == '"' || !c.is_ascii_punctuation()));
     (rest.is_some(), rest.unwrap_or(raw).starts_with('"'))
 }
 
@@ -1275,6 +1276,9 @@ mod tests {
     #[test]
     fn negation_and_dates() {
         assert!(hit("budget -invoice") && !hit("budget -engine") && !hit("-from:ada") && hit("-is:read"));
+        // An arrow is not a `-`: `budget -> engine` finds what has both words.
+        assert!(hit("budget -> engine") && hit("budget --> engine") && !hit("budget -> invoice"));
+        assert!(!hit("-@example") && hit("-@nowhere"), "a `-` before an address still leaves it out");
         assert!(hit("on:2026-10-11") && hit("after:2026-10-10") && hit("before:10/12/2026"));
         assert!(!hit("after:2026-10-11") && !hit("before:2026-10-11"));
         // In a zone an hour east it is already the 12th.

@@ -408,6 +408,10 @@ pub struct ViewState {
     pub filing: Option<Id>,
     /// Selected saved virtual query. Typing a different search leaves its definition intact.
     pub search_folder: Option<Id>,
+    /// In the unified mailbox (its Inbox, All mail, its folders, search folders), only the mail
+    /// of folders with this tag ([`mailcraft_model::Mailbox::tag_of`], `view.tag`); `None`: all.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
     pub reading_pane: Pane,
     pub folder_pane: bool,
     /// The switch between Mail, Calendar, People and Tasks at the foot of the pane on the left,
@@ -459,6 +463,7 @@ impl Default for ViewState {
             all_mail: false,
             filing: None,
             search_folder: None,
+            tag: None,
             reading_pane: Pane::Right,
             folder_pane: true,
             nav_foot: false,

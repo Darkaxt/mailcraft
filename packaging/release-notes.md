@@ -1,30 +1,11 @@
-**MailCraft 0.12.7 in short** — every new email in one list
-- New: **All mail** under Unified mailbox › Inbox lists every new email from every account, newest first, whatever folder it was filed to; each row names its folder. Handy while you wait for a sign-in code. Sent Items, Drafts, Deleted Items and Junk Email stay out.
-- The unified mailbox's folder tree is now called **Folders** (it was Unfiled).
-- Fix: a message written in an alias account (for example an @outlook.es address that is not the account's main one) is sent from that alias, not from the account's main address.
-- Fix: after a restart, search no longer spends minutes rewriting what it already knows about every message; it only catches up on what changed.
-- Agents can save and attach files larger than 1 MiB, in parts.
-- Folding a folder in the unified tree no longer folds it in its account's own tree, and the other way round.
-- Spanish: the newest texts are translated.
-- New: when you drag a sender's message into a folder, that sender's other mail leaves every Inbox for the same folder too. Mail you had put somewhere else stays where it is, and one Undo puts it all back.
-- New: right-click MailCraft on the taskbar or in the Start menu for New Email, New Appointment, New Meeting, New Contact and New Task, as Outlook has. A message you are writing is saved to Drafts first.
-- Brings in the latest MailCraft changes from upstream, among them snooze, close to the notification area, folder kinds and a switch between modules.
-- New: a yellow **Account Problems** shield at the top right of the window, as Outlook has, while an account needs you: a sign-in waiting in your browser, a sign-in that has run out, or a Send/Receive that went wrong. A click lists each account with its way out: Open the Page Again or Cancel, Sign In, Show Details. The account's name in the folder pane says "Sign in needed" too.
-- Headless MailCraft asks you once, in its own small window, when an account needs you to sign in again (Sign In or Later); Sign In opens the sign-in page. `status` lists those accounts as `signInNeeded`, and a message sent from one says it waits in the Outbox until you sign in.
-- Fix: while one account waits for you to sign in on its page, the others keep sending and receiving.
-- Fix: the sign-in page no longer comes back to an address your browser refuses to open (ERR_UNSAFE_PORT); on computers whose free ports start at 1024 a sign-in could fail that way.
-- The reading pane's scroll bar stays in sight instead of fading out and popping back.
-- In a unified filing folder, a message's tag names its account in full, and its folder icon wears the account's colour.
-- Fix: filing mail from a sender in a new folder no longer asks about rules that file mail sent to one of your addresses, or about rules that are turned off. A message that truly matches both is still caught when it arrives.
-- When filing does need you, the window is short and plain: where this mail usually goes, both folders in a small tree in their own colours, and three choices: move it there instead, move all of that sender's mail to the new folder from now on, or just move this message.
-- When Google refuses a sign-in, the log now says why in Google's standard words (for example "Token has been expired or revoked."), never anything that could carry a secret.
-- Fix: the window that asks you about an agent's request (headless MailCraft) no longer takes the keyboard when it appears and only a click answers it; a key you were typing elsewhere could press its No button and close it within seconds. It now stays up at least a minute, counted from when it is on the screen.
-- The window that asks you about an agent's request (headless MailCraft) keeps its Send and Don't Send buttons in a row at the bottom, below the question and the message.
-- When an agent asks to send, the question window shows the message exactly as it will go: sender, recipients (Cc and Bcc), subject, body and the files attached, with the answer buttons always in sight.
-- Reply and Reply All treat only the replying account, its shared mailboxes and its alias as you; mail from your other accounts is answered like anyone's, so Reply All keeps every recipient.
-- Search answers quickly after new mail arrives instead of waiting while its word list is read again.
-- Upstream MailCraft merged: Romanian as a preview language, the software-render notice, IMAP and SMTP problems explained in Copy Diagnostics, phone app packages never opened from mail.
-- Everything from 0.12.1 stays.
+**MailCraft 0.12.8 in short** — folder tags, folder tabs, and questions you can't miss
+- New: give a folder a tag, an emoji or a short word (right-click it › Tag). It shows before the folder's name, its subfolders wear it too, and in the unified mailbox each message shows its folder's tag. A tag menu above the list shows only the mail of the folders with that tag.
+- New: the folder pane has tabs down its edge: Unified, Favorites and one per account (Outlook.es, Gmail 1, Gmail 2). Each tab shows just its part of the pane. Right-click an account's tab to rename it; File › Options › General turns the tabs off.
+- Fix: the question about an agent's request now always opens in its own small window on top of every other window, also while MailCraft's window is open, so a message window can no longer hide it. It waits for you as long as headless does.
+- Fix: search finds new mail at once, before the search index has read it.
+- Fix: a `->` in a search is an arrow, not "leave out".
+- Fix: moving all of a rule's senders to another folder replaces the rule, instead of leaving one behind that matches nothing.
+- Everything from 0.12.7 stays.
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

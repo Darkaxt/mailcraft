@@ -141,6 +141,67 @@ pub(crate) fn mode_dropdown(app: &mut MailApp, ui: &mut Ui, r: Rect) {
     });
 }
 
+/// In a combined view, the tag filter (`view.tag`): the tag chosen, on the accent's soft colour,
+/// or a funnel for every tag; its menu has the tags the folders have, each with the folders that
+/// have it. Only while some folder has a tag.
+pub(crate) fn tag_dropdown(app: &mut MailApp, ui: &mut Ui, r: Rect) {
+    let t = Tokens::get(ui.ctx());
+    let chosen = app.session.view.tag.clone();
+    let resp = ui.interact(r, ui.scope_id().with("tag_filter"), Sense::click());
+    app.hit.add("tagFilter", 0, r);
+    let name = match &chosen {
+        Some(tag) => crate::i18n::fmt(tl!("Tag: {tag}"), &[("tag", tag)]),
+        None => tl!("Every tag").to_string(),
+    };
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, &name));
+    if chosen.is_some() {
+        ui.painter().rect_filled(r, 4.0, t.accent_soft);
+    } else if resp.hovered() {
+        ui.painter().rect_filled(r, 4.0, t.hover);
+    }
+    if resp.has_focus() {
+        ui.painter().rect_stroke(r, 4.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    match &chosen {
+        Some(tag) => {
+            crate::theme::paint_clipped(ui.painter(), pos2(r.min.x + 4.0, r.center().y), (r.width() - 16.0).max(0.0), tag, regular(13.0), t.text);
+        }
+        None => crate::icons::paint(
+            ui.painter(),
+            Rect::from_center_size(pos2(r.min.x + 11.0, r.center().y), vec2(14.0, 14.0)),
+            "filter",
+            t.icon,
+            t.accent,
+        ),
+    }
+    let c = pos2(r.max.x - 7.0, r.center().y + 1.0);
+    ui.painter().line(vec![c + vec2(-3.5, -2.0), c + vec2(0.0, 2.0), c + vec2(3.5, -2.0)], Stroke::new(1.2, t.text));
+    // (What the menu lists, read before anything is run.)
+    let tags: Vec<(String, String)> = mailcraft_engine::list::tags(&app.session)
+        .into_iter()
+        .map(|tag| {
+            let folders: Vec<&str> = app.session.mailbox.folders.iter().filter(|f| f.tag == tag).take(3).map(crate::nav::folder_name).collect();
+            let label = format!("{tag}  {}", folders.join(", "));
+            (tag, label)
+        })
+        .collect();
+    let resp = resp.on_hover_text(tl!("Show only the mail of folders with this tag"));
+    egui::Popup::menu(&resp).show(|ui| {
+        ui.set_min_width(200.0);
+        ui.label(egui::RichText::new(tl!("Tag")).font(regular(11.0)).weak());
+        if ui.selectable_label(chosen.is_none(), tl!("Every tag")).clicked() {
+            let _ = app.run("view.tag", json!({}));
+            ui.close();
+        }
+        for (tag, label) in &tags {
+            if ui.selectable_label(chosen.as_deref() == Some(tag.as_str()), label).clicked() {
+                let _ = app.run("view.tag", json!({"tag": tag}));
+                ui.close();
+            }
+        }
+    });
+}
+
 /// A small swatch of an origin colour (beside an account's root, an alias row), ringed so that a
 /// colour close to the pane's still shows.
 pub(crate) fn swatch(painter: &egui::Painter, t: &Tokens, center: egui::Pos2, color: Rgb) -> Rect {

@@ -4846,6 +4846,11 @@ msgstr ""
 msgid "Every other time that was proposed for this meeting."
 msgstr "Alle andere tijden die voor deze vergadering zijn voorgesteld."
 
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Every tag"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarMapping.kt
 msgid "Every week"
@@ -5192,6 +5197,11 @@ msgstr "E-mail filteren"
 msgid "Filter Tasks"
 msgstr "Taken filteren"
 
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Filter by Tag"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/search_folders.rs
 msgid "Filter folder paths"
@@ -5374,11 +5384,21 @@ msgstr "Mapgrootte"
 msgid "Folder Size…"
 msgstr "Mapgrootte…"
 
+#. command label
+#: crates/engine/src/cmd/folder.rs
+msgid "Folder Tag"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "Folder name"
 msgstr "Mapnaam"
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+msgid "Folder pane tabs"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -9349,6 +9369,11 @@ msgstr ""
 msgid "No Send/Receive is running"
 msgstr "Er is geen Verzenden/ontvangen actief"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "No Tag"
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/invitation.rs
 #, fuzzy
@@ -9504,6 +9529,11 @@ msgstr "Nog geen vermeldingen"
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarSpeech.kt
 msgid "No events"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "No favorites yet."
 msgstr ""
 
 #. interface
@@ -10628,6 +10658,11 @@ msgstr "Opties"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "Of is het een van deze?"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Or type one, then Enter"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -11941,6 +11976,11 @@ msgstr "Map hernoemen"
 msgid "Rename Signature"
 msgstr "Handtekening hernoemen"
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Rename Tab"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -12296,6 +12336,11 @@ msgstr "Tekst met opmaak"
 #, fuzzy
 msgid "Right before or after: {items}"
 msgstr "Meteen ervoor of erna: {items}"
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Right-click a folder to add it."
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/rules_remote.rs
@@ -13652,6 +13697,11 @@ msgstr "Bijdragers weergeven"
 msgid "Show Details"
 msgstr ""
 
+#. command label
+#: crates/ui-egui/src/lib.rs
+msgid "Show Folder Pane Tab"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
@@ -13781,6 +13831,11 @@ msgid "Show messages on a light background in the dark theme"
 msgstr "Berichten op een lichte achtergrond tonen in het donkere thema"
 
 #. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Show only the mail of folders with this tag"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/secret_field.rs
 #, fuzzy
 msgid "Show password"
@@ -13838,6 +13893,11 @@ msgstr ""
 #, fuzzy
 msgid "Show the messages of this conversation"
 msgstr "De berichten van dit gesprek weergeven"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Show the unified mailbox, Favorites and each account on tabs down the folder pane's edge."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/controls.rs
@@ -14704,6 +14764,11 @@ msgstr "System"
 msgid "System default"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Tab name"
+msgstr ""
+
 #. interface, ribbon
 #: crates/ui-egui/src/credits.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -14715,6 +14780,16 @@ msgstr "Tabel"
 #, fuzzy
 msgid "Tables"
 msgstr "Tabellen"
+
+#. interface
+#: crates/ui-egui/src/nav.rs crates/ui-egui/src/unified_inbox.rs
+msgid "Tag"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/unified_inbox.rs
+msgid "Tag: {tag}"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/category.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/ribbon.rs
@@ -17925,6 +18000,11 @@ msgstr "{what} ongedaan maken"
 #. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Unified"
 msgstr ""
 
 #. command label

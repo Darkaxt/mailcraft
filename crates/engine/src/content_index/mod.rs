@@ -821,6 +821,18 @@ impl Index {
             return (HashMap::new(), 0);
         }
         let answer = self.answer(query, options);
+        // Without a `-` word, a message the index hasn't got as it is (new, or changed since it
+        // was read) is searched on the message itself: the index only speeds a search up and
+        // never hides new mail. A message it holds waits for the answer, so no bodies are read
+        // for it. With a `-` word, or an index not open yet or with a problem, it waits as
+        // before: looking at less than the message could wrongly prove a word absent.
+        let negated = (0..query.len()).any(|index| query.text_of(index).is_some() && query.term_negated(index));
+        let direct = |message: &Message| {
+            !negated
+                && self.initialized
+                && self.problem.is_none()
+                && (self.dirty.contains(&message.id) || !(self.versions.contains_key(&message.id) || self.settled.contains_key(&message.id)))
+        };
         let mut decisions = HashMap::new();
         let mut unknown = 0usize;
         let in_view = crate::list::in_view(session);
@@ -855,7 +867,9 @@ impl Index {
                 )
             });
             unknown += usize::from(frame.is_none() || missing);
-            decisions.insert(message.id, hit);
+            if frame.is_some() || !direct(message) {
+                decisions.insert(message.id, hit);
+            }
         }
         (decisions, unknown)
     }

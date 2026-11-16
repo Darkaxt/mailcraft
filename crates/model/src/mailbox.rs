@@ -105,6 +105,12 @@ pub struct Folder {
     pub name: String,
     pub kind: FolderKind,
     pub favorite: bool,
+    /// The owner's tag of it (an emoji, or a short word): shown before its name in the folder
+    /// pane, and on the rows of its mail in the unified mailbox, whose list can be narrowed to it
+    /// (`folder.tag`, `view.tag`). The folders under it without one of their own wear it too
+    /// ([`Mailbox::tag_of`]). Kept on this computer only.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub tag: String,
     /// Its path on the server (IMAP), when it has one.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub remote: String,
@@ -1791,6 +1797,20 @@ impl Mailbox {
 
     pub fn folder(&self, id: Id) -> Option<&Folder> {
         self.folders.iter().find(|f| f.id == id)
+    }
+
+    /// The tag the mail of folder `id` wears ([`Folder::tag`]): its own, else that of the nearest
+    /// folder above it with one; `None` for none.
+    pub fn tag_of(&self, id: Id) -> Option<&str> {
+        let mut cur = Some(id);
+        for _ in 0..=MAX_DEPTH {
+            let f = self.folder(cur?)?;
+            if !f.tag.is_empty() {
+                return Some(&f.tag);
+            }
+            cur = f.parent;
+        }
+        None
     }
 
     pub fn folder_mut(&mut self, id: Id) -> Result<&mut Folder, ModelError> {

@@ -71,9 +71,12 @@ sends, with what the owner allowed with `--allow` (`send`, `delete`, `accounts`,
 ([MCP: agents get only what the owner allows](mcp.md#agents-get-only-what-the-owner-allows)):
 
 - a command not for agents, or a param that names a file, is refused;
-- a command that needs the owner and isn't allowed is asked about over the window (Don't is the
-  default); the reply comes when the owner answers (`{"ok": false, "error": "the owner said no
-  …"}` for no, or after 50 s without an answer); a `mail.delete`, `mail.deletePermanently` or
+- a command that needs the owner and isn't allowed is asked about in a small window of its own,
+  on top of every other window and never taking the keyboard (Don't is the default). The reply
+  comes at once as `{"pending": …, "question": n}`, and `agent.answer {"question": n}` gives the
+  command's own answer once the owner answered (`{"ok": false, "error": "the owner said no …"}`
+  for no, or after a day without an answer). Only a host without that window (a test, a
+  library) asks over the main window instead, and replies after the answer or 50 s; a `mail.delete`, `mail.deletePermanently` or
   `mail.move` that names a message not in the mailbox is refused, never asked about (#503);
 - closing, replacing or discarding a message the owner has typed in (until it is closed, saved
   or not), or an appointment, a contact or a task with changes of theirs that aren't saved (in

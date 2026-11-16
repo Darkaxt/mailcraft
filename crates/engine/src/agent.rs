@@ -280,6 +280,8 @@ const SAFE: &[&str] = &[
     "folder.rename",
     "folder.move",
     "folder.favorite",
+    // A tag kept on this computer only, and taken off as easily.
+    "folder.tag",
     // An account's place in the folder pane (#702): as moving a folder, nothing leaves this
     // computer, nothing is removed, no setting of the account changes (the default account
     // stays the one it was), and Undo puts it back.
@@ -287,6 +289,7 @@ const SAFE: &[&str] = &[
     "account.rowColor",
     // View.
     "view.favorites",
+    "view.tag",
     "view.reminders",
     "view.mail",
     "view.allInboxes",
@@ -470,6 +473,10 @@ const SAFE: &[&str] = &[
     "ui.snoozeReminders",
     "ui.toggleFolder",
     "ui.toggleAliases",
+    // The folder pane's tabs (v0.12.8): which shows, their names, and tabs or one list.
+    "ui.folderTab",
+    "ui.tabName",
+    "ui.folderTabs",
     "ui.source",
     "ui.searchIndex",
     "ui.searchCase",

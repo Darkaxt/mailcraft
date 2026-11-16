@@ -280,13 +280,36 @@ fn me(s: &Session) -> Vec<&str> {
 
 /// Whether `m` matches the filter in view (All, Unread, Flagged…); `me` as from [`me`].
 fn filtered(s: &Session, m: &Message, me: &[&str]) -> bool {
-    match s.view.filter {
-        Filter::All => true,
-        Filter::Unread => !m.read,
-        Filter::Flagged => m.flag == FlagStatus::Flagged,
-        Filter::Attachments => m.has_attachments(),
-        Filter::ToMe => m.to.iter().any(|a| me.iter().any(|e| a.email.eq_ignore_ascii_case(e))),
+    tag_kept(s, m)
+        && match s.view.filter {
+            Filter::All => true,
+            Filter::Unread => !m.read,
+            Filter::Flagged => m.flag == FlagStatus::Flagged,
+            Filter::Attachments => m.has_attachments(),
+            Filter::ToMe => m.to.iter().any(|a| me.iter().any(|e| a.email.eq_ignore_ascii_case(e))),
+        }
+}
+
+/// Whether `m` is kept by the tag filter in view (`view.tag`): in a view of the unified mailbox,
+/// only the mail of folders with that tag; elsewhere, and with no tag chosen, all of it.
+fn tag_kept(s: &Session, m: &Message) -> bool {
+    match s.view.tag.as_deref() {
+        Some(tag) if s.view.search_folder.is_some() || s.view.filing.is_some() || s.view.scope == Scope::Inboxes => {
+            s.mailbox.tag_of(m.folder) == Some(tag)
+        }
+        _ => true,
     }
+}
+
+/// Every tag a folder has (`folder.tag`), once each, in the order of the first folder with it.
+pub fn tags(s: &Session) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for f in s.mailbox.folders.iter().filter(|f| !f.tag.is_empty()) {
+        if !out.contains(&f.tag) {
+            out.push(f.tag.clone());
+        }
+    }
+    out
 }
 
 /// Of `ids`, those the list in view lists now, without building it (#428): in the folder in view,

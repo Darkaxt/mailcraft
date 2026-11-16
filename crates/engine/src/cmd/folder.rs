@@ -28,6 +28,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("folder.favorite", "Add to Favorites", "Folder › Favorites", favorite).params(
             r#"{"value"?: bool (default: toggle), "id"?: number} — refused for a folder of an account whose Favorites come from its server (Outlook's list, which is changed in Outlook; `view.favorites` says which accounts those are). A shared mailbox's folders are favourites kept in MailCraft, whatever the account it is opened through has: nothing is written to any server for them"#,
         ),
+        CommandSpec::new("folder.tag", "Folder Tag", "Folder › Actions", tag).params(
+            r#"{"tag": string (an emoji or a short word, at most 16 characters; "" takes it off), "id"?: number} — the folder's tag, kept on this computer only: shown before its name in the folder pane and on the rows of its mail in the unified mailbox (and of the mail of the folders under it that have none of their own), whose list `view.tag` narrows to one tag. Answers {"id", "tag"}"#,
+        ),
         CommandSpec::new("view.favorites", "Favorites from Outlook", "File › Options", favorites_command).pure().params(
             r#"{"own"?: bool} — "own": true shows the Favorites that are marked here even for an account whose server has a list of its own, false the server's list where there is one (default: as it is). Answers what the folder pane lists under Favorites, in its order: {"own": bool, "favorites": [{"id", "name", "account", "path"}], "accounts": [{"account": number, "from": "server" | "mailbox", "listed": number}]}"#,
         ),
@@ -447,6 +450,20 @@ fn favorite(s: &mut Session, v: &Value) -> CmdResult {
     let f = s.mailbox.folder_mut(id)?;
     f.favorite = p::bool(v, "value").unwrap_or(!f.favorite);
     Ok(json!({"id": id, "favorite": f.favorite}))
+}
+
+/// Most characters a folder's tag has.
+const MAX_TAG: usize = 16;
+
+fn tag(s: &mut Session, v: &Value) -> CmdResult {
+    let id = target(s, v)?;
+    let tag = p::req_str(v, "tag")?.trim();
+    if tag.chars().count() > MAX_TAG || tag.chars().any(char::is_control) {
+        return Err(bad("`tag` is at most 16 characters, none of them a control character"));
+    }
+    let f = s.mailbox.folder_mut(id)?;
+    f.tag = tag.to_string();
+    Ok(json!({"id": id, "tag": f.tag}))
 }
 
 /// The folders that go with a folder when it is emptied: those deleted into Deleted Items, when it

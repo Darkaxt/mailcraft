@@ -5,18 +5,19 @@
 //! in advance), and those go through [`mailcraft_engine::agent`]'s gate here. A command that is
 //! not for agents, or names a file, is refused; one that needs the owner is asked about in a
 //! question over the window ("An agent wants to send …"), whose default answer is no. It runs
-//! only on the owner's yes; nobody's answer within [`WAIT_MS`] is a no (headless, within
-//! [`HEADLESS_WAIT_MS`], the agent told at once and reading the outcome with `agent.answer`). While a question is up,
+//! only on the owner's yes; nobody's answer within [`WAIT_MS`] is a no (with a host window,
+//! within [`HEADLESS_WAIT_MS`], the agent told at once and reading the outcome with `agent.answer`). While a question is up,
 //! no input from the control channel reaches the window. Other agent commands still run, and
 //! the yes reaches only what the question showed ([`agent::bind`], kept in the question's own
 //! record with the windows as they were): what changed meanwhile makes it do nothing.
 //!
-//! Headless (`mailcraft --headless`) there is no window to ask in: the host shows the question
-//! in a small window of its own instead ([`crate::Services::ask_owner`], one at a time, the first
+//! The host shows the question in a small window of its own, on top of every other window
+//! ([`crate::Services::ask_owner`], headless or not, one at a time, the first
 //! waiting), and its answer goes through the very same [`answer`] as a click over the window,
 //! with all of its checks. Its default is no too, and so is its closing, Escape and its time
 //! running out; an answer that comes after the question expired or went is thrown away. Without
-//! such a host (the tests, the browser) a headless agent's question is refused, as before.
+//! such a host (the tests, the browser) the desktop asks over its window, and a headless agent's
+//! question is refused, as before.
 
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
@@ -35,7 +36,7 @@ use crate::widgets::primary_button;
 /// How long a question waits for the owner (the control channel gives up at 60 s).
 pub const WAIT_MS: f64 = 50_000.0;
 
-/// How long a headless question waits for the owner in the host's window: a day. The agent's
+/// How long a question waits for the owner in the host's window: a day. The agent's
 /// request isn't held open meanwhile (the control channel would give up): it is answered at once
 /// that the owner is being asked, and what came of it is read with `agent.answer`.
 pub const HEADLESS_WAIT_MS: f64 = 86_400_000.0;
@@ -256,9 +257,10 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
             let (taken, items) = undo_takes(app, id);
             let steps = app.session.undo_steps_moved();
             let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
-            // Headless, the owner may be away: the question stays up and the agent is told so now.
-            let headless = app.is_headless();
-            let (reply, deadline) = if headless {
+            // In the host's window the owner may be away: the question stays up and the agent is
+            // told so now.
+            let hosted = app.services.ask_owner.is_some();
+            let (reply, deadline) = if hosted {
                 let (tx, rx) = std::sync::mpsc::channel();
                 answers().insert(serial, rx);
                 (tx, crate::now_ms() + HEADLESS_WAIT_MS)
@@ -286,7 +288,7 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
                 serial,
                 preview,
             });
-            if headless {
+            if hosted {
                 return ok(json!({"pending": true, "question": serial, "waitingFor": "owner", "asked": asked,
                     "next": format!("agent.answer {{\"question\": {serial}}} gives the command's own answer once the owner answered")}));
             }
@@ -558,7 +560,7 @@ pub fn expire(app: &mut MailApp, now: f64) {
     }
 }
 
-/// Headless: the first question waiting is shown in the host's window, one at a time, and its
+/// With a host window: the first question waiting is shown there, one at a time, and its
 /// answer is taken there as [`answer`] takes a click: only while that question is still the
 /// first. An answer for a question that expired or went meanwhile is dropped, and its window
 /// told to close. A host that went without answering is a no.
@@ -642,7 +644,8 @@ fn layer() -> egui::LayerId {
 /// answers, once the question was on the screen: not a key that was already held down when it
 /// came up, nor one pressed before it was drawn.
 pub fn keys(app: &mut MailApp, ctx: &egui::Context) {
-    if app.asking.is_empty() {
+    // (The host's own window takes no key: only a click answers it.)
+    if app.asking.is_empty() || app.services.ask_owner.is_some() {
         return;
     }
     // (Not a button of the question either: the next question's would be pressed with it.)
@@ -655,12 +658,18 @@ pub fn keys(app: &mut MailApp, ctx: &egui::Context) {
     }
 }
 
-/// The question over the window, when there is one. Enter and Escape say no ([`keys`]).
+/// The question over the window, when there is one and no host window asks it. Enter and
+/// Escape say no ([`keys`]).
 pub fn show(app: &mut MailApp, ctx: &egui::Context) {
+    // Nothing from the control channel reaches the window while the owner is asked.
+    if !app.asking.is_empty() {
+        app.synthetic.clear();
+    }
+    if app.services.ask_owner.is_some() {
+        return;
+    }
     expire(app, crate::now_ms());
     let Some(a) = app.asking.front() else { return };
-    // Nothing from the control channel reaches the window while the owner is asked.
-    app.synthetic.clear();
     let t = Tokens::get(ctx);
     let text = question_text(a);
     let (yes_label, no_label) = verbs(a.class, &a.id);

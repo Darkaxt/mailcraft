@@ -10,6 +10,7 @@ use egui::{Align2, Color32, CornerRadius, Painter, Pos2, Rect, Sense, Shape, Str
 use mailcraft_engine::Module;
 use mailcraft_engine::cmd::folder::sort_as_listed;
 use mailcraft_model::{Folder, FolderKind, GmailCategory, Id, Mailbox};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::favorites_sync::Note;
@@ -336,28 +337,34 @@ fn heading(app: &mut MailApp, ui: &mut Ui, id: Id, name: &str, height: f32, text
     if id != FAVORITES {
         resp.context_menu(|ui| {
             ui.set_min_width(190.0);
-            // The keyboard's and the menu's way of a drag (#702), for the accounts that drag.
-            if movable {
-                let own = owners(&app.session.mailbox);
-                for (label, up) in [(tl!("Move Up"), true), (tl!("Move Down"), false)] {
-                    let before = move_before(&own, id, up);
-                    if ui.add_enabled(before.is_some(), egui::Button::new(label).min_size(vec2(180.0, 0.0))).clicked() {
-                        if let Some(before) = before {
-                            let _ = app.run("account.move", json!({"id": id, "before": before}));
-                        }
-                        ui.close();
-                    }
-                }
-                ui.separator();
-            }
-            if ui.add(egui::Button::new(tl!("Properties…")).min_size(vec2(180.0, 0.0))).clicked() {
-                let _ = app.run("folder.properties", json!({"account": id}));
-                ui.close();
-            }
-            crate::unified_inbox::color_menu(app, ui, id);
+            account_menu(app, ui, id, movable);
         });
     }
     open
+}
+
+/// An account's menu, on its heading or its tab: Move Up and Move Down for a `movable` one,
+/// Properties, and its colour.
+fn account_menu(app: &mut MailApp, ui: &mut Ui, id: Id, movable: bool) {
+    // The keyboard's and the menu's way of a drag (#702), for the accounts that drag.
+    if movable {
+        let own = owners(&app.session.mailbox);
+        for (label, up) in [(tl!("Move Up"), true), (tl!("Move Down"), false)] {
+            let before = move_before(&own, id, up);
+            if ui.add_enabled(before.is_some(), egui::Button::new(label).min_size(vec2(180.0, 0.0))).clicked() {
+                if let Some(before) = before {
+                    let _ = app.run("account.move", json!({"id": id, "before": before}));
+                }
+                ui.close();
+            }
+        }
+        ui.separator();
+    }
+    if ui.add(egui::Button::new(tl!("Properties…")).min_size(vec2(180.0, 0.0))).clicked() {
+        let _ = app.run("folder.properties", json!({"account": id}));
+        ui.close();
+    }
+    crate::unified_inbox::color_menu(app, ui, id);
 }
 
 /// An account being dragged up or down the folder pane by its heading (#702).
@@ -558,14 +565,14 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     // (Drafts, Junk) in a quiet grey one.
     let name_end = count_pill(ui.painter(), &t, r, right_edge, count, selected);
     let font = if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) };
-    paint_clipped(
-        ui.painter(),
-        pos2(x + NAME_LEFT, y),
-        (name_end - x - NAME_LEFT).max(0.0),
-        &name,
-        font,
-        if selected { t.accent_soft_text } else { t.text },
-    );
+    // Its tag (`folder.tag`), before its name.
+    let mut name_x = x + NAME_LEFT;
+    if !f.tag.is_empty() {
+        let w = paint_clipped(ui.painter(), pos2(name_x, y), (name_end - name_x).max(0.0), &f.tag, regular(NAME_SIZE), t.text);
+        app.hit.add("folderTag", f.id, Rect::from_min_max(pos2(name_x, r.min.y), pos2(name_x + w, r.max.y)));
+        name_x += w + 5.0;
+    }
+    paint_clipped(ui.painter(), pos2(name_x, y), (name_end - name_x).max(0.0), &name, font, if selected { t.accent_soft_text } else { t.text });
     if resp.clicked() && !rules_clicked {
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("folder_picked_in_list"), key == "tree"));
         if unified {
@@ -599,6 +606,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     let takes_folders = !(f.kind == FolderKind::Custom && f.server_owned());
     // An account whose Favorites are Outlook's has them changed in Outlook: nothing to do here.
     let from_outlook = mailcraft_engine::cmd::folder::favorites_from_server(&app.session, f.account);
+    let tag = f.tag.clone();
     resp.context_menu(|ui| {
         ui.set_min_width(190.0);
         let item = |ui: &mut Ui, app: &mut MailApp, label: &str, cmd: &str, params: serde_json::Value, enabled: bool| {
@@ -614,6 +622,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         let deletable = custom && !app.session.mailbox.folder_stays_on_server(id);
         item(ui, app, "Delete Folder", "folder.delete", json!({"id": id}), deletable);
         ui.separator();
+        ui.menu_button(tl!("Tag"), |ui| tag_menu(app, ui, id, &tag));
         item(ui, app, "Mark All as Read", "mail.markAllRead", json!({"folder": id}), true);
         item(ui, app, "Rules for This Folder…", "ui.dialog", json!({"name": "rules", "destination": id}), !app.session.mailbox.is_send_queue(id));
         item(ui, app, "Run Rules Now", "rules.run", json!({"folder": id}), true);
@@ -630,6 +639,45 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         ui.separator();
         item(ui, app, "Properties…", "folder.properties", json!({"id": id}), true);
     });
+}
+
+/// The tags a folder's menu offers (`folder.tag`); any other can be typed.
+const TAG_CHOICES: &[&str] = &[
+    "⭐", "📌", "🔥", "✅", "💼", "🏦", "💳", "📄", "💰", "📦", "✈", "🚆", "🏠", "🎮", "🎬", "🎵", "📚", "🎓", "💻", "🔒", "☁", "📰", "📣", "🏥",
+    "⚽", "🍔", "🎁", "👪", "⚖", "📁",
+];
+
+/// A folder's Tag menu: the tags to choose from (the one it has, chosen again, takes it off),
+/// a field for any other, and No Tag.
+fn tag_menu(app: &mut MailApp, ui: &mut Ui, id: Id, now: &str) {
+    egui::Grid::new(("tag_choices", id)).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+        for (n, tag) in TAG_CHOICES.iter().enumerate() {
+            let on = *tag == now;
+            let button = ui.add(egui::Button::new(egui::RichText::new(*tag).size(16.0)).selected(on).min_size(vec2(28.0, 28.0)));
+            app.hit.add("tagChoice", n as Id, button.rect);
+            if button.clicked() {
+                let _ = app.run("folder.tag", json!({"id": id, "tag": if on { "" } else { *tag }}));
+                ui.close();
+            }
+            if n % 6 == 5 {
+                ui.end_row();
+            }
+        }
+    });
+    ui.separator();
+    let key = egui::Id::unique(("tag_typed", id));
+    let mut typed: String = ui.data_mut(|d| d.get_temp(key)).unwrap_or_else(|| now.to_string());
+    let field = ui.add(egui::TextEdit::singleline(&mut typed).hint_text(tl!("Or type one, then Enter")).char_limit(16).desired_width(180.0));
+    ui.data_mut(|d| d.insert_temp(key, typed.clone()));
+    if field.lost_focus() && crate::keys::enter(ui.ctx(), ui.layer_id()) {
+        let _ = app.run("folder.tag", json!({"id": id, "tag": typed}));
+        ui.data_mut(|d| d.remove::<String>(key));
+        ui.close();
+    }
+    if ui.add_enabled(!now.is_empty(), egui::Button::new(tl!("No Tag")).min_size(vec2(180.0, 0.0))).clicked() {
+        let _ = app.run("folder.tag", json!({"id": id, "tag": ""}));
+        ui.close();
+    }
 }
 
 /// A row's count, flush right before `right_edge`, in a pill: an unread count in the accent's soft
@@ -973,7 +1021,8 @@ pub fn folder_pane_strip(app: &mut MailApp, ui: &mut Ui) {
     });
 }
 
-/// The folder pane: favourites, then every account's folders.
+/// The folder pane: the unified mailbox, the favourites, then every account's folders; with
+/// [`crate::UiState::folder_tabs`], one of them at a time, picked by the tabs down its left edge.
 pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let panel = egui::Panel::left("folders")
@@ -989,18 +1038,30 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
         sheet(ui.painter(), ui.max_rect(), &t);
         module_foot(app, ui);
         ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+        // The unified mailbox at the top: every Inbox, the filing account's real tree for all
+        // accounts, and the saved search folders.
+        let filing_accounts = crate::unified_inbox::filing_accounts(app);
+        let filing_account = crate::unified_inbox::filing_account(app, &filing_accounts);
+        let tabs = app.ui.folder_tabs;
+        let tab = current_tab(app);
+        if tabs {
+            egui::Panel::left("folder_tabs")
+                .exact_size(TAB_W)
+                .resizable(false)
+                .show_separator_line(false)
+                .frame(egui::Frame::NONE)
+                .show(ui, |ui| tab_strip(app, ui, &t, tab, &filing_accounts, filing_account));
+        }
         pane_top(app, ui, &t);
         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
             // (Counted once per change to the mailbox, not at every frame: `Session::folder_counts`.)
             let counts = app.session.folder_counts();
             // What is listed: the unified mailbox, the favourites, and under each account what
-            // isn't folded away.
+            // isn't folded away; with tabs, only what the tab in view has, and nothing folded
+            // under a heading (there are none).
             let folded = app.ui.collapsed_folders.clone();
-            // The unified mailbox at the top: every Inbox, the filing account's real tree for all
-            // accounts, and the saved search folders.
-            let filing_accounts = crate::unified_inbox::filing_accounts(app);
-            let filing_account = crate::unified_inbox::filing_account(app, &filing_accounts);
-            if unified_heading(app, ui, &filing_accounts, filing_account) {
+            let shows = |section: NavTab| !tabs || tab == section;
+            if shows(NavTab::Unified) && (tabs || unified_heading(app, ui, &filing_accounts, filing_account)) {
                 let view = &app.session.view;
                 let unified_list = view.scope == mailcraft_engine::Scope::Inboxes && view.search_folder.is_none() && view.filing.is_none();
                 let all_mail = view.all_mail;
@@ -1061,15 +1122,20 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             let note = app.favorites_note();
             // (A shared mailbox right after the account it is opened through, #70.)
             // (The folders are grouped by account once, not once for each account.)
-            let mut trees = trees(&app.session.mailbox, |a| !folded.contains(&a));
-            let lists: Vec<(Id, String, Vec<(Folder, usize, bool)>)> = app
+            let mut trees = trees(&app.session.mailbox, |a| if tabs { tab == NavTab::Account(a) } else { !folded.contains(&a) });
+            // Each account's heading, or with tabs what its heading would say beside its name
+            // (No access, Sign in needed), and its rows.
+            let lists: Vec<(Id, String, Option<String>, Vec<(Folder, usize, bool)>)> = app
                 .session
                 .mailbox
                 .accounts_in_order()
                 .into_iter()
+                .filter(|a| shows(NavTab::Account(a.id)))
                 .map(|a| {
                     let rows = visible_in(trees.remove(&a.id).unwrap_or_default(), &folded);
-                    (a.id, heading_name(app, a), rows)
+                    let heading = heading_name(app, a);
+                    let said = (heading != a.name).then(|| heading.clone());
+                    (a.id, heading, said, rows)
                 })
                 .collect();
             // The folder in view is highlighted once: under Favorites when it shows there, unless
@@ -1080,18 +1146,26 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             let gmail_now = mailcraft_engine::gmail::in_view(&app.session);
             let current = if gmail_now.is_some() && !gmail_tabs { 0 } else { app.session.view.folder };
             let gmail_current = app.session.view.folder;
-            let among_favorites = !folded.contains(&FAVORITES) && favorites.iter().any(|f| f.id == current);
-            let in_a_list = lists.iter().any(|(_, _, rows)| rows.iter().any(|(f, _, _)| f.id == current));
-            let favorite_selected = app.session.view.filing.is_none() && among_favorites && !(in_a_list && picked_in_list(ui));
+            let favorites_shown = if tabs { tab == NavTab::Favorites } else { !folded.contains(&FAVORITES) };
+            let among_favorites = favorites_shown && favorites.iter().any(|f| f.id == current);
+            let in_a_list = lists.iter().any(|(.., rows)| rows.iter().any(|(f, _, _)| f.id == current));
+            let favorite_selected = app.session.view.filing.is_none() && among_favorites && (tabs || !(in_a_list && picked_in_list(ui)));
             // The owner's own accounts are dragged up or down by their headings (#702), when there
-            // are two at least; a shared mailbox goes with its account.
+            // are two at least; a shared mailbox goes with its account. (With tabs, by the menus of
+            // their tabs.)
             let own = owners(&app.session.mailbox);
-            let movable: HashSet<Id> = if own.len() > 1 { own.into_iter().collect() } else { HashSet::new() };
+            let movable: HashSet<Id> = if own.len() > 1 && !tabs { own.into_iter().collect() } else { HashSet::new() };
             // The unified mailbox's heading sits right under the top of the pane; each later one
             // starts a new block, with a rule above it.
             let head =
                 |app: &mut MailApp, ui: &mut Ui, id: Id, name: &str| heading(app, ui, id, name, 2.0 * ROW_H, 34.5, true, movable.contains(&id));
-            if (!favorites.is_empty() || note.is_some()) && head(app, ui, FAVORITES, tl!("Favorites")) {
+            let favorites_open =
+                if tabs { tab == NavTab::Favorites } else { (!favorites.is_empty() || note.is_some()) && head(app, ui, FAVORITES, tl!("Favorites")) };
+            if favorites_open {
+                if favorites.is_empty() && note.is_none() {
+                    quiet_line(ui, &t, tl!("No favorites yet."));
+                    quiet_line(ui, &t, tl!("Right-click a folder to add it."));
+                }
                 if let Some((account, note)) = &note {
                     favorites_note(app, ui, *account, note);
                 }
@@ -1114,14 +1188,18 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             }
             // Where each of the owner's accounts starts, for a drag of one.
             let mut blocks: Vec<Block> = Vec::new();
-            for (account, name, rows) in &lists {
+            for (account, name, said, rows) in &lists {
                 if movable.contains(account) {
                     let top = ui.cursor().min.y;
                     // (On the rule above its heading.)
                     let line = top + 9.5;
                     blocks.push(Block { account: *account, top, line });
                 }
-                if !head(app, ui, *account, if name.is_empty() { tl!("Mailbox") } else { name }) {
+                if tabs {
+                    if let Some(said) = said {
+                        quiet_line(ui, &t, said);
+                    }
+                } else if !head(app, ui, *account, if name.is_empty() { tl!("Mailbox") } else { name }) {
                     continue;
                 }
                 if let Some(observed) = aliases.accounts.get(account) {
@@ -1172,6 +1250,220 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
         account_ghost(app, ui);
     });
     app.ui.folder_pane_width = shown.response.rect.width();
+}
+
+/// A quiet line of text in the pane, where a name would start.
+fn quiet_line(ui: &mut Ui, t: &Tokens, text: &str) {
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+    paint_clipped(
+        ui.painter(),
+        pos2(r.min.x + NAME_LEFT, r.center().y),
+        (r.width() - NAME_LEFT - 8.0).max(0.0),
+        text,
+        regular(NAME_SIZE),
+        t.text_dim,
+    );
+}
+
+/// The width of the folder pane's tabs, down its left edge.
+const TAB_W: f32 = 28.0;
+/// The size of a tab's name, and the most of the pane's height one name takes.
+const TAB_TEXT: f32 = 12.0;
+const TAB_TEXT_MAX: f32 = 140.0;
+/// Most characters a tab's name has.
+const MAX_TAB_NAME: usize = 24;
+
+/// One of the folder pane's tabs ([`crate::UiState::folder_tabs`]): the unified mailbox,
+/// Favorites, or an account.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NavTab {
+    #[default]
+    Unified,
+    Favorites,
+    Account(Id),
+}
+
+/// What [`crate::UiState::folder_tabs`] is in settings saved before it was kept: on.
+pub(crate) fn tabs_on() -> bool {
+    true
+}
+
+/// The tab in view: the one picked, unless it is of an account that is no longer there.
+fn current_tab(app: &MailApp) -> NavTab {
+    match app.ui.nav_tab {
+        NavTab::Account(id) if app.session.mailbox.account(id).is_none() => NavTab::Unified,
+        tab => tab,
+    }
+}
+
+/// Saved tab names that are fit to show: at most 200, none too long or with control characters.
+pub(crate) fn sane_tab_names(names: &mut std::collections::BTreeMap<Id, String>) {
+    names.retain(|_, name| name.chars().count() <= MAX_TAB_NAME && !name.chars().any(char::is_control) && !name.trim().is_empty());
+    while names.len() > 200 {
+        names.pop_last();
+    }
+}
+
+/// What an account's tab says: the name the owner gave it, else its address's domain
+/// (`Outlook.es`), or where two accounts share one, its first part and a number (`Gmail 1`,
+/// `Gmail 2`, in the pane's order).
+pub(crate) fn tab_name(app: &MailApp, a: &mailcraft_model::Account) -> String {
+    if let Some(name) = app.ui.tab_names.get(&a.id).map(|name| name.trim()).filter(|name| !name.is_empty()) {
+        return name.to_string();
+    }
+    default_tab_name(&app.session.mailbox, a)
+}
+
+fn default_tab_name(mb: &Mailbox, a: &mailcraft_model::Account) -> String {
+    let domain = |a: &mailcraft_model::Account| a.email.rsplit_once('@').map(|(_, d)| d.trim().to_lowercase()).filter(|d| !d.is_empty());
+    let capital = |s: &str| {
+        let mut chars = s.chars();
+        chars.next().map(|first| first.to_uppercase().chain(chars).collect::<String>()).unwrap_or_default()
+    };
+    let Some(own) = domain(a) else {
+        return if a.name.trim().is_empty() { tl!("Mailbox").to_string() } else { a.name.trim().to_string() };
+    };
+    let same: Vec<Id> = mb.accounts_in_order().into_iter().filter(|o| domain(o).as_deref() == Some(own.as_str())).map(|o| o.id).collect();
+    if same.len() > 1 {
+        let first = own.split('.').next().unwrap_or(&own);
+        let n = same.iter().position(|id| *id == a.id).map_or(1, |i| i + 1);
+        format!("{} {n}", capital(first))
+    } else {
+        capital(&own)
+    }
+}
+
+/// `ui.folderTab`: which tab the folder pane shows.
+pub(crate) fn pick_tab(app: &mut MailApp, p: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let tab = match p.get("tab") {
+        Some(serde_json::Value::String(s)) if s == "unified" => NavTab::Unified,
+        Some(serde_json::Value::String(s)) if s == "favorites" => NavTab::Favorites,
+        Some(v) => match v.as_u64() {
+            Some(id) if app.session.mailbox.account(id).is_some() => NavTab::Account(id),
+            _ => return Err("`tab` is \"unified\", \"favorites\" or the id of an account".into()),
+        },
+        None => return Err("missing `tab`".into()),
+    };
+    app.ui.nav_tab = tab;
+    Ok(json!({"tab": tab, "tabs": app.ui.folder_tabs}))
+}
+
+/// `ui.tabName`: the name of an account's tab ("" for its address's domain again).
+pub(crate) fn name_tab(app: &mut MailApp, p: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let Some(account) = p.get("account").and_then(serde_json::Value::as_u64).filter(|a| app.session.mailbox.account(*a).is_some()) else {
+        return Err("no account with that id".into());
+    };
+    let Some(name) = p.get("name").and_then(serde_json::Value::as_str) else { return Err("missing `name`".into()) };
+    if name.chars().count() > MAX_TAB_NAME || name.chars().any(char::is_control) {
+        return Err("a tab's name is at most 24 characters".into());
+    }
+    // (Kept as typed, spaces and all, so a name can be typed a letter at a time; shown trimmed.)
+    if name.trim().is_empty() {
+        app.ui.tab_names.remove(&account);
+    } else {
+        app.ui.tab_names.insert(account, name.to_string());
+    }
+    let shown = app.session.mailbox.account(account).map(|a| tab_name(app, a)).unwrap_or_default();
+    Ok(json!({"account": account, "name": shown}))
+}
+
+/// The tabs down the folder pane's left edge: the unified mailbox, Favorites, and each account
+/// (in the pane's order, with its colour), each name reading upwards. A click shows that tab;
+/// a right-click has what its heading's menu had. Mail dragged over a tab opens it, to be let
+/// go over one of its folders.
+fn tab_strip(app: &mut MailApp, ui: &mut Ui, t: &Tokens, current: NavTab, filing_accounts: &[(Id, String)], filing_account: Option<Id>) {
+    let strip = ui.max_rect();
+    ui.painter().line_segment([pos2(strip.max.x - 0.5, strip.min.y + 10.0), pos2(strip.max.x - 0.5, strip.max.y - 6.0)], Stroke::new(1.0, t.border));
+    let mut tabs: Vec<(NavTab, String, Option<mailcraft_model::Rgb>, String)> = vec![
+        (NavTab::Unified, tl!("Unified").to_string(), None, tl!("Unified mailbox").to_string()),
+        (NavTab::Favorites, tl!("Favorites").to_string(), None, tl!("Favorites").to_string()),
+    ];
+    for a in app.session.mailbox.accounts_in_order() {
+        let hint = if a.email.is_empty() { a.name.clone() } else { a.email.clone() };
+        tabs.push((NavTab::Account(a.id), tab_name(app, a), Some(a.effective_row_color()), hint));
+    }
+    let own = owners(&app.session.mailbox);
+    let mut y = strip.min.y + 10.0;
+    for (tab, name, color, hint) in tabs {
+        let on = tab == current;
+        let ink = if on { t.accent_soft_text } else { t.text };
+        let font = if on { bold(TAB_TEXT) } else { regular(TAB_TEXT) };
+        let mut job = egui::text::LayoutJob::single_section(name.clone(), egui::text::TextFormat { font_id: font, color: ink, ..Default::default() });
+        job.wrap = egui::text::TextWrapping { max_width: TAB_TEXT_MAX, max_rows: 1, break_anywhere: true, overflow_character: Some('…') };
+        let galley = ui.painter().layout_job(job);
+        let dot = if color.is_some() { 16.0 } else { 0.0 };
+        let r = Rect::from_min_size(pos2(strip.min.x + 3.0, y), vec2(TAB_W - 6.0, galley.size().x + dot + 20.0));
+        y = r.max.y + 4.0;
+        let key = match tab {
+            NavTab::Unified => crate::unified_inbox::UNIFIED_ROOT,
+            NavTab::Favorites => FAVORITES,
+            NavTab::Account(id) => id,
+        };
+        app.hit.add("folderTab", key, r);
+        let resp = ui.interact(r, ui.scope_id().with(("folder_tab", key)), Sense::click());
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Tab, true, on, &name));
+        if on {
+            ui.painter().rect_filled(r, 6.0, t.accent_soft);
+            ui.painter().rect_filled(
+                Rect::from_center_size(pos2(r.min.x + 1.5, r.center().y), vec2(3.0, (r.height() - 12.0).max(6.0))),
+                1.5,
+                t.selection_edge,
+            );
+        } else if resp.hovered() {
+            ui.painter().rect_filled(r, 6.0, t.hover_nav);
+        }
+        if resp.has_focus() {
+            ui.painter().rect_stroke(r, 6.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+        }
+        if let Some(color) = color {
+            crate::unified_inbox::swatch(ui.painter(), t, pos2(r.center().x, r.min.y + 13.0), color);
+        }
+        let centre = pos2(r.center().x, r.max.y - 10.0 - galley.size().x / 2.0);
+        let at = centre - galley.size() / 2.0;
+        ui.painter().add(Shape::Text(
+            egui::epaint::TextShape::new(at, galley, ink).with_angle_and_anchor(-std::f32::consts::FRAC_PI_2, Align2::CENTER_CENTER),
+        ));
+        // Mail dragged over a tab opens it.
+        if !on && resp.dnd_hover_payload::<crate::mail_view::MessageDrag>().is_some() {
+            app.ui.nav_tab = tab;
+        }
+        let resp = resp.on_hover_text(hint);
+        if resp.clicked() && !on {
+            let _ = app.execute("ui.folderTab", tab_param(tab));
+        }
+        match tab {
+            NavTab::Unified => {
+                resp.context_menu(|ui| crate::unified_inbox::root_menu(app, ui, filing_accounts, filing_account));
+            }
+            NavTab::Favorites => {}
+            NavTab::Account(id) => {
+                let movable = own.len() > 1 && own.contains(&id);
+                resp.context_menu(|ui| {
+                    ui.set_min_width(190.0);
+                    ui.label(egui::RichText::new(tl!("Tab name")).font(regular(11.0)).weak());
+                    let mut typed = app.ui.tab_names.get(&id).cloned().unwrap_or_default();
+                    let hint = app.session.mailbox.account(id).map(|a| default_tab_name(&app.session.mailbox, a)).unwrap_or_default();
+                    let field = ui.add(egui::TextEdit::singleline(&mut typed).hint_text(hint).char_limit(MAX_TAB_NAME).desired_width(180.0));
+                    app.hit.add("tabName", id, field.rect);
+                    if field.changed() {
+                        let _ = app.execute("ui.tabName", json!({"account": id, "name": typed}));
+                    }
+                    ui.separator();
+                    account_menu(app, ui, id, movable);
+                });
+            }
+        }
+    }
+}
+
+/// What `ui.folderTab` is told to show `tab`.
+fn tab_param(tab: NavTab) -> serde_json::Value {
+    match tab {
+        NavTab::Unified => json!({"tab": "unified"}),
+        NavTab::Favorites => json!({"tab": "favorites"}),
+        NavTab::Account(id) => json!({"tab": id}),
+    }
 }
 
 /// Virtual alias filters belong to an account; they never become move/drop destinations.

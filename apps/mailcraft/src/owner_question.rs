@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Headless MailCraft asks the owner about what an agent wants in a small window of its own
+//! MailCraft asks the owner about what an agent wants in a small window of its own, headless or
+//! not, on top of every other window
 //! (`mailcraft_ui_egui::Services::ask_owner`): a separate, short-lived copy of this program,
 //! started with [`ARG`], that reads the question from its standard input, shows it on top of
 //! everything and ends with exit code 0 only when the owner clicked the yes button. Clicking no,

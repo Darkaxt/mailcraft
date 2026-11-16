@@ -139,6 +139,35 @@ fn reroute_splits_only_selected_alternatives_and_received_history_preserving_oth
     assert_eq!(review(&mut s, &[future], new)["conflicts"], json!([]), "the exact remainder exception is disjoint");
 }
 
+/// Rerouting all of a rule's senders leaves no rule behind that can never match (the owner's
+/// mailbox had three: "from X and not from X"), and doing it again adds none.
+#[test]
+fn rerouting_all_of_a_rules_senders_replaces_it_instead_of_leaving_a_dead_rule() {
+    let (mut s, a, new, old) = setup();
+    let rule = add_rule(&mut s, old, &["billing@example.org"]);
+    let selected = mail(&mut s, a[1], "billing@example.org");
+    let report = review(&mut s, &[selected], new);
+    assert_eq!(report["conflicts"][0]["id"], rule);
+    apply(&mut s, &[selected], new, &report, "reroute");
+    assert!(s.mailbox.rules.iter().all(|r| r.id != rule), "the spent original is gone");
+    assert_eq!(s.mailbox.rules.len(), 1, "{:?}", s.mailbox.rules);
+    let future = mail(&mut s, a[2], "billing@example.org");
+    s.mailbox.apply_rules(future);
+    assert_eq!(s.mailbox.message(future).unwrap().folder, new);
+    // With another action besides filing, it keeps that action for the sender, once.
+    let (mut s, a, new, old) = setup();
+    let rule = add_rule(&mut s, old, &["billing@example.org"]);
+    s.mailbox.rules.iter_mut().find(|r| r.id == rule).unwrap().actions.push(Action::MarkRead);
+    let selected = mail(&mut s, a[1], "billing@example.org");
+    let report = review(&mut s, &[selected], new);
+    apply(&mut s, &[selected], new, &report, "reroute");
+    assert!(s.mailbox.rules.iter().all(|r| !r.conditions.iter().any(|c| matches!(c, Condition::Unless(_)))), "{:?}", s.mailbox.rules);
+    let future = mail(&mut s, a[2], "billing@example.org");
+    s.mailbox.apply_rules(future);
+    assert_eq!(s.mailbox.message(future).unwrap().folder, new);
+    assert!(s.mailbox.message(future).unwrap().read);
+}
+
 #[test]
 fn once_survives_native_reopen_and_repeated_rule_processing_without_exempting_future_mail() {
     let (mut s, a, new, old) = setup();

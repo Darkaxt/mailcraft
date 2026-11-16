@@ -239,6 +239,28 @@ fn edits_removal_and_account_scopes_cannot_reuse_stale_hits() {
     assert_eq!(search(&mut session, "AttachmentOnlyCopper"), [id]);
 }
 
+/// New mail is found at once, before the index has read it or answered the search again.
+#[test]
+fn new_mail_is_found_before_the_index_has_answered_for_it() {
+    let scratch = tempfile::tempdir().unwrap();
+    let path = scratch.path().join("mailbox.mailcraft");
+    let (id, _, _) = fixture(&path);
+    let (mut session, _) = open(&path);
+    assert!(search(&mut session, "ArrivalTopaz").is_empty());
+    let folder = session.mailbox.message(id).unwrap().folder;
+    let account = session.mailbox.message(id).unwrap().account;
+    let new = session.mailbox.add_message(Message { account, folder, subject: "ArrivalTopaz just sent".into(), ..Default::default() }).unwrap();
+    session.mailbox_changed();
+    // The answer held is from before the message came: it is looked at itself.
+    session.view.search = "ArrivalTopaz".into();
+    assert!(session.rows().iter().any(|row| row.id == new), "a stale answer hid the new message");
+    // A search never asked before, not answered yet.
+    session.view.search = "\"ArrivalTopaz just\"".into();
+    assert!(session.rows().iter().any(|row| row.id == new), "an unanswered search hid the new message");
+    session.wait_for_word_index();
+    assert!(session.rows().iter().any(|row| row.id == new));
+}
+
 #[test]
 fn missing_content_has_explicit_coverage_and_never_proves_a_negative_match() {
     let scratch = tempfile::tempdir().unwrap();

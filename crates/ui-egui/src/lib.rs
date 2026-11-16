@@ -939,6 +939,16 @@ pub struct UiState {
     /// The Microsoft account whose real folder tree the "Unified mailbox" root shows, as the owner
     /// last picked it; `None` (or one that no longer qualifies) for the first.
     pub unified_filing_account: Option<Id>,
+    /// The folder pane as tabs down its left edge (v0.12.8): the unified mailbox, Favorites and
+    /// each account, one at a time; off, all of them in one list as before. On for an install
+    /// that had settings before it, and for a new one ([`MailApp::fresh_prefs`]).
+    #[serde(default = "nav::tabs_on", deserialize_with = "theme::lenient_bool")]
+    pub folder_tabs: bool,
+    /// The tab the folder pane shows ([`nav::NavTab`]).
+    pub nav_tab: nav::NavTab,
+    /// The names the owner gave the accounts' tabs; an account without one has its address's
+    /// domain ([`nav::tab_name`]).
+    pub tab_names: std::collections::BTreeMap<Id, String>,
     /// How rows of combined views show their origin colour: a stripe (the default) or the full row.
     pub origin_colors: unified_inbox::OriginColors,
     /// Mailbox files opened lately, most recent first.
@@ -1049,6 +1059,9 @@ impl Default for UiState {
             collapsed_unified: Vec::new(),
             expanded_alias_accounts: Vec::new(),
             unified_filing_account: None,
+            folder_tabs: false,
+            nav_tab: nav::NavTab::default(),
+            tab_names: Default::default(),
             origin_colors: Default::default(),
             recent: Vec::new(),
             microsoft_client_id: String::new(),
@@ -1343,6 +1356,24 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.googleClientId", "Google Desktop Application ID", "File › Options", r#"{"value": string (empty: the build's own)}"#),
     ("ui.rememberSignIn", "Remember Passwords and Sign-Ins", "File › Options", r#"{"value"?: bool (default: toggle)}"#),
     ("ui.closeToTray", "Close to system tray", "File › Options › General", r#"{"value"?: bool (default: toggle)}"#),
+    (
+        "ui.folderTabs",
+        "Folder pane tabs",
+        "File › Options › General",
+        r#"{"value"?: bool (default: toggle)} — the folder pane as tabs down its left edge (the unified mailbox, Favorites, each account), or as one list"#,
+    ),
+    (
+        "ui.folderTab",
+        "Show Folder Pane Tab",
+        "Folder",
+        r#"{"tab": "unified"|"favorites"|number (an account)} — which of the folder pane's tabs shows; nothing else changes"#,
+    ),
+    (
+        "ui.tabName",
+        "Rename Tab",
+        "Folder",
+        r#"{"account": number, "name": string (at most 24 characters; "": its address's domain)} — the name of an account's tab in the folder pane, kept on this computer"#,
+    ),
     (
         "ui.importPrivateKey",
         "Import Your Certificate or Key",
@@ -2153,6 +2184,8 @@ impl MailApp {
     /// off (#755). The hosts call this where they would otherwise [`MailApp::apply_prefs`].
     pub fn fresh_prefs(&mut self) {
         self.session.prefs = fresh_options();
+        // (Not in [`UiState::default`], which the tests' windows start from with the pane whole.)
+        self.ui.folder_tabs = true;
     }
 
     /// Restore preferences saved by [`MailApp::prefs`].
@@ -2171,6 +2204,7 @@ impl MailApp {
         self.ui.collapsed_folders.truncate(10_000);
         self.ui.collapsed_unified.truncate(10_000);
         self.ui.expanded_alias_accounts.truncate(1000);
+        nav::sane_tab_names(&mut self.ui.tab_names);
         self.ui.recent.truncate(20);
         self.ui.confirmed_mailboxes.truncate(200);
         self.ui.collapsed_calendar_groups.truncate(200);
@@ -2985,6 +3019,17 @@ impl MailApp {
                 }
                 Ok(json!({"account": account, "expanded": expanded}))
             })(),
+            "ui.folderTabs" => {
+                let value = match p.get("value") {
+                    None => !self.ui.folder_tabs,
+                    Some(Value::Bool(value)) => *value,
+                    Some(_) => return Some(Err("value must be a boolean".into())),
+                };
+                self.ui.folder_tabs = value;
+                Ok(json!({"value": value}))
+            }
+            "ui.folderTab" => nav::pick_tab(self, p),
+            "ui.tabName" => nav::name_tab(self, p),
             "ui.toggleFolder" => {
                 let Some(id) = p.get("id").and_then(Value::as_u64) else { return Some(Err("missing `id`".into())) };
                 let unified = p.get("unified").and_then(Value::as_bool) == Some(true);
@@ -4956,9 +5001,12 @@ impl MailApp {
         // Before anything can start or end a Send/Receive in this frame ([`alerts`]).
         alerts::tick(self, ctx);
         self.drain_control(ctx);
-        // Headless: the owner answers agents' questions in the host's own small window.
-        if self.is_headless() {
+        // The owner answers agents' questions in the host's own small window, when it has one.
+        if self.services.ask_owner.is_some() {
             agent_gate::ask_owner_tick(self, ctx);
+        }
+        // Headless: an account that needs signing in again is asked about there too.
+        if self.is_headless() {
             sign_in_notice::tick(self, ctx);
         }
         // What is kept to show things again quickly goes once the window has been out of sight a while.

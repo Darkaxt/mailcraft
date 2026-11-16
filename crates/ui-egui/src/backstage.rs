@@ -577,6 +577,15 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
         ui.label(tl!("On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."));
     }
+    // The folder pane as tabs (v0.12.8), or as one list.
+    let mut tabs = app.ui.folder_tabs;
+    let switch = ui
+        .checkbox(&mut tabs, tl!("Folder pane tabs"))
+        .on_hover_text(tl!("Show the unified mailbox, Favorites and each account on tabs down the folder pane's edge."));
+    app.hit.add("optionFolderTabs", 0, switch.rect);
+    if switch.changed() {
+        let _ = app.run("ui.folderTabs", json!({"value": tabs}));
+    }
     row(ui, tl!("Interface theme"), |ui| {
         let cur = app.ui.theme;
         egui::ComboBox::from_id_salt("opt_theme").selected_text(tl!(cur.label())).show_ui(ui, |ui| {

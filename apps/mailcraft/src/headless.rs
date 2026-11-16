@@ -6,7 +6,7 @@
 //!
 //! An agent's command that needs the owner (sending, permanent deletion and the like) is asked
 //! about in a small window of a separate, short-lived copy of the program (`owner_question`,
-//! wired as `Services::ask_owner` for headless mode only): its answer, which is no unless the
+//! wired as `Services::ask_owner`, the desktop's too): its answer, which is no unless the
 //! owner clicks yes, wakes this loop and goes through the desktop's own answer and checks.
 
 use std::path::{Path, PathBuf};

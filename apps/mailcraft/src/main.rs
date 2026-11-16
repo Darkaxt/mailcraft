@@ -1356,9 +1356,10 @@ fn services(
         open_page: Some(Box::new(open_in_browser)),
         open_page_waiting: Some(std::sync::Arc::new(open_in_browser)),
         clipboard: (!headless).then(|| clipboard::board(None)).flatten(),
-        // Headless: an agent's question to the owner in a small window of its own; the desktop
-        // asks over its window instead.
-        ask_owner: headless.then(|| owner_question::hook(ask_ctx)),
+        // An agent's question to the owner in a small window of its own, on top of every other
+        // window, headless or not: over the main window it could hide behind a message's window
+        // or another program (owner: "you should make them top-most").
+        ask_owner: Some(owner_question::hook(ask_ctx)),
         // Help › Copy Diagnostics: the version, the platform and the redacted end of the logs.
         diagnostics: Some(Box::new(|| diagnostics::report(env!("CARGO_PKG_VERSION"), build_sha(), log_dir().filter(|_| prefs_enabled()).as_deref()))),
         // Help › Report a Problem › Send report (#956), on the owner's click alone: the report the

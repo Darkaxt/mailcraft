@@ -24,6 +24,13 @@ const NOW: i64 = 1_791_993_600;
 type Shown = Rc<RefCell<Vec<(OwnerQuestion, Sender<bool>)>>>;
 
 fn headless(host: bool) -> (MailApp, Shown) {
+    let (mut app, shown) = desktop(host);
+    app.start_headless();
+    (app, shown)
+}
+
+/// The desktop app, with the fake host window when `host`.
+fn desktop(host: bool) -> (MailApp, Shown) {
     let shown: Shown = Rc::default();
     let mut services = Services::default();
     if host {
@@ -37,7 +44,6 @@ fn headless(host: bool) -> (MailApp, Shown) {
     let mut app = MailApp::new(Session::at(mailcraft_engine::sample::mailbox(NOW, 0), NOW, 0), services);
     app.autosave = false;
     app.session.driver.set_auto_sync(false);
-    app.start_headless();
     (app, shown)
 }
 
@@ -108,6 +114,30 @@ fn a_yes_in_the_hosts_window_sends() {
     assert_eq!(sent(&a), 1);
     assert!(a.asking.is_empty());
     assert!(a.owner_window.is_none());
+}
+
+/// The desktop asks in the host's window too, on top of every other window, never over its own
+/// (a message's window could hide that), and gives the owner as long as headless does.
+#[test]
+fn the_desktop_asks_in_the_hosts_window_on_top_and_waits_as_long() {
+    let (mut a, shown) = desktop(true);
+    assert!(!a.is_headless());
+    write(&mut a);
+    let q = asked(&mut a, "compose.send", json!({}));
+    tick(&mut a);
+    assert_eq!(shown.borrow().len(), 1, "shown in the host's window");
+    assert!(shown.borrow()[0].0.seconds > 3600, "well over a minute: {}", shown.borrow()[0].0.seconds);
+    // Nothing is drawn over the main window, and no key there answers it.
+    let ctx = egui::Context::default();
+    ctx.run_ui(egui::RawInput::default(), |ui| crate::agent_gate::show(&mut a, ui.ctx())).textures_delta.clear();
+    assert_eq!(a.asking.len(), 1, "still waiting for the host's window");
+    // Past the old 50 seconds it still waits.
+    expire(&mut a, crate::now_ms() + 120_000.0);
+    assert!(outcome(&mut a, q).is_none());
+    say(&shown, 0, true);
+    tick(&mut a);
+    assert_eq!(outcome(&mut a, q).unwrap()["ok"], true);
+    assert_eq!(sent(&a), 1);
 }
 
 #[test]

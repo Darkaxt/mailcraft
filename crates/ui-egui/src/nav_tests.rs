@@ -569,3 +569,64 @@ fn gmail_categories_are_reached_and_chosen_with_the_keyboard() {
     assert_eq!(harness.state().session.view.gmail, Some((inbox, GmailCategory::Promotions)));
     assert_eq!(mailcraft_engine::gmail::in_view(&harness.state().session), Some(GmailCategory::Promotions));
 }
+
+/// With tabs the pane shows one part at a time, the unified mailbox first; a click on an
+/// account's tab shows that account's folders, under the name the owner gives its tab.
+#[test]
+fn the_folder_tabs_show_one_part_of_the_pane_at_a_time() {
+    let mut harness = window();
+    harness.state_mut().ui.folder_tabs = true;
+    harness.run_steps(3);
+    let account = harness.state().session.mailbox.accounts.first().unwrap().id;
+    let inbox = harness.state().session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    assert!(harness.state().hit.rect("allMail", 0).is_some());
+    assert!(harness.state().hit.rect("folder", inbox).is_none(), "an account's folders wait behind its tab");
+    assert!(harness.state().hit.rect("folderHeading", account).is_none(), "tabs take the headings' place");
+    let tab = harness.state().hit.rect("folderTab", account).unwrap();
+    let unified = harness.state().hit.rect("folderTab", crate::unified_inbox::UNIFIED_ROOT).unwrap();
+    assert!(tab.min.y > unified.max.y && tab.width() < TAB_W, "{tab:?} {unified:?}");
+    click(&mut harness, tab.center());
+    assert_eq!(harness.state().ui.nav_tab, NavTab::Account(account));
+    assert!(harness.state().hit.rect("folder", inbox).is_some());
+    assert!(harness.state().hit.rect("allMail", 0).is_none());
+    harness.state_mut().execute("ui.tabName", serde_json::json!({"account": account, "name": "Home "})).unwrap();
+    let a = harness.state().session.mailbox.account(account).unwrap().clone();
+    assert_eq!(tab_name(harness.state(), &a), "Home");
+    harness.state_mut().execute("ui.tabName", serde_json::json!({"account": account, "name": ""})).unwrap();
+    assert!(harness.state().ui.tab_names.is_empty());
+    assert!(harness.state_mut().execute("ui.folderTab", serde_json::json!({"tab": 999_999})).is_err());
+    harness.state_mut().execute("ui.folderTab", serde_json::json!({"tab": "favorites"})).unwrap();
+    assert_eq!(harness.state().ui.nav_tab, NavTab::Favorites);
+}
+
+/// An account's tab is named after its address's domain; two of one domain are numbered.
+#[test]
+fn accounts_tabs_are_named_after_their_domains() {
+    let mut mb = Mailbox::default();
+    let mut add = |email: &str| mb.add_account(mailcraft_model::Account { email: email.into(), ..Default::default() });
+    let (outlook, one, two) = (add("me@outlook.es"), add("a@gmail.com"), add("b@gmail.com"));
+    let name = |id| default_tab_name(&mb, mb.account(id).unwrap());
+    assert_eq!([name(outlook), name(one), name(two)], ["Outlook.es", "Gmail 1", "Gmail 2"]);
+}
+
+/// A folder's tag is drawn before its name, and the settings saved before tabs were kept turn
+/// them on.
+#[test]
+fn a_folders_tag_shows_before_its_name_and_old_settings_get_tabs() {
+    let mut harness = window();
+    let account = harness.state().session.mailbox.accounts.first().unwrap().id;
+    // (One that isn't among the Favorites too, which would draw it twice.)
+    let mb = &harness.state().session.mailbox;
+    let inbox = [FolderKind::Drafts, FolderKind::Sent, FolderKind::Deleted]
+        .into_iter()
+        .filter_map(|kind| mb.folder_of_kind(account, kind))
+        .find(|id| mb.folder(*id).is_some_and(|f| !f.favorite))
+        .unwrap();
+    harness.state_mut().execute("folder.tag", serde_json::json!({"id": inbox, "tag": "📌"})).unwrap();
+    harness.run_steps(3);
+    let tag = harness.state().hit.rect("folderTag", inbox).unwrap();
+    let row = harness.state().hit.rect("folder", inbox).unwrap();
+    assert!(row.contains(tag.center()), "{tag:?} {row:?}");
+    let restored: crate::UiState = serde_json::from_str("{}").unwrap();
+    assert!(restored.folder_tabs && !crate::UiState::default().folder_tabs);
+}

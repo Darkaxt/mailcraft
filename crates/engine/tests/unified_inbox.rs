@@ -163,3 +163,29 @@ fn alias_custom_colours_override_only_their_account_and_reset_to_inheritance() {
     reopened.run("account.rowColor", &json!({"id":account,"color":null})).unwrap();
     assert_eq!(reopened.mailbox.account(account).unwrap().origin_row_color(Some("studio@example.org")), Rgb(213, 238, 220));
 }
+
+#[test]
+fn a_folders_tag_narrows_the_unified_mailbox_and_the_folders_under_it_wear_it() {
+    let (mut s, accounts) = three();
+    let a = message(&mut s, accounts[0], FolderKind::Inbox, "Invoice A", false);
+    let b = message(&mut s, accounts[1], FolderKind::Inbox, "Invoice B", false);
+    let inbox = s.mailbox.folder_of_kind(accounts[0], FolderKind::Inbox).unwrap();
+    let under = s.run("folder.new", &json!({"name": "Bills", "parent": inbox, "account": accounts[0]})).unwrap()["id"].as_u64().unwrap();
+    assert_eq!(s.mailbox.tag_of(under), None);
+    assert_eq!(s.run("folder.tag", &json!({"id": inbox, "tag": "🏦"})).unwrap()["tag"], "🏦");
+    assert_eq!(s.mailbox.tag_of(under), Some("🏦"), "a folder without a tag of its own wears the one above it");
+    s.run("view.allInboxes", &json!({})).unwrap();
+    assert_eq!(s.run("view.tag", &json!({"tag": "🏦"})).unwrap()["tags"], json!(["🏦"]));
+    assert_eq!(ids(&s.run("mail.list", &json!({})).unwrap()), [a]);
+    s.run("view.tag", &json!({})).unwrap();
+    let listed = ids(&s.run("mail.list", &json!({})).unwrap());
+    assert!(listed.contains(&a) && listed.contains(&b));
+    // Outside the unified mailbox the tag chosen changes nothing.
+    s.run("view.tag", &json!({"tag": "🏦"})).unwrap();
+    s.run("folder.select", &json!({"kind": "inbox", "account": accounts[1]})).unwrap();
+    assert_eq!(ids(&s.run("mail.list", &json!({})).unwrap()), [b]);
+    // At most 16 characters; "" takes it off.
+    assert!(s.run("folder.tag", &json!({"id": inbox, "tag": "x".repeat(17)})).is_err());
+    s.run("folder.tag", &json!({"id": inbox, "tag": ""})).unwrap();
+    assert_eq!(s.mailbox.tag_of(under), None);
+}
