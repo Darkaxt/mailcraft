@@ -38,6 +38,9 @@ impl Startup {
             let kept = path.is_some();
             session.path = path;
             session.index_words = true;
+            // Calendar and contacts servers (#209) ship switched off: `MAILCRAFT_DAV=1` turns
+            // them on, until they are ready.
+            session.dav_enabled = std::env::var("MAILCRAFT_DAV").is_ok_and(|v| v == "1");
             let kept_pictures = if kept && !self.sample && !self.headless && prefs_enabled() { keep_pictures() } else { None };
             let mut services = services(file_dialog, ctx.clone(), kept_pictures, self.updates.as_ref(), self.headless);
             if !self.headless {

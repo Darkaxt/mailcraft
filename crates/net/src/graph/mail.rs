@@ -1049,6 +1049,8 @@ mod down_tests;
 #[cfg(test)]
 mod draft_content_tests;
 #[cfg(test)]
+mod fetch_error_tests;
+#[cfg(test)]
 mod header_order_tests;
 #[cfg(test)]
 mod inbox_first_tests;

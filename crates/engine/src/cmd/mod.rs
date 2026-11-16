@@ -25,6 +25,7 @@ pub mod calendar;
 pub mod calendar_extra;
 pub mod calendar_opened;
 pub mod calendar_settings;
+pub mod calendar_subscribed;
 pub mod category;
 #[cfg(test)]
 mod category_tests;
@@ -33,6 +34,10 @@ pub mod compose;
 mod compose_trust_tests;
 #[cfg(test)]
 mod conversation_thread_tests;
+pub mod dav_account;
+#[cfg(test)]
+mod dav_account_tests;
+pub mod dav_sync;
 pub mod device_limits;
 #[cfg(test)]
 mod device_limits_relist_tests;
@@ -53,6 +58,9 @@ mod folder_empty_tests;
 mod folder_kind_tests;
 #[cfg(test)]
 mod folder_properties_tests;
+pub mod followup;
+#[cfg(test)]
+mod followup_tests;
 pub mod format;
 #[cfg(test)]
 mod format_tests;
@@ -156,6 +164,7 @@ mod search_scope_tests;
 pub mod search_server;
 #[cfg(test)]
 mod search_suggest_tests;
+pub mod send_later;
 pub mod send_receive;
 pub mod shared;
 pub mod signature;
@@ -208,6 +217,7 @@ pub fn registry() -> Registry {
     v.extend(mail::specs());
     v.extend(aliases::specs());
     v.extend(snooze::specs());
+    v.extend(followup::specs());
     v.extend(gmail_move::specs());
     v.extend(compose::specs());
     v.extend(format::specs());
@@ -219,6 +229,7 @@ pub fn registry() -> Registry {
     v.extend(calendar::specs());
     v.extend(calendar_extra::specs());
     v.extend(calendar_opened::specs());
+    v.extend(calendar_subscribed::specs());
     v.extend(calendar_settings::specs());
     v.extend(zones::specs());
     v.extend(people::specs());
@@ -237,10 +248,13 @@ pub fn registry() -> Registry {
     v.extend(offline::specs());
     v.extend(device_limits::specs());
     v.extend(send_receive::specs());
+    v.extend(send_later::specs());
     v.extend(signature::specs());
     v.extend(graph_mail::specs());
     v.extend(jmap_mail::specs());
     v.extend(ews_mail::specs());
+    v.extend(dav_account::specs());
+    v.extend(dav_sync::specs());
     v.extend(shared::specs());
     v.extend(graph_switch::specs());
     v.extend(graph_send::specs());
