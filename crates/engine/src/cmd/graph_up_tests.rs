@@ -132,7 +132,7 @@ fn a_move_out_of_the_account_waits_for_the_whole_message_and_the_save() {
     s.mailbox.message_mut(m).unwrap().unfetched = true;
     s.run("mail.move", &json!({"ids": [m], "folder": kept})).unwrap();
     let moved = s.mailbox.message(m).unwrap();
-    assert_eq!(moved.moving_out, Some(MovingOut { account, id: "M-1".into(), folder: "F-in".into(), left: false, listing: false }));
+    assert_eq!(moved.moving_out, Some(MovingOut { account, id: "M-1".into(), folder: "F-in".into(), left: false, listing: false, archive: false }));
     assert!(moved.server.is_none() && moved.folder == kept);
     // Fetched first of all, whatever its size.
     assert_eq!(super::super::graph_down::fetch_queue(&s.mailbox, account, 5, s.now()), ["M-1"]);
@@ -143,7 +143,7 @@ fn a_move_out_of_the_account_waits_for_the_whole_message_and_the_save() {
     assert_eq!(changes(&s, account), []);
     // Saved (as the host's own saver says, or a file that holds it as it is).
     s.note_saved();
-    assert_eq!(changes(&s, account), [MessageChange::MovedOut { message: m, id: "M-1".into() }]);
+    assert_eq!(changes(&s, account), [MessageChange::MovedOut { message: m, id: "M-1".into(), purge: false }]);
     // Moved back before that went: it is the server's message again, where the server still has it.
     // (Back into the folder it came from: nothing goes up at all.)
     let inbox = s.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
@@ -169,7 +169,7 @@ fn moved_back_while_the_servers_copy_was_removed_it_is_made_there_again() {
     s.run("mail.move", &json!({"ids": [m], "folder": kept})).unwrap();
     s.note_saved();
     let run = graph_mail_request(&s, account).unwrap();
-    assert_eq!(run.messages, [MessageChange::MovedOut { message: m, id: "M-1".into() }]);
+    assert_eq!(run.messages, [MessageChange::MovedOut { message: m, id: "M-1".into(), purge: false }]);
     let inbox = s.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
     s.run("mail.move", &json!({"ids": [m], "folder": inbox})).unwrap();
     let outcome = MessageOutcome::Done { categories: None, flag: None, folder: String::new(), id: String::new() };
@@ -190,7 +190,7 @@ fn a_message_whose_text_or_a_file_couldnt_be_read_keeps_its_server_copy_when_mov
     s.run("mail.move", &json!({"ids": [m], "folder": kept})).unwrap();
     s.note_saved();
     // Whole here, and saved so: the server's copy goes.
-    assert_eq!(changes(&s, account), [MessageChange::MovedOut { message: m, id: "M-1".into() }]);
+    assert_eq!(changes(&s, account), [MessageChange::MovedOut { message: m, id: "M-1".into(), purge: false }]);
     s.mailbox.message_mut(m).unwrap().kept = Some(Box::new(mailcraft_model::KeptBody { failed: true, ..Default::default() }));
     assert_eq!(changes(&s, account), []);
     // A file kept outside memory that can't be read back (this mailbox has no file to read it from).
@@ -217,7 +217,7 @@ fn mail_moved_to_this_computer_past_a_requests_limit_isnt_read_back_for_it() {
     let mut file = mailcraft_model::Attachment::new("plan.pdf", "application/pdf", Vec::new());
     file.kept = Some(mailcraft_model::ContentRef { sha256: [7; 32], len: 4096 });
     s.mailbox.message_mut(other).unwrap().attachments = vec![file];
-    let first = [MessageChange::MovedOut { message: m, id: "M-1".into() }];
+    let first = [MessageChange::MovedOut { message: m, id: "M-1".into(), purge: false }];
     // Past the limit it is counted, not read.
     assert_eq!(message_changes(&s, account, 1), (first.to_vec(), 2));
     // With room for it, it is read back, and stays.

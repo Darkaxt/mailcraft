@@ -1278,6 +1278,9 @@ pub struct Session {
     /// Messages being moved out of a Microsoft account that were whole in the mailbox file when
     /// it was last saved: only for those is the server's copy removed (R3 spec S19). Never saved.
     pub(crate) saved_whole: std::collections::HashSet<Id>,
+    /// Archived messages (v0.12.10) that a backup made this session holds whole
+    /// ([`Session::note_backed_up`]): only their servers' copies go. Never saved.
+    pub(crate) backed_up: std::collections::HashSet<Id>,
     /// What the server refused in the Graph run under way, for the status at its end (S20).
     pub(crate) graph_said: Vec<String>,
     /// When each Microsoft account last had every folder read in a Graph run, none passed over
@@ -1510,6 +1513,7 @@ impl Session {
             openings: 0,
             restored: 0,
             saved_whole: Default::default(),
+            backed_up: Default::default(),
             graph_said: Vec::new(),
             graph_swept: Default::default(),
             graph_listed_short: Default::default(),
@@ -3468,6 +3472,11 @@ impl Session {
         self.saved_whole.retain(|id| out.contains(id));
     }
 
+    /// A backup holds the archived messages `ids` whole (v0.12.10): their servers' copies may go.
+    pub fn note_backed_up(&mut self, ids: impl IntoIterator<Item = Id>) {
+        self.backed_up.extend(ids);
+    }
+
     /// Whether the mailbox file is known to hold the mailbox as it is now.
     pub(crate) fn file_is_current(&self) -> bool {
         self.path.is_some() && !self.dirty
@@ -3500,6 +3509,7 @@ impl Session {
         self.search_pass = None;
         self.searched_for = None;
         self.saved_whole.clear();
+        self.backed_up.clear();
         self.kept_for_now.clear();
         if let Ok(lost) = self.lost_originals.get_mut() {
             lost.clear();

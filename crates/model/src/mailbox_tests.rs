@@ -1171,7 +1171,9 @@ fn repair_of_a_long_chain_of_folders_is_linear() {
     }
     let t = std::time::Instant::now();
     mb.repair();
-    assert!(t.elapsed().as_millis() < 1000, "{:?}", t.elapsed());
+    // Quadratic would be some 2.5e9 lookups (minutes); 5 s leaves room for a machine busy with
+    // other work (a 1 s bound failed at 1.2 s while a 13 GB copy ran beside the tests).
+    assert!(t.elapsed().as_millis() < 5000, "{:?}", t.elapsed());
     assert!(mb.folders.len() <= MAX_FOLDERS);
 }
 

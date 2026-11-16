@@ -157,6 +157,7 @@ const ROWS: &[(&str, &str, Setup)] = &[
     ("account.add", r#"{"email": "bo@example.org", "incoming": {"host": "imap.example.org"}}"#, Setup::None),
     ("account.edit", r#"{"id": $account, "name": "X"}"#, Setup::None),
     ("account.remove", r#"{"id": $account}"#, Setup::None),
+    ("archive.set", r#"{"account": $account, "years": 3}"#, Setup::None),
     ("account.forgetEwsCertificate", r#"{"id": $account}"#, Setup::None),
     ("account.davSet", r#"{"id": $account, "calendarHomes": ["https://dav.example.org/cal/"]}"#, Setup::None),
     ("account.davOff", r#"{"id": $account}"#, Setup::None),

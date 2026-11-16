@@ -87,7 +87,13 @@ pub fn message_changes(s: &Session, account: Id, limit: usize) -> (Vec<MessageCh
         // Every part of one on this computer is read back only when it goes into the request: not
         // for a count, nor for what waits past the limit.
         if super::graph_place::safe_here(s, m, current, false) {
-            note(&|| super::graph_place::safe_here(s, m, current, true).then(|| MessageChange::MovedOut { message: m.id, id: out.id.clone() }));
+            note(&|| {
+                super::graph_place::safe_here(s, m, current, true).then(|| MessageChange::MovedOut {
+                    message: m.id,
+                    id: out.id.clone(),
+                    purge: out.archive,
+                })
+            });
         }
     }
     (changes, count)
@@ -438,7 +444,7 @@ pub fn message_done(mb: &mut Mailbox, account: Id, done: &MessageChangeDone, ref
             }
             true
         }
-        MessageChange::MovedOut { message, id } => {
+        MessageChange::MovedOut { message, id, .. } => {
             let Ok(m) = mb.message_mut(*message) else { return false };
             if !m.moving_out.as_ref().is_some_and(|out| out.account == account && out.id == *id) {
                 // Moved back into the account (or the move undone) while the server's copy was

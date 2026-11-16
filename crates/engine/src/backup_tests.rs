@@ -183,3 +183,23 @@ fn a_damaged_file_is_not_restored_from() {
     let e = backup::restore(&tmp.folder(), &tmp.0.join("restored.mailcraft")).unwrap_err();
     assert!(e.contains("damaged"), "{e}");
 }
+
+#[test]
+fn archived_mail_whole_is_said_to_be_in_the_backup() {
+    let tmp = Temp::new("archived");
+    let mut mb = saved(&tmp.file());
+    let by_subject = |mb: &Mailbox, subject: &str| *mb.messages.iter().find(|(_, m)| m.subject == subject).unwrap().0;
+    let (whole, part) = (by_subject(&mb, "Message 0"), by_subject(&mb, "Message 1"));
+    for (id, unfetched) in [(whole, false), (part, true)] {
+        let mut m = Message::clone(mb.messages.get(&id).unwrap());
+        m.moving_out = Some(mailcraft_model::sync::MovingOut { account: 99, id: format!("S-{id}"), archive: true, ..Default::default() });
+        m.unfetched = unfetched;
+        mb.messages.insert(id, Arc::new(m));
+    }
+    let report = backup::run(&job(&mb, &tmp, ts(2026, 11, 16), false)).unwrap();
+    assert_eq!(report.archived, [whole]);
+    // Its file unchanged: in the backup all the same.
+    let again = backup::run(&job(&mb, &tmp, ts(2026, 11, 16) + 60, true)).unwrap();
+    assert!(again.written.is_empty());
+    assert_eq!(again.archived, [whole]);
+}

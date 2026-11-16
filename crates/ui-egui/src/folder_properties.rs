@@ -4,9 +4,11 @@
 //! an account (Outlook's Data File Properties). General says what it is, where it is and how many
 //! messages it holds, and its Folder Size… button opens, over it, the table of what the folder and
 //! each folder under it (for an account, all of its folders) hold and the space they take: sorted
-//! by each column, a folder's name going to that folder. The other tabs come with the features
-//! behind them; until then each says so. Everything shown is what `folder.properties` answered
-//! when the dialog opened.
+//! by each column, a folder's name going to that folder. AutoArchive is where the account's old
+//! mail is kept on this computer (the local archive, [`crate::archive`]), and Synchronization says
+//! whether the folder is on a server too and what each side counts. Outlook's Policy and
+//! Permissions tabs have nothing behind them in MailCraft and are left out. What General, Folder
+//! Size and Synchronization show is what `folder.properties` answered when the dialog opened.
 //!
 //! Folder names come from the mailbox, and from a server: they are shown as text, cut to the
 //! column.
@@ -14,7 +16,7 @@
 use std::collections::HashMap;
 
 use egui::{RichText, Ui, vec2};
-use mailcraft_model::{Folder, FolderKind, Id};
+use mailcraft_model::{AccountKind, Folder, FolderKind, Id};
 use serde_json::Value;
 
 use crate::MailApp;
@@ -28,6 +30,9 @@ pub const WIDTH: f32 = 460.0;
 const TAB_H: f32 = 190.0;
 const LABEL_W: f32 = 90.0;
 const VALUE_W: f32 = 320.0;
+/// Synchronization's columns: a wider label, for longer names.
+const SYNC_LABEL_W: f32 = 140.0;
+const SYNC_VALUE_W: f32 = 270.0;
 /// Folder Size's columns: the folder's name, its messages, unread, size, and size with its
 /// subfolders; and the server's count, when there is one, and the space between columns.
 const WIDTHS: [f32; 6] = [240.0, 80.0, 70.0, 90.0, 110.0, 100.0];
@@ -60,29 +65,48 @@ impl Tally {
     }
 }
 
-/// A tab of the dialog, in classic Outlook's order. Only General has anything in it yet; a tab
-/// gets its content with the feature behind it.
+/// A tab of the dialog, in classic Outlook's order (without its Policy and Permissions).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tab {
     General,
     AutoArchive,
-    Policy,
-    Permissions,
     Synchronization,
 }
 
 impl Tab {
-    pub const ALL: [Tab; 5] = [Tab::General, Tab::AutoArchive, Tab::Policy, Tab::Permissions, Tab::Synchronization];
+    pub const ALL: [Tab; 3] = [Tab::General, Tab::AutoArchive, Tab::Synchronization];
 
     pub fn label(self) -> &'static str {
         match self {
             Tab::General => tl!("General"),
             Tab::AutoArchive => tl!("AutoArchive"),
-            Tab::Policy => tl!("Policy"),
-            Tab::Permissions => tl!("Permissions"),
             Tab::Synchronization => tl!("Synchronization"),
         }
     }
+}
+
+/// What AutoArchive can do for the folder or the account.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Archiving {
+    /// Its account's old mail can be kept on this computer (a Microsoft account's).
+    Account,
+    /// A folder whose mail stays in the cloud: Drafts, the Outbox, Deleted Items, Junk Email,
+    /// Snoozed and the folders under them.
+    Stays,
+    /// It is on this computer only.
+    Local,
+}
+
+/// What Synchronization says of the folder or the account.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Synchronization {
+    /// It is on a server too, not only on this computer.
+    pub on_server: bool,
+    /// What it holds here, and what its server last counted: messages and unread.
+    pub here: (u64, u64),
+    pub server: Option<(u64, u64)>,
+    /// How far back the account's mail is kept in full here, when it has a server.
+    pub offline: Option<&'static str>,
 }
 
 /// What General says of the folder or the account.
@@ -147,7 +171,11 @@ pub struct FolderProperties {
     /// "Inbox Properties": the folder's name, or the account's.
     pub title: String,
     pub tab: Tab,
+    /// The account it is of, or is.
+    pub account: Option<Id>,
     pub general: General,
+    pub archiving: Archiving,
+    pub sync: Synchronization,
     pub size: FolderSize,
     /// Folder Size is open over the tabs.
     pub size_open: bool,
@@ -190,9 +218,34 @@ impl FolderProperties {
             });
         }
         let total = Tally::read(&answer["total"]);
-        let account = answer["account"].as_u64().and_then(|a| mb.account(a));
+        let account_id = answer["account"].as_u64();
+        let account = account_id.and_then(|a| mb.account(a));
+        let local = account.is_none_or(|a| a.kind == AccountKind::Local);
+        let offline = account.filter(|_| !local).map(|a| crate::keep_offline::label(a.keep_offline));
+        let folder = answer["folder"].as_u64().and_then(|f| mb.folder(f));
+        let (archiving, sync) = match folder {
+            Some(f) => {
+                let own = rows.first().filter(|r| r.id == f.id);
+                let on_server = !local && f.server.is_some();
+                let archiving = if !on_server || f.twin_of.is_some() {
+                    Archiving::Local
+                } else if stays_in_the_cloud(mb, f) {
+                    Archiving::Stays
+                } else {
+                    Archiving::Account
+                };
+                let here = own.map_or((0, 0), |r| (r.own.messages, r.own.unread));
+                (archiving, Synchronization { on_server, here, server: own.and_then(|r| r.server), offline: offline.filter(|_| on_server) })
+            }
+            None => {
+                let counted: Vec<(u64, u64)> = rows.iter().filter_map(|r| r.server).collect();
+                let server = (!counted.is_empty()).then(|| counted.iter().fold((0, 0), |(m, u), (cm, cu)| (m + cm, u + cu)));
+                let archiving = if local { Archiving::Local } else { Archiving::Account };
+                (archiving, Synchronization { on_server: !local, here: (total.messages, total.unread), server, offline })
+            }
+        };
         let account_name = account.map(|a| crate::nav::heading_name(app, a)).filter(|n| !n.is_empty()).unwrap_or_else(|| tl!("Mailbox").to_string());
-        let general = match answer["folder"].as_u64().and_then(|f| mb.folder(f)) {
+        let general = match folder {
             Some(f) => {
                 let own = rows.first().filter(|r| r.id == f.id).map_or_else(Tally::default, |r| r.own);
                 let above = f.parent.and_then(|p| folders.get(&p)).map(|p| shown_path(&folders, p));
@@ -219,7 +272,10 @@ impl FolderProperties {
         Some(FolderProperties {
             title,
             tab: Tab::General,
+            account: account_id,
             general,
+            archiving,
+            sync,
             size: FolderSize { rows, total, more, sort: Sort::Folder, descending: false, order, server },
             size_open: false,
         })
@@ -227,7 +283,7 @@ impl FolderProperties {
 
     /// Draw the tabs; Enter closes it when `enter` (not while Folder Size is open over it). `true`
     /// when it is done with.
-    pub fn show(&mut self, ui: &mut Ui, enter: bool) -> bool {
+    pub fn show(&mut self, app: &mut MailApp, ui: &mut Ui, enter: bool) -> bool {
         let t = Tokens::get(ui.ctx());
         // On a second line when the tabs' names don't fit on one.
         ui.horizontal_wrapped(|ui| {
@@ -242,9 +298,8 @@ impl FolderProperties {
             ui.set_min_height(TAB_H);
             match self.tab {
                 Tab::General => self.general_ui(ui, &t),
-                _ => {
-                    ui.label(RichText::new(tl!("Pending development")).color(t.text_dim));
-                }
+                Tab::AutoArchive => self.archive_ui(app, ui, &t),
+                Tab::Synchronization => self.sync_ui(ui, &t),
             }
         });
         let mut done = false;
@@ -276,6 +331,67 @@ impl FolderProperties {
         ui.add_space(8.0);
         if ui.button(tl!("Folder Size…")).on_hover_text(tl!("How many messages each folder holds and the space they take")).clicked() {
             self.size_open = true;
+        }
+    }
+
+    /// AutoArchive: the account's choice of how old mail is kept on this computer, as in File ›
+    /// Options › Old mail.
+    fn archive_ui(&self, app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
+        let dim = |ui: &mut Ui, text: &str| {
+            ui.label(RichText::new(text).color(t.text_dim));
+        };
+        dim(ui, tl!("Keep old mail on this computer to free space in the cloud. It stays in the same folders."));
+        ui.add_space(4.0);
+        if self.archiving == Archiving::Local {
+            dim(ui, tl!("This is only on this computer."));
+            return;
+        }
+        let Some(row) = self.account.and_then(|a| crate::archive::row_of(app, a)) else {
+            dim(ui, tl!("This works for Microsoft accounts only."));
+            return;
+        };
+        if self.archiving == Archiving::Stays {
+            dim(ui, tl!("Mail in this folder stays in the cloud."));
+        }
+        if !app.ui.backups {
+            dim(ui, tl!("Turn on backups first."));
+        }
+        crate::archive::control(
+            app,
+            ui,
+            t,
+            &row,
+            tl!("Old mail in this account"),
+            ["propertiesArchive", "propertiesArchiveYes", "propertiesArchiveNo"],
+        );
+    }
+
+    /// Synchronization: whether it is on a server too, and what each side counts.
+    fn sync_ui(&self, ui: &mut Ui, t: &Tokens) {
+        let s = &self.sync;
+        let counts = |(messages, unread): (u64, u64)| {
+            format!("{} · {}", tln!(messages, "{n} message", "{n} messages"), tln!(unread, "{n} unread", "{n} unread"))
+        };
+        let place = if s.on_server { tl!("On the server and on this computer") } else { tl!("Only on this computer") };
+        let mut lines = vec![(tl!("Kept"), place.to_string()), (tl!("On this computer"), counts(s.here))];
+        if s.on_server {
+            lines.push((tl!("On the server"), s.server.map_or_else(|| tl!("Not counted yet").to_string(), counts)));
+        }
+        if let Some(offline) = s.offline {
+            lines.push((tl!("Mail to keep offline"), offline.to_string()));
+        }
+        egui::Grid::new("folder_properties_sync").num_columns(2).spacing(vec2(GAP, 6.0)).show(ui, |ui| {
+            for (label, value) in lines {
+                cell(ui, SYNC_LABEL_W, false, |ui| ui.label(RichText::new(label).color(t.text_dim)));
+                cell(ui, SYNC_VALUE_W, false, |ui| ui.add(egui::Label::new(RichText::new(value).color(t.text)).truncate()));
+                ui.end_row();
+            }
+        });
+        if s.on_server {
+            ui.add_space(8.0);
+            ui.label(
+                RichText::new(tl!("The server's count is from the last Send/Receive that read the folder to the end.")).small().color(t.text_dim),
+            );
         }
     }
 
@@ -484,6 +600,22 @@ fn kind_name(kind: FolderKind) -> String {
         FolderKind::Custom => tl!("Mail folder").to_string(),
         kind => crate::i18n::fmt(tl!("Mail folder: the account's {folder}"), &[("folder", crate::i18n::current().folder(kind.default_name()))]),
     }
+}
+
+/// Whether `f`'s mail stays in the cloud when old mail is kept on this computer: it is, or is
+/// under, Drafts, the Outbox, Deleted Items, Junk Email or Snoozed (as the engine's archive
+/// keeps them).
+fn stays_in_the_cloud(mb: &mailcraft_model::Mailbox, f: &Folder) -> bool {
+    let snoozed = mb.snoozed_folder(f.account);
+    let mut cur = Some(f);
+    for _ in 0..64 {
+        let Some(at) = cur else { break };
+        if Some(at.id) == snoozed || matches!(at.kind, FolderKind::Drafts | FolderKind::Outbox | FolderKind::Deleted | FolderKind::Junk) {
+            return true;
+        }
+        cur = at.parent.and_then(|p| mb.folder(p));
+    }
+    false
 }
 
 /// A folder's path as the window names it: each folder by [`crate::nav::folder_name`].

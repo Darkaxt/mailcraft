@@ -150,6 +150,11 @@ pub struct Folder {
     /// It is never made on the server: one that complete listing doesn't have goes.
     #[serde(skip_serializing_if = "is_false", deserialize_with = "crate::sync::lenient_or_default")]
     pub awaiting_listing: bool,
+    /// A folder of the local archive (v0.12.10), under "On this computer": the folder of a
+    /// Microsoft account whose old mail it keeps, whose list shows this one's mail with its own;
+    /// for the archive's top folder, the account itself. `None` for every other folder.
+    #[serde(skip_serializing_if = "Option::is_none", deserialize_with = "crate::sync::lenient")]
+    pub twin_of: Option<Id>,
 }
 
 /// Whether a list of category names has `name`.
@@ -427,6 +432,11 @@ pub struct Account {
     /// mailbox follows its owner's ([`Mailbox::keep_offline_of`]).
     #[serde(skip_serializing_if = "KeepOffline::is_default", deserialize_with = "crate::sync::lenient_or_default")]
     pub keep_offline: KeepOffline,
+    /// **Keep old mail on this computer** (v0.12.10): for a Microsoft account, its mail older
+    /// than this many years goes into the local archive ([`Folder::twin_of`]) and is removed from
+    /// the server once it is safe here. 0: off.
+    #[serde(skip_serializing_if = "is_zero", deserialize_with = "crate::sync::lenient_or_default")]
+    pub archive_after: u32,
     /// For a Microsoft account still kept in step by IMAP: what its owner said to switching it
     /// to Microsoft Graph (R3.7). Nothing for every other account.
     #[serde(skip_serializing_if = "GraphSwitch::is_default", deserialize_with = "crate::sync::lenient_or_default")]

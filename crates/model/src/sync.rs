@@ -418,6 +418,10 @@ pub struct MovingOut {
     /// came as until the listing ends without it.
     #[serde(skip_serializing_if = "is_false")]
     pub listing: bool,
+    /// Moved into the local archive (v0.12.10): the server's copy goes for good, and only once
+    /// the message is in a backup too.
+    #[serde(skip_serializing_if = "is_false")]
+    pub archive: bool,
 }
 
 /// Whether two names are the same category's. Outlook's categories are matched by name and a
@@ -1241,9 +1245,15 @@ pub enum MessageChange {
     /// it recoverable for the retention period; never past it, S19).
     Delete { id: String },
     /// The message `message` was moved out of the account, is fetched whole and saved here: the
-    /// server's copy goes (S19).
+    /// server's copy goes (S19). `purge`: for good, not kept recoverable (the local archive,
+    /// v0.12.10, whose mail would otherwise still count against the account's storage).
     #[serde(rename_all = "camelCase")]
-    MovedOut { message: Id, id: String },
+    MovedOut {
+        message: Id,
+        id: String,
+        #[serde(default, skip_serializing_if = "is_false")]
+        purge: bool,
+    },
 }
 
 impl MessageChange {

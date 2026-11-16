@@ -2297,7 +2297,7 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
             let over = dialog.size_open;
             let mut done = false;
             let title = dialog.title.clone();
-            let open = window(ctx, &title, crate::folder_properties::WIDTH, |ui| done = dialog.show(ui, enter && idle));
+            let open = window(ctx, &title, crate::folder_properties::WIDTH, |ui| done = dialog.show(app, ui, enter && idle));
             if over {
                 let size = crate::folder_properties::size_layer();
                 let (escape, enter) = (crate::keys::escape(ctx, size), crate::keys::enter(ctx, size) && idle);

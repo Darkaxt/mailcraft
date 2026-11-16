@@ -616,8 +616,9 @@ fn local_mail_moved_and_copied_into_a_microsoft_account_is_made_on_its_server() 
     assert_eq!(rig.server.state().mailbox.messages.values().filter(|m| m.subject == "Moved in").count(), 1);
 }
 
-/// Graph's delete past the recoverable items is used nowhere (R3 spec S19). The name is spelled in
-/// pieces here so that this file isn't a place it is written.
+/// Graph's delete past the recoverable items is used nowhere (R3 spec S19) but where the local
+/// archive (v0.12.10, the owner's click) takes old mail off the server for good, in the Graph
+/// upload. The name is spelled in pieces here so that this file isn't a place it is written.
 #[test]
 fn graphs_delete_past_the_retention_period_is_nowhere_in_the_code() {
     let name = ["perm", "anent", "delete"].concat();
@@ -631,7 +632,8 @@ fn graphs_delete_past_the_retention_period_is_nowhere_in_the_code() {
                 stack.push(path);
             } else if path.extension().is_some_and(|e| e == "rs") {
                 let text = std::fs::read_to_string(&path).unwrap_or_default().to_lowercase();
-                assert!(!text.contains(&name), "{} names it", path.display());
+                let allowed = path.ends_with(std::path::Path::new("graph/mail/up.rs"));
+                assert!(text.matches(&name).count() <= if allowed { 2 } else { 0 }, "{} names it", path.display());
                 looked += 1;
             }
         }

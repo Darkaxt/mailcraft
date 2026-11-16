@@ -6,7 +6,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use mailcraft_model::search::Query;
-use mailcraft_model::{FlagStatus, FolderKind, Id, Importance, Message, ThreadIndex, ThreadKey};
+use mailcraft_model::{FlagStatus, FolderKind, Id, Importance, Mailbox, Message, ThreadIndex, ThreadKey};
 use mailcraft_time::{Date, DateGroup, Timestamp};
 use serde::Serialize;
 
@@ -210,7 +210,7 @@ fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
         return (false, HashSet::new());
     }
     if crate::cmd::filing::is_unfiled_view(s) {
-        return (false, crate::cmd::filing::unfiled_folders(s, s.view.filing.unwrap_or(0)));
+        return (false, with_twins(&s.mailbox, false, crate::cmd::filing::unfiled_folders(s, s.view.filing.unwrap_or(0))));
     }
     let mb = &s.mailbox;
     let folder = s.view.folder;
@@ -236,7 +236,17 @@ fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
         Scope::Everywhere => (true, hidden(None)),
         Scope::Inboxes => (false, unified_folders(s)),
     };
-    (everywhere, folders)
+    (everywhere, with_twins(mb, everywhere, folders))
+}
+
+/// The folders looked in, with their twins in the local archive (v0.12.10): a folder's old mail
+/// is in its list as before. (Not for every mailbox: the archive is a mailbox of its own there.)
+fn with_twins(mb: &Mailbox, everywhere: bool, mut folders: HashSet<Id>) -> HashSet<Id> {
+    if !everywhere {
+        let twins = crate::cmd::archive::twins_of(mb, &folders);
+        folders.extend(twins);
+    }
+    folders
 }
 
 /// The folders the unified mailbox's list shows ([`Scope::Inboxes`]): every account's Inbox, or for

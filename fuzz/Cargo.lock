@@ -1460,25 +1460,25 @@ checksum = "b0d28e293f2b8c9d2b2d1c0193bd3c1cbdc0d2cf396888dc01162f7cf9d6c3f3"
 
 [[package]]
 name = "mailcraft-assuan"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "mailcraft-ber"
-version = "0.12.9"
+version = "0.12.10"
 
 [[package]]
 name = "mailcraft-charset"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "encoding_rs",
 ]
 
 [[package]]
 name = "mailcraft-dav"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-link",
  "mailcraft-model",
@@ -1487,7 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-engine"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "craft-content",
  "flate2",
@@ -1520,7 +1520,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-ews"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "hmac 0.13.0",
  "log",
@@ -1559,7 +1559,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-html"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-link",
  "mailcraft-names",
@@ -1568,11 +1568,11 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-i18n"
-version = "0.12.9"
+version = "0.12.10"
 
 [[package]]
 name = "mailcraft-ical"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-model",
  "mailcraft-time",
@@ -1580,7 +1580,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-jmap"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "log",
  "mailcraft-jmap-types",
@@ -1593,7 +1593,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-jmap-types"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "serde",
  "serde_json",
@@ -1601,14 +1601,14 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-link"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-names",
 ]
 
 [[package]]
 name = "mailcraft-mime"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-ber",
  "mailcraft-charset",
@@ -1619,7 +1619,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-mime-model"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-html",
  "mailcraft-mime",
@@ -1629,7 +1629,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-model"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "caseless",
  "mailcraft-charset",
@@ -1645,11 +1645,11 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-names"
-version = "0.12.9"
+version = "0.12.10"
 
 [[package]]
 name = "mailcraft-openpgp"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-names",
  "pgp",
@@ -1660,7 +1660,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-proto"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "log",
  "mailcraft-charset",
@@ -1669,14 +1669,14 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-pst"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-charset",
 ]
 
 [[package]]
 name = "mailcraft-smime"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "aes 0.9.4",
  "cbc",
@@ -1704,7 +1704,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-time"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "jiff",
  "js-sys",
@@ -1713,7 +1713,7 @@ dependencies = [
 
 [[package]]
 name = "mailcraft-vcard"
-version = "0.12.9"
+version = "0.12.10"
 dependencies = [
  "mailcraft-charset",
  "mailcraft-model",

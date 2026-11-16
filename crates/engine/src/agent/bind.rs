@@ -101,6 +101,7 @@ pub fn object(id: &str) -> Option<Object> {
         _ if CALENDARS.contains(&id) => Calendar,
         "category.remove" | "category.rename" => Category,
         "account.setAutomaticReplies"
+        | "archive.set"
         | "account.add"
         | "account.edit"
         | "account.remove"

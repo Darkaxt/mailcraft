@@ -23,6 +23,12 @@ pub fn receiving_folder(s: &Session, id: Id) -> bool {
     let mut next = Some(id);
     for _ in 0..s.mailbox.folders.len() {
         let Some(folder) = next.and_then(|id| s.mailbox.folder(id)) else { return false };
+        // A folder of the local archive is what its twin is (v0.12.10): archived Sent Items stay
+        // out of All mail.
+        if let Some(of) = folder.twin_of.filter(|of| s.mailbox.folder(*of).is_some()) {
+            next = Some(of);
+            continue;
+        }
         if matches!(folder.kind, FolderKind::Drafts | FolderKind::Sent | FolderKind::Deleted | FolderKind::Junk | FolderKind::Outbox) {
             return false;
         }
@@ -40,7 +46,9 @@ fn in_an_inbox(mailbox: &Mailbox, id: Id) -> bool {
 }
 
 pub fn unfiled_folders(s: &Session, account: Id) -> std::collections::HashSet<Id> {
-    s.mailbox.folders.iter().filter(|f| (f.account != account || f.kind == FolderKind::Inbox) && receiving_folder(s, f.id)).map(|f| f.id).collect()
+    // (The local archive's folders are their twins': [`crate::list`] adds those of what is here.)
+    let own = |f: &&mailcraft_model::Folder| f.twin_of.is_none() && (f.account != account || f.kind == FolderKind::Inbox);
+    s.mailbox.folders.iter().filter(own).filter(|f| receiving_folder(s, f.id)).map(|f| f.id).collect()
 }
 
 pub fn is_unfiled_view(s: &Session) -> bool {

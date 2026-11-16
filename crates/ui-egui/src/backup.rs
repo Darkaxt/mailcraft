@@ -17,6 +17,9 @@ use crate::MailApp;
 /// backup is made when the last one is a day old ([`backup::FRESH`]).
 const FIRST: Duration = Duration::from_secs(120);
 const EVERY: Duration = Duration::from_secs(3600);
+/// Archived mail waits for a backup before it leaves its server (v0.12.10): while some does, a
+/// backup is made when the last is this old (seconds), not only once a day.
+const ARCHIVE_GAP: i64 = 15 * 60;
 
 /// The backup under way, and what the last one did.
 #[derive(Default)]
@@ -52,6 +55,7 @@ pub(crate) fn tick(app: &mut MailApp) {
         app.backups.job = None;
         match done {
             Ok(report) => {
+                app.session.note_backed_up(report.archived.iter().copied());
                 if !report.skipped && report.incomplete > 0 {
                     app.status(tln!(
                         report.incomplete,
@@ -78,8 +82,15 @@ pub(crate) fn tick(app: &mut MailApp) {
     let next = *app.backups.next.get_or_insert(now + FIRST);
     if now >= next {
         app.backups.next = Some(now + EVERY);
-        let _ = start(app, false);
+        let force = archive_due(app);
+        let _ = start(app, force);
     }
+}
+
+/// Whether archived mail waits for a backup that is due ([`ARCHIVE_GAP`]).
+fn archive_due(app: &MailApp) -> bool {
+    let recent = app.backups.last.as_ref().is_some_and(|l| !l.skipped && (0..ARCHIVE_GAP).contains(&(app.session.now() - l.finished)));
+    !recent && mailcraft_engine::cmd::archive::waits_for_backup(&app.session)
 }
 
 /// Start a backup on a thread of its own: the daily one, or (`force`) Back up now.

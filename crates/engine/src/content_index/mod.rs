@@ -825,13 +825,20 @@ impl Index {
         // was read) is searched on the message itself: the index only speeds a search up and
         // never hides new mail. A message it holds waits for the answer, so no bodies are read
         // for it. With a `-` word, or an index not open yet or with a problem, it waits as
-        // before: looking at less than the message could wrongly prove a word absent.
+        // before: looking at less than the message could wrongly prove a word absent. An answer
+        // speaks for every message the index had when it was given, so one it has no frame for
+        // came (or changed) after it, even if the index has read it since: that is looked at
+        // itself too (a search not answered yet goes by the newest answer held). Messages only
+        // known from the index file at a start still wait, so their bodies aren't all read.
         let negated = (0..query.len()).any(|index| query.text_of(index).is_some() && query.term_negated(index));
+        let newest = self.answers.iter().max_by_key(|answer| answer.generation).map(|answer| &**answer);
         let direct = |message: &Message| {
             !negated
                 && self.initialized
                 && self.problem.is_none()
-                && (self.dirty.contains(&message.id) || !(self.versions.contains_key(&message.id) || self.settled.contains_key(&message.id)))
+                && (self.dirty.contains(&message.id)
+                    || !(self.versions.contains_key(&message.id) || self.settled.contains_key(&message.id))
+                    || (self.versions.contains_key(&message.id) && answer.or(newest).is_some_and(|held| self.frame(Some(held), message).is_none())))
         };
         let mut decisions = HashMap::new();
         let mut unknown = 0usize;

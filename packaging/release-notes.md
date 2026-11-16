@@ -1,9 +1,10 @@
-**MailCraft 0.12.9 in short** — a daily backup of your mail
-- New: MailCraft backs up your mail once a day, compressed: one file for each past year and one for each month of this year. Only the files whose mail changed are written again, so a daily backup stays light. The last 7 days of your settings, accounts and folders are kept too. Passwords are never in a backup.
-- File › Options › Backups: turn it off, pick the folder (an external drive is a good place), or Back Up Now.
-- Each backup file opens as a mailbox of its own once unzipped (7-Zip opens it); `mailcraft-cli backup-restore <folder> <new mailbox>` puts the whole mailbox back together.
-- The latest changes from MailCraft upstream are included.
-- Everything from 0.12.8 stays.
+**MailCraft 0.12.10 in short** — keep old mail on this computer
+- New: File › Options › Old mail moves a Microsoft account's mail older than 1, 2, 3, 5 or 10 years to this computer, to free space in the cloud. Before you say yes it tells you how many emails and how much space.
+- Your folders stay the same: each folder still lists its old mail. It is kept in the same folders under On this computer.
+- Mail leaves the cloud only after it is fully downloaded, saved and in a backup. It is then deleted from the server for good, so it no longer counts against the account's storage. Backups must be on.
+- It runs in the background and is done in a few hours; mail that becomes old later follows by itself. Choose Off to stop. Mail already moved stays on this computer.
+- The same choice is in an account's or folder's Properties › AutoArchive. Synchronization there shows what the server and this computer hold. The empty Policy and Permissions tabs are gone.
+- Everything from 0.12.9 stays (daily backups).
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

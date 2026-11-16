@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Folder Properties (#314) in the window: General for a folder and for an account, the other
-//! tabs, and Folder Size over them: sorted by its columns, a folder's name going to that folder,
+//! Folder Properties (#314) in the window: General for a folder and for an account, AutoArchive
+//! and Synchronization, and Folder Size over them: sorted by its columns, a folder's name going to that folder,
 //! Escape and Enter closing it before the tabs.
 
 use std::collections::HashMap;
@@ -9,10 +9,10 @@ use std::collections::HashMap;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use mailcraft_engine::Session;
-use mailcraft_model::{FolderKind, Id};
+use mailcraft_model::{AccountKind, FolderKind, Id, ServerFolder};
 use serde_json::json;
 
-use super::{FolderProperties, Sort, Tab};
+use super::{Archiving, FolderProperties, Sort, Tab};
 use crate::dialogs::Dialog;
 use crate::{MailApp, Services};
 
@@ -190,23 +190,64 @@ fn the_columns_sort_largest_first_and_a_second_click_turns_them_round() {
     assert_eq!(d.sorted().iter().rev().map(|r| r.id).collect::<Vec<_>>(), pane);
 }
 
-/// General in the window, and every other tab saying it is still to come.
+/// General, AutoArchive and Synchronization in the window, for a folder only on this computer;
+/// Outlook's Policy and Permissions aren't there.
 #[test]
-fn general_and_the_tabs_still_to_come() {
+fn general_autoarchive_and_synchronization() {
     let (mut a, _, inbox, _) = app();
     a.run("folder.properties", json!({"id": inbox})).unwrap();
     let mut h = window(a);
     for label in ["Name", "Type", "Location", "Messages", "Unread", "Mail folder: the account's Inbox", "Folder Size…"] {
         assert!(h.query_by_label(label).is_some(), "{label}");
     }
-    for tab in [Tab::AutoArchive, Tab::Policy, Tab::Permissions, Tab::Synchronization] {
+    assert!(h.query_by_label("Policy").is_none() && h.query_by_label("Permissions").is_none());
+    let says = [(Tab::AutoArchive, "This is only on this computer."), (Tab::Synchronization, "Only on this computer")];
+    for (tab, said) in says {
         click(&mut h, tab.label());
         assert_eq!(open(h.state()).tab, tab);
-        assert!(h.query_by_label("Pending development").is_some(), "{tab:?}");
+        assert!(h.query_by_label(said).is_some(), "{tab:?}");
         assert!(h.query_by_label("Folder Size…").is_none(), "{tab:?}");
     }
+    assert!(h.query_by_label("On the server").is_none(), "no server: no server's count");
     click(&mut h, "General");
-    assert!(h.query_by_label("Folder Size…").is_some() && h.query_by_label("Pending development").is_none());
+    assert!(h.query_by_label("Folder Size…").is_some());
+}
+
+/// A Microsoft account's folder: AutoArchive has the account's choice of years (off until the
+/// owner turns backups on), Deleted Items says its mail stays in the cloud, and Synchronization
+/// has the server's count.
+#[test]
+fn a_microsoft_folder_has_the_old_mail_choice_and_the_servers_count() {
+    let (mut a, account, inbox, _) = app();
+    {
+        let mb = &mut a.session.mailbox;
+        mb.account_mut(account).unwrap().kind = AccountKind::Microsoft;
+        for kind in [FolderKind::Inbox, FolderKind::Deleted] {
+            let f = mb.folder_of_kind(account, kind).unwrap();
+            mb.folder_mut(f).unwrap().server = Some(ServerFolder { id: format!("F-{kind:?}"), ..Default::default() });
+        }
+    }
+    let deleted = a.session.mailbox.folder_of_kind(account, FolderKind::Deleted).unwrap();
+    a.run("folder.properties", json!({"id": deleted})).unwrap();
+    assert_eq!(open(&a).archiving, Archiving::Stays);
+    a.dialog = None;
+    a.run("folder.properties", json!({"account": account})).unwrap();
+    assert_eq!(open(&a).archiving, Archiving::Account);
+    a.dialog = None;
+    a.run("folder.properties", json!({"id": inbox})).unwrap();
+    assert_eq!(open(&a).archiving, Archiving::Account);
+    assert!(open(&a).sync.on_server && open(&a).sync.offline.is_some());
+    a.ui.backups = false;
+    let mut h = window(a);
+    click(&mut h, Tab::AutoArchive.label());
+    // (The line's name is painted, as File › Options' rows are: the choice is found by its place.)
+    assert!(h.query_by_label("This works for Microsoft accounts only.").is_none());
+    assert!(h.state().hit.rect("propertiesArchive", account).is_some(), "the choice of years");
+    assert!(h.query_by_label("Turn on backups first.").is_some());
+    click(&mut h, Tab::Synchronization.label());
+    for label in ["On the server and on this computer", "On the server", "Not counted yet", "Mail to keep offline"] {
+        assert!(h.query_by_label(label).is_some(), "{label}");
+    }
 }
 
 /// Folder Size… opens the table over the tabs; Escape, Enter or its Close close it alone, and
@@ -354,7 +395,7 @@ fn what_folder_properties_adds_has_names() {
     assert_eq!(added(&h), Vec::<String>::new(), "the account heading's menu");
     click(&mut h, "Properties…");
     assert_eq!(added(&h), Vec::<String>::new(), "General");
-    for tab in [Tab::AutoArchive, Tab::Policy, Tab::Permissions, Tab::Synchronization, Tab::General] {
+    for tab in [Tab::AutoArchive, Tab::Synchronization, Tab::General] {
         click(&mut h, tab.label());
         assert_eq!(added(&h), Vec::<String>::new(), "{tab:?}");
     }

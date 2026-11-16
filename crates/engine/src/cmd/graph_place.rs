@@ -153,7 +153,9 @@ pub(crate) fn safe_here(s: &Session, m: &Message, saved: bool, read: bool) -> bo
     } else {
         let whole = !m.unfetched && !m.incomplete && m.not_downloaded == 0 && !m.kept.as_deref().is_some_and(|k| k.failed);
         // (Whole with the bytes it came as, or of its parts once those can't be lost.)
-        whole && (saved || s.saved_whole.contains(&m.id)) && (!read || (s.parts_readable(m) && released()))
+        // Archived (v0.12.10): in a backup too, as the server's copy goes for good.
+        let backed_up = !super::archive::waiting(m) || s.backed_up.contains(&m.id);
+        whole && backed_up && (saved || s.saved_whole.contains(&m.id)) && (!read || (s.parts_readable(m) && released()))
     }
 }
 

@@ -18,6 +18,9 @@ pub mod aliases;
 mod aliases_tests;
 #[cfg(test)]
 mod answered_tests;
+pub mod archive;
+#[cfg(test)]
+mod archive_tests;
 pub mod auto_replies;
 #[cfg(test)]
 mod auto_replies_tests;
@@ -216,6 +219,7 @@ pub fn registry() -> Registry {
     v.extend(edit::specs());
     v.extend(mail::specs());
     v.extend(aliases::specs());
+    v.extend(archive::specs());
     v.extend(snooze::specs());
     v.extend(followup::specs());
     v.extend(gmail_move::specs());

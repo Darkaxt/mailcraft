@@ -25,7 +25,7 @@
 //!   the mailbox, so never in a backup.
 //! - The search index is not backed up: it is made again from the mail.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
@@ -39,6 +39,7 @@ use mailcraft_time::Date;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::cmd::archive;
 use crate::store;
 
 /// The manifest's name in the backup folder.
@@ -98,6 +99,9 @@ pub struct Report {
     pub incomplete: usize,
     /// The size of the backup's files together.
     pub bytes: u64,
+    /// The archived messages it holds whole (v0.12.10): [`crate::Session::note_backed_up`].
+    #[serde(skip)]
+    pub archived: Vec<Id>,
 }
 
 /// A backup to make: a copy of the mailbox (cheap: its messages are shared), where its file is
@@ -175,10 +179,16 @@ pub fn run(job: &Job) -> Result<Report, String> {
         let fingerprint = fingerprint(&job.mailbox, ids)?;
         let file = format!("mail-{key}.mailcraft.gz");
         let there = |p: &PeriodFile| fs::metadata(folder.join(&p.file)).is_ok_and(|m| m.len() == p.bytes);
+        // Archived mail whole here: in the file already, the same, or once it is written whole.
+        let archived: Vec<Id> =
+            ids.iter().copied().filter(|id| job.mailbox.messages.get(id).is_some_and(|m| archive::waiting(m) && archive::whole(m))).collect();
         if manifest.periods.get(key).is_some_and(|p| p.fingerprint == fingerprint && p.file == file && there(p)) {
+            report.archived.extend(archived);
             continue;
         }
-        let (bytes, sha256, incomplete) = write_verified(&folder.join(&file), |out| write_period(out, &rest, job, ids))?;
+        let mut failed = HashSet::new();
+        let (bytes, sha256, incomplete) = write_verified(&folder.join(&file), |out| write_period(out, &rest, job, ids, &mut failed))?;
+        report.archived.extend(archived.into_iter().filter(|id| !failed.contains(id)));
         report.incomplete += incomplete;
         manifest.periods.insert(key.clone(), PeriodFile { file, fingerprint, messages: ids.len(), bytes, sha256, written: job.now });
         report.written.push(key.clone());
@@ -261,7 +271,13 @@ fn write_json(out: &mut dyn Write, map: &serde_json::Map<String, Value>) -> Resu
 /// A period's file: the mailbox's rest with the messages `ids`, each brought whole into memory
 /// in turn and written out (a year of mail is never in memory at once). Returns how many were
 /// written without some content that couldn't be read.
-fn write_period(out: &mut dyn Write, rest: &serde_json::Map<String, Value>, job: &Job, ids: &[Id]) -> Result<usize, String> {
+fn write_period(
+    out: &mut dyn Write,
+    rest: &serde_json::Map<String, Value>,
+    job: &Job,
+    ids: &[Id],
+    failed: &mut HashSet<Id>,
+) -> Result<usize, String> {
     let io = |e: std::io::Error| e.to_string();
     let json = |e: serde_json::Error| e.to_string();
     out.write_all(b"{").map_err(io)?;
@@ -288,6 +304,7 @@ fn write_period(out: &mut dyn Write, rest: &serde_json::Map<String, Value>, job:
             Err(e) => {
                 log::warn!("backup: {e}; kept without it");
                 incomplete += 1;
+                failed.insert(*id);
                 serde_json::to_writer(&mut *out, &Whole(m)).map_err(json)?;
             }
         }

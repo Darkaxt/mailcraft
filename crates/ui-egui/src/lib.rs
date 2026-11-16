@@ -54,6 +54,7 @@ mod agent_undo_tests;
 pub mod alerts;
 pub mod app_lifecycle;
 pub mod approval;
+pub mod archive;
 #[cfg(test)]
 mod attachment_menu_tests;
 mod attachment_open;
@@ -1947,6 +1948,8 @@ pub struct MailApp {
     /// The daily backup ([`backup`]).
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) backups: backup::Backups,
+    /// The local archive ([`archive`]).
+    pub(crate) archive: archive::Archive,
     /// Calendar and contact files the system asked MailCraft to open, each waiting to be asked
     /// about ([`files::ask_next`]).
     pub(crate) opened_waiting: std::collections::VecDeque<String>,
@@ -2166,6 +2169,7 @@ impl MailApp {
             file_dialog: None,
             #[cfg(not(target_arch = "wasm32"))]
             backups: Default::default(),
+            archive: Default::default(),
             source_pane: Default::default(),
             search_index_pane: Default::default(),
             opened_waiting: Default::default(),
@@ -5346,6 +5350,7 @@ impl MailApp {
         let _ = files::poll(self);
         #[cfg(not(target_arch = "wasm32"))]
         backup::tick(self);
+        archive::tick(self);
         files::drain_inbox(self);
         opening::poll_ahead(self, ctx);
         files::ask_next(self);

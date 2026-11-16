@@ -91,7 +91,7 @@ fn heading(ui: &mut Ui, text: &str, t: &Tokens) {
     ui.add_space(4.0);
 }
 
-fn section(ui: &mut Ui, text: &str, t: &Tokens) {
+pub(crate) fn section(ui: &mut Ui, text: &str, t: &Tokens) {
     ui.add_space(10.0);
     ui.label(egui::RichText::new(text).font(semibold(14.0)).color(t.accent_text));
 }
@@ -623,7 +623,7 @@ fn open(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
 }
 
 /// A labelled row: the label on the left, the control after it.
-fn row(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
+pub(crate) fn row(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         let t = Tokens::get(ui.ctx());
         // A label longer than the column, as a translation can be, pushes its control along.
@@ -924,6 +924,8 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     if app.session.path.is_some() {
         section(ui, tl!("Backups"), t);
         backups(app, ui, t);
+        // Old mail kept on this computer only (v0.12.10), which backups make safe.
+        crate::archive::options(app, ui, t);
     }
     section(ui, tl!("Accounts"), t);
     let mut remember = app.ui.remember_sign_in;

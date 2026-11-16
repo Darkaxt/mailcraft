@@ -1918,5 +1918,5 @@ fn a_rule_files_new_microsoft_mail_into_gmail_once_it_has_come_down_whole() {
     apply_sync(&mut s, SyncResult { account: a, placed: vec![put(&asked, rota, 40, 7)], ..Default::default() }).unwrap();
     assert_eq!(at(&s, rota), (a, gmail, 40));
     let changes = graph_mail_request(&s, ms).unwrap().messages;
-    assert!(changes.iter().any(|c| matches!(c, MessageChange::MovedOut { message, id } if *message == rota && id == "R1")), "{changes:?}");
+    assert!(changes.iter().any(|c| matches!(c, MessageChange::MovedOut { message, id, .. } if *message == rota && id == "R1")), "{changes:?}");
 }

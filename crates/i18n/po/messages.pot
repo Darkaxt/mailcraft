@@ -987,6 +987,11 @@ msgid "All of them"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/archive.rs
+msgid "All old mail is on this computer."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "All source details"
 msgstr ""
@@ -1443,9 +1448,14 @@ msgstr ""
 msgid "April"
 msgstr ""
 
-#. android, command label, interface, name, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#. android, command label, interface, name, ribbon, ribbon location
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 msgid "Archive"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/archive.rs
+msgid "Archive Old Mail"
 msgstr ""
 
 #. name
@@ -2227,7 +2237,7 @@ msgid "Can't sign"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs
 msgid "Cancel"
 msgstr ""
 
@@ -4671,7 +4681,7 @@ msgid "Fewer than two of these contacts are still here, so there is nothing to m
 msgstr ""
 
 #. command label, name, ribbon location
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/dav_account.rs crates/engine/src/cmd/device_limits.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/help.rs crates/engine/src/cmd/keys.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/signature.rs crates/engine/src/cmd/tasks_remote.rs crates/engine/src/cmd/zones.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/archive.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/dav_account.rs crates/engine/src/cmd/device_limits.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/graph_switch.rs crates/engine/src/cmd/help.rs crates/engine/src/cmd/keys.rs crates/engine/src/cmd/offline.rs crates/engine/src/cmd/shared.rs crates/engine/src/cmd/signature.rs crates/engine/src/cmd/tasks_remote.rs crates/engine/src/cmd/zones.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
 msgid "File"
 msgstr ""
 
@@ -6530,6 +6540,11 @@ msgid "Keep MailCraft running for mail and reminders when you close its window. 
 msgstr ""
 
 #. command label
+#: crates/engine/src/cmd/archive.rs
+msgid "Keep Old Mail on This Computer"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/rules.rs
 msgid "Keep Rule on Server"
 msgstr ""
@@ -6572,6 +6587,11 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Keep mail from the last"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+msgid "Keep old mail on this computer to free space in the cloud. It stays in the same folders."
 msgstr ""
 
 #. interface
@@ -6622,6 +6642,11 @@ msgstr ""
 #. what a command says
 #: crates/model/src/sync/progress.rs
 msgid "Keeping a copy of what was sent"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "Kept"
 msgstr ""
 
 #. interface
@@ -6854,6 +6879,11 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
+#. command label
+#: crates/engine/src/cmd/archive.rs
+msgid "Local Archive Status"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/dialogs.rs
 msgid "Local mailbox"
@@ -7005,6 +7035,11 @@ msgid "Mail in Junk E-mail still asks first. File › Options turns this off aga
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "Mail in this folder stays in the cloud."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
 msgid "Mail in this shared mailbox's Outbox waits: sending from shared mailboxes needs your permission. Use Send/Receive."
 msgstr ""
@@ -7040,7 +7075,7 @@ msgid "Mail to Keep Offline"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/folder_properties.rs
 msgid "Mail to keep offline"
 msgstr ""
 
@@ -7936,6 +7971,11 @@ msgid "Move Rule"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/archive.rs
+msgid "Move Them"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/nav.rs
 msgid "Move Up"
 msgstr ""
@@ -8043,6 +8083,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "Moving them puts them into your account's calendar, where Outlook and your other devices have them too."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/archive.rs
+msgid "Moving: {left} left, {waiting} leaving the cloud"
 msgstr ""
 
 #. interface
@@ -8856,6 +8901,11 @@ msgid "Not connected: the rest of this message is on the server"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "Not counted yet"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 msgid "Not every layout checked."
 msgstr ""
@@ -9096,7 +9146,7 @@ msgid "October"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/backstage.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/archive.rs crates/ui-egui/src/backstage.rs
 msgid "Off"
 msgstr ""
 
@@ -9105,10 +9155,27 @@ msgstr ""
 msgid "Offline"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/archive.rs
+msgid "Old mail"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "Old mail in this account"
+msgstr ""
+
 #. name
 #: crates/time/src/lib.rs
 msgid "Older"
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/archive.rs
+msgid "Older than {n} year"
+msgid_plural "Older than {n} years"
+msgstr[0] ""
+msgstr[1] ""
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
@@ -9133,6 +9200,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view/server_rows.rs
 msgid "On the server"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "On the server and on this computer"
 msgstr ""
 
 #. interface
@@ -9161,7 +9233,7 @@ msgid "On the server: here it can be switched on or off, moved or deleted"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
 msgid "On this computer"
 msgstr ""
 
@@ -9296,7 +9368,7 @@ msgid "Only on"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/forms.rs
+#: crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs
 msgid "Only on this computer"
 msgstr ""
 
@@ -9628,7 +9700,7 @@ msgid "Optional"
 msgstr ""
 
 #. command label, interface, name, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/keys.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/zones.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/archive.rs crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/invitation.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/file.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/keys.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/zones.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
 msgid "Options"
 msgstr ""
 
@@ -9913,7 +9985,7 @@ msgid "Pending"
 msgstr ""
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt crates/ui-egui/src/nav.rs crates/ui-egui/src/ribbon.rs
 msgid "Pending development"
 msgstr ""
 
@@ -9925,11 +9997,6 @@ msgstr ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt
 msgid "People to invite"
-msgstr ""
-
-#. interface, name
-#: crates/ui-egui/src/folder_properties.rs
-msgid "Permissions"
 msgstr ""
 
 #. interface
@@ -10074,11 +10141,6 @@ msgstr ""
 msgid "Point at one to see why."
 msgstr ""
 
-#. interface, name
-#: crates/ui-egui/src/folder_properties.rs
-msgid "Policy"
-msgstr ""
-
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 msgid ""
@@ -10134,6 +10196,11 @@ msgstr ""
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/reading.rs
 msgid "Preview Attachment"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/archive.rs
+msgid "Preview Local Archive"
 msgstr ""
 
 #. command label
@@ -11843,7 +11910,7 @@ msgid "Send & Receive"
 msgstr ""
 
 #. ribbon location
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/dav_sync.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules_remote.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/send_receive.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/sync_progress.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/lib.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/archive.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/dav_sync.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules_remote.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/send_receive.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/sync_progress.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/lib.rs
 msgid "Send / Receive"
 msgstr ""
 
@@ -14777,6 +14844,11 @@ msgid "The server's copies stay as they are, and nothing is sent to the server. 
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "The server's count is from the last Send/Receive that read the folder to the end."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "The server's name"
 msgstr ""
@@ -15488,6 +15560,11 @@ msgstr ""
 msgid "This is not somebody else's meeting: a message can't call it off."
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "This is only on this computer."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/calendar/meeting.rs
 msgid "This isn't an online meeting."
@@ -15863,6 +15940,11 @@ msgstr ""
 msgid "This system has no place MailCraft knows for S/MIME certificates with a private key."
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/folder_properties.rs
+msgid "This works for Microsoft accounts only."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/cmd/remote.rs
 msgid "This {what} is kept by the server of {who}. Changes made here are not sent back yet, so it can't be changed or deleted here."
@@ -16201,6 +16283,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
 msgid "Turn on attachment previews in File › Options."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+msgid "Turn on backups first."
 msgstr ""
 
 #. interface
@@ -17747,6 +17834,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/attachment_scan.rs
 msgid "a threat"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/archive.rs
+msgid "account not found"
 msgstr ""
 
 #. what a command says
@@ -20827,6 +20919,13 @@ msgstr[1] ""
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt
 msgid "{n} downloaded picture is kept on this phone ({size})."
 msgid_plural "{n} downloaded pictures are kept on this phone ({size})."
+msgstr[0] ""
+msgstr[1] ""
+
+#. interface
+#: crates/ui-egui/src/archive.rs
+msgid "{n} email ({size}) will move to this computer and be deleted from the cloud."
+msgid_plural "{n} emails ({size}) will move to this computer and be deleted from the cloud."
 msgstr[0] ""
 msgstr[1] ""
 

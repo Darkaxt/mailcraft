@@ -608,12 +608,31 @@ impl Up<'_, '_, '_> {
 
     /// Deletes for good, and the server's copies of messages moved out of the account.
     fn deletes(&mut self) -> Result<(), NetError> {
-        let mut subs = Vec::new();
+        let (mut subs, mut purges) = (Vec::new(), Vec::new());
         for (at, change) in self.changes.iter().enumerate() {
             let (MessageChange::Delete { id } | MessageChange::MovedOut { id, .. }) = change else { continue };
+            let purge = matches!(change, MessageChange::MovedOut { purge: true, .. });
             match piece(id) {
+                // Archived here (v0.12.10): removed for good, so that it no longer counts against
+                // the account's storage.
+                Some(id) if purge => purges.push(Sub {
+                    at,
+                    method: "POST",
+                    url: self.graph.batch_path(&format!("/messages/{id}/permanentDelete")),
+                    body: Some(json!({})),
+                }),
                 Some(id) => subs.push(Sub { at, method: "DELETE", url: self.graph.batch_path(&format!("/messages/{id}")), body: None }),
                 None => self.settle(at, MessageOutcome::Refused { status: 400 }),
+            }
+        }
+        // A removal for good the server won't make is a delete as any other.
+        for (sub, status, body) in self.repeatable(Kind::Same, purges)? {
+            if (200..300).contains(&status) {
+                self.settle(sub.at, done());
+            } else if !self.held_back(status, &body, "a removal for good of a message") {
+                log::info!("graph changes: a removal for good of a message was refused (status {status}); it is deleted instead");
+                let url = sub.url.trim_end_matches("/permanentDelete").to_string();
+                subs.push(Sub { method: "DELETE", url, body: None, ..sub });
             }
         }
         // A delete for good refused is put back here as the server has it: read first. One whose

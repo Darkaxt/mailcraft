@@ -108,6 +108,11 @@ impl Access {
 }
 
 const SAFE: &[&str] = &[
+    // The local archive (v0.12.10): what it would move and how it goes; a step moves only what
+    // the owner turned it on for.
+    "archive.preview",
+    "archive.status",
+    "archive.step",
     // What came of a question a headless owner is asked in a window of its own (the window's
     // `agent_gate`): reading it changes nothing.
     "agent.answer",
@@ -528,6 +533,8 @@ const SEND: &[&str] = &[
 
 const DELETE: &[&str] = &[
     "mail.deletePermanently",
+    // Old mail removed from the server for good once archived here (turning it off is Safe).
+    "archive.set",
     "mail.removeAttachment",
     "folder.delete",
     "folder.empty",
@@ -890,6 +897,7 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
             return Access::Owner(Class::Delete);
         }
         "file.open" if crate::cmd::file::deleting_rules_in(params) => return Access::Owner(Class::Delete),
+        "archive.set" if params.get("years").is_some_and(Value::is_null) => return Access::Safe,
         "account.graphSwitch" if p::str(params, "answer").is_some_and(|answer| answer.trim().eq_ignore_ascii_case("later")) => {
             return Access::Safe;
         }
@@ -1618,6 +1626,13 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
         "mail.delete" | "mail.deletePermanently" => {
             let ids = taken(params);
             format!("permanently delete {}", messages_text(s, &ids))
+        }
+        "archive.set" => {
+            let account = p::id(params, "account");
+            let a = account.and_then(|id| s.mailbox.account(id)).map_or_else(|| "a Microsoft account".to_string(), |a| clip(&a.email, 80));
+            let years = p::u64(params, "years").unwrap_or(0).min(crate::cmd::archive::MOST_YEARS) as u32;
+            let n = account.map_or(0, |id| crate::cmd::archive::candidates(&s.mailbox, id, years, s.now()).len());
+            format!("move the {n} messages of {a} older than {years} years to this computer, and delete them from its server for good")
         }
         "folder.empty" | "folder.delete" => {
             let f = p::id_strict(params, "id").map(|f| f.unwrap_or(s.view.folder)).unwrap_or_default();

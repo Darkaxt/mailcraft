@@ -667,7 +667,7 @@ fn undo_never_takes_away_graph_mail_a_rule_moved_out_of_its_account() {
     // There is no going back past it: not even once the server's copy is removed.
     assert_eq!(s.undo_label(), None);
     let done = MessageChangeDone {
-        change: MessageChange::MovedOut { message: id, id: "F-in/news@paper.example".into() },
+        change: MessageChange::MovedOut { message: id, id: "F-in/news@paper.example".into(), purge: false },
         outcome: MessageOutcome::Done { categories: None, flag: None, folder: String::new(), id: String::new() },
         there: None,
     };
