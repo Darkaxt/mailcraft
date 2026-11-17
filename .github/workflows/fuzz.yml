@@ -75,6 +75,7 @@ jobs:
               [ -n "$hit" ] && picked="$picked $t"
             done
           fi
+          # shellcheck disable=SC2086 # $picked is a space-separated list, split on purpose
           echo "targets=$(printf '%s\n' $picked | jq -Rnc '[inputs | select(length > 0)]')" >> "$GITHUB_OUTPUT"
           echo "Fuzzing:${picked:- nothing}"
 
