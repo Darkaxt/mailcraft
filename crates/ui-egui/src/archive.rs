@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! The local archive in the window (v0.12.10): `archive.step` every minute, and the Archive
-//! section of File › Options, where the owner turns it on for a Microsoft account after seeing
-//! how much mail would leave the cloud ([`mailcraft_engine::cmd::archive`]).
+//! The local archive in the window (v0.12.10): `archive.step` every minute, and the Old mail
+//! choice under each Microsoft account in File › Options › Mail on this computer (and in a
+//! folder's Properties), where the owner turns it on after seeing how much mail would leave the
+//! cloud ([`mailcraft_engine::cmd::archive`]).
 
 use std::time::Duration;
 
@@ -12,7 +13,7 @@ use mailcraft_time::Stopwatch;
 use serde_json::{Value, json};
 
 use crate::MailApp;
-use crate::backstage::{row as option_row, section};
+use crate::backstage::row as option_row;
 use crate::theme::Tokens;
 
 /// Seconds between two steps.
@@ -65,23 +66,6 @@ fn rows(app: &mut MailApp) -> Vec<Value> {
 /// Microsoft account).
 pub(crate) fn row_of(app: &mut MailApp, account: Id) -> Option<Value> {
     rows(app).into_iter().find(|r| r["account"].as_u64() == Some(account))
-}
-
-/// File › Options › Archive: a row for each Microsoft account.
-pub(crate) fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
-    let rows = rows(app);
-    if rows.is_empty() {
-        return;
-    }
-    section(ui, tl!("Old mail"), t);
-    ui.label(egui::RichText::new(tl!("Keep old mail on this computer to free space in the cloud. It stays in the same folders.")).color(t.text_dim));
-    if !app.ui.backups {
-        ui.label(egui::RichText::new(tl!("Turn on backups first.")).color(t.text_dim));
-    }
-    for row in &rows {
-        let email = row["email"].as_str().unwrap_or_default().to_string();
-        control(app, ui, t, row, &email, ["optionArchive", "optionArchiveYes", "optionArchiveNo"]);
-    }
 }
 
 /// The choice of years for the account of `row` (`archive.status`'), on a line that says

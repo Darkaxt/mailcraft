@@ -187,6 +187,12 @@ const CALENDARS: &[&str] = &[
 /// takes only those still there on the yes (#503): their question isn't described again.
 pub const COUNTED: &[&str] = &["mail.delete", "mail.deletePermanently", "mail.move"];
 
+/// The commands that take nothing from the window (what they act on is named in full) and whose
+/// question names everything they reach: the account, the years and how many messages. Their yes
+/// is bound by that text alone, described again: not by the mailbox's revision, which a synced
+/// mailbox moves on every few seconds, so no yes could ever reach them.
+pub const BY_TEXT: &[&str] = &["archive.set"];
+
 /// What a question showed the owner, kept with it until the owner answers.
 #[derive(Clone, Debug)]
 pub struct Shown {
@@ -261,7 +267,8 @@ impl Shown {
             view: s.view.clone(),
             accounts: s.mailbox.accounts.iter().map(|a| a.id).collect(),
             composing: digest(&keys, s.all_composing()),
-            revision: (matches!(object, Object::Account | Object::Mailbox)
+            revision: (!BY_TEXT.contains(&id)
+                && matches!(object, Object::Account | Object::Mailbox)
                 && matches!(super::classify(s, id, params), super::Access::Owner(super::Class::Delete) | super::Access::Asked(super::Class::Delete)))
             .then_some(s.rev()),
             signature: if object == Object::Signature { signature_digest(&keys, s) } else { None },
@@ -294,7 +301,7 @@ impl Shown {
         let window = s.sel != self.sel || s.view != self.view || accounts != self.accounts || digest(&self.keys, s.all_composing()) != self.composing;
         // The messages of a Delete or a Move are named (`NEEDS_IDS`) and counted where they are by
         // the window, which takes on the yes those of them still there (#503).
-        if window && !COUNTED.contains(&id) && (self.object != Object::FolderContent || s.view.folder != self.view.folder) {
+        if window && !COUNTED.contains(&id) && !BY_TEXT.contains(&id) && (self.object != Object::FolderContent || s.view.folder != self.view.folder) {
             return changed();
         }
         if people(s, self.object, params) != self.people || dav_identity(&self.keys, s, id, params) != self.dav {

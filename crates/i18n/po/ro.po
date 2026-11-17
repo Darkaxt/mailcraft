@@ -1071,6 +1071,11 @@ msgstr "Adrese separate prin ; (lăsați gol ca răspunsurile să vină la dvs.)
 msgid "Addresses, separated by semicolons"
 msgstr "Adrese, separate prin punct și virgulă"
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Advanced"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -1540,6 +1545,11 @@ msgstr "Tot ce încă așteaptă să ajungă pe server pleacă primul: e-mailuri
 #. interface
 #: crates/ui-egui/src/reading/appearance.rs
 msgid "App theme"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Appearance"
 msgstr ""
 
 #. interface
@@ -2337,6 +2347,11 @@ msgstr[2] ""
 msgid "Backing up…"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backup Options"
+msgstr ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Backup Status"
@@ -2350,6 +2365,16 @@ msgstr ""
 #. interface, ribbon location
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups are on, but no folder is chosen for them."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups can't be made: {folder} isn't there."
 msgstr ""
 
 #. interface
@@ -3106,6 +3131,11 @@ msgid "Choose Default Signature"
 msgstr "Alegere semnătură implicită"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose Folder…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Choose Google sign-in, or select Use an app password instead."
@@ -3134,6 +3164,11 @@ msgstr "Alegeți o primă și o ultimă zi, la cel mult un an distanță."
 #, fuzzy
 msgid "Choose a folder"
 msgstr "Alegeți un dosar"
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose a folder for backups first: File › Options › Backups."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -4705,9 +4740,8 @@ msgstr "Descărcare în toate e-mailurile"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Download messages in full:"
-msgstr "Descărcare integrală mesaje:"
+msgid "Download messages in full"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt crates/ui-egui/src/reading/remote.rs
@@ -5934,12 +5968,6 @@ msgstr "Culoare font"
 #, fuzzy
 msgid "Font Size"
 msgstr "Dimensiune font"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-msgstr "Pentru conturile IMAP. Conturile Microsoft și de server Exchange păstrează e-mailurile după E-mail păstrat offline, din Fișier › Informații."
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -7873,7 +7901,7 @@ msgid "Keep mail from the last"
 msgstr "Păstrează e-mailurile din ultimele"
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/folder_properties.rs
 msgid "Keep old mail on this computer to free space in the cloud. It stays in the same folders."
 msgstr ""
 
@@ -7965,6 +7993,11 @@ msgstr "Păstrat în spațiul de stocare al acestui browser, salvat pe parcurs. 
 #, fuzzy
 msgid "Kept in {path}, saved as you go."
 msgstr "Păstrat în {path}, salvat pe parcurs."
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8426,6 +8459,11 @@ msgstr "E-mailurile de pe servere nu sunt atinse."
 msgid "Mail on the servers is not touched. This can't be undone."
 msgstr "E-mailurile de pe servere nu sunt atinse. Acest lucru nu poate fi anulat."
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Mail on this computer"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 #, fuzzy
@@ -8445,16 +8483,10 @@ msgid "Mail to Keep Offline"
 msgstr "E-mail păstrat offline"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/folder_properties.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "E-mail păstrat offline"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Mail to keep offline:"
-msgstr "E-mail păstrat offline:"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10612,6 +10644,11 @@ msgid "Not available: {reason}"
 msgstr "Indisponibil: {reason}"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Not chosen yet"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/mail_view/server_rows.rs crates/ui-egui/src/server_search.rs
 #, fuzzy
 msgid "Not connected"
@@ -10929,7 +10966,7 @@ msgid "Offline"
 msgstr "Offline"
 
 #. interface
-#: crates/ui-egui/src/archive.rs
+#: crates/ui-egui/src/backstage.rs
 msgid "Old mail"
 msgstr ""
 
@@ -17090,7 +17127,7 @@ msgid "The last Send/Receive had problems."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/backup.rs
 msgid "The last backup failed."
 msgstr ""
 
@@ -17320,6 +17357,11 @@ msgstr "Numele cuiva pe care îl cunoașteți."
 #, fuzzy
 msgid "The name the calendar gives itself"
 msgstr "Numele pe care și-l dă calendarul"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The newest messages of each folder. The same for every Gmail and other IMAP account."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -19430,7 +19472,7 @@ msgid "Turn on attachment previews in File › Options."
 msgstr "Activați previzualizarea atașamentelor din Fișier › Opțiuni."
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr ""
 
@@ -25976,6 +26018,18 @@ msgstr "„{subject}” era prea mare pentru descărcare: aici e doar antetul lu
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” nu a fost găsit pe server, deci nu poate fi redirecționat ca atașament"
+
+#, fuzzy
+#~ msgid "Download messages in full:"
+#~ msgstr "Descărcare integrală mesaje:"
+
+#, fuzzy
+#~ msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
+#~ msgstr "Pentru conturile IMAP. Conturile Microsoft și de server Exchange păstrează e-mailurile după E-mail păstrat offline, din Fișier › Informații."
+
+#, fuzzy
+#~ msgid "Mail to keep offline:"
+#~ msgstr "E-mail păstrat offline:"
 
 #, fuzzy
 #~ msgid "Permissions"

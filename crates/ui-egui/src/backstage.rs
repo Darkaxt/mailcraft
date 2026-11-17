@@ -334,23 +334,30 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
             });
             ui.add_space(4.0);
         }
-        // Which messages are kept whole on this computer (R3.2); a shared mailbox keeps as much
-        // as its owner's account (#70).
+        // What it keeps on this computer (R3.2, #143), said in a line: it is chosen in File ›
+        // Options › Mail on this computer, beside every other account's (0.12.11: the same
+        // choices in two places read as if they disagreed). A shared mailbox keeps as much as
+        // its owner's account (#70).
         if a.kind.has_offline_window() && !a.is_shared() {
-            download_in_full(app, ui, a);
-            // How far back mail is kept in full (#143), beside it.
             ui.horizontal(|ui| {
-                ui.add_space(12.0);
-                ui.label(tl!("Mail to keep offline:"));
-                crate::keep_offline::slider(app, ui, a.id, a.keep_offline);
+                ui.add_space(36.0);
+                let size = download_choices().into_iter().find(|(c, _, _)| *c == a.download_in_full).map_or("", |(_, _, label)| label);
+                let said = crate::i18n::fmt(
+                    tl!("Kept offline: {offline} · Downloaded in full: {size}"),
+                    &[("offline", crate::keep_offline::label(a.keep_offline)), ("size", size)],
+                );
+                ui.label(egui::RichText::new(said).font(regular(11.5)).color(t.text_dim));
+                if ui.link(tl!("Change…")).clicked() {
+                    let _ = app.run("ui.backstage", json!({"value": true, "page": "options"}));
+                }
             });
-            ui.add_space(8.0);
+            ui.add_space(4.0);
         }
         // A mailbox of the organisation that the owner was given Full Access to (#70).
         // (Not for a personal Microsoft account, which has none.)
         if crate::shared_mailboxes::can_open_shared(a) {
             ui.horizontal(|ui| {
-                ui.add_space(12.0);
+                ui.add_space(36.0);
                 let link = ui.link(tl!("Add Shared Mailbox…")).on_hover_text(tl!(
                     "Open a mailbox of your organisation that you were given Full Access to, such as a team's, under this account"
                 ));
@@ -530,21 +537,23 @@ fn subscribed_calendars(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     }
 }
 
-/// "Download messages in full" for a Microsoft account: everything, or up to a size (larger ones
-/// download when opened).
-fn download_in_full(app: &mut MailApp, ui: &mut Ui, a: &mailcraft_model::Account) {
+/// The choices of "Download messages in full": everything, or up to a size.
+fn download_choices() -> [(mailcraft_model::DownloadInFull, &'static str, &'static str); 4] {
     use mailcraft_model::DownloadInFull;
-    let choices = [
+    [
         (DownloadInFull::UpTo10Mb, "upTo10Mb", tl!("Up to 10 MB")),
         (DownloadInFull::UpTo25Mb, "upTo25Mb", tl!("Up to 25 MB")),
         (DownloadInFull::UpTo50Mb, "upTo50Mb", tl!("Up to 50 MB")),
         (DownloadInFull::Everything, "everything", tl!("Everything")),
-    ];
+    ]
+}
+
+/// "Download messages in full" for a Microsoft account: everything, or up to a size (larger ones
+/// download when opened).
+fn download_in_full(app: &mut MailApp, ui: &mut Ui, a: &mailcraft_model::Account) {
+    let choices = download_choices();
     let now = choices.iter().find(|(c, _, _)| *c == a.download_in_full).map_or("", |(_, _, label)| *label);
-    ui.add_space(4.0);
-    ui.horizontal(|ui| {
-        ui.add_space(12.0);
-        ui.label(tl!("Download messages in full:"));
+    row(ui, tl!("Download messages in full"), |ui| {
         egui::ComboBox::from_id_salt(("download-in-full", a.id))
             .selected_text(now)
             .show_ui(ui, |ui| {
@@ -558,7 +567,65 @@ fn download_in_full(app: &mut MailApp, ui: &mut Ui, a: &mailcraft_model::Account
             .response
             .on_hover_text(tl!("Larger messages download when you open them. Choosing less removes nothing already downloaded."));
     });
-    ui.add_space(8.0);
+}
+
+/// File › Options › Mail on this computer (0.12.11): how often mail is fetched, and under each
+/// account's own name what it keeps here and its old mail, so that no account's choice reads
+/// as if it were another's.
+fn mail_here(app: &mut MailApp, ui: &mut Ui, t: &Tokens, prefs: &mailcraft_engine::Prefs) {
+    section(ui, tl!("Mail on this computer"), t);
+    row(ui, tl!("Send and receive automatically"), |ui| {
+        let label = |n: u32| match n {
+            0 => tl!("Only when I ask").to_string(),
+            1 => tl!("Every minute").to_string(),
+            n => crate::i18n::fmt(tl!("Every {n} minutes"), &[("n", &n.to_string())]),
+        };
+        egui::ComboBox::from_id_salt("opt_sync_minutes").selected_text(label(prefs.sync_minutes)).show_ui(ui, |ui| {
+            for n in [1u32, 5, 15, 30, 60, 0] {
+                if ui.selectable_label(n == prefs.sync_minutes, label(n)).clicked() {
+                    let _ = app.run("file.options", json!({"syncMinutes": n}));
+                }
+            }
+        });
+    });
+    let accounts: Vec<mailcraft_model::Account> =
+        app.session.mailbox.accounts.iter().filter(|a| a.kind != AccountKind::Local && !a.is_shared()).cloned().collect();
+    for a in &accounts {
+        ui.add_space(8.0);
+        ui.label(egui::RichText::new(&a.email).font(semibold(12.5)).color(t.text));
+        if a.kind.has_offline_window() {
+            row(ui, tl!("Mail to keep offline"), |ui| {
+                crate::keep_offline::slider(app, ui, a.id, a.keep_offline);
+            });
+            download_in_full(app, ui, a);
+        } else if a.kind == AccountKind::Imap {
+            // (One choice for every IMAP account: said under each, the same.)
+            row(ui, tl!("Messages to download per folder"), |ui| {
+                let all = |n: u32| if n == 0 { tl!("All").to_string() } else { n.to_string() };
+                egui::ComboBox::from_id_salt(("opt_sync", a.id))
+                    .selected_text(all(prefs.sync_limit))
+                    .show_ui(ui, |ui| {
+                        for n in [100u32, 500, 2000, 10_000, 0] {
+                            if ui.selectable_label(n == prefs.sync_limit, all(n)).clicked() {
+                                let _ = app.run("file.options", json!({"syncLimit": n}));
+                            }
+                        }
+                    })
+                    .response
+                    .on_hover_text(tl!("The newest messages of each folder. The same for every Gmail and other IMAP account."));
+            });
+        }
+        // Old mail kept on this computer only (v0.12.10), where the mailbox is a file.
+        #[cfg(not(target_arch = "wasm32"))]
+        if app.session.path.is_some()
+            && let Some(old) = crate::archive::row_of(app, a.id)
+        {
+            crate::archive::control(app, ui, t, &old, tl!("Old mail"), ["optionArchive", "optionArchiveYes", "optionArchiveNo"]);
+            if !app.ui.backups {
+                ui.label(egui::RichText::new(tl!("Turn on backups first.")).color(t.text_dim));
+            }
+        }
+    }
 }
 
 fn open(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
@@ -682,7 +749,7 @@ fn backups(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     if switch.changed() {
         let _ = app.run("ui.backups", json!({"value": on}));
     }
-    let folder = backup::folder(app).map(|f| f.display().to_string()).unwrap_or_default();
+    let folder = backup::folder(app).map_or_else(|| tl!("Not chosen yet").to_string(), |f| f.display().to_string());
     let mut change = egui::Rect::NOTHING;
     row(ui, tl!("Backup folder"), |ui| {
         ui.label(egui::RichText::new(&folder).color(t.text_dim));
@@ -741,6 +808,24 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     if switch.changed() {
         let _ = app.run("ui.folderTabs", json!({"value": tabs}));
     }
+    row(ui, tl!("Language"), |ui| {
+        // Each language by its own name, so the owner finds theirs whatever the window speaks.
+        let name = |l: crate::i18n::Lang| l.picker_name();
+        let auto = app.ui.language == crate::i18n::AUTO;
+        let cur = app.language();
+        let shown = if auto { tl!("Automatic").to_string() } else { name(cur) };
+        egui::ComboBox::from_id_salt("opt_language").selected_text(shown).show_ui(ui, |ui| {
+            if ui.selectable_label(auto, tl!("Automatic")).clicked() {
+                let _ = app.run("ui.language", json!({"language": crate::i18n::AUTO}));
+            }
+            for l in crate::i18n::Lang::available() {
+                if ui.selectable_label(!auto && l == cur, name(l)).clicked() {
+                    let _ = app.run("ui.language", json!({"language": l.code()}));
+                }
+            }
+        });
+    });
+    section(ui, tl!("Appearance"), t);
     row(ui, tl!("Interface theme"), |ui| {
         let cur = app.ui.theme;
         egui::ComboBox::from_id_salt("opt_theme").selected_text(tl!(cur.label())).show_ui(ui, |ui| {
@@ -813,23 +898,6 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     {
         let _ = app.run("ui.lightMessages", json!({"value": light}));
     }
-    row(ui, tl!("Language"), |ui| {
-        // Each language by its own name, so the owner finds theirs whatever the window speaks.
-        let name = |l: crate::i18n::Lang| l.picker_name();
-        let auto = app.ui.language == crate::i18n::AUTO;
-        let cur = app.language();
-        let shown = if auto { tl!("Automatic").to_string() } else { name(cur) };
-        egui::ComboBox::from_id_salt("opt_language").selected_text(shown).show_ui(ui, |ui| {
-            if ui.selectable_label(auto, tl!("Automatic")).clicked() {
-                let _ = app.run("ui.language", json!({"language": crate::i18n::AUTO}));
-            }
-            for l in crate::i18n::Lang::available() {
-                if ui.selectable_label(!auto && l == cur, name(l)).clicked() {
-                    let _ = app.run("ui.language", json!({"language": l.code()}));
-                }
-            }
-        });
-    });
     row(ui, tl!("Interface size"), |ui| {
         let cur = app.ui.interface_size.percent();
         egui::ComboBox::from_id_salt("opt_size").selected_text(format!("{cur}%")).show_ui(ui, |ui| {
@@ -880,19 +948,6 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
             }
         });
     });
-    row(ui, tl!("Messages to download per folder"), |ui| {
-        egui::ComboBox::from_id_salt("opt_sync")
-            .selected_text(if prefs.sync_limit == 0 { tl!("All").to_string() } else { prefs.sync_limit.to_string() })
-            .show_ui(ui, |ui| {
-                for n in [100u32, 500, 2000, 10_000, 0] {
-                    if ui.selectable_label(n == prefs.sync_limit, if n == 0 { tl!("All").to_string() } else { n.to_string() }).clicked() {
-                        set(app, json!({"syncLimit": n}));
-                    }
-                }
-            })
-            .response
-            .on_hover_text(tl!("For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."));
-    });
     // Undo Send (#950): how long a message waits in the Outbox after Send, so that it can still be taken back.
     row(ui, tl!("Wait before sending"), |ui| {
         let wait = |n: u8| if n == 0 { tl!("Off").to_string() } else { tln!(u64::from(n), "{n} second", "{n} seconds") };
@@ -910,6 +965,7 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     });
     // (Whose Favorites the folder pane shows, for an account that signs in with Microsoft.)
     crate::favorites_sync::options(app, ui, t);
+    mail_here(app, ui, t, &prefs);
     // Where the system can show them (not in the browser).
     if app.services.alert.is_some() {
         section(ui, tl!("Desktop alerts"), t);
@@ -924,8 +980,6 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     if app.session.path.is_some() {
         section(ui, tl!("Backups"), t);
         backups(app, ui, t);
-        // Old mail kept on this computer only (v0.12.10), which backups make safe.
-        crate::archive::options(app, ui, t);
     }
     section(ui, tl!("Accounts"), t);
     let mut remember = app.ui.remember_sign_in;
@@ -942,39 +996,27 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     if remember && let Some(trouble) = app.secrets_trouble {
         ui.label(egui::RichText::new(crate::store_trouble_notice(trouble)).color(t.text_dim));
     }
-    row(ui, tl!("Microsoft application ID"), |ui| {
-        // What Microsoft knows this installation by when an account signs in on its page; an
-        // identifier from an app registration, not a secret.
-        let built_in = !app.services.microsoft_client_id.is_empty();
-        let mut id = app.ui.microsoft_client_id.clone();
-        let hint = if built_in { tl!("The one this build came with") } else { tl!("Needed for Outlook.com and Microsoft 365 accounts") };
-        let edit = egui::TextEdit::singleline(&mut id).hint_text(hint).desired_width(300.0);
-        if crate::text_menu::field(ui.add(edit)).changed() {
-            let _ = app.execute("ui.microsoftClientId", json!({"value": id.trim()}));
-        }
-    });
-    row(ui, tl!("Google Desktop application ID"), |ui| {
-        let mut id = app.ui.google_client_id.clone();
-        let hint = if app.services.google_client_id.is_empty() {
-            tl!("Waiting for MailCraft's Google registration")
-        } else {
-            tl!("The one this build came with")
-        };
-        if ui.add(egui::TextEdit::singleline(&mut id).hint_text(hint).desired_width(300.0)).changed() {
-            let _ = app.execute("ui.googleClientId", json!({"value": id.trim()}));
-        }
-    });
-    row(ui, tl!("Send and receive automatically"), |ui| {
-        let label = |n: u32| match n {
-            0 => tl!("Only when I ask").to_string(),
-            1 => tl!("Every minute").to_string(),
-            n => crate::i18n::fmt(tl!("Every {n} minutes"), &[("n", &n.to_string())]),
-        };
-        egui::ComboBox::from_id_salt("opt_sync_minutes").selected_text(label(prefs.sync_minutes)).show_ui(ui, |ui| {
-            for n in [1u32, 5, 15, 30, 60, 0] {
-                if ui.selectable_label(n == prefs.sync_minutes, label(n)).clicked() {
-                    set(app, json!({"syncMinutes": n}));
-                }
+    egui::CollapsingHeader::new(tl!("Advanced")).id_salt("opt_accounts_advanced").show(ui, |ui| {
+        row(ui, tl!("Microsoft application ID"), |ui| {
+            // What Microsoft knows this installation by when an account signs in on its page; an
+            // identifier from an app registration, not a secret.
+            let built_in = !app.services.microsoft_client_id.is_empty();
+            let mut id = app.ui.microsoft_client_id.clone();
+            let hint = if built_in { tl!("The one this build came with") } else { tl!("Needed for Outlook.com and Microsoft 365 accounts") };
+            let edit = egui::TextEdit::singleline(&mut id).hint_text(hint).desired_width(300.0);
+            if crate::text_menu::field(ui.add(edit)).changed() {
+                let _ = app.execute("ui.microsoftClientId", json!({"value": id.trim()}));
+            }
+        });
+        row(ui, tl!("Google Desktop application ID"), |ui| {
+            let mut id = app.ui.google_client_id.clone();
+            let hint = if app.services.google_client_id.is_empty() {
+                tl!("Waiting for MailCraft's Google registration")
+            } else {
+                tl!("The one this build came with")
+            };
+            if ui.add(egui::TextEdit::singleline(&mut id).hint_text(hint).desired_width(300.0)).changed() {
+                let _ = app.execute("ui.googleClientId", json!({"value": id.trim()}));
             }
         });
     });

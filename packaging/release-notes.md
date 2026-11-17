@@ -1,10 +1,10 @@
-**MailCraft 0.12.10 in short** — keep old mail on this computer
-- New: File › Options › Old mail moves a Microsoft account's mail older than 1, 2, 3, 5 or 10 years to this computer, to free space in the cloud. Before you say yes it tells you how many emails and how much space.
-- Your folders stay the same: each folder still lists its old mail. It is kept in the same folders under On this computer.
-- Mail leaves the cloud only after it is fully downloaded, saved and in a backup. It is then deleted from the server for good, so it no longer counts against the account's storage. Backups must be on.
-- It runs in the background and is done in a few hours; mail that becomes old later follows by itself. Choose Off to stop. Mail already moved stays on this computer.
-- The same choice is in an account's or folder's Properties › AutoArchive. Synchronization there shows what the server and this computer hold. The empty Policy and Permissions tabs are gone.
-- Everything from 0.12.9 stays (daily backups).
+**MailCraft 0.12.11 in short** — settings that stay, and backups only where you choose
+- Your settings are saved as soon as you change them, not only when MailCraft closes.
+- Backups are a choice: off until you turn them on and pick a folder. MailCraft never picks a folder for you. If the folder can't be reached (a drive not connected), a bar says so and nothing is written anywhere else.
+- While old mail waits for a backup before leaving the cloud, a backup is made within minutes, not hours.
+- File › Options is reorganized: General, Appearance, Mail, then Mail on this computer, where each account shows what it keeps here and its Old mail choice. File › Info shows a short line with a link to it.
+- Saying yes to an agent's Old mail question works while mail keeps arriving.
+- Everything from 0.12.10 stays (old mail kept on this computer).
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

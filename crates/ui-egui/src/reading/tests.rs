@@ -1406,6 +1406,14 @@ fn shown(harness: &Window, id: u64) -> (usize, usize, usize) {
     super::view::kept(&harness.ctx, id, |laid, _| (laid.stats.pictures, laid.stats.placeholders, laid.stats.remote)).unwrap()
 }
 
+/// Clicks `label` in File › Options. Options is longer than most test windows, and a scroll into
+/// view moves there over several frames: the windows that use this are tall enough to show it all.
+fn click_option(harness: &mut Window, label: &str) {
+    harness.get_by_label(label).scroll_to_me();
+    harness.run_steps(30);
+    harness.get_by_label(label).click();
+}
+
 /// Whether the window says something that has `text` in it.
 fn says(harness: &Window, text: &str) -> bool {
     harness.query_all_by_label_contains(text).next().is_some()
@@ -2256,7 +2264,7 @@ fn what_is_kept_of_pictures_is_said_and_cleared_in_the_options() {
     app.services.picture_cache = Some(Box::new(kept.clone()));
     app.execute("ui.downloadPicturesAutomatically", json!({"value": true})).unwrap();
     let id = ids[0];
-    let mut harness = window(app, (1280.0, 900.0));
+    let mut harness = window(app, (1280.0, 2000.0));
     select(&mut harness, id);
     harness.run_steps(10);
     assert_eq!((host.asked().len(), shown(&harness, id)), (2, (2, 0, 0)));
@@ -2264,7 +2272,7 @@ fn what_is_kept_of_pictures_is_said_and_cleared_in_the_options() {
     harness.state_mut().execute("ui.backstage", json!({"value": true, "page": "options"})).unwrap();
     harness.run_steps(3);
     assert!(says(&harness, "12 downloaded pictures are kept on this computer (3.2 MB)."));
-    harness.get_by_label("Clear").click();
+    click_option(&mut harness, "Clear");
     harness.run_steps(4);
     assert_eq!(*kept.cleared.lock().unwrap(), 1);
     assert!(says(&harness, "No downloaded pictures are kept on this computer."));
@@ -4668,7 +4676,7 @@ fn the_bar_turns_on_pictures_in_all_mail_after_asking() {
     let (first, second, junk) = (ids[0], ids[1], ids[2]);
     app.execute("mail.junk", json!({"ids": [junk]})).unwrap();
     let host = Host::answering(&mut app, |_| Ok(png(40, 30)));
-    let mut harness = window(app, (1280.0, 800.0));
+    let mut harness = window(app, (1280.0, 2000.0));
     let asking = |harness: &Window| matches!(&harness.state().dialog, Some(crate::dialogs::Dialog::Confirm { command, .. }) if command == "ui.downloadPicturesAutomatically");
 
     // Off here (the owner turned it off); the bar offers it, and not in Junk E-mail.
@@ -4715,12 +4723,12 @@ fn the_bar_turns_on_pictures_in_all_mail_after_asking() {
     // File › Options shows the switch, ticked; off there asks nothing, and the bar offers it again.
     harness.state_mut().execute("ui.backstage", json!({"value": true, "page": "options"})).unwrap();
     harness.run_steps(3);
-    harness.get_by_label("Download pictures in mail automatically").click();
+    click_option(&mut harness, "Download pictures in mail automatically");
     harness.run_steps(3);
     assert!(harness.state().dialog.is_none());
     assert!(!harness.state().ui.download_pictures);
     // On again there asks the same question; Cancel leaves it off.
-    harness.get_by_label("Download pictures in mail automatically").click();
+    click_option(&mut harness, "Download pictures in mail automatically");
     harness.run_steps(3);
     assert!(asking(&harness));
     harness.get_by_label("Cancel").click();

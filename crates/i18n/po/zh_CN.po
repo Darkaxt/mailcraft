@@ -1071,6 +1071,11 @@ msgstr "多个地址用分号（;）分隔；留空则将回复发送给您"
 msgid "Addresses, separated by semicolons"
 msgstr "地址，以分号分隔"
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Advanced"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -1538,6 +1543,11 @@ msgstr "等待发送到服务器的内容将先被处理：发件箱中的邮件
 #. interface
 #: crates/ui-egui/src/reading/appearance.rs
 msgid "App theme"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Appearance"
 msgstr ""
 
 #. interface
@@ -2331,6 +2341,11 @@ msgstr[0] ""
 msgid "Backing up…"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backup Options"
+msgstr ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Backup Status"
@@ -2344,6 +2359,16 @@ msgstr ""
 #. interface, ribbon location
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups are on, but no folder is chosen for them."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups can't be made: {folder} isn't there."
 msgstr ""
 
 #. interface
@@ -3100,6 +3125,11 @@ msgid "Choose Default Signature"
 msgstr "选择默认签名"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose Folder…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Choose Google sign-in, or select Use an app password instead."
@@ -3128,6 +3158,11 @@ msgstr "选择开始日期和结束日期，两者相隔最多一年。"
 #, fuzzy
 msgid "Choose a folder"
 msgstr "选择一个文件夹"
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose a folder for backups first: File › Options › Backups."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -4698,9 +4733,8 @@ msgstr "下载所有邮件中的图片"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Download messages in full:"
-msgstr "下载完整邮件："
+msgid "Download messages in full"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt crates/ui-egui/src/reading/remote.rs
@@ -5911,12 +5945,6 @@ msgstr "字体颜色"
 #, fuzzy
 msgid "Font Size"
 msgstr "字体大小"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-msgstr "适用于 IMAP 账户。Microsoft 和 Exchange 服务器账户通过“文件 › 信息”中的“要脱机保留的邮件”设置保留邮件。"
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -7838,7 +7866,7 @@ msgid "Keep mail from the last"
 msgstr "保留最近这段时间的邮件"
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/folder_properties.rs
 msgid "Keep old mail on this computer to free space in the cloud. It stays in the same folders."
 msgstr ""
 
@@ -7930,6 +7958,11 @@ msgstr "保存在此浏览器中，随操作自动保存。使用“打开和导
 #, fuzzy
 msgid "Kept in {path}, saved as you go."
 msgstr "保存在 {path}，随操作自动保存。"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8391,6 +8424,11 @@ msgstr "服务器上的邮件不会受到影响。"
 msgid "Mail on the servers is not touched. This can't be undone."
 msgstr "服务器上的邮件不会受到影响。这无法撤消。"
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Mail on this computer"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 #, fuzzy
@@ -8410,16 +8448,10 @@ msgid "Mail to Keep Offline"
 msgstr "要保留以供离线使用的邮件"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/folder_properties.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "要保留以供离线使用的邮件"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Mail to keep offline:"
-msgstr "要保留以供离线使用的邮件："
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10569,6 +10601,11 @@ msgid "Not available: {reason}"
 msgstr "不可用：{reason}"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Not chosen yet"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/mail_view/server_rows.rs crates/ui-egui/src/server_search.rs
 #, fuzzy
 msgid "Not connected"
@@ -10886,7 +10923,7 @@ msgid "Offline"
 msgstr "离线"
 
 #. interface
-#: crates/ui-egui/src/archive.rs
+#: crates/ui-egui/src/backstage.rs
 msgid "Old mail"
 msgstr ""
 
@@ -17029,7 +17066,7 @@ msgid "The last Send/Receive had problems."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/backup.rs
 msgid "The last backup failed."
 msgstr ""
 
@@ -17259,6 +17296,11 @@ msgstr "你认识的人的名字。"
 #, fuzzy
 msgid "The name the calendar gives itself"
 msgstr "日历给自己起的名称"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The newest messages of each folder. The same for every Gmail and other IMAP account."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -19357,7 +19399,7 @@ msgid "Turn on attachment previews in File › Options."
 msgstr "请在“文件”→“选项”中启用附件预览。"
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr ""
 
@@ -25662,6 +25704,18 @@ msgstr "“{subject}”太大，无法下载：此处只有邮件头，因此无
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "在其服务器上找不到“{subject}”，因此无法将其作为附件转发"
+
+#, fuzzy
+#~ msgid "Download messages in full:"
+#~ msgstr "下载完整邮件："
+
+#, fuzzy
+#~ msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
+#~ msgstr "适用于 IMAP 账户。Microsoft 和 Exchange 服务器账户通过“文件 › 信息”中的“要脱机保留的邮件”设置保留邮件。"
+
+#, fuzzy
+#~ msgid "Mail to keep offline:"
+#~ msgstr "要保留以供离线使用的邮件："
 
 #, fuzzy
 #~ msgid "Permissions"

@@ -1022,6 +1022,11 @@ msgstr ""
 msgid "Addresses, separated by semicolons"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Advanced"
+msgstr "Avanzado"
+
 #. command label, interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs
 msgid "Advanced Search"
@@ -1465,6 +1470,11 @@ msgstr "Primero se envía todo lo que aún espera para ir al servidor: el correo
 #: crates/ui-egui/src/reading/appearance.rs
 msgid "App theme"
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Appearance"
+msgstr "Apariencia"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -2203,6 +2213,11 @@ msgstr[1] "Copia hecha; a {n} mensajes les falta parte del contenido"
 msgid "Backing up…"
 msgstr "Haciendo la copia…"
 
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backup Options"
+msgstr "Opciones de copia de seguridad"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Backup Status"
@@ -2217,6 +2232,16 @@ msgstr "Carpeta de copias"
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 msgid "Backups"
 msgstr "Copias de seguridad"
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups are on, but no folder is chosen for them."
+msgstr "Las copias de seguridad están activadas, pero no se ha elegido una carpeta."
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups can't be made: {folder} isn't there."
+msgstr "No se pueden hacer copias de seguridad: {folder} no está."
 
 #. interface
 #: crates/ui-egui/src/files.rs
@@ -2927,6 +2952,11 @@ msgid "Choose Default Signature"
 msgstr "Elegir firma predeterminada"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose Folder…"
+msgstr "Elegir carpeta…"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Choose Google sign-in, or select Use an app password instead."
 msgstr "Elige el inicio de sesión con Google o selecciona Usar una contraseña de aplicación en su lugar."
@@ -2953,6 +2983,11 @@ msgstr ""
 #, fuzzy
 msgid "Choose a folder"
 msgstr "Elija una carpeta"
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose a folder for backups first: File › Options › Backups."
+msgstr "Elija antes una carpeta para las copias de seguridad: Archivo › Opciones › Copias de seguridad."
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -4454,9 +4489,8 @@ msgstr "Descargar en todo el correo"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Download messages in full:"
-msgstr "Descargar mensajes completos:"
+msgid "Download messages in full"
+msgstr "Descargar los mensajes completos"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt crates/ui-egui/src/reading/remote.rs
@@ -5614,11 +5648,6 @@ msgstr "Color de fuente"
 #, fuzzy
 msgid "Font Size"
 msgstr "Tamaño de fuente"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -7398,7 +7427,7 @@ msgid "Keep mail from the last"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/folder_properties.rs
 msgid "Keep old mail on this computer to free space in the cloud. It stays in the same folders."
 msgstr "Guarde el correo antiguo en este equipo para liberar espacio en la nube. Sigue en las mismas carpetas."
 
@@ -7485,6 +7514,11 @@ msgstr "Se guarda en el almacenamiento de este navegador a medida que trabaja. U
 #, fuzzy
 msgid "Kept in {path}, saved as you go."
 msgstr "Se guarda en {path} a medida que trabaja."
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
+msgstr "Sin conexión: {offline} · Descargado completo: {size}"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -7920,6 +7954,11 @@ msgstr ""
 msgid "Mail on the servers is not touched. This can't be undone."
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Mail on this computer"
+msgstr "Correo en este equipo"
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Mail on this phone"
@@ -7938,16 +7977,10 @@ msgid "Mail to Keep Offline"
 msgstr "Correo para conservar sin conexión"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/folder_properties.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "Correo para conservar sin conexión"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Mail to keep offline:"
-msgstr "Correo para conservar sin conexión:"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10004,6 +10037,11 @@ msgid "Not available: {reason}"
 msgstr "No disponible: {reason}"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Not chosen yet"
+msgstr "Aún sin elegir"
+
+#. interface
 #: crates/ui-egui/src/mail_view/server_rows.rs crates/ui-egui/src/server_search.rs
 #, fuzzy
 msgid "Not connected"
@@ -10302,7 +10340,7 @@ msgid "Offline"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/archive.rs
+#: crates/ui-egui/src/backstage.rs
 msgid "Old mail"
 msgstr "Correo antiguo"
 
@@ -16082,7 +16120,7 @@ msgid "The last Send/Receive had problems."
 msgstr "El último Enviar y recibir tuvo problemas."
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/backup.rs
 msgid "The last backup failed."
 msgstr "La última copia falló."
 
@@ -16300,6 +16338,11 @@ msgstr ""
 #, fuzzy
 msgid "The name the calendar gives itself"
 msgstr "El nombre que se da el calendario a sí mismo"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The newest messages of each folder. The same for every Gmail and other IMAP account."
+msgstr "Los mensajes más recientes de cada carpeta. Igual para todas las cuentas de Gmail y otras IMAP."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -18251,7 +18294,7 @@ msgid "Turn on attachment previews in File › Options."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr "Active antes las copias de seguridad."
 
@@ -24343,6 +24386,14 @@ msgstr "«{subject}» era demasiado grande para descargarlo: solo está aquí su
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "«{subject}» no se encontró en su servidor, así que no se puede reenviar como datos adjuntos"
+
+#, fuzzy
+#~ msgid "Download messages in full:"
+#~ msgstr "Descargar mensajes completos:"
+
+#, fuzzy
+#~ msgid "Mail to keep offline:"
+#~ msgstr "Correo para conservar sin conexión:"
 
 #, fuzzy
 #~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"

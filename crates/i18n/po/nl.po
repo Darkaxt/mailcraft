@@ -1071,6 +1071,11 @@ msgstr "Adressen gescheiden door ; (leeg laten als antwoorden naar u moeten kome
 msgid "Addresses, separated by semicolons"
 msgstr "Adressen, gescheiden door puntkomma's"
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Advanced"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -1539,6 +1544,11 @@ msgstr "Alles wat nog naar de server moet, gaat eerst: e-mail in Postvak UIT, en
 #. interface
 #: crates/ui-egui/src/reading/appearance.rs
 msgid "App theme"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Appearance"
 msgstr ""
 
 #. interface
@@ -2334,6 +2344,11 @@ msgstr[1] ""
 msgid "Backing up…"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backup Options"
+msgstr ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Backup Status"
@@ -2347,6 +2362,16 @@ msgstr ""
 #. interface, ribbon location
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups are on, but no folder is chosen for them."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups can't be made: {folder} isn't there."
 msgstr ""
 
 #. interface
@@ -3103,6 +3128,11 @@ msgid "Choose Default Signature"
 msgstr "Standaardhandtekening kiezen"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose Folder…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Choose Google sign-in, or select Use an app password instead."
@@ -3131,6 +3161,11 @@ msgstr "Kies een eerste en een laatste dag, hoogstens een jaar uit elkaar."
 #, fuzzy
 msgid "Choose a folder"
 msgstr "Een map kiezen"
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose a folder for backups first: File › Options › Backups."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -4701,9 +4736,8 @@ msgstr "In alle e-mail downloaden"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Download messages in full:"
-msgstr "Berichten volledig downloaden:"
+msgid "Download messages in full"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt crates/ui-egui/src/reading/remote.rs
@@ -5921,12 +5955,6 @@ msgstr "Tekstkleur"
 #, fuzzy
 msgid "Font Size"
 msgstr "Lettergrootte"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-msgstr "Voor IMAP-accounts. Microsoft- en Exchange-serveraccounts bewaren e-mail volgens E-mail offline bewaren, in Bestand › Info."
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -7851,7 +7879,7 @@ msgid "Keep mail from the last"
 msgstr "E-mail van de afgelopen bewaren"
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/folder_properties.rs
 msgid "Keep old mail on this computer to free space in the cloud. It stays in the same folders."
 msgstr ""
 
@@ -7943,6 +7971,11 @@ msgstr "Bewaard in de opslag van deze browser, opgeslagen terwijl u werkt. Gebru
 #, fuzzy
 msgid "Kept in {path}, saved as you go."
 msgstr "Bewaard in {path}, opgeslagen terwijl u werkt."
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8404,6 +8437,11 @@ msgstr "E-mail op de servers blijft onaangeroerd."
 msgid "Mail on the servers is not touched. This can't be undone."
 msgstr "E-mail op de servers blijft onaangeroerd. Dit kan niet ongedaan worden gemaakt."
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Mail on this computer"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 #, fuzzy
@@ -8423,16 +8461,10 @@ msgid "Mail to Keep Offline"
 msgstr "E-mail om offline te bewaren"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/folder_properties.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "E-mail om offline te bewaren"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Mail to keep offline:"
-msgstr "E-mail om offline te bewaren:"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10587,6 +10619,11 @@ msgid "Not available: {reason}"
 msgstr "Niet beschikbaar: {reason}"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Not chosen yet"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/mail_view/server_rows.rs crates/ui-egui/src/server_search.rs
 #, fuzzy
 msgid "Not connected"
@@ -10904,7 +10941,7 @@ msgid "Offline"
 msgstr "Offline"
 
 #. interface
-#: crates/ui-egui/src/archive.rs
+#: crates/ui-egui/src/backstage.rs
 msgid "Old mail"
 msgstr ""
 
@@ -17057,7 +17094,7 @@ msgid "The last Send/Receive had problems."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/backup.rs
 msgid "The last backup failed."
 msgstr ""
 
@@ -17287,6 +17324,11 @@ msgstr "De naam van iemand die u kent."
 #, fuzzy
 msgid "The name the calendar gives itself"
 msgstr "De naam die de agenda zichzelf geeft"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The newest messages of each folder. The same for every Gmail and other IMAP account."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -19389,7 +19431,7 @@ msgid "Turn on attachment previews in File › Options."
 msgstr "Schakel voorbeelden van bijlagen in via Bestand › Opties."
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr ""
 
@@ -25814,6 +25856,18 @@ msgstr "„{subject}” was te groot om te downloaden: alleen de koptekst is hie
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "„{subject}” is niet op de server gevonden, dus het kan niet als bijlage worden doorgestuurd"
+
+#, fuzzy
+#~ msgid "Download messages in full:"
+#~ msgstr "Berichten volledig downloaden:"
+
+#, fuzzy
+#~ msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
+#~ msgstr "Voor IMAP-accounts. Microsoft- en Exchange-serveraccounts bewaren e-mail volgens E-mail offline bewaren, in Bestand › Info."
+
+#, fuzzy
+#~ msgid "Mail to keep offline:"
+#~ msgstr "E-mail om offline te bewaren:"
 
 #, fuzzy
 #~ msgid "Permissions"

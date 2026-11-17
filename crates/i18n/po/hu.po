@@ -1074,6 +1074,11 @@ msgstr "Címek külön; (hagyja üresen a válaszokat, hogy jöjjön Önhöz)"
 msgid "Addresses, separated by semicolons"
 msgstr "Címek, pontosvesszővel elválasztva"
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Advanced"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/chrome.rs crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -1542,6 +1547,11 @@ msgstr "Bármi, ami még vár a szerverre, az az első: a postafiókban, a zász
 #. interface
 #: crates/ui-egui/src/reading/appearance.rs
 msgid "App theme"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Appearance"
 msgstr ""
 
 #. interface
@@ -2335,6 +2345,11 @@ msgstr[1] ""
 msgid "Backing up…"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backup Options"
+msgstr ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Backup Status"
@@ -2348,6 +2363,16 @@ msgstr ""
 #. interface, ribbon location
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
 msgid "Backups"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups are on, but no folder is chosen for them."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Backups can't be made: {folder} isn't there."
 msgstr ""
 
 #. interface
@@ -3102,6 +3127,11 @@ msgid "Choose Default Signature"
 msgstr "Az alapértelmezett aláírás kiválasztása"
 
 #. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose Folder…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Choose Google sign-in, or select Use an app password instead."
@@ -3130,6 +3160,11 @@ msgstr "Válasszon egy első és utolsó napot, legfeljebb egy év különbségg
 #, fuzzy
 msgid "Choose a folder"
 msgstr "Válasszon egy mappát"
+
+#. interface
+#: crates/ui-egui/src/backup.rs
+msgid "Choose a folder for backups first: File › Options › Backups."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/search_folders.rs
@@ -4694,9 +4729,8 @@ msgstr "Letöltés minden levélben"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Download messages in full:"
-msgstr "Teljes üzenetek letöltése:"
+msgid "Download messages in full"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt crates/ui-egui/src/reading/remote.rs
@@ -5909,12 +5943,6 @@ msgstr "Betűszín"
 #, fuzzy
 msgid "Font Size"
 msgstr "Betűméret"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-msgstr "IMAP fiókok. Microsoft és Exchange szerver fiókok vezetnek posta Mail, hogy tartsa offline, a File › Info."
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -7840,7 +7868,7 @@ msgid "Keep mail from the last"
 msgstr "Levelek megtartása az utolsó"
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/folder_properties.rs
 msgid "Keep old mail on this computer to free space in the cloud. It stays in the same folders."
 msgstr ""
 
@@ -7932,6 +7960,11 @@ msgstr "A böngésző tárhelyében tárolt, mentett útközben. Nyitott & Expor
 #, fuzzy
 msgid "Kept in {path}, saved as you go."
 msgstr "Helye: {path}. A módosításokat a MailCraft automatikusan menti."
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8393,6 +8426,11 @@ msgstr "A szervereken lévő levelekhez nem nyúlnak."
 msgid "Mail on the servers is not touched. This can't be undone."
 msgstr "A szervereken lévő levelekhez nem nyúltak, ezt nem lehet visszacsinálni."
 
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Mail on this computer"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 #, fuzzy
@@ -8412,16 +8450,10 @@ msgid "Mail to Keep Offline"
 msgstr "A offline offline cím"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/folder_properties.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "Levelek, hogy ne kapcsoljanak ki"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Mail to keep offline:"
-msgstr "Kapcsolat nélkül elérhető levelek:"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10572,6 +10604,11 @@ msgid "Not available: {reason}"
 msgstr "Nem áll rendelkezésre: {reason}"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Not chosen yet"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/mail_view/server_rows.rs crates/ui-egui/src/server_search.rs
 #, fuzzy
 msgid "Not connected"
@@ -10889,7 +10926,7 @@ msgid "Offline"
 msgstr "Offline"
 
 #. interface
-#: crates/ui-egui/src/archive.rs
+#: crates/ui-egui/src/backstage.rs
 msgid "Old mail"
 msgstr ""
 
@@ -17034,7 +17071,7 @@ msgid "The last Send/Receive had problems."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/backup.rs
 msgid "The last backup failed."
 msgstr ""
 
@@ -17264,6 +17301,11 @@ msgstr "Valakinek a neve, akit ismersz."
 #, fuzzy
 msgid "The name the calendar gives itself"
 msgstr "A név, amelyet a naptár magának ad"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "The newest messages of each folder. The same for every Gmail and other IMAP account."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -19366,7 +19408,7 @@ msgid "Turn on attachment previews in File › Options."
 msgstr "Kapcsolja be a melléklet előnézetét a File-ban › Beállítások."
 
 #. interface
-#: crates/ui-egui/src/archive.rs crates/ui-egui/src/folder_properties.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr ""
 
@@ -25787,6 +25829,18 @@ msgstr "a(z) „{subject}” üzenet túl nagy a letöltéshez, ezért csak a fe
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "~A {subject} ~ nem volt a szerveren, így nem lehet továbbítani, mint egy melléklet"
+
+#, fuzzy
+#~ msgid "Download messages in full:"
+#~ msgstr "Teljes üzenetek letöltése:"
+
+#, fuzzy
+#~ msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
+#~ msgstr "IMAP fiókok. Microsoft és Exchange szerver fiókok vezetnek posta Mail, hogy tartsa offline, a File › Info."
+
+#, fuzzy
+#~ msgid "Mail to keep offline:"
+#~ msgstr "Kapcsolat nélkül elérhető levelek:"
 
 #, fuzzy
 #~ msgid "Permissions"

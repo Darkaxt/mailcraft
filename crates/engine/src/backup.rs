@@ -156,7 +156,11 @@ fn write_manifest(folder: &Path, manifest: &Manifest) -> Result<(), String> {
 /// Make a backup ([`Job`]).
 pub fn run(job: &Job) -> Result<Report, String> {
     let folder = &job.folder;
-    fs::create_dir_all(folder).map_err(|e| format!("{}: {e}", folder.display()))?;
+    // The folder the owner chose, as it is: one that isn't there (a drive not connected, a
+    // folder moved) isn't made again somewhere the owner didn't choose (0.12.11).
+    if !folder.is_dir() {
+        return Err(format!("the backup folder isn't there: {}", folder.display()));
+    }
     let mut manifest = read_manifest(folder)?;
     let total = |m: &Manifest| m.periods.values().map(|p| p.bytes).sum::<u64>();
     if !job.force && manifest.finished > 0 && (0..FRESH).contains(&(job.now - manifest.finished)) {

@@ -19,7 +19,7 @@ impl Temp {
     fn new(name: &str) -> Temp {
         let dir = std::env::temp_dir().join(format!("mailcraft-backup-{}-{name}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
+        fs::create_dir_all(dir.join("Backups")).unwrap();
         Temp(dir)
     }
 
@@ -202,4 +202,16 @@ fn archived_mail_whole_is_said_to_be_in_the_backup() {
     let again = backup::run(&job(&mb, &tmp, ts(2026, 11, 16) + 60, true)).unwrap();
     assert!(again.written.is_empty());
     assert_eq!(again.archived, [whole]);
+}
+
+/// A backup folder that isn't there (a drive not connected) fails the backup: it isn't made
+/// again, and nothing is written anywhere else (0.12.11).
+#[test]
+fn a_folder_that_is_not_there_is_not_made() {
+    let tmp = Temp::new("missing");
+    let mb = saved(&tmp.file());
+    fs::remove_dir_all(tmp.folder()).unwrap();
+    let why = backup::run(&job(&mb, &tmp, ts(2026, 11, 16), true)).unwrap_err();
+    assert!(why.contains("isn't there"), "{why}");
+    assert!(!tmp.folder().exists());
 }

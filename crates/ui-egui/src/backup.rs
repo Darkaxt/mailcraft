@@ -14,9 +14,12 @@ use serde_json::{Value, json};
 use crate::MailApp;
 
 /// The first look after the window opens (not while it is busy starting), then every hour: a
-/// backup is made when the last one is a day old ([`backup::FRESH`]).
+/// backup is made when the last one is a day old ([`backup::FRESH`]). While archived mail waits
+/// for a backup, every minute ([`WAITING`]), so that it does every [`ARCHIVE_GAP`] (0.12.11: an
+/// hour apart, the archive's backups came hours late).
 const FIRST: Duration = Duration::from_secs(120);
 const EVERY: Duration = Duration::from_secs(3600);
+const WAITING: Duration = Duration::from_secs(60);
 /// Archived mail waits for a backup before it leaves its server (v0.12.10): while some does, a
 /// backup is made when the last is this old (seconds), not only once a day.
 const ARCHIVE_GAP: i64 = 15 * 60;
@@ -36,12 +39,25 @@ impl Backups {
     }
 }
 
-/// Where backups go: the folder the owner picked, else `Backups` beside the mailbox file.
+/// Where backups go: the folder the owner picked. None until one is: MailCraft never chooses
+/// one itself (0.12.11, owner: "backup is always a choice").
 pub fn folder(app: &MailApp) -> Option<PathBuf> {
-    if let Some(f) = app.ui.backup_folder.as_deref().filter(|f| !f.is_empty()) {
-        return Some(PathBuf::from(f));
+    app.ui.backup_folder.as_deref().filter(|f| !f.is_empty()).map(PathBuf::from)
+}
+
+/// Why backups that are on can't be made, for the bar over the window: no folder chosen, or the
+/// one chosen isn't there (a drive not connected). None when they can, or are off.
+pub(crate) fn trouble(app: &MailApp) -> Option<String> {
+    if !app.ui.backups || app.session.path.is_none() {
+        return None;
     }
-    Some(app.session.path.as_ref()?.parent()?.join("Backups"))
+    match folder(app) {
+        None => Some(tl!("Backups are on, but no folder is chosen for them.").to_string()),
+        Some(f) if !f.is_dir() => {
+            Some(crate::i18n::fmt(tl!("Backups can't be made: {folder} isn't there."), &[("folder", &f.display().to_string())]))
+        }
+        Some(_) => app.backups.error.as_ref().map(|_| tl!("The last backup failed.").to_string()),
+    }
 }
 
 /// Every frame: pick up a finished backup, and start the daily one when it is time.
@@ -81,7 +97,12 @@ pub(crate) fn tick(app: &mut MailApp) {
     let now = Instant::now();
     let next = *app.backups.next.get_or_insert(now + FIRST);
     if now >= next {
-        app.backups.next = Some(now + EVERY);
+        let waiting = mailcraft_engine::cmd::archive::waits_for_backup(&app.session);
+        app.backups.next = Some(now + if waiting { WAITING } else { EVERY });
+        // No folder, or one that isn't there: the bar says so ([`trouble`]); nothing is written.
+        if folder(app).is_none_or(|f| !f.is_dir()) {
+            return;
+        }
         let force = archive_due(app);
         let _ = start(app, force);
     }
@@ -98,8 +119,11 @@ pub(crate) fn start(app: &mut MailApp, force: bool) -> Result<Value, String> {
     if app.backups.running() {
         return Ok(json!({"running": true}));
     }
-    let (Some(path), Some(folder)) = (app.session.path.clone(), folder(app)) else {
+    let Some(path) = app.session.path.clone() else {
         return Err(tl!("This mailbox isn't kept in a file, so there is nothing to back up.").to_string());
+    };
+    let Some(folder) = folder(app) else {
+        return Err(tl!("Choose a folder for backups first: File › Options › Backups.").to_string());
     };
     // A copy of the mailbox as it is now: its messages are shared, not copied.
     let job = Job { mailbox: app.session.mailbox.clone(), path, folder, now: app.session.now(), force };
@@ -126,7 +150,19 @@ pub(crate) fn status(app: &MailApp) -> Value {
         "running": app.backups.running(),
         "last": app.backups.last,
         "error": app.backups.error,
+        "trouble": trouble(app),
     })
+}
+
+/// The bar over the status bar while backups that are on can't be made ([`trouble`]), as for an
+/// account that is signed out: never a folder chosen in the owner's place.
+pub(crate) fn bar(app: &mut MailApp, ui: &mut egui::Ui) {
+    let Some(said) = trouble(app) else { return };
+    let failed = folder(app).is_some_and(|f| f.is_dir());
+    let button = if failed { ("backupNoticeOptions", tl!("Backup Options"), true) } else { ("backupNoticeChoose", tl!("Choose Folder…"), true) };
+    crate::updates::bar(app, ui, "backup_trouble", &said, &[button], |app, _| {
+        let _ = if failed { app.run("ui.backstage", json!({"value": true, "page": "options"})) } else { app.run("ui.backupFolder", json!({})) };
+    });
 }
 
 /// The commands: `ui.backups`, `ui.backupFolder`, `ui.backupNow`, `ui.backupStatus`.
@@ -138,15 +174,29 @@ pub(crate) fn command(app: &mut MailApp, id: &str, p: &Value) -> Option<Result<V
                 Some(Value::Bool(value)) => *value,
                 Some(_) => return Some(Err("value must be a boolean".into())),
             };
+            // On means into a folder the owner chose: without one, the owner is asked for it
+            // first, and backups go on with it ([`folder`]).
+            if value && folder(app).is_none() {
+                return crate::files::intercept(app, "ui.backupFolder", &json!({"on": true}))
+                    .or(Some(Err(tl!("Choose a folder for backups first: File › Options › Backups.").to_string())));
+            }
             app.ui.backups = value;
             Ok(json!({"value": value}))
         }
         "ui.backupFolder" => {
-            let Some(path) = p.get("path").and_then(Value::as_str) else { return Some(Err("missing `path`".into())) };
+            // Without a path (an agent's, or a host's own run): the owner picks it, where there
+            // is a way to ask.
+            let Some(path) = p.get("path").and_then(Value::as_str) else {
+                return crate::files::intercept(app, id, p).or(Some(Err("missing `path`".into())));
+            };
             if !std::path::Path::new(path).is_absolute() {
                 return Some(Err("the backup folder must be a full path".into()));
             }
             app.ui.backup_folder = Some(path.to_string());
+            // Chosen on the way to turning backups on.
+            if p.get("on").and_then(Value::as_bool) == Some(true) {
+                app.ui.backups = true;
+            }
             // The next backup goes there, at the next look.
             app.backups.next = None;
             Ok(json!({"folder": path}))
@@ -166,3 +216,7 @@ pub(crate) fn when(app: &MailApp, at: i64) -> String {
 pub(crate) fn size(bytes: u64) -> String {
     mailcraft_model::size_label(bytes)
 }
+
+#[cfg(test)]
+#[path = "backup_tests.rs"]
+mod tests;

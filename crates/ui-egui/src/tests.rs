@@ -2205,7 +2205,7 @@ fn info_account_card_keeps_what_follows_below_it() {
     h.run_steps(3);
     let rect = |n: egui_kittest::Node<'_>| n.rect();
     let settings = rect(h.get_by_label("Settings"));
-    let download = rect(h.get_by_label_contains("Download messages in full"));
+    let download = rect(h.get_by_label_contains("Kept offline:"));
     // The card is 58 pt, and Settings sits in its middle: the download line starts below the
     // card's bottom edge, with the page's spacing between them.
     let card_bottom = settings.center().y + 29.0;

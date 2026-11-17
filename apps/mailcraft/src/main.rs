@@ -198,6 +198,7 @@ impl eframe::App for App {
             bar.pump(&mut self.0, ctx);
         }
         self.0.logic(ctx);
+        save_prefs_as_they_change(&self.0);
         // Another mailbox file opened in the window (or File › New): the lock follows it (#517).
         if let Some(guard) = &self.4
             && !self.0.is_opening()
@@ -464,6 +465,48 @@ fn save_prefs(app: &MailApp) {
     if let Some(p) = prefs_path() {
         save_prefs_at(app, &p);
     }
+}
+
+/// How often the settings are looked at for a change ([`save_prefs_as_they_change`]).
+const PREFS_LOOK: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// The settings as last written by [`save_prefs_as_they_change`], and when they were last
+/// looked at.
+static PREFS_WRITTEN: std::sync::Mutex<Option<(std::time::Instant, Vec<u8>)>> = std::sync::Mutex::new(None);
+
+/// Every frame: the settings, written when they changed (looked at every [`PREFS_LOOK`]), not
+/// only at exit, so a run that ends without its exit (the process stopped, a crash, the power
+/// gone) keeps what the owner chose (the backup folder was lost that way, 0.12.11).
+fn save_prefs_as_they_change(app: &MailApp) {
+    let Ok(mut last) = PREFS_WRITTEN.lock() else { return };
+    let now = std::time::Instant::now();
+    if last.as_ref().is_some_and(|(at, _)| now.duration_since(*at) < PREFS_LOOK) {
+        return;
+    }
+    if !prefs_enabled() || app.data_removed || app.is_opening() || PREFS_LEFT_IN_PLACE.load(std::sync::atomic::Ordering::Relaxed) {
+        if let Some((at, _)) = last.as_mut() {
+            *at = now;
+        }
+        return;
+    }
+    let Some(path) = prefs_path() else { return };
+    let Ok(bytes) = serde_json::to_vec_pretty(&app.prefs()) else { return };
+    if last.as_ref().is_some_and(|(_, written)| *written == bytes) {
+        if let Some((at, _)) = last.as_mut() {
+            *at = now;
+        }
+        return;
+    }
+    let wrote = path
+        .parent()
+        .map_or(Ok(()), mailcraft_engine::store::create_private_dir_all)
+        .and_then(|()| mailcraft_engine::store::write_atomic(&path, &bytes));
+    if let Err(e) = wrote {
+        log::warn!("the settings couldn't be saved ({:?}); trying again in a moment", e.kind());
+        *last = Some((now, Vec::new()));
+        return;
+    }
+    *last = Some((now, bytes));
 }
 
 /// [`save_prefs`] to `path`.

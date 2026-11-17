@@ -134,3 +134,24 @@ fn an_agent_needs_the_owner_to_turn_it_on() {
         assert_eq!(agent::access(id), Some(Access::Safe), "{id}");
     }
 }
+
+/// The owner's yes reaches turning it on while the mailbox syncs: new mail arriving changes
+/// nothing the question named. More old mail does: its count is in the question.
+#[test]
+fn the_owners_yes_holds_while_new_mail_arrives() {
+    let (mut s, account, _, _, _) = mailbox();
+    let params = json!({"account": account, "years": 3});
+    let shown = agent::bind::Shown::new(&s, "archive.set", &params, &agent::describe(&s, "archive.set", &params)).unwrap();
+    let inbox = s.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let arrive = |s: &mut Session, id: &str, when: i64| {
+        let server = ServerMessage { id: id.into(), folder: "F-in".into(), size: 1000, ..Default::default() };
+        s.mailbox
+            .add_message(Message { folder: inbox, subject: id.into(), date: when, received: when, server: Some(server), ..Default::default() })
+            .unwrap();
+        s.mailbox_changed();
+    };
+    arrive(&mut s, "M-new", NOW - 3600);
+    assert!(shown.check(&s, "archive.set", &params).is_ok());
+    arrive(&mut s, "M-old", OLD);
+    assert!(shown.check(&s, "archive.set", &params).is_err());
+}

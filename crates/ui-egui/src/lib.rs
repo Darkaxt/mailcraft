@@ -897,11 +897,12 @@ pub struct UiState {
     /// Desktop: the close button hides the window while mail and reminders keep running.
     #[serde(deserialize_with = "theme::lenient_bool")]
     pub close_to_tray: bool,
-    /// Desktop: a compressed copy of the mailbox once a day (v0.12.9, [`backup`]); on unless
-    /// the owner turned it off.
+    /// Desktop: a compressed copy of the mailbox once a day (v0.12.9, [`backup`]); off until
+    /// the owner turns it on and chooses where (0.12.11: backup is always a choice).
     #[serde(deserialize_with = "theme::lenient_bool")]
     pub backups: bool,
-    /// Where backups go; `None`: `Backups` beside the mailbox file ([`backup::folder`]).
+    /// Where backups go, as the owner chose; `None`: not chosen, and no backup is made
+    /// ([`backup::folder`]).
     pub backup_folder: Option<String>,
     /// The owner has seen where the window goes on its first close to the tray (#544).
     #[serde(deserialize_with = "theme::lenient_bool")]
@@ -1059,7 +1060,7 @@ impl Default for UiState {
             high_contrast: false,
             animations: motion::Motion::default(),
             close_to_tray: false,
-            backups: true,
+            backups: false,
             backup_folder: None,
             close_to_tray_notice_seen: false,
             accent: theme::Accent::default(),
@@ -1383,10 +1384,20 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.googleClientId", "Google Desktop Application ID", "File › Options", r#"{"value": string (empty: the build's own)}"#),
     ("ui.rememberSignIn", "Remember Passwords and Sign-Ins", "File › Options", r#"{"value"?: bool (default: toggle)}"#),
     ("ui.closeToTray", "Close to system tray", "File › Options › General", r#"{"value"?: bool (default: toggle)}"#),
-    ("ui.backups", "Back up every day", "File › Options › Backups", r#"{"value"?: bool (default: toggle)}"#),
+    (
+        "ui.backups",
+        "Back up every day",
+        "File › Options › Backups",
+        r#"{"value"?: bool (default: toggle)} — on into the folder the owner chose; with none chosen, the owner is asked to pick one first (off until then)"#,
+    ),
     ("ui.backupFolder", "Change Backup Folder", "File › Options › Backups", r#"{} — asks the owner to pick the folder backups go to"#),
     ("ui.backupNow", "Back Up Now", "File › Options › Backups", r#"{} — a backup now, of what changed since the last one"#),
-    ("ui.backupStatus", "Backup Status", "File › Options › Backups", r#"{} — on or off, the folder, and what the last backup did"#),
+    (
+        "ui.backupStatus",
+        "Backup Status",
+        "File › Options › Backups",
+        r#"{} — on or off, the folder (null until the owner chooses one), what the last backup did, and `trouble`: why backups that are on can't be made"#,
+    ),
     (
         "ui.folderTabs",
         "Folder pane tabs",
@@ -5808,6 +5819,8 @@ impl MailApp {
             // The question about checking for new versions, at the first starts: above the status bar.
             updates::question(self, ui);
             settings_notice::bar(self, ui);
+            #[cfg(not(target_arch = "wasm32"))]
+            backup::bar(self, ui);
             software::bar(self, ui);
             unconfirmed::bar(self, ui);
             // Undo Send's wait is running: "Sending in 5 s · Undo".
