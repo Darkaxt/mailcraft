@@ -120,6 +120,8 @@ mod hidden_text_tests;
 #[cfg(test)]
 mod lifecycle_tests;
 #[cfg(test)]
+mod send_warnings_tests;
+#[cfg(test)]
 mod server_tests;
 #[cfg(test)]
 mod shared_window_tests;

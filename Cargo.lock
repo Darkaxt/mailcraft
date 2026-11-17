@@ -3363,6 +3363,7 @@ dependencies = [
  "mailcraft-model",
  "mailcraft-net",
  "mailcraft-time",
+ "serde_json",
 ]
 
 [[package]]
