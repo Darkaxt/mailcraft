@@ -606,12 +606,6 @@ msgid "A port is a number from 1 to 65535"
 msgstr "Port je číslo od 1 do 65535"
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "A preview may omit some content from the original file."
-msgstr "Náhled nemusí zobrazit veškerý obsah původního souboru."
-
-#. interface
 #: crates/ui-egui/src/import_pst.rs
 #, fuzzy
 msgid "A report is written beside your mailbox."
@@ -1324,46 +1318,10 @@ msgid "Allow MailCraft to keep this mailbox in step with Outlook on the page tha
 msgstr "Povolit MailCraftu synchronizovat tuto schránku s Outlookem na stránce otevřené ve vašem prohlížeči…"
 
 #. interface
-#: crates/ui-egui/src/auto_replies.rs
-#, fuzzy
-msgid "Allow MailCraft to change your automatic replies on the page that opened in your browser…"
-msgstr "Povolte MailCraftu měnit vaše automatické odpovědi na stránce, která se otevřela v prohlížeči…"
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "Allow MailCraft to keep your rules on the server on the page that opened in your browser…"
-msgstr "Povolte MailCraftu uchovávat vaše pravidla na serveru na stránce, která se otevřela v prohlížeči…"
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-#, fuzzy
-msgid "Allow MailCraft to keep your tasks in step with Microsoft To Do on the page that opened in your browser…"
-msgstr "Povolte MailCraftu synchronizovat vaše úkoly s Microsoft To Do na stránce, která se otevřela v prohlížeči…"
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-#, fuzzy
-msgid "Allow MailCraft to read other people's calendars on the page that opened in your browser…"
-msgstr "Povolte MailCraftu číst kalendáře jiných lidí na stránce, která se otevřela v prohlížeči…"
-
-#. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
 #, fuzzy
 msgid "Allow MailCraft to read shared mailboxes on the page that opened in your browser…"
 msgstr "Povolte MailCraftu číst sdílené poštovní schránky na stránce, která se otevřela v prohlížeči…"
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid "Allow MailCraft to read shared mailboxes' calendars on the page that opened in your browser…"
-msgstr "Povolte MailCraftu číst kalendáře sdílených poštovních schránek na stránce, která se otevřela v prohlížeči…"
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid "Allow MailCraft to send from shared mailboxes on the page that opened in your browser…"
-msgstr "Povolte MailCraftu odesílat ze sdílených poštovních schránek na stránce, která se otevřela v prohlížeči…"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -1858,7 +1816,7 @@ msgid "Aqua"
 msgstr "Akvamarín"
 
 #. android, command label, interface, name, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/swipe.rs
 #, fuzzy
 msgid "Archive"
 msgstr "Archivovat"
@@ -1962,12 +1920,6 @@ msgstr "Před stažením obrázků od odesílatelů z této domény se znovu pt�
 msgid "Ask before downloading this sender's pictures again"
 msgstr "Před stažením obrázků od tohoto odesílatele se znovu ptát"
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Ask before previewing this type of file"
-msgstr "Před zobrazením náhledu tohoto typu souboru se zeptat"
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt
 #, fuzzy
@@ -1999,18 +1951,6 @@ msgid "Ask for permission to keep your tasks, rules, automatic replies and categ
 msgstr "Požádejte o oprávnění synchronizovat vaše úkoly, pravidla, automatické odpovědi a kategorie s Outlookem: v prohlížeči se otevře stránka Microsoftu. Bez něj úkoly a pravidla zůstanou v tomto počítači a kategorie zde nelze měnit."
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Ask for permission to change the rules on the server: Microsoft's page opens in your browser. Without it, new rules stay on this computer and nothing of them is sent."
-msgstr "Požádejte o oprávnění měnit pravidla na serveru: v prohlížeči se otevře stránka Microsoftu. Bez něj nová pravidla zůstanou v tomto počítači a nic z nich se neodešle."
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Ask for permission to change your automatic replies: Microsoft's page opens in your browser. Reading them doesn't need it."
-msgstr "Požádejte o oprávnění měnit automatické odpovědi: v prohlížeči se otevře stránka Microsoftu. Ke čtení není potřeba."
-
-#. interface
 #: crates/ui-egui/src/server_sync.rs
 #, fuzzy
 msgid "Ask for permission to read and change your To Do lists and tasks: Microsoft's page opens in your browser. Without it, tasks stay on this computer."
@@ -2027,12 +1967,6 @@ msgstr "Požádejte o oprávnění číst a odesílat ze sdílených poštovníc
 #, fuzzy
 msgid "Ask for these messages again at the next Send / Receive. The mail on the server is untouched, and nothing is lost if they fail again."
 msgstr "Požádat o tyto zprávy znovu při příštím odesílání a přijímání. Pošta na serveru zůstane nedotčena a nic se neztratí, pokud selžou znovu."
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Ask for permission to read the calendars of shared mailboxes: Microsoft's page opens in your browser. Without it, nothing of this mailbox's calendars is read."
-msgstr "Požádejte o oprávnění číst kalendáře sdílených poštovních schránek: v prohlížeči se otevře stránka Microsoftu. Bez něj se z kalendářů této poštovní schránky nic nenačte."
 
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
@@ -2591,6 +2525,11 @@ msgid "Before anything changes, a copy of your whole mailbox is saved next to it
 msgstr "Než se cokoli změní, uloží se vedle poštovní schránky kopie celé schránky s dnešním datem v názvu."
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Best match on top"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 #, fuzzy
 msgid "Binary assets added"
@@ -2601,11 +2540,6 @@ msgstr "Přidané binární soubory"
 #, fuzzy
 msgid "Binary assets removed"
 msgstr "Odebrané binární soubory"
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Best match on top"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/people_view.rs
@@ -2684,12 +2618,6 @@ msgstr "Načíst"
 #, fuzzy
 msgid "Browse…"
 msgstr "Procházet…"
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-#, fuzzy
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
-msgstr "Vytvářím index, ze kterého hledání odpovídá; dokud nebude hotový, starší pošta se prohledává pomaleji"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
@@ -3604,12 +3532,6 @@ msgstr "Vymazat hledání"
 #, fuzzy
 msgid "Clear search (Esc)"
 msgstr "Vymazat hledání (Esc)"
-
-#. interface
-#: crates/ui-egui/src/reading.rs
-#, fuzzy
-msgid "Click to select {name}; double-click to open it"
-msgstr "Kliknutím vyberete {name}; dvojitým kliknutím jej otevřete"
 
 #. interface
 #: crates/ui-egui/src/compose.rs
@@ -4573,7 +4495,7 @@ msgid "Delayed until {when}"
 msgstr "Zpožděno do {when}"
 
 #. android, command label, interface, name, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/signatures.rs crates/ui-egui/src/tasks_view.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/signatures.rs crates/ui-egui/src/swipe.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "Delete"
 msgstr "Odstranit"
@@ -5127,12 +5049,6 @@ msgstr "Stahovat obrázky v poště automaticky"
 #, fuzzy
 msgid "Download in all mail"
 msgstr "Stahovat ve veškeré poště"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Download messages in full:"
-msgstr "Stahovat zprávy celé:"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -6421,12 +6337,6 @@ msgstr "Barva písma"
 #, fuzzy
 msgid "Font Size"
 msgstr "Velikost písma"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-msgstr "Pro účty IMAP. Účty Microsoft a účty serveru Exchange uchovávají poštu podle volby Pošta uchovávaná offline v Soubor › Informace."
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -8388,18 +8298,6 @@ msgid "Keep Rule on Server"
 msgstr "Uchovávat pravidlo na serveru"
 
 #. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "Keep Rules on the Server"
-msgstr "Uchovávat pravidla na serveru"
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-#, fuzzy
-msgid "Keep Tasks in Step with Microsoft To Do"
-msgstr "Synchronizovat úkoly s Microsoft To Do"
-
-#. interface
 #: crates/ui-egui/src/graph_switch.rs
 #, fuzzy
 msgid "Keep Waiting"
@@ -8542,15 +8440,15 @@ msgid "Kept in {path}, saved as you go."
 msgstr "Uchováváno v {path}, ukládá se průběžně."
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Kept on this computer only"
 msgstr "Uchováváno jen v tomto počítači"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Kept offline: {offline} · Downloaded in full: {size}"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -8634,15 +8532,15 @@ msgid "Last Week"
 msgstr "Minulý týden"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Last backup: {when}, {size}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 #, fuzzy
 msgid "Last commit"
 msgstr "Poslední commit"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Last backup: {when}, {size}"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
@@ -9057,12 +8955,6 @@ msgid "Mail from another mailbox can't go into an Outbox: the next Send/Receive 
 msgstr "Pošta z jiné poštovní schránky nemůže jít do složky Pošta k odeslání: další Odeslat/přijmout by ji odeslalo"
 
 #. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid "Mail from the shared mailbox waits: {error}"
-msgstr "Pošta ze sdílené poštovní schránky čeká: {error}"
-
-#. interface
 #: crates/ui-egui/src/filing.rs
 msgid "Mail from {sender} usually goes to {folder}."
 msgstr ""
@@ -9130,12 +9022,6 @@ msgstr "Pošta uchovávaná offline"
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "Pošta uchovávaná offline"
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "Mail to keep offline:"
-msgstr "Pošta uchovávaná offline:"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10393,7 +10279,7 @@ msgid "My outgoing server needs no sign-in"
 msgstr "Můj odchozí server nevyžaduje přihlášení"
 
 #. interface, name
-#: crates/engine/src/session.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/search_folders.rs
+#: crates/engine/src/session.rs crates/ui-egui/src/credits.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/search_folders.rs
 #, fuzzy
 msgid "Name"
 msgstr "Název"
@@ -11186,12 +11072,6 @@ msgstr ""
 msgid "No preview helper is available for this attachment."
 msgstr "Pro tuto přílohu není k dispozici žádný pomocník náhledu."
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "No preview is available for this attachment."
-msgstr "Pro tuto přílohu není náhled k dispozici."
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Hosted.kt
 #, fuzzy
@@ -11370,8 +11250,8 @@ msgstr "Není pozván nikdo s adresou"
 msgid "Nobody, or more than one of your contacts, matches: {names}"
 msgstr "Neodpovídá nikdo, nebo více vašich kontaktů: {names}"
 
-#. android, interface, what a command says
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt crates/engine/src/cmd/tasks/status.rs crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/date_picker.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/tasks_view.rs
+#. android, interface, name, what a command says
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt crates/engine/src/cmd/tasks/status.rs crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/date_picker.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/swipe.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "None"
 msgstr "Žádné"
@@ -12287,12 +12167,6 @@ msgstr "Otevřít sdílený kalendář…"
 msgid "Open a mailbox of your organisation that you were given Full Access to, such as a team's, under this account"
 msgstr "Pod tímto účtem otevřít poštovní schránku vaší organizace, ke které jste dostali úplný přístup, například týmovou"
 
-#. ribbon
-#: crates/ui-egui/src/ribbon.rs
-#, fuzzy
-msgid "Open a message you sent as a new one"
-msgstr "Otevřít odeslanou zprávu jako novou"
-
 #. interface
 #: crates/ui-egui/src/attachment_open.rs
 msgid "Open anyway"
@@ -12496,15 +12370,15 @@ msgid "Or is it one of these?"
 msgstr "Nebo je to jeden z těchto?"
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Or type one, then Enter"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Orange"
 msgstr "Oranžová"
-
-#. interface
-#: crates/ui-egui/src/nav.rs
-msgid "Or type one, then Enter"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -12590,12 +12464,6 @@ msgstr "Další účty a V tomto počítači"
 #, fuzzy
 msgid "Other people's calendars can be opened under a Microsoft work or school account"
 msgstr "Kalendáře jiných lidí lze otevřít pod pracovním nebo školním účtem Microsoft"
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-#, fuzzy
-msgid "Other people's calendars weren't allowed: {error}"
-msgstr "Kalendáře jiných lidí nebyly povoleny: {error}"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt
@@ -12867,12 +12735,6 @@ msgstr "Lidé"
 msgid "People to invite"
 msgstr "Lidé k pozvání"
 
-#. interface, name
-#: crates/ui-egui/src/folder_properties.rs
-#, fuzzy
-msgid "Permissions"
-msgstr "Oprávnění"
-
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PeopleScreen.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
@@ -13055,12 +12917,6 @@ msgstr "Najeďte na to a uvidíte proč."
 msgid "Point at one to see why."
 msgstr "Najeďte na jeden z nich a uvidíte proč."
 
-#. interface, name
-#: crates/ui-egui/src/folder_properties.rs
-#, fuzzy
-msgid "Policy"
-msgstr "Zásady"
-
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -13140,12 +12996,6 @@ msgstr ""
 msgid "Preview Attachment"
 msgstr "Náhled přílohy"
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Preview File"
-msgstr "Zobrazit náhled souboru"
-
 #. command label
 #: crates/engine/src/cmd/archive.rs
 msgid "Preview Local Archive"
@@ -13188,12 +13038,6 @@ msgstr "Zobrazovat náhledy příloh pomocí místního PdfCraftu a PhotoCraftu"
 #, fuzzy
 msgid "Preview attachments with local PhotoCraft"
 msgstr "Zobrazovat náhledy příloh pomocí místního PhotoCraftu"
-
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Preview files only when you trust the sender."
-msgstr "Náhledy souborů zobrazujte pouze tehdy, pokud důvěřujete odesílateli."
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -13505,6 +13349,11 @@ msgstr ""
 msgid "Reading Pane"
 msgstr "Podokno čtení"
 
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "Reading pane"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
@@ -13522,11 +13371,6 @@ msgstr "Podokno čtení vypnuto"
 #, fuzzy
 msgid "Reading pane on the right"
 msgstr "Podokno čtení vpravo"
-
-#. ribbon location
-#: crates/ui-egui/src/lib.rs
-msgid "Reading pane"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
@@ -14318,12 +14162,6 @@ msgstr "Restartovat a aktualizovat"
 msgid "Restart to update is the owner's click."
 msgstr "Restartovat a aktualizovat musí kliknout vlastník."
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Restore attachment preview warnings"
-msgstr "Obnovit upozornění před zobrazením náhledu příloh"
-
 #. interface, ribbon
 #: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/window_chrome.rs
 msgid "Restore"
@@ -14336,15 +14174,15 @@ msgid "Retry"
 msgstr "Zkusit znovu"
 
 #. command label
+#: crates/engine/src/cmd/search_index.rs
+msgid "Retry Missing or Failed Search Content"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Retry Skipped Messages"
 msgstr "Zkusit znovu vynechané zprávy"
-
-#. command label
-#: crates/engine/src/cmd/search_index.rs
-msgid "Retry Missing or Failed Search Content"
-msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/snooze.rs
@@ -14490,20 +14328,13 @@ msgstr "Pravidla pro"
 
 #. interface
 #: crates/ui-egui/src/nav.rs
-msgid "Rules for {folder}"
+msgid "Rules for This Folder…"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "Rules stay on this computer for now: {error}"
-msgstr "Pravidla zatím zůstávají v tomto počítači: {error}"
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "Rules weren't allowed on the server: {error}"
-msgstr "Pravidla na serveru nebyla povolena: {error}"
+#: crates/ui-egui/src/nav.rs
+msgid "Rules for {folder}"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -14813,12 +14644,6 @@ msgstr "Před přechodem na přihlášení přes Google změny tohoto účtu ulo
 msgid "Save out"
 msgstr "Uložit ven"
 
-#. ribbon
-#: crates/ui-egui/src/ribbon.rs
-#, fuzzy
-msgid "Save to Computer"
-msgstr "Uložit do počítače"
-
 #. interface
 #: crates/ui-egui/src/search_folders.rs
 msgid "Save search folder"
@@ -14828,6 +14653,12 @@ msgstr ""
 #: crates/ui-egui/src/source_pane.rs
 msgid "Save the complete message as an .eml file"
 msgstr ""
+
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid "Save to Computer"
+msgstr "Uložit do počítače"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
@@ -15335,7 +15166,7 @@ msgid "Send & Receive"
 msgstr "Odeslat a přijmout"
 
 #. ribbon location
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/archive.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/dav_sync.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules_remote.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/send_receive.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/sync_progress.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/lib.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/archive.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/categories_remote.rs crates/engine/src/cmd/dav_sync.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules_remote.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/send_receive.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/sync_progress.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Send / Receive"
 msgstr "Odeslat / přijmout"
@@ -15439,12 +15270,6 @@ msgstr "Odesílat a přijímat automaticky"
 #, fuzzy
 msgid "Send automatic replies"
 msgstr "Odesílat automatické odpovědi"
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid "Send from a Shared Mailbox"
-msgstr "Odeslat ze sdílené poštovní schránky"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
@@ -15936,18 +15761,6 @@ msgid "Shared mailboxes and calendars: waiting for your permission"
 msgstr "Sdílené poštovní schránky a kalendáře: čeká na vaše oprávnění"
 
 #. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid "Shared mailboxes weren't allowed: {error}"
-msgstr "Sdílené poštovní schránky nebyly povoleny: {error}"
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid "Shared mailboxes' calendars weren't allowed: {error}"
-msgstr "Kalendáře sdílených poštovních schránek nebyly povoleny: {error}"
-
-#. interface
 #: crates/ui-egui/src/shortcuts_page.rs
 msgid "Shift"
 msgstr ""
@@ -16092,12 +15905,6 @@ msgstr "Zobrazit úkoly z"
 #, fuzzy
 msgid "Show Training"
 msgstr "Zobrazit školení"
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid "Show a Shared Mailbox's Calendars"
-msgstr "Zobrazit kalendáře sdílené poštovní schránky"
 
 #. interface
 #: crates/ui-egui/src/alerts.rs
@@ -16434,12 +16241,6 @@ msgstr "Znovu se přihlásit, až to správce schválí"
 #, fuzzy
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
 msgstr "Znovu se přihlaste: v prohlížeči se otevře stránka Microsoftu. Pošta a kalendář mezitím fungují jako dosud."
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Sign in on the page that opened in your browser…"
-msgstr "Přihlaste se na stránce, která se otevřela v prohlížeči…"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -16969,12 +16770,6 @@ msgstr "Stavový řádek · Soubor"
 msgid "Status:"
 msgstr "Stav:"
 
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "Still indexing: some older mail is searched more slowly"
-msgstr "Stále indexuji: některá starší pošta se prohledává pomaleji"
-
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt crates/ui-egui/src/sync_panel.rs
 #, fuzzy
@@ -17392,12 +17187,6 @@ msgstr "Úkoly zatím zůstávají v tomto počítači: {error}"
 #. interface
 #: crates/ui-egui/src/task_sync.rs
 #, fuzzy
-msgid "Tasks weren't allowed to be kept in step: {error}"
-msgstr "Synchronizace úkolů nebyla povolena: {error}"
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-#, fuzzy
 msgid "Tasks: Microsoft no longer takes the sign-in"
 msgstr "Úkoly: Microsoft už přihlášení nepřijímá"
 
@@ -17704,12 +17493,6 @@ msgstr "To je na hlášení příliš dlouhé: zkraťte to"
 #, fuzzy
 msgid "That isn't a GitHub username: letters, digits and single hyphens, 39 at most. Leave the box empty if you have none."
 msgstr "To není uživatelské jméno na GitHubu: písmena, číslice a jednotlivé pomlčky, nejvýše 39. Pokud žádné nemáte, nechte pole prázdné."
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid "That isn't a shared mailbox"
-msgstr "To není sdílená poštovní schránka"
 
 #. interface
 #: crates/ui-egui/src/import_pst.rs
@@ -18084,12 +17867,6 @@ msgstr "Kalendář {name} a jeho události uchovávané v tomto počítači budo
 msgid "The categories couldn't be kept in step: the job stopped unexpectedly"
 msgstr "Kategorie se nepodařilo synchronizovat: úloha se neočekávaně zastavila"
 
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid "The calendars of the shared mailbox wait: {error}"
-msgstr "Kalendáře sdílené poštovní schránky čekají: {error}"
-
 #. interface, what a command says
 #: crates/engine/src/sync_driver/calendar_plan.rs crates/ui-egui/src/category_sync.rs
 #, fuzzy
@@ -18149,12 +17926,6 @@ msgstr "Certifikát, který ukazuje server {host}, není ten, kterému jste pro 
 #, fuzzy
 msgid "The certificate wasn't issued by a certification authority this computer trusts."
 msgstr "Certifikát nevydala certifikační autorita, které tento počítač důvěřuje."
-
-#. what a command says
-#: crates/engine/src/cmd/category.rs
-#, fuzzy
-msgid "The colour is set in Outlook"
-msgstr "Barva se nastavuje v Outlooku"
 
 #. interface
 #: crates/ui-egui/src/source_pane.rs
@@ -19547,12 +19318,6 @@ msgstr "Tento týden"
 msgid "This account does not use Google sign-in."
 msgstr "Tento účet nepoužívá přihlášení přes Google."
 
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "This account doesn't keep its rules on its server"
-msgstr "Tento účet neuchovává pravidla na svém serveru"
-
 #. what a command says
 #: crates/engine/src/cmd/unsubscribe.rs
 #, fuzzy
@@ -19572,7 +19337,7 @@ msgid "This account has no mail server to send the answer through."
 msgstr "Tento účet nemá poštovní server, přes který by odpověď odeslal."
 
 #. interface
-#: crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
+#: crates/ui-egui/src/lib.rs crates/ui-egui/src/rule_sync.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs crates/ui-egui/src/task_sync.rs
 #, fuzzy
 msgid "This account has no sign-in with Microsoft"
 msgstr "Tento účet nemá přihlášení přes Microsoft"
@@ -20677,42 +20442,6 @@ msgstr ""
 "Dokud to nepovolíte, úkoly zůstanou v tomto počítači a nic z nich se Microsoftu neodešle a vaše automatické odpovědi se nemění."
 
 #. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid ""
-"To answer or send meetings from {address}, MailCraft needs your permission to send from shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"Whether the answer goes as {address} or on its behalf is your organisation's choice. Until you allow it, the answer waits on this computer, and nothing is sent from your own address."
-msgstr ""
-"Aby mohl odpovídat na schůzky nebo je odesílat z {address}, potřebuje MailCraft vaše oprávnění k odesílání ze sdílených poštovních schránek. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
-"\n"
-"Zda odpověď odejde jako {address}, nebo jejím jménem, rozhoduje vaše organizace. Dokud to nepovolíte, odpověď čeká v tomto počítači a z vaší vlastní adresy se nic neodešle."
-
-#. interface
-#: crates/ui-egui/src/auto_replies.rs
-#, fuzzy
-msgid ""
-"To change the automatic replies of {address}, MailCraft needs your permission to change your mailbox settings. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"MailCraft changes only your automatic replies and the rules of your Inbox with it, never your categories or working hours. Reading your automatic replies doesn't need it."
-msgstr ""
-"Aby mohl měnit automatické odpovědi {address}, potřebuje MailCraft vaše oprávnění ke změně nastavení poštovní schránky. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
-"\n"
-"MailCraft s ním mění jen vaše automatické odpovědi a pravidla Doručené pošty, nikdy kategorie ani pracovní dobu. Ke čtení automatických odpovědí ho nepotřebuje."
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid ""
-"To keep the rules of {address} on its server, where they run even while MailCraft is closed and show in Outlook on the web and on your phone, MailCraft needs your permission to change your mailbox settings, where Microsoft keeps the rules. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"Until you allow it, your rules stay on this computer and nothing of them is sent to Microsoft."
-msgstr ""
-"Aby mohl uchovávat pravidla {address} na jejím serveru, kde běží, i když je MailCraft zavřený, a zobrazují se v Outlooku na webu i v telefonu, potřebuje MailCraft vaše oprávnění ke změně nastavení poštovní schránky, kde Microsoft pravidla uchovává. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
-"\n"
-"Dokud to nepovolíte, pravidla zůstávají v tomto počítači a nic z nich se Microsoftu neodesílá."
-
-#. interface
 #: crates/ui-egui/src/server_sync.rs
 #, fuzzy
 msgid ""
@@ -20753,42 +20482,6 @@ msgstr ""
 "Aby MailCraft mohl číst a odesílat ze sdílených poštovních schránek, které otevíráte přes {address}, a zobrazovat kalendáře, které s vámi sdílejí, potřebuje vaše oprávnění. V prohlížeči se otevře stránka Microsoftu, která vás jednou požádá o vše, co MailCraft používá a co jste zatím nepovolili.\n"
 "\n"
 "Dokud to nepovolíte, nic z těchto schránek a kalendářů se nečte, pošta a odpovědi na schůzky ze sdílené schránky čekají v tomto počítači a nic se místo nich neodešle z vaší vlastní adresy."
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-#, fuzzy
-msgid ""
-"To open other people's calendars, MailCraft needs your permission to read the calendars people share with you. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"What you open is kept on this computer only: it doesn't appear in Outlook or on your other devices."
-msgstr ""
-"Aby mohl otevírat kalendáře jiných lidí, potřebuje MailCraft vaše oprávnění číst kalendáře, které s vámi lidé sdílejí. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
-"\n"
-"Co otevřete, se uchovává jen v tomto počítači: nezobrazí se v Outlooku ani na vašich dalších zařízeních."
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid ""
-"To send from {address}, MailCraft needs your permission to send from shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"Whether your mail goes as {address} or on its behalf is your organisation's choice. Until you allow it, the mail waits in its Outbox, and nothing is sent from your own address."
-msgstr ""
-"Aby mohl odesílat z {address}, potřebuje MailCraft vaše oprávnění k odesílání ze sdílených poštovních schránek. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
-"\n"
-"Zda pošta odejde jako {address}, nebo jejím jménem, rozhoduje vaše organizace. Dokud to nepovolíte, pošta čeká ve své složce Pošta k odeslání a z vaší vlastní adresy se nic neodešle."
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid ""
-"To show the calendars of {address}, MailCraft needs your permission to read the calendars of shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"What you may see of a calendar is for its owner and your organisation to decide: this changes nothing about that. Until you allow it, nothing of {address}'s calendars is read."
-msgstr ""
-"Aby mohl zobrazit kalendáře {address}, potřebuje MailCraft vaše oprávnění číst kalendáře sdílených poštovních schránek. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
-"\n"
-"Co z kalendáře smíte vidět, rozhoduje jeho vlastník a vaše organizace: na tom se nic nemění. Dokud to nepovolíte, z kalendářů {address} se nic nečte."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -20972,12 +20665,6 @@ msgid "Tuesday"
 msgstr "úterý"
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Turn on attachment previews in File › Options."
-msgstr "Náhledy příloh zapněte v Soubor › Možnosti."
-
-#. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr ""
@@ -21121,12 +20808,6 @@ msgid "Undo {what}"
 msgstr "Zpět: {what}"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "Unpin"
-msgstr "Odepnout"
-
-#. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
 msgstr ""
@@ -21145,6 +20826,12 @@ msgstr ""
 #: crates/ui-egui/src/nav.rs
 msgid "Unified mailbox"
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+#, fuzzy
+msgid "Unpin"
+msgstr "Odepnout"
 
 #. android, interface, name
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowParts.kt crates/engine/src/session.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/folder_properties.rs
@@ -22369,30 +22056,6 @@ msgid "Your organisation doesn't allow Exchange Web Services for this account. A
 msgstr "Vaše organizace pro tento účet nepovoluje Exchange Web Services. Obraťte se na správce."
 
 #. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "Your organisation doesn't allow MailCraft to keep rules on the server"
-msgstr "Vaše organizace MailCraftu nepovoluje uchovávat pravidla na serveru"
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-#, fuzzy
-msgid "Your organisation doesn't allow MailCraft to keep tasks in step with Microsoft To Do"
-msgstr "Vaše organizace MailCraftu nepovoluje synchronizovat úkoly s Microsoft To Do"
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid "Your organisation doesn't allow MailCraft to read shared mailboxes' calendars"
-msgstr "Vaše organizace MailCraftu nepovoluje číst kalendáře sdílených poštovních schránek"
-
-#. interface
-#: crates/ui-egui/src/auto_replies.rs
-#, fuzzy
-msgid "Your organisation doesn't let MailCraft change automatic replies"
-msgstr "Vaše organizace MailCraftu nedovoluje měnit automatické odpovědi"
-
-#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Your organisation doesn't let MailCraft change your automatic replies. Ask your administrator."
@@ -22481,42 +22144,6 @@ msgstr "Správce vaší organizace musí jednou schválit, aby MailCraft synchro
 #, fuzzy
 msgid "Your organisation's administrator has to approve MailCraft reading shared mailboxes and calendars once: File › Info"
 msgstr "Správce vaší organizace musí jednou schválit, aby MailCraft četl sdílené poštovní schránky a kalendáře: Soubor › Informace"
-
-#. interface
-#: crates/ui-egui/src/auto_replies.rs
-#, fuzzy
-msgid "Your organisation's administrator has to approve MailCraft changing automatic replies once: File › Info"
-msgstr "Správce vaší organizace musí jednou schválit, že MailCraft smí měnit automatické odpovědi: Soubor › Informace"
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-#, fuzzy
-msgid "Your organisation's administrator has to approve keeping rules on the server once: File › Info"
-msgstr "Správce vaší organizace musí jednou schválit uchovávání pravidel na serveru: Soubor › Informace"
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-#, fuzzy
-msgid "Your organisation's administrator has to approve keeping tasks in step with Microsoft To Do once: File › Info"
-msgstr "Správce vaší organizace musí jednou schválit synchronizaci úkolů s Microsoft To Do: Soubor › Informace"
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-#, fuzzy
-msgid "Your organisation's administrator has to approve reading other people's calendars once: File › Info"
-msgstr "Správce vaší organizace musí jednou schválit čtení kalendářů jiných lidí: Soubor › Informace"
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-#, fuzzy
-msgid "Your organisation's administrator has to approve reading shared mailboxes once: File › Info"
-msgstr "Správce vaší organizace musí jednou schválit čtení sdílených poštovních schránek: Soubor › Informace"
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-#, fuzzy
-msgid "Your organisation's administrator has to approve reading shared mailboxes' calendars once: File › Info"
-msgstr "Správce vaší organizace musí jednou schválit čtení kalendářů sdílených poštovních schránek: Soubor › Informace"
 
 #. interface
 #: crates/ui-egui/src
@@ -23350,12 +22977,6 @@ msgstr "nemůže to přijmout"
 #. name
 #: crates/engine/src/agent.rs
 #, fuzzy
-msgid "it changes an account or a sign-in"
-msgstr "mění účet nebo přihlášení"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
 msgid "it changes options, signatures or rules"
 msgstr "mění možnosti, podpisy nebo pravidla"
 
@@ -23370,12 +22991,6 @@ msgstr "kliká nebo píše v okně"
 #, fuzzy
 msgid "it could not be removed"
 msgstr "nešlo to odstranit"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it deletes for good"
-msgstr "odstraňuje natrvalo"
 
 #. interface
 #: crates/ui-egui/src/rule_sync.rs
@@ -23481,12 +23096,6 @@ msgstr "odvádí okno od zprávy, kterou vlastník píše"
 #, fuzzy
 msgid "it took too long"
 msgstr "trvalo to příliš dlouho"
-
-#. name
-#: crates/engine/src/agent.rs
-#, fuzzy
-msgid "it writes to other people or reaches out to the web"
-msgstr "píše jiným lidem nebo se obrací na web"
 
 #. why a mail server couldn't be used
 #: crates/net/src/transport.rs
@@ -26006,12 +25615,6 @@ msgstr "{counted} · Pozastaveno do dalšího Odeslat/přijmout"
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr "Zprávy ({count}) nebyly prohledány celé: dokud se nestáhnou, je zde jen jejich začátek."
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
 msgid "{count} messages are not fully downloaded. Their missing content cannot be searched offline."
 msgstr ""
 
@@ -27356,15 +26959,6 @@ msgstr[0] "{n} starší zpráva vrácena jen na záhlaví"
 msgstr[1] "{n} starší zprávy vráceny jen na záhlaví"
 msgstr[2] "{n} starších zpráv vráceno jen na záhlaví"
 
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-#, fuzzy
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] "{n} starší zpráva nebyla prohledána: její text ještě není načten"
-msgstr[1] "{n} starší zprávy nebyly prohledány: jejich text ještě není načten"
-msgstr[2] "{n} starších zpráv nebylo prohledáno: jejich text ještě není načten"
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 #, fuzzy
@@ -27926,6 +27520,22 @@ msgid "−Lines"
 msgstr "−Řádky"
 
 #, fuzzy
+#~ msgid "A preview may omit some content from the original file."
+#~ msgstr "Náhled nemusí zobrazit veškerý obsah původního souboru."
+
+#, fuzzy
+#~ msgid "Allow MailCraft to change your automatic replies on the page that opened in your browser…"
+#~ msgstr "Povolte MailCraftu měnit vaše automatické odpovědi na stránce, která se otevřela v prohlížeči…"
+
+#, fuzzy
+#~ msgid "Allow MailCraft to keep your rules on the server on the page that opened in your browser…"
+#~ msgstr "Povolte MailCraftu uchovávat vaše pravidla na serveru na stránce, která se otevřela v prohlížeči…"
+
+#, fuzzy
+#~ msgid "Allow MailCraft to keep your tasks in step with Microsoft To Do on the page that opened in your browser…"
+#~ msgstr "Povolte MailCraftu synchronizovat vaše úkoly s Microsoft To Do na stránce, která se otevřela v prohlížeči…"
+
+#, fuzzy
 #~ msgid "Allow MailCraft to read other people's calendars on the page that opened in your browser…"
 #~ msgstr "Povolte MailCraftu číst kalendáře jiných lidí na stránce, která se otevřela v prohlížeči…"
 
@@ -27938,16 +27548,92 @@ msgstr "−Řádky"
 #~ msgstr "Povolte MailCraftu odesílat ze sdílených poštovních schránek na stránce, která se otevřela v prohlížeči…"
 
 #, fuzzy
+#~ msgid "Ask before previewing this type of file"
+#~ msgstr "Před zobrazením náhledu tohoto typu souboru se zeptat"
+
+#, fuzzy
+#~ msgid "Ask for permission to change the rules on the server: Microsoft's page opens in your browser. Without it, new rules stay on this computer and nothing of them is sent."
+#~ msgstr "Požádejte o oprávnění měnit pravidla na serveru: v prohlížeči se otevře stránka Microsoftu. Bez něj nová pravidla zůstanou v tomto počítači a nic z nich se neodešle."
+
+#, fuzzy
+#~ msgid "Ask for permission to change your automatic replies: Microsoft's page opens in your browser. Reading them doesn't need it."
+#~ msgstr "Požádejte o oprávnění měnit automatické odpovědi: v prohlížeči se otevře stránka Microsoftu. Ke čtení není potřeba."
+
+#, fuzzy
 #~ msgid "Ask for permission to read the calendars of shared mailboxes: Microsoft's page opens in your browser. Without it, nothing of this mailbox's calendars is read."
 #~ msgstr "Požádejte o oprávnění číst kalendáře sdílených poštovních schránek: v prohlížeči se otevře stránka Microsoftu. Bez něj se z kalendářů této poštovní schránky nic nenačte."
+
+#, fuzzy
+#~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
+#~ msgstr "Vytvářím index, ze kterého hledání odpovídá; dokud nebude hotový, starší pošta se prohledává pomaleji"
+
+#, fuzzy
+#~ msgid "Click to select {name}; double-click to open it"
+#~ msgstr "Kliknutím vyberete {name}; dvojitým kliknutím jej otevřete"
+
+#, fuzzy
+#~ msgid "Download messages in full:"
+#~ msgstr "Stahovat zprávy celé:"
+
+#, fuzzy
+#~ msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
+#~ msgstr "Pro účty IMAP. Účty Microsoft a účty serveru Exchange uchovávají poštu podle volby Pošta uchovávaná offline v Soubor › Informace."
+
+#, fuzzy
+#~ msgid "Keep Rules on the Server"
+#~ msgstr "Uchovávat pravidla na serveru"
+
+#, fuzzy
+#~ msgid "Keep Tasks in Step with Microsoft To Do"
+#~ msgstr "Synchronizovat úkoly s Microsoft To Do"
 
 #, fuzzy
 #~ msgid "Mail from the shared mailbox waits: {error}"
 #~ msgstr "Pošta ze sdílené poštovní schránky čeká: {error}"
 
 #, fuzzy
+#~ msgid "Mail to keep offline:"
+#~ msgstr "Pošta uchovávaná offline:"
+
+#, fuzzy
+#~ msgid "No preview is available for this attachment."
+#~ msgstr "Pro tuto přílohu není náhled k dispozici."
+
+#, fuzzy
+#~ msgid "Open a message you sent as a new one"
+#~ msgstr "Otevřít odeslanou zprávu jako novou"
+
+#, fuzzy
 #~ msgid "Other people's calendars weren't allowed: {error}"
 #~ msgstr "Kalendáře jiných lidí nebyly povoleny: {error}"
+
+#, fuzzy
+#~ msgid "Permissions"
+#~ msgstr "Oprávnění"
+
+#, fuzzy
+#~ msgid "Policy"
+#~ msgstr "Zásady"
+
+#, fuzzy
+#~ msgid "Preview File"
+#~ msgstr "Zobrazit náhled souboru"
+
+#, fuzzy
+#~ msgid "Preview files only when you trust the sender."
+#~ msgstr "Náhledy souborů zobrazujte pouze tehdy, pokud důvěřujete odesílateli."
+
+#, fuzzy
+#~ msgid "Restore attachment preview warnings"
+#~ msgstr "Obnovit upozornění před zobrazením náhledu příloh"
+
+#, fuzzy
+#~ msgid "Rules stay on this computer for now: {error}"
+#~ msgstr "Pravidla zatím zůstávají v tomto počítači: {error}"
+
+#, fuzzy
+#~ msgid "Rules weren't allowed on the server: {error}"
+#~ msgstr "Pravidla na serveru nebyla povolena: {error}"
 
 #, fuzzy
 #~ msgid "Send from a Shared Mailbox"
@@ -27966,12 +27652,32 @@ msgstr "−Řádky"
 #~ msgstr "Zobrazit kalendáře sdílené poštovní schránky"
 
 #, fuzzy
+#~ msgid "Sign in on the page that opened in your browser…"
+#~ msgstr "Přihlaste se na stránce, která se otevřela v prohlížeči…"
+
+#, fuzzy
+#~ msgid "Still indexing: some older mail is searched more slowly"
+#~ msgstr "Stále indexuji: některá starší pošta se prohledává pomaleji"
+
+#, fuzzy
+#~ msgid "Tasks weren't allowed to be kept in step: {error}"
+#~ msgstr "Synchronizace úkolů nebyla povolena: {error}"
+
+#, fuzzy
 #~ msgid "That isn't a shared mailbox"
 #~ msgstr "To není sdílená poštovní schránka"
 
 #, fuzzy
 #~ msgid "The calendars of the shared mailbox wait: {error}"
 #~ msgstr "Kalendáře sdílené poštovní schránky čekají: {error}"
+
+#, fuzzy
+#~ msgid "The colour is set in Outlook"
+#~ msgstr "Barva se nastavuje v Outlooku"
+
+#, fuzzy
+#~ msgid "This account doesn't keep its rules on its server"
+#~ msgstr "Tento účet neuchovává pravidla na svém serveru"
 
 #, fuzzy
 #~ msgid ""
@@ -27984,12 +27690,70 @@ msgstr "−Řádky"
 #~ "Zda odpověď odejde jako {address}, nebo jejím jménem, rozhoduje vaše organizace. Dokud to nepovolíte, odpověď čeká v tomto počítači a z vaší vlastní adresy se nic neodešle."
 
 #, fuzzy
+#~ msgid ""
+#~ "To change the automatic replies of {address}, MailCraft needs your permission to change your mailbox settings. Microsoft's page opens in your browser to ask you, once.\n"
+#~ "\n"
+#~ "MailCraft changes only your automatic replies and the rules of your Inbox with it, never your categories or working hours. Reading your automatic replies doesn't need it."
+#~ msgstr ""
+#~ "Aby mohl měnit automatické odpovědi {address}, potřebuje MailCraft vaše oprávnění ke změně nastavení poštovní schránky. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
+#~ "\n"
+#~ "MailCraft s ním mění jen vaše automatické odpovědi a pravidla Doručené pošty, nikdy kategorie ani pracovní dobu. Ke čtení automatických odpovědí ho nepotřebuje."
+
+#, fuzzy
+#~ msgid ""
+#~ "To keep the rules of {address} on its server, where they run even while MailCraft is closed and show in Outlook on the web and on your phone, MailCraft needs your permission to change your mailbox settings, where Microsoft keeps the rules. Microsoft's page opens in your browser to ask you, once.\n"
+#~ "\n"
+#~ "Until you allow it, your rules stay on this computer and nothing of them is sent to Microsoft."
+#~ msgstr ""
+#~ "Aby mohl uchovávat pravidla {address} na jejím serveru, kde běží, i když je MailCraft zavřený, a zobrazují se v Outlooku na webu i v telefonu, potřebuje MailCraft vaše oprávnění ke změně nastavení poštovní schránky, kde Microsoft pravidla uchovává. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
+#~ "\n"
+#~ "Dokud to nepovolíte, pravidla zůstávají v tomto počítači a nic z nich se Microsoftu neodesílá."
+
+#, fuzzy
+#~ msgid ""
+#~ "To open other people's calendars, MailCraft needs your permission to read the calendars people share with you. Microsoft's page opens in your browser to ask you, once.\n"
+#~ "\n"
+#~ "What you open is kept on this computer only: it doesn't appear in Outlook or on your other devices."
+#~ msgstr ""
+#~ "Aby mohl otevírat kalendáře jiných lidí, potřebuje MailCraft vaše oprávnění číst kalendáře, které s vámi lidé sdílejí. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
+#~ "\n"
+#~ "Co otevřete, se uchovává jen v tomto počítači: nezobrazí se v Outlooku ani na vašich dalších zařízeních."
+
+#, fuzzy
+#~ msgid ""
+#~ "To send from {address}, MailCraft needs your permission to send from shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
+#~ "\n"
+#~ "Whether your mail goes as {address} or on its behalf is your organisation's choice. Until you allow it, the mail waits in its Outbox, and nothing is sent from your own address."
+#~ msgstr ""
+#~ "Aby mohl odesílat z {address}, potřebuje MailCraft vaše oprávnění k odesílání ze sdílených poštovních schránek. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
+#~ "\n"
+#~ "Zda pošta odejde jako {address}, nebo jejím jménem, rozhoduje vaše organizace. Dokud to nepovolíte, pošta čeká ve své složce Pošta k odeslání a z vaší vlastní adresy se nic neodešle."
+
+#, fuzzy
+#~ msgid ""
+#~ "To show the calendars of {address}, MailCraft needs your permission to read the calendars of shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
+#~ "\n"
+#~ "What you may see of a calendar is for its owner and your organisation to decide: this changes nothing about that. Until you allow it, nothing of {address}'s calendars is read."
+#~ msgstr ""
+#~ "Aby mohl zobrazit kalendáře {address}, potřebuje MailCraft vaše oprávnění číst kalendáře sdílených poštovních schránek. V prohlížeči se otevře stránka Microsoftu, která se vás jednou zeptá.\n"
+#~ "\n"
+#~ "Co z kalendáře smíte vidět, rozhoduje jeho vlastník a vaše organizace: na tom se nic nemění. Dokud to nepovolíte, z kalendářů {address} se nic nečte."
+
+#, fuzzy
+#~ msgid "Turn on attachment previews in File › Options."
+#~ msgstr "Náhledy příloh zapněte v Soubor › Možnosti."
+
+#, fuzzy
 #~ msgid "Your organisation doesn't allow MailCraft to keep rules on the server"
 #~ msgstr "Vaše organizace MailCraftu nepovoluje uchovávat pravidla na serveru"
 
 #, fuzzy
 #~ msgid "Your organisation doesn't allow MailCraft to keep tasks in step with Microsoft To Do"
 #~ msgstr "Vaše organizace MailCraftu nepovoluje synchronizovat úkoly s Microsoft To Do"
+
+#, fuzzy
+#~ msgid "Your organisation doesn't allow MailCraft to read shared mailboxes' calendars"
+#~ msgstr "Vaše organizace MailCraftu nepovoluje číst kalendáře sdílených poštovních schránek"
 
 #, fuzzy
 #~ msgid "Your organisation doesn't let MailCraft change automatic replies"
@@ -28008,10 +27772,6 @@ msgstr "−Řádky"
 #~ msgstr "Správce vaší organizace musí jednou schválit synchronizaci úkolů s Microsoft To Do: Soubor › Informace"
 
 #, fuzzy
-#~ msgid "Your organisation doesn't allow MailCraft to read shared mailboxes' calendars"
-#~ msgstr "Vaše organizace MailCraftu nepovoluje číst kalendáře sdílených poštovních schránek"
-
-#, fuzzy
 #~ msgid "Your organisation's administrator has to approve reading other people's calendars once: File › Info"
 #~ msgstr "Správce vaší organizace musí jednou schválit čtení kalendářů jiných lidí: Soubor › Informace"
 
@@ -28022,94 +27782,6 @@ msgstr "−Řádky"
 #, fuzzy
 #~ msgid "Your organisation's administrator has to approve reading shared mailboxes' calendars once: File › Info"
 #~ msgstr "Správce vaší organizace musí jednou schválit čtení kalendářů sdílených poštovních schránek: Soubor › Informace"
-
-#, fuzzy
-#~ msgid "Allow MailCraft to change your automatic replies on the page that opened in your browser…"
-#~ msgstr "Povolte MailCraftu měnit vaše automatické odpovědi na stránce, která se otevřela v prohlížeči…"
-
-#, fuzzy
-#~ msgid "Allow MailCraft to keep your rules on the server on the page that opened in your browser…"
-#~ msgstr "Povolte MailCraftu uchovávat vaše pravidla na serveru na stránce, která se otevřela v prohlížeči…"
-
-#, fuzzy
-#~ msgid "Allow MailCraft to keep your tasks in step with Microsoft To Do on the page that opened in your browser…"
-#~ msgstr "Povolte MailCraftu synchronizovat vaše úkoly s Microsoft To Do na stránce, která se otevřela v prohlížeči…"
-
-#, fuzzy
-#~ msgid "Ask for permission to change the rules on the server: Microsoft's page opens in your browser. Without it, new rules stay on this computer and nothing of them is sent."
-#~ msgstr "Požádejte o oprávnění měnit pravidla na serveru: v prohlížeči se otevře stránka Microsoftu. Bez něj nová pravidla zůstanou v tomto počítači a nic z nich se neodešle."
-
-#, fuzzy
-#~ msgid "Ask for permission to change your automatic replies: Microsoft's page opens in your browser. Reading them doesn't need it."
-#~ msgstr "Požádejte o oprávnění měnit automatické odpovědi: v prohlížeči se otevře stránka Microsoftu. Ke čtení není potřeba."
-
-#, fuzzy
-#~ msgid "Keep Rules on the Server"
-#~ msgstr "Uchovávat pravidla na serveru"
-
-#, fuzzy
-#~ msgid "Keep Tasks in Step with Microsoft To Do"
-#~ msgstr "Synchronizovat úkoly s Microsoft To Do"
-
-#, fuzzy
-#~ msgid "Rules stay on this computer for now: {error}"
-#~ msgstr "Pravidla zatím zůstávají v tomto počítači: {error}"
-
-#, fuzzy
-#~ msgid "Rules weren't allowed on the server: {error}"
-#~ msgstr "Pravidla na serveru nebyla povolena: {error}"
-
-#, fuzzy
-#~ msgid "Tasks weren't allowed to be kept in step: {error}"
-#~ msgstr "Synchronizace úkolů nebyla povolena: {error}"
-
-#, fuzzy
-#~ msgid "The colour is set in Outlook"
-#~ msgstr "Barva se nastavuje v Outlooku"
-
-#, fuzzy
-#~ msgid "This account doesn't keep its rules on its server"
-#~ msgstr "Tento účet neuchovává pravidla na svém serveru"
-
-#, fuzzy
-#~ msgid "Turn on attachment previews in File › Options."
-#~ msgstr "Náhledy příloh zapněte v Soubor › Možnosti."
-
-#, fuzzy
-#~ msgid "Open a message you sent as a new one"
-#~ msgstr "Otevřít odeslanou zprávu jako novou"
-
-#, fuzzy
-#~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
-#~ msgstr "Vytvářím index, ze kterého hledání odpovídá; dokud nebude hotový, starší pošta se prohledává pomaleji"
-
-#, fuzzy
-#~ msgid "Download messages in full:"
-#~ msgstr "Stahovat zprávy celé:"
-
-#, fuzzy
-#~ msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
-#~ msgstr "Pro účty IMAP. Účty Microsoft a účty serveru Exchange uchovávají poštu podle volby Pošta uchovávaná offline v Soubor › Informace."
-
-#, fuzzy
-#~ msgid "Mail to keep offline:"
-#~ msgstr "Pošta uchovávaná offline:"
-
-#, fuzzy
-#~ msgid "Permissions"
-#~ msgstr "Oprávnění"
-
-#, fuzzy
-#~ msgid "Policy"
-#~ msgstr "Zásady"
-
-#, fuzzy
-#~ msgid "Sign in on the page that opened in your browser…"
-#~ msgstr "Přihlaste se na stránce, která se otevřela v prohlížeči…"
-
-#, fuzzy
-#~ msgid "Still indexing: some older mail is searched more slowly"
-#~ msgstr "Stále indexuji: některá starší pošta se prohledává pomaleji"
 
 #, fuzzy
 #~ msgid "it changes an account or a sign-in"
@@ -28137,3 +27809,4 @@ msgstr "−Řádky"
 #, fuzzy
 #~ msgid "Show a notification when a calendar reminder falls due. Off, none is shown; the reminders themselves stay in the calendar."
 #~ msgstr "Zobrazit oznámení, když nastane čas připomenutí v kalendáři. Pokud je vypnuto, nezobrazí se žádné; samotná připomenutí zůstávají v kalendáři."
+

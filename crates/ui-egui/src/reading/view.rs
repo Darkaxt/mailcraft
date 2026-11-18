@@ -298,10 +298,6 @@ struct Key {
     /// In whole points.
     width: u32,
     dark: bool,
-    /// A light page ([`on_light_page`]) in a dark window: turned on as the window turns dark,
-    /// `dark` (the page's) stays as it was. In the light theme the page is the window's own, and
-    /// turning the switch lays nothing out again.
-    light: bool,
     /// High contrast, which the colours of the text are worked out for and which leaves out the
     /// pictures behind boxes ([`super::backdrop::tint`]): turning it on or off lays out again.
     high_contrast: bool,
@@ -610,7 +606,6 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
         width: width as u32,
         zoom: zoom.to_bits(),
         dark: t.dark,
-        light: light && Tokens::get(&ctx).dark,
         high_contrast: t.high_contrast,
         palette: [t.surface, t.text, t.text_dim, t.accent_text, t.border_strong, t.panel],
         scale: ctx.pixels_per_point().to_bits(),

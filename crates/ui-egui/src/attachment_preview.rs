@@ -20,6 +20,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, mpsc::Receiver};
 use std::time::Duration;
 
+use mailcraft_engine::{Module, Pane};
 use mailcraft_model::{Attachment, Body, Id, Message};
 use serde_json::{Value, json};
 
@@ -351,17 +352,10 @@ pub(crate) struct Preview {
 pub(crate) struct Click {
     origin: Origin,
     index: usize,
-    window: u64,
     viewport: egui::ViewportId,
     spot: u64,
     mailbox: u64,
     attachment: Attachment,
-    return_tab: Option<String>,
-    warn: bool,
-}
-
-pub(crate) struct Click {
-    target: Selection,
     at: f64,
 }
 
@@ -434,6 +428,7 @@ pub(crate) fn options(app: &mut MailApp, ui: &mut egui::Ui) {
     app.hit.add("attachmentPreviewOption", 0, response.rect);
     if response.changed() && !app.ui.attachment_previews {
         app.attachment_preview = None;
+        app.pending_attachment_preview = None;
     }
 }
 
@@ -572,8 +567,8 @@ pub(crate) fn open_in(app: &mut MailApp, viewport: egui::ViewportId, origin: Ori
     let name = mailcraft_engine::opening::file_name(&part.name);
     let size = mailcraft_model::size_label_in(crate::i18n::current(), part.size() as u64);
     let read = app.session.attachment_reader(part).map_err(|_| Error::Invalid.text())?;
-    let selection = Selection::new(app, viewport, id, index).ok_or_else(|| Error::Invalid.text())?;
-    select(app, selection);
+    let attachment = part.clone();
+    // Dropping a preview tells the worker to stop before the next render starts.
     app.attachment_preview = None;
     let mut preview = Preview {
         origin,
@@ -948,6 +943,7 @@ fn draw(app: &mut MailApp, ui: &mut egui::Ui, in_place: bool) {
     let Some(preview) = app.attachment_preview.as_mut() else { return };
     let key = preview.origin.key();
     let mut turn = None;
+    let mut close = false;
     egui::Frame::NONE.fill(tokens.panel).inner_margin(egui::Margin::symmetric(12, 8)).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.spacing_mut().item_spacing = egui::vec2(8.0, 6.0);

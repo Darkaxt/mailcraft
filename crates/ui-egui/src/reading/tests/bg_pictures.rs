@@ -244,10 +244,12 @@ fn text_over_a_picture_shown_as_it_is_keeps_its_colour() {
             assert_eq!(ink_of(&laid, "Autumn sale"), Color32::WHITE);
         }
     });
-    // In the dark theme the cream is turned dark and the picture dimmed with it: white stays.
+    // In the dark theme the cream is turned dark and the picture dimmed with it: white stays
+    // white (the fork's dark palette writes it as the window's own near-white text colour).
     in_frame(true, |ctx| {
         for message in [&m, &dark_fallback, &table] {
-            assert_eq!(ink_of(&laid(ctx, message, false), "Autumn sale"), Color32::WHITE);
+            let ink = ink_of(&laid(ctx, message, false), "Autumn sale");
+            assert!(ink.r() >= 0xE0 && ink.g() >= 0xE0 && ink.b() >= 0xE0, "{ink:?}");
         }
     });
 }

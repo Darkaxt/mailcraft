@@ -93,6 +93,7 @@ const MAX_VISITORS: usize = 16;
 const MAX_PORT_TRIES: usize = 32;
 
 /// Whether a browser goes to `port` on this computer ([`blocked_port`]).
+#[cfg(test)]
 fn browser_opens(port: u16) -> bool {
     !blocked_port(port)
 }

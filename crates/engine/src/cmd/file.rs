@@ -396,7 +396,10 @@ fn export_message(s: &mut Session, v: &Value) -> CmdResult {
     let id = p::message_strict(v)?.or(s.sel.focus()).ok_or_else(|| fail("select a message first"))?;
     let Some(m) = s.mailbox.message(id) else { return Err(failed!("no message with id {id}", id)) };
     let (name, kind) = (eml_name(m), s.mailbox.account(m.account).map(|a| a.kind));
-    let copy = s.take_for_save(id);
+    // A ready `mail.exportEml` snapshot (`token`) is what is written: the agent prepared it, and
+    // its provenance is the answer's.
+    let snapshot = v.get("token").is_some();
+    let copy = if snapshot { None } else { s.take_for_save(id) };
     if let Some(as_received::ServerCopy::Came(bytes)) = copy {
         return saved_as_received(v, &name, bytes, "server");
     }
@@ -405,7 +408,7 @@ fn export_message(s: &mut Session, v: &Value) -> CmdResult {
         return Err(e);
     }
     let why = as_received::rebuilt_why(kind, m, copy.as_ref());
-    if m.has_original() && !m.parts_removed {
+    if !snapshot && m.has_original() && !m.parts_removed {
         let bytes = s.content(id, crate::Part::Original)?;
         return saved_as_received(v, &name, std::sync::Arc::unwrap_or_clone(bytes), "kept");
     }

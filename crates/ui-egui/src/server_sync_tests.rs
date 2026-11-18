@@ -45,6 +45,7 @@ fn window() -> (MailApp, Id, SignIns, Answer) {
     remote::apply_categories(&mut s, &download(owner)).unwrap();
     let mut app = MailApp::new(s, Services::default());
     app.autosave = false;
+    app.ui.todo_sync_accounts.push(OWNER.into());
     app.tokens.insert(owner, tokens("own-access", "ref-1"));
     let tasks: Arc<Mutex<VecDeque<TasksResult>>> = Default::default();
     tasks.lock().unwrap().push_back(TasksResult { account: owner, consent_needed: true, ..Default::default() });
@@ -73,12 +74,13 @@ fn window() -> (MailApp, Id, SignIns, Answer) {
 fn both_need_it(app: &mut MailApp, owner: Id) {
     assert!(app.tasks_tick_at(0.0));
     app.poll_tasks();
-    // The to-dos' question is up; the categories' job runs meanwhile and joins it.
+    // (The fork: To Do never asks by itself.) The categories' job puts the one question, for both.
     app.tasks_tick_at(1.0);
-    assert!(app.dialog.is_some());
+    assert!(app.dialog.is_none());
     assert!(app.categories_tick_at(2.0));
     app.poll_categories();
     app.categories_tick_at(3.0);
+    assert!(app.dialog.is_some());
     app.tasks_tick_at(3.0);
     assert_eq!(app.session.driver.tasks.perm.get(&owner), Some(&Permission::Asking));
     assert!(matches!(app.category_sync.perm.get(&owner), Some(Permission::Needed | Permission::Asking)));
@@ -170,9 +172,10 @@ fn the_question_is_the_owners_alone() {
     assert!(app.run("ui.allowSync", json!({"account": 9_999, "confirmed": true})).is_err());
     assert!(app.run("ui.allowSync", json!({"account": 0, "confirmed": true})).is_err());
     assert!(sign_ins.lock().unwrap().is_empty());
-    // An agent asks the owner first, as for adding an account.
-    use mailcraft_engine::agent::{Access, Class, access};
-    assert_eq!(access("ui.allowSync"), Some(Access::Owner(Class::Accounts)));
+    // (The fork: only destructive account changes ask the owner. Opening Microsoft's page is
+    // safe for an agent; the owner still says yes on the page, and nobody else can.)
+    use mailcraft_engine::agent::{Access, access};
+    assert_eq!(access("ui.allowSync"), Some(Access::Safe));
 }
 
 #[test]
@@ -200,6 +203,7 @@ fn a_microsoft_account_still_on_imap_is_asked_only_for_its_to_dos_and_automatic_
     let owner = s.run("account.add", &added).unwrap()["id"].as_u64().unwrap();
     let mut app = MailApp::new(s, Services::default());
     app.autosave = false;
+    app.ui.todo_sync_accounts.push(OWNER.into());
     app.tokens.insert(owner, tokens("own-access", "ref-1"));
     app.services.graph_tasks = Some(Box::new(move |_: TasksJob| {
         let (tx, rx) = mpsc::channel();
@@ -214,6 +218,8 @@ fn a_microsoft_account_still_on_imap_is_asked_only_for_its_to_dos_and_automatic_
     assert!(app.tasks_tick_at(0.0));
     app.poll_tasks();
     app.tasks_tick_at(1.0);
+    // (The fork: To Do never asks by itself; the owner asks in File › Info.)
+    assert!(app.dialog.is_none() && app.ask_sync_again(owner));
     let Some(Dialog::Confirm { command, ask, .. }) = &app.dialog else { panic!("asked") };
     assert_eq!(command, "ui.allowSync");
     let tip = app.sync_tip(owner);
@@ -273,6 +279,8 @@ fn mailbox_settings_allowed_already_are_left_out_of_the_question() {
         assert!(app.tasks_tick_at(0.0));
         app.poll_tasks();
         app.tasks_tick_at(1.0);
+        // (The fork: To Do never asks by itself; the owner asks in File › Info.)
+        assert!(app.dialog.is_none() && app.ask_sync_again(owner), "{given}");
         let Some(Dialog::Confirm { command, ask, .. }) = &app.dialog else { panic!("{given}: asked") };
         assert_eq!(command, "ui.allowSync");
         let tip = app.sync_tip(owner);

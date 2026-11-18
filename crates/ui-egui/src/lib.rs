@@ -3239,16 +3239,19 @@ impl MailApp {
             "ui.cancelSignIn" => match self.signing_in.take() {
                 Some(s) => {
                     s.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
-                    if s.rules {
-                        self.session.driver.rules.perm.insert(s.account, rule_sync::Permission::Needed);
-                    }
                     self.session.sync_status = tl!("Sign-in cancelled").to_string();
                     // The one page for an older sign-in: what waited for it takes it as a no (not
                     // put again by itself), and a shared mailbox being added is taken off again
                     // with the reason, not left checking.
                     if s.sync {
+                        // (Cancelling isn't a no: rules the owner asked to allow wait as they
+                        // were, so an explicit request can start again — the fork's rule.)
+                        let rules_asked = self.session.driver.rules.perm.get(&s.account) == Some(&rule_sync::Permission::Asking);
                         self.sync_asking.remove(&s.account);
                         self.sync_not_now(s.account);
+                        if rules_asked {
+                            self.session.driver.rules.perm.insert(s.account, rule_sync::Permission::Needed);
+                        }
                         if let Some(shared) = s.shared.filter(|shared| self.shared_checking.contains(shared)) {
                             self.finish_shared_check(shared, Err(tl!("Sign-in cancelled").to_string()));
                         }

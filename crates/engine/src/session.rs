@@ -4061,9 +4061,6 @@ impl Session {
             // A to-do in a list shared with other people that the step changes, brings back or
             // removes.
             || crate::agent::changes_shared_tasks(now, to)
-            // A to-do the step puts in an account's To Do, or the owner's answer about local
-            // to-dos.
-            || crate::agent::places_tasks(now, to)
     }
 
     /// The categories of a list kept in step with Outlook, kept on this computer alone now, that

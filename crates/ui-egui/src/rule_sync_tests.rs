@@ -104,7 +104,7 @@ fn headless_rules_permission_request_only_starts_one_rules_authorization() {
     let answer = permission_request(&mut app, owner);
     assert_eq!(answer["ok"], true, "{answer}");
     assert_eq!(answer["result"]["pending"], "signIn");
-    assert_eq!(*sign_ins.lock().unwrap(), [(owner, true, false)]);
+    assert_eq!(*sign_ins.lock().unwrap(), [(owner, true)]);
     assert_eq!(app.session.driver.rules.perm.get(&owner), Some(&Permission::Asking));
     assert_eq!(app.tokens[&owner].refresh, "ref-1");
     assert_eq!(serde_json::to_value(&app.session.mailbox.rules).unwrap(), serde_json::to_value(&before).unwrap());
@@ -139,7 +139,7 @@ fn headless_rules_permission_request_preserves_other_work_and_offline_state() {
     let oauth = app.session.mailbox.account(owner).unwrap().oauth.clone().unwrap();
     app.begin_sign_in(owner, oauth, OWNER, String::new(), false, true).unwrap();
     assert_eq!(permission_request(&mut app, owner)["ok"], false);
-    assert_eq!(*sign_ins.lock().unwrap(), [(owner, false, false)]);
+    assert_eq!(*sign_ins.lock().unwrap(), [(owner, false)]);
 }
 
 #[test]

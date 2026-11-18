@@ -541,7 +541,6 @@ const SEND: &[&str] = &[
     // category it sends, so it is asked about (`tasks.sendLocal`, the owner's answer for all the
     // tasks kept here, is never an agent's).
     "category.addToOutlook",
-    "ui.downloadPictures",
     // Unsubscribes from a list: one click reaches its server, by mail writes to it.
     "ui.unsubscribe",
     "ui.reportProblem",
@@ -887,11 +886,6 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
     if shared_task(s, id, params).is_some() || shared_category(s, id, params) {
         return Access::Owner(Class::Send);
     }
-    // A to-do put in another account's To Do than the owner's own would go to is on that server
-    // at once, as mail moved there is (#632).
-    if new_task_onto(s, id, params).is_some() {
-        return Access::Owner(Class::Send);
-    }
     // A rename on a list kept in step with Outlook makes the new name there and deletes the old
     // one (#661): the owner says yes first, as for sending what is kept on this computer alone.
     if id == "category.rename" && renames_in_outlook(s, params) {
@@ -908,14 +902,9 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
         id,
         "rules.add" | "rules.edit" | "rules.enable" | "rules.remove" | "rules.move" | "rules.keepOnServer" | "rules.run" | "rules.fromMessage"
     ) {
-        // A rule its server has is deleted there, where undo doesn't reach and MailCraft may not be
-        // able to make it again (#566), as `tasks.delete`; so is one that went to be made there and
-        // had no answer, which the server may have.
-        let there = |x: &mailcraft_model::Rule| x.on_server() || x.unanswered;
-        let deleted_there = id == "rules.remove" && p::id(params, "id").is_some_and(|r| s.mailbox.rules.iter().any(|x| x.id == r && there(x)));
         // Filing into the owner's own accounts is reversible and SAFE; a rule moving or copying
         // into a shared mailbox discloses mail to other people, as mail.move there does.
-        return if deleted_there || rule_change_deletes_mail(s, id, params) {
+        return if rule_change_deletes_mail(s, id, params) {
             Access::Owner(Class::Delete)
         } else if rules_onto_another_server(s, id, params, true) {
             Access::Owner(Class::Send)
@@ -1681,10 +1670,6 @@ pub fn also(s: &Session, id: &str, params: &Value, class: Class) -> Vec<Class> {
             if class != Class::Delete && s.undo_deletes(redo) {
                 more.push(Class::Delete);
             }
-            // Rules and the like put back are a change of settings, whatever else the step does.
-            if class != Class::Settings && s.undo_changes_settings(redo) {
-                more.push(Class::Settings);
-            }
             more
         }
         // A category a to-do in a shared list has is deleted as `send` asks; one that goes from
@@ -1698,9 +1683,7 @@ pub fn also(s: &Session, id: &str, params: &Value, class: Class) -> Vec<Class> {
             if class != Class::Send && makes_in_outlook(s, id, params).is_some() {
                 more.push(Class::Send);
             }
-            let there = |x: &mailcraft_model::Rule| x.on_server() || x.unanswered;
-            let deleted_there = id == "rules.remove" && p::id(params, "id").is_some_and(|r| s.mailbox.rules.iter().any(|x| x.id == r && there(x)));
-            if class != Class::Delete && (deleted_there || rule_change_deletes_mail(s, id, params)) {
+            if class != Class::Delete && rule_change_deletes_mail(s, id, params) {
                 more.push(Class::Delete);
             }
             // A change of rules is a change of settings, whatever else it is asked as.

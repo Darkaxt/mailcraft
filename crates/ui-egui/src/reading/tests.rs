@@ -1700,8 +1700,8 @@ fn a_long_list_of_remembered_senders_is_folded_and_paged() {
     let (mut app, _) = app_with(vec![]);
     app.ui.picture_senders = (0..45).map(|i| format!("sender{i:02}@shop.example")).collect();
     app.ui.picture_domains = vec!["kite.example".into()];
-    // (Tall enough for the page's buttons to be on screen to be clicked.)
-    let mut harness = window(app, (1200.0, 1600.0));
+    // (Tall enough for the page's buttons to be on screen to be clicked: the fork's Options page is longer.)
+    let mut harness = window(app, (1200.0, 2600.0));
     harness.state_mut().execute("ui.backstage", json!({"value": true, "page": "options"})).unwrap();
     harness.run_steps(3);
     // Folded, with the count; the rows of the page below are still there.

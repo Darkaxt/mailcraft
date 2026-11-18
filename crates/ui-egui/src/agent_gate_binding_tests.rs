@@ -222,6 +222,7 @@ const ROWS: &[(&str, &str, Setup)] = &[
     ),
     ("rules.enable", r#"{"id": $rule, "value": true}"#, Setup::DisabledDeletingRule),
     ("rules.run", "{}", Setup::DeletingRule),
+    ("rules.remove", r#"{"id": $rule}"#, Setup::DeletingRule),
     ("rules.fromMessage", r#"{"folder": $deleted}"#, Setup::None),
     ("rules.move", r#"{"id": $rule, "direction": "up"}"#, Setup::DeletingRule),
     ("rules.keepOnServer", r#"{"id": $rule}"#, Setup::DeletingRule),

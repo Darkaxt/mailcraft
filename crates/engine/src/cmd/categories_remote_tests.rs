@@ -2707,8 +2707,11 @@ fn an_agents_undo_of_an_address_change_sends_nothing_the_old_server_has_and_says
     read_as(&mut s, a, "other@example.org", vec![tag("Theirs", GREEN)]);
     s.run("sync.categoryWrites", &json!({"account": a, "allowed": true})).unwrap();
     assert!(s.mailbox.category_is_local(a, "Red category"));
+    // (The fork asks no Accounts question for a reversible account edit; whatever is asked must
+    // not claim to send the categories.)
     match check(&s, "edit.undo", &json!({}), &[]) {
-        Verdict::Ask(Class::Accounts, text) => assert!(!text.contains("sends the categor"), "{text}"),
+        Verdict::Ask(_, text) => assert!(!text.contains("sends the categor"), "{text}"),
+        Verdict::Run => {}
         other => panic!("{other:?}"),
     }
     assert!(s.undo_sends_categories(false).is_empty());
@@ -2853,7 +2856,8 @@ fn a_rule_that_moves_mail_before_it_categorises_it_names_the_list_the_mail_lands
     s.run("rules.run", &json!({"folder": inbox})).unwrap();
     assert_eq!(s.mailbox.message(m).unwrap().account, b);
     assert_eq!(s.mailbox.message(headers).unwrap().account, a);
-    assert!(s.mailbox.category_of(b, "Zed").is_some() && s.mailbox.category_of(a, "Zed").is_some());
+    // (In the fork a rule waits for the whole of a headers-only message before acting on it.)
+    assert!(s.mailbox.category_of(b, "Zed").is_some());
 }
 
 /// The rules run in one order on mail, those of the account it came to, wherever an earlier one
@@ -2982,10 +2986,10 @@ fn an_undo_or_redo_of_a_rule_change_asks_for_the_categories_the_rules_may_then_g
     assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Settings]), Verdict::Run);
 }
 
-/// Deleting a rule its server has is a delete, and while a rule that runs with it gives mail a
-/// name new on a list kept in step with Outlook, a send too: both are asked at once (#661).
+/// Deleting a rule its server has deletes no mail, so it is no delete in the fork; while a rule
+/// that runs with it gives mail a name new on a list kept in step with Outlook, it is a send (#661).
 #[test]
-fn deleting_a_server_rule_that_lets_another_give_a_new_category_asks_send_and_delete() {
+fn deleting_a_server_rule_that_lets_another_give_a_new_category_asks_send() {
     let (mut s, a) = rig(vec![tag("Red category", RED)], true);
     let server = mailcraft_model::ServerRule { id: "srv-1".into(), synced_enabled: true, ..Default::default() };
     s.mailbox.rules = vec![
@@ -3012,17 +3016,15 @@ fn deleting_a_server_rule_that_lets_another_give_a_new_category_asks_send_and_de
         },
     ];
     let params = json!({"id": 911});
-    assert!(!matches!(check(&s, "rules.remove", &params, &[Class::Send]), Verdict::Run), "it deletes a rule on its server");
-    assert!(!matches!(check(&s, "rules.remove", &params, &[Class::Delete]), Verdict::Run), "it makes a category in Outlook");
-    assert!(matches!(check(&s, "rules.remove", &params, &[Class::Send, Class::Delete]), Verdict::Ask(Class::Settings, _)), "it changes the rules");
-    assert_eq!(check(&s, "rules.remove", &params, &[Class::Send, Class::Delete, Class::Settings]), Verdict::Run);
+    assert!(matches!(check(&s, "rules.remove", &params, &[]), Verdict::Ask(Class::Send, _)), "it makes a category in Outlook");
+    assert_eq!(check(&s, "rules.remove", &params, &[Class::Send]), Verdict::Run, "removing a rule deletes no mail");
 }
 
-/// A rule call asked about as a send (a category made in Outlook) is a change of rules too, and
-/// so is an undo or redo that puts back rules, whatever else it is asked about as: `--allow send`
-/// alone lets neither run, and one question covers both (#661).
+/// In the fork, rules that delete no mail are no change of settings the owner is asked about: a
+/// rule call or an undo of rules asked about as a send (a category made in Outlook) needs nothing
+/// else (#661).
 #[test]
-fn a_rule_call_or_an_undo_asked_about_for_something_else_needs_settings_too() {
+fn a_rule_call_or_an_undo_asked_about_as_a_send_needs_nothing_else() {
     let (mut s, a) = rig(vec![tag("Red category", RED)], true);
     let rule = |id: Id, actions: Vec<Action>| Rule {
         id,
@@ -3036,26 +3038,12 @@ fn a_rule_call_or_an_undo_asked_about_for_something_else_needs_settings_too() {
     s.mailbox.rules = vec![rule(902, vec![Action::Flag]), rule(903, vec![Action::Categorize("Zed".into())])];
     let tag_it = json!({"name": "T", "account": a, "conditions": [{"type": "subjectContains", "value": "z"}], "actions": [{"type": "categorize", "value": "Zed"}]});
     for (command, params) in [("rules.remove", json!({"id": 902})), ("rules.add", tag_it)] {
-        assert!(matches!(check(&s, command, &params, &[Class::Send]), Verdict::Ask(Class::Settings, _)), "{command}");
-        assert_eq!(check(&s, command, &params, &[Class::Send, Class::Settings]), Verdict::Run, "{command}");
+        assert!(matches!(check(&s, command, &params, &[]), Verdict::Ask(Class::Send, _)), "{command}");
+        assert_eq!(check(&s, command, &params, &[Class::Send]), Verdict::Run, "{command}");
     }
-    // Undone: the rules it puts back are said with the categories they give.
     s.run("rules.remove", &json!({"id": 903})).unwrap();
-    match check(&s, "edit.undo", &json!({}), &[Class::Send]) {
-        Verdict::Ask(Class::Settings, text) => {
-            assert!(text.contains("puts the rules, signatures or Safe and Blocked Senders back") && text.contains("Zed"), "{text}")
-        }
-        other => panic!("{other:?}"),
-    }
-    assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Send, Class::Settings]), Verdict::Run);
-    // A step that also puts back the accounts: the accounts, and the rules too.
-    if let Some(account) = s.history.last_mut().and_then(|step| step.mailbox.accounts.first_mut()) {
-        account.name = "Before".into();
-    }
-    assert_eq!(s.undo_reverts(false), Some(Class::Accounts));
-    assert!(crate::agent::also(&s, "edit.undo", &json!({}), Class::Accounts).contains(&Class::Settings));
-    assert!(crate::agent::describe(&s, "edit.undo", &json!({})).contains("the rules, signatures or Safe and Blocked Senders"));
-    // And a change that writes to people that it puts back is said as well.
+    assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Send]), Verdict::Run);
+    // A change that writes to people that it puts back is said.
     if let Some(step) = s.history.last_mut() {
         step.mailbox.event_changes.push(mailcraft_model::remote::EventChange { account: a, send: true, ..Default::default() });
     }
@@ -3213,17 +3201,17 @@ fn a_meeting_with_a_contact_kept_on_this_computer_is_not_said_to_make_a_category
 }
 
 /// An undo that puts an account back as a Microsoft account, with a category of its list still to
-/// go to Outlook, needs `send` too, not only `accounts`, and asks both at once (#661).
+/// go to Outlook, needs `send` (#661).
 #[test]
 fn an_undo_that_puts_back_an_account_and_what_it_sends_needs_send_too() {
     let (mut s, a) = rig(vec![tag("Red category", RED)], true);
     s.run("category.set", &json!({"account": a, "name": "Travel", "color": GREEN.hex()})).unwrap();
     s.run("account.edit", &json!({"id": a, "kind": "imap"})).unwrap();
-    assert_eq!(s.undo_reverts(false), Some(Class::Accounts));
+    // (A reversible account edit asks nothing in the fork; what it sends is the question.)
+    assert_eq!(s.undo_reverts(false), Some(Class::Send));
     assert!(!s.undo_sends_categories(false).is_empty());
-    assert!(!matches!(check(&s, "edit.undo", &json!({}), &[Class::Accounts]), Verdict::Run), "it sends a category to Outlook");
-    assert_eq!(crate::agent::also(&s, "edit.undo", &json!({}), Class::Accounts), [Class::Send]);
-    assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Accounts, Class::Send]), Verdict::Run);
+    assert!(!matches!(check(&s, "edit.undo", &json!({}), &[]), Verdict::Run), "it sends a category to Outlook");
+    assert_eq!(check(&s, "edit.undo", &json!({}), &[Class::Send]), Verdict::Run);
 }
 
 /// The question about deleting a category says it goes from Outlook only when it does: not for

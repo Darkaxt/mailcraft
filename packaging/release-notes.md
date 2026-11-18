@@ -1,3 +1,10 @@
+**MailCraft 0.12.15 in short** — the latest MailCraft improvements, merged in
+- Brings in 484 changes from the main MailCraft project. Among them: one message that fails to download no longer stops Send/Receive; File › Info says which messages were left out, with Try again.
+- Large mailboxes save with Save As without running out of memory, and Save Message As writes the message exactly as it was received.
+- Microsoft accounts ask for their permissions on one sign-in page.
+- Pasted tables survive Find and Replace.
+- Everything from 0.12.14 stays (folder changes that reach the server, the attachment preview pane, recent folders).
+
 **MailCraft 0.12.14 in short** — folders that reach the server, previews beside your mail
 - Renaming, moving or deleting a folder of a Gmail or other IMAP account now changes it on the server too. A deleted folder's mail goes to Deleted Items first, and the folder goes in the next Send/Receive, unless new mail arrived in it. The Inbox and the server's own folders are never changed.
 - A folder moved into Gmail's Trash is deleted instead, so no label is left under Trash.

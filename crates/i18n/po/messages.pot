@@ -509,11 +509,6 @@ msgid "A port is a number from 1 to 65535"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "A preview may omit some content from the original file."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/import_pst.rs
 msgid "A report is written beside your mailbox."
 msgstr ""
@@ -1114,38 +1109,8 @@ msgid "Allow MailCraft to keep this mailbox in step with Outlook on the page tha
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/auto_replies.rs
-msgid "Allow MailCraft to change your automatic replies on the page that opened in your browser…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "Allow MailCraft to keep your rules on the server on the page that opened in your browser…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Allow MailCraft to keep your tasks in step with Microsoft To Do on the page that opened in your browser…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-msgid "Allow MailCraft to read other people's calendars on the page that opened in your browser…"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/shared_mailboxes.rs
 msgid "Allow MailCraft to read shared mailboxes on the page that opened in your browser…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid "Allow MailCraft to read shared mailboxes' calendars on the page that opened in your browser…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid "Allow MailCraft to send from shared mailboxes on the page that opened in your browser…"
 msgstr ""
 
 #. interface
@@ -1561,7 +1526,7 @@ msgid "Aqua"
 msgstr ""
 
 #. android, command label, interface, name, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/swipe.rs
 msgid "Archive"
 msgstr ""
 
@@ -1647,11 +1612,6 @@ msgstr ""
 msgid "Ask before downloading this sender's pictures again"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Ask before previewing this type of file"
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt
 msgid "Ask first again"
@@ -1678,16 +1638,6 @@ msgid "Ask for permission to keep your tasks, rules, automatic replies and categ
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Ask for permission to change the rules on the server: Microsoft's page opens in your browser. Without it, new rules stay on this computer and nothing of them is sent."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Ask for permission to change your automatic replies: Microsoft's page opens in your browser. Reading them doesn't need it."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/server_sync.rs
 msgid "Ask for permission to read and change your To Do lists and tasks: Microsoft's page opens in your browser. Without it, tasks stay on this computer."
 msgstr ""
@@ -1700,11 +1650,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Ask for these messages again at the next Send / Receive. The mail on the server is untouched, and nothing is lost if they fail again."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Ask for permission to read the calendars of shared mailboxes: Microsoft's page opens in your browser. Without it, nothing of this mailbox's calendars is read."
 msgstr ""
 
 #. interface
@@ -2184,6 +2129,11 @@ msgid "Before anything changes, a copy of your whole mailbox is saved next to it
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Best match on top"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 msgid "Binary assets added"
 msgstr ""
@@ -2191,11 +2141,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/credits.rs
 msgid "Binary assets removed"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Best match on top"
 msgstr ""
 
 #. interface
@@ -2261,11 +2206,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/recent_attachments.rs
 msgid "Browse…"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"
 msgstr ""
 
 #. android
@@ -3034,11 +2974,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/mail_view.rs
 msgid "Clear search (Esc)"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/reading.rs
-msgid "Click to select {name}; double-click to open it"
 msgstr ""
 
 #. interface
@@ -3852,7 +3787,7 @@ msgid "Delayed until {when}"
 msgstr ""
 
 #. android, command label, interface, name, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/signatures.rs crates/ui-egui/src/tasks_view.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/signatures.rs crates/ui-egui/src/swipe.rs crates/ui-egui/src/tasks_view.rs
 msgid "Delete"
 msgstr ""
 
@@ -4318,11 +4253,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/dialogs.rs
 msgid "Download in all mail"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Download messages in full:"
 msgstr ""
 
 #. interface
@@ -5404,11 +5334,6 @@ msgstr ""
 #. command label, ribbon
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
 msgid "Font Size"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "For IMAP accounts. Microsoft and Exchange server accounts keep mail by Mail to keep offline, in File › Info."
 msgstr ""
 
 #. interface
@@ -7048,16 +6973,6 @@ msgid "Keep Rule on Server"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "Keep Rules on the Server"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Keep Tasks in Step with Microsoft To Do"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/graph_switch.rs
 msgid "Keep Waiting"
 msgstr ""
@@ -7178,13 +7093,13 @@ msgid "Kept in {path}, saved as you go."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/forms.rs
-msgid "Kept on this computer only"
+#: crates/ui-egui/src/backstage.rs
+msgid "Kept offline: {offline} · Downloaded in full: {size}"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Kept offline: {offline} · Downloaded in full: {size}"
+#: crates/ui-egui/src/forms.rs
+msgid "Kept on this computer only"
 msgstr ""
 
 #. interface
@@ -7258,13 +7173,13 @@ msgid "Last Week"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/credits.rs
-msgid "Last commit"
+#: crates/ui-egui/src/backstage.rs
+msgid "Last backup: {when}, {size}"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Last backup: {when}, {size}"
+#: crates/ui-egui/src/credits.rs
+msgid "Last commit"
 msgstr ""
 
 #. interface
@@ -7618,11 +7533,6 @@ msgid "Mail from another mailbox can't go into an Outbox: the next Send/Receive 
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid "Mail from the shared mailbox waits: {error}"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/filing.rs
 msgid "Mail from {sender} usually goes to {folder}."
 msgstr ""
@@ -7680,11 +7590,6 @@ msgstr ""
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Mail to keep offline"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "Mail to keep offline:"
 msgstr ""
 
 #. android
@@ -8749,7 +8654,7 @@ msgid "My outgoing server needs no sign-in"
 msgstr ""
 
 #. interface, name
-#: crates/engine/src/session.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/search_folders.rs
+#: crates/engine/src/session.rs crates/ui-egui/src/credits.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/search_folders.rs
 msgid "Name"
 msgstr ""
 
@@ -9408,11 +9313,6 @@ msgstr ""
 msgid "No preview helper is available for this attachment."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "No preview is available for this attachment."
-msgstr ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Hosted.kt
 msgid "No program can call this number."
@@ -9563,8 +9463,8 @@ msgstr ""
 msgid "Nobody, or more than one of your contacts, matches: {names}"
 msgstr ""
 
-#. android, interface, what a command says
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt crates/engine/src/cmd/tasks/status.rs crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/date_picker.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/tasks_view.rs
+#. android, interface, name, what a command says
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt crates/engine/src/cmd/tasks/status.rs crates/ui-egui/src/account_setup.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/date_picker.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/swipe.rs crates/ui-egui/src/tasks_view.rs
 msgid "None"
 msgstr ""
 
@@ -10339,11 +10239,6 @@ msgstr ""
 msgid "Open a mailbox of your organisation that you were given Full Access to, such as a team's, under this account"
 msgstr ""
 
-#. ribbon
-#: crates/ui-egui/src/ribbon.rs
-msgid "Open a message you sent as a new one"
-msgstr ""
-
 #. interface
 #: crates/ui-egui/src/attachment_open.rs
 msgid "Open anyway"
@@ -10515,13 +10410,13 @@ msgid "Or is it one of these?"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/ribbon.rs
-msgid "Orange"
+#: crates/ui-egui/src/nav.rs
+msgid "Or type one, then Enter"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/nav.rs
-msgid "Or type one, then Enter"
+#: crates/ui-egui/src/ribbon.rs
+msgid "Orange"
 msgstr ""
 
 #. interface
@@ -10597,11 +10492,6 @@ msgstr ""
 #. what a command says
 #: crates/engine/src/cmd/calendar_opened.rs
 msgid "Other people's calendars can be opened under a Microsoft work or school account"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-msgid "Other people's calendars weren't allowed: {error}"
 msgstr ""
 
 #. android
@@ -10834,11 +10724,6 @@ msgstr ""
 msgid "People to invite"
 msgstr ""
 
-#. interface, name
-#: crates/ui-egui/src/folder_properties.rs
-msgid "Permissions"
-msgstr ""
-
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PeopleScreen.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 msgid "Phone"
@@ -10991,11 +10876,6 @@ msgstr ""
 msgid "Point at one to see why."
 msgstr ""
 
-#. interface, name
-#: crates/ui-egui/src/folder_properties.rs
-msgid "Policy"
-msgstr ""
-
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 msgid ""
@@ -11065,11 +10945,6 @@ msgstr ""
 msgid "Preview Attachment"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Preview File"
-msgstr ""
-
 #. command label
 #: crates/engine/src/cmd/archive.rs
 msgid "Preview Local Archive"
@@ -11108,11 +10983,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
 msgid "Preview attachments with local PhotoCraft"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Preview files only when you trust the sender."
 msgstr ""
 
 #. interface
@@ -11377,6 +11247,11 @@ msgstr ""
 msgid "Reading Pane"
 msgstr ""
 
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "Reading pane"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/chrome.rs
 msgid "Reading pane at the bottom"
@@ -11390,11 +11265,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/chrome.rs
 msgid "Reading pane on the right"
-msgstr ""
-
-#. ribbon location
-#: crates/ui-egui/src/lib.rs
-msgid "Reading pane"
 msgstr ""
 
 #. interface
@@ -12055,11 +11925,6 @@ msgstr ""
 msgid "Restart to update is the owner's click."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Restore attachment preview warnings"
-msgstr ""
-
 #. interface, ribbon
 #: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/window_chrome.rs
 msgid "Restore"
@@ -12071,13 +11936,13 @@ msgid "Retry"
 msgstr ""
 
 #. command label
-#: crates/engine/src/cmd/account.rs
-msgid "Retry Skipped Messages"
+#: crates/engine/src/cmd/search_index.rs
+msgid "Retry Missing or Failed Search Content"
 msgstr ""
 
 #. command label
-#: crates/engine/src/cmd/search_index.rs
-msgid "Retry Missing or Failed Search Content"
+#: crates/engine/src/cmd/account.rs
+msgid "Retry Skipped Messages"
 msgstr ""
 
 #. command label
@@ -12201,17 +12066,12 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/nav.rs
+msgid "Rules for This Folder…"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/nav.rs
 msgid "Rules for {folder}"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "Rules stay on this computer for now: {error}"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "Rules weren't allowed on the server: {error}"
 msgstr ""
 
 #. interface
@@ -12469,11 +12329,6 @@ msgstr ""
 msgid "Save out"
 msgstr ""
 
-#. ribbon
-#: crates/ui-egui/src/ribbon.rs
-msgid "Save to Computer"
-msgstr ""
-
 #. interface
 #: crates/ui-egui/src/search_folders.rs
 msgid "Save search folder"
@@ -12482,6 +12337,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/source_pane.rs
 msgid "Save the complete message as an .eml file"
+msgstr ""
+
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid "Save to Computer"
 msgstr ""
 
 #. android
@@ -12918,7 +12778,7 @@ msgid "Send & Receive"
 msgstr ""
 
 #. ribbon location
-#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/archive.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/dav_sync.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules_remote.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/send_receive.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/sync_progress.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/lib.rs
+#: crates/engine/src/cmd/account.rs crates/engine/src/cmd/archive.rs crates/engine/src/cmd/auto_replies.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/categories_remote.rs crates/engine/src/cmd/dav_sync.rs crates/engine/src/cmd/ews_mail.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/graph_send.rs crates/engine/src/cmd/jmap_mail.rs crates/engine/src/cmd/remote.rs crates/engine/src/cmd/rules_remote.rs crates/engine/src/cmd/send_later.rs crates/engine/src/cmd/send_receive.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/sync_progress.rs crates/engine/src/cmd/tasks_remote.rs crates/ui-egui/src/lib.rs
 msgid "Send / Receive"
 msgstr ""
 
@@ -13002,11 +12862,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Send automatic replies"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid "Send from a Shared Mailbox"
 msgstr ""
 
 #. android
@@ -13416,16 +13271,6 @@ msgid "Shared mailboxes and calendars: waiting for your permission"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid "Shared mailboxes weren't allowed: {error}"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid "Shared mailboxes' calendars weren't allowed: {error}"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/shortcuts_page.rs
 msgid "Shift"
 msgstr ""
@@ -13544,11 +13389,6 @@ msgstr ""
 #. command label
 #: crates/engine/src/cmd/help.rs
 msgid "Show Training"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid "Show a Shared Mailbox's Calendars"
 msgstr ""
 
 #. interface
@@ -13833,11 +13673,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Sign in again: Microsoft's page opens in your browser. Mail and your calendar work as they are meanwhile."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/lib.rs
-msgid "Sign in on the page that opened in your browser…"
 msgstr ""
 
 #. interface
@@ -14290,11 +14125,6 @@ msgstr ""
 msgid "Status:"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Still indexing: some older mail is searched more slowly"
-msgstr ""
-
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt crates/ui-egui/src/sync_panel.rs
 msgid "Stop"
@@ -14647,11 +14477,6 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/task_sync.rs
-msgid "Tasks weren't allowed to be kept in step: {error}"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
 msgid "Tasks: Microsoft no longer takes the sign-in"
 msgstr ""
 
@@ -14908,11 +14733,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/report_problem.rs
 msgid "That isn't a GitHub username: letters, digits and single hyphens, 39 at most. Leave the box empty if you have none."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs crates/ui-egui/src/shared_mailboxes.rs
-msgid "That isn't a shared mailbox"
 msgstr ""
 
 #. interface
@@ -15226,11 +15046,6 @@ msgstr ""
 msgid "The categories couldn't be kept in step: the job stopped unexpectedly"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid "The calendars of the shared mailbox wait: {error}"
-msgstr ""
-
 #. interface, what a command says
 #: crates/engine/src/sync_driver/calendar_plan.rs crates/ui-egui/src/category_sync.rs
 msgid "The categories couldn't be taken in: {error}"
@@ -15279,11 +15094,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/signature.rs
 msgid "The certificate wasn't issued by a certification authority this computer trusts."
-msgstr ""
-
-#. what a command says
-#: crates/engine/src/cmd/category.rs
-msgid "The colour is set in Outlook"
 msgstr ""
 
 #. interface
@@ -16453,11 +16263,6 @@ msgstr ""
 msgid "This account does not use Google sign-in."
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "This account doesn't keep its rules on its server"
-msgstr ""
-
 #. what a command says
 #: crates/engine/src/cmd/unsubscribe.rs
 msgid "This account doesn't send mail from MailCraft, so it can't unsubscribe by mail."
@@ -16474,7 +16279,7 @@ msgid "This account has no mail server to send the answer through."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
+#: crates/ui-egui/src/lib.rs crates/ui-egui/src/rule_sync.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs crates/ui-egui/src/task_sync.rs
 msgid "This account has no sign-in with Microsoft"
 msgstr ""
 
@@ -17391,30 +17196,6 @@ msgid ""
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid ""
-"To answer or send meetings from {address}, MailCraft needs your permission to send from shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"Whether the answer goes as {address} or on its behalf is your organisation's choice. Until you allow it, the answer waits on this computer, and nothing is sent from your own address."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/auto_replies.rs
-msgid ""
-"To change the automatic replies of {address}, MailCraft needs your permission to change your mailbox settings. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"MailCraft changes only your automatic replies and the rules of your Inbox with it, never your categories or working hours. Reading your automatic replies doesn't need it."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid ""
-"To keep the rules of {address} on its server, where they run even while MailCraft is closed and show in Outlook on the web and on your phone, MailCraft needs your permission to change your mailbox settings, where Microsoft keeps the rules. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"Until you allow it, your rules stay on this computer and nothing of them is sent to Microsoft."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/server_sync.rs
 msgid ""
 "To keep the tasks of {address} in step with Microsoft To Do, MailCraft needs your permission to read and change your To Do lists and tasks. Microsoft's page opens in your browser to ask you, once.\n"
@@ -17441,30 +17222,6 @@ msgid ""
 "To read and send from the shared mailboxes you open with {address}, and to show the calendars shared with you, MailCraft needs your permission. Microsoft's page opens in your browser to ask you, once, for everything MailCraft uses that you haven't allowed yet.\n"
 "\n"
 "Until you allow it, nothing of those mailboxes and calendars is read, mail and meeting answers from a shared mailbox wait on this computer, and nothing is sent from your own address in their place."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-msgid ""
-"To open other people's calendars, MailCraft needs your permission to read the calendars people share with you. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"What you open is kept on this computer only: it doesn't appear in Outlook or on your other devices."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid ""
-"To send from {address}, MailCraft needs your permission to send from shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"Whether your mail goes as {address} or on its behalf is your organisation's choice. Until you allow it, the mail waits in its Outbox, and nothing is sent from your own address."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid ""
-"To show the calendars of {address}, MailCraft needs your permission to read the calendars of shared mailboxes. Microsoft's page opens in your browser to ask you, once.\n"
-"\n"
-"What you may see of a calendar is for its owner and your organisation to decide: this changes nothing about that. Until you allow it, nothing of {address}'s calendars is read."
 msgstr ""
 
 #. interface
@@ -17623,11 +17380,6 @@ msgid "Tuesday"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Turn on attachment previews in File › Options."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
 msgstr ""
@@ -17753,11 +17505,6 @@ msgid "Undo {what}"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Unpin"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
 msgstr ""
@@ -17775,6 +17522,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/nav.rs
 msgid "Unified mailbox"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Unpin"
 msgstr ""
 
 #. android, interface, name
@@ -18804,26 +18556,6 @@ msgid "Your organisation doesn't allow Exchange Web Services for this account. A
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "Your organisation doesn't allow MailCraft to keep rules on the server"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Your organisation doesn't allow MailCraft to keep tasks in step with Microsoft To Do"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid "Your organisation doesn't allow MailCraft to read shared mailboxes' calendars"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/auto_replies.rs
-msgid "Your organisation doesn't let MailCraft change automatic replies"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Your organisation doesn't let MailCraft change your automatic replies. Ask your administrator."
 msgstr ""
@@ -18896,36 +18628,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/server_sync.rs
 msgid "Your organisation's administrator has to approve MailCraft reading shared mailboxes and calendars once: File › Info"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/auto_replies.rs
-msgid "Your organisation's administrator has to approve MailCraft changing automatic replies once: File › Info"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/rule_sync.rs
-msgid "Your organisation's administrator has to approve keeping rules on the server once: File › Info"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/task_sync.rs
-msgid "Your organisation's administrator has to approve keeping tasks in step with Microsoft To Do once: File › Info"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/open_shared.rs
-msgid "Your organisation's administrator has to approve reading other people's calendars once: File › Info"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_mailboxes.rs
-msgid "Your organisation's administrator has to approve reading shared mailboxes once: File › Info"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/shared_calendars.rs
-msgid "Your organisation's administrator has to approve reading shared mailboxes' calendars once: File › Info"
 msgstr ""
 
 #. interface
@@ -19634,11 +19336,6 @@ msgstr ""
 
 #. name
 #: crates/engine/src/agent.rs
-msgid "it changes an account or a sign-in"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
 msgid "it changes options, signatures or rules"
 msgstr ""
 
@@ -19650,11 +19347,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/data_removal.rs
 msgid "it could not be removed"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it deletes for good"
 msgstr ""
 
 #. interface
@@ -19745,11 +19437,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/remote.rs
 msgid "it took too long"
-msgstr ""
-
-#. name
-#: crates/engine/src/agent.rs
-msgid "it writes to other people or reaches out to the web"
 msgstr ""
 
 #. why a mail server couldn't be used
@@ -21893,11 +21580,6 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/mail_view.rs
-msgid "{count} messages weren't searched in full: only their beginning is here until they download."
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/mail_view.rs
 msgid "{count} messages are not fully downloaded. Their missing content cannot be searched offline."
 msgstr ""
 
@@ -22985,13 +22667,6 @@ msgid_plural "{n} older messages taken back to its headers"
 msgstr[0] ""
 msgstr[1] ""
 
-#. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "{n} older message wasn't searched: its text isn't loaded yet"
-msgid_plural "{n} older messages weren't searched: their text isn't loaded yet"
-msgstr[0] ""
-msgstr[1] ""
-
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 msgid "{n} open"
@@ -23447,3 +23122,4 @@ msgstr ""
 #: crates/ui-egui/src/credits.rs
 msgid "−Lines"
 msgstr ""
+

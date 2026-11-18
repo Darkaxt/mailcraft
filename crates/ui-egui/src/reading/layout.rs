@@ -492,7 +492,7 @@ impl Cx<'_> {
     /// are not judged against the colour under the picture.
     fn lit(&self, behind: &Option<Behind>, asked: Option<Rgb>, paper: Paper) -> Paper {
         match asked {
-            Some(asked) if behind.is_some() && Paper::of(asked, &self.t).fill == super::colors::c32(asked) => Paper { picture: true, ..paper },
+            Some(asked) if behind.is_some() && !super::colors::turned_dark(asked, &self.t) => Paper { picture: true, ..paper },
             _ => paper,
         }
     }
@@ -503,7 +503,7 @@ impl Cx<'_> {
         let (Some(Behind { slot, data, size: [w, h] }), Some(picture)) = (behind, picture) else { return };
         // Dimmed in the dark theme with a colour it turned dark, or none; veiled where there is none.
         let veil = asked.is_none().then(|| paper.fill.gamma_multiply(super::backdrop::VEIL));
-        let turned = asked.is_some_and(|c| Paper::of(c, &self.t).fill != super::colors::c32(c));
+        let turned = asked.is_some_and(|c| super::colors::turned_dark(c, &self.t));
         let tint = match super::backdrop::tint(&self.t) {
             Some(tint) if turned || veil.is_some() => tint,
             _ => Color32::WHITE,

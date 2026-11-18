@@ -80,7 +80,7 @@ fn manual_todo_connection_requires_consent_and_persists_only_after_success() {
     app.ui.todo_sync_accounts.clear();
     let pending = app.configure_tasks_sync(&json!({"account": owner, "enabled": true})).unwrap();
     assert_eq!(pending["pending"], "ownerConsent");
-    assert!(matches!(&app.dialog, Some(crate::dialogs::Dialog::Confirm { command, .. }) if command == "ui.allowTasks"));
+    assert!(matches!(&app.dialog, Some(crate::dialogs::Dialog::Confirm { command, .. }) if command == "ui.allowSync"));
     assert!(jobs.lock().unwrap().is_empty());
     assert!(sign_ins.lock().unwrap().is_empty());
     assert!(!app.tasks_enabled(owner));
@@ -118,7 +118,7 @@ fn todo_panel_offers_manual_connect_in_both_themes_and_small_windows() {
             harness.run_steps(4);
             harness.get_by_label("Connect Microsoft To Do…").click();
             harness.run_steps(2);
-            assert!(matches!(&harness.state().dialog, Some(crate::dialogs::Dialog::Confirm { command, .. }) if command == "ui.allowTasks"));
+            assert!(matches!(&harness.state().dialog, Some(crate::dialogs::Dialog::Confirm { command, .. }) if command == "ui.allowSync"));
             assert!(jobs.lock().unwrap().is_empty());
             assert!(sign_ins.lock().unwrap().is_empty());
         }

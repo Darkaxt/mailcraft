@@ -30,6 +30,7 @@ fn window(directory: Directory) -> (MailApp, Id, Id) {
     }
     let mut app = MailApp::new(s, Services::default());
     app.autosave = false;
+    app.ui.todo_sync_accounts.push(OWNER.into());
     let fresh = mailcraft_model::sync::Tokens {
         access: "own".into(),
         refresh: "ref-1".into(),
@@ -61,6 +62,8 @@ fn the_one_question_says_its_page_asks_for_the_shared_mailboxes_too_except_of_a_
         assert!(app.tasks_tick_at(0.0));
         app.poll_tasks();
         app.tasks_tick_at(1.0);
+        // (The fork: To Do never asks by itself; the owner asks in File › Info.)
+        assert!(app.dialog.is_none() && app.ask_sync_again(owner));
         let text = question_text(&app);
         assert!(text.contains("tasks"), "{text}");
         assert_eq!(text.contains("The same page asks to read and send from the shared mailboxes"), said, "{directory:?}: {text}");

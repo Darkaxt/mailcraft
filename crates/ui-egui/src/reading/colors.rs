@@ -114,6 +114,13 @@ fn at_least(ink: Color32, paper: Color32, target: f32) -> Color32 {
 }
 
 /// Hue (0 to 6), saturation and lightness of a colour.
+/// Whether the dark theme turns a box's colour `asked` dark: a light one (lightness over a half).
+/// A dark one counts as left as it is for a picture over it (#601), even where the dark palette
+/// nudges its tone, so the picture is not dimmed and the text over it keeps its colours.
+pub fn turned_dark(asked: Rgb, t: &Tokens) -> bool {
+    t.dark && !t.sender_dark && !t.high_contrast && hsl(c32(asked)).2 > 0.5
+}
+
 fn hsl(c: Color32) -> (f32, f32, f32) {
     let (r, g, b) = (f32::from(c.r()) / 255.0, f32::from(c.g()) / 255.0, f32::from(c.b()) / 255.0);
     let (max, min) = (r.max(g).max(b), r.min(g).min(b));

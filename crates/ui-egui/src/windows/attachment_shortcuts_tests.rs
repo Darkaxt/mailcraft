@@ -39,7 +39,8 @@ fn a_native_message_window_keeps_its_delete_shortcut_with_the_attachment_ribbon(
     h.run_steps(30);
     assert_eq!(attachment_preview::target(&h.state().0, WINDOW, MESSAGE), Some(0));
     assert!(h.state().0.hit.rect_in(WINDOW, "ribbon", crate::ribbon::hit_id("ui.showAttachmentMessage")).is_some());
-    h.key_down(Key::Delete);
+    // (The fork's Delete is Mod+D: a key alone is too easy to press by accident.)
+    h.event(egui::Event::Key { key: Key::D, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::COMMAND });
     h.step();
     assert!(h.state().2, "the message window closed");
     assert_eq!(h.state().0.session.mailbox.message(MESSAGE).unwrap().folder, trash);
