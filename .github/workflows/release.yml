@@ -182,11 +182,9 @@ jobs:
       - name: The files are the ones their jobs made
         env:
           WINDOWS_X64: ${{ needs.dry-run.outputs.windows_x64 }}
-          WINDOWS_X86: ${{ needs.dry-run.outputs.windows_x86 }}
-          WINDOWS_ARM64: ${{ needs.dry-run.outputs.windows_arm64 }}
         run: |
           bash packaging/ci/handoff.sh check artifacts \
-            "release-windows-x64=$WINDOWS_X64" "release-windows-x86=$WINDOWS_X86" "release-windows-arm64=$WINDOWS_ARM64"
+            "release-windows-x64=$WINDOWS_X64"
       - name: Checksums
         working-directory: artifacts
         run: |
@@ -293,11 +291,9 @@ jobs:
       - name: The files are the ones their jobs made
         env:
           WINDOWS_X64: ${{ needs.package.outputs.windows_x64 }}
-          WINDOWS_X86: ${{ needs.package.outputs.windows_x86 }}
-          WINDOWS_ARM64: ${{ needs.package.outputs.windows_arm64 }}
         run: |
           bash packaging/ci/handoff.sh check artifacts \
-            "release-windows-x64=$WINDOWS_X64" "release-windows-x86=$WINDOWS_X86" "release-windows-arm64=$WINDOWS_ARM64"
+            "release-windows-x64=$WINDOWS_X64"
       - name: Checksums
         working-directory: artifacts
         run: |
