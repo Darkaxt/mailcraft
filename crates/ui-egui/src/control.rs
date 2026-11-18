@@ -98,7 +98,7 @@ impl HitMap {
     }
 
     /// The window of its own being laid out now (0: the main window).
-    pub(crate) fn current(&self) -> u64 {
+    pub(crate) fn window(&self) -> u64 {
         self.scope
     }
 

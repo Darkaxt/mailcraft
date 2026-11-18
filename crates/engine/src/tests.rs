@@ -2934,3 +2934,17 @@ fn all_of_lists_one_special_folder_of_every_account() {
         assert_eq!(s.mailbox.message(draft).unwrap().folder, drafts);
     }
 }
+
+/// The window runs a command it asked about first with `"confirmed": true` added (the owner's
+/// yes): no command refuses that note as a parameter it doesn't take. Remove Imported Duplicates
+/// did, so its question's yes could never go ahead.
+#[test]
+fn no_command_refuses_the_windows_yes() {
+    let mut s = session();
+    let ids: Vec<&'static str> = s.registry.all().iter().map(|c| c.id).collect();
+    for id in ids {
+        if let Err(e) = s.run(id, &json!({"confirmed": true})) {
+            assert!(!e.to_string().contains("`confirmed` isn't a parameter"), "{id}: {e}");
+        }
+    }
+}

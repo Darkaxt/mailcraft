@@ -2974,6 +2974,7 @@ mod tests {
             name: name.into(),
             email: "noor@example.org".into(),
             tenant: String::new(),
+            ..Default::default()
         }
     }
 

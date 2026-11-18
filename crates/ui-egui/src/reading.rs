@@ -30,6 +30,9 @@ pub(crate) mod appearance;
 #[cfg(test)]
 mod appearance_tests;
 pub use appearance::MessageTheme;
+mod backdrop;
+#[cfg(test)]
+mod backdrop_tests;
 pub(crate) mod colors;
 #[cfg(test)]
 mod colors_strong_tests;
@@ -130,7 +133,7 @@ pub enum Place {
 pub fn show_file_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place) {
     let ctx = ui.ctx().clone();
     remote::tick(app, &ctx);
-    select::begin(app, ui, m, place);
+    select::begin(app, ui, m, place, true);
     let doc = view::doc_shown(&ctx, m, place, false, view::env_of(app, ui, place));
     let access = Access::Blocked;
     ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
@@ -159,7 +162,7 @@ pub fn show_file_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place
 /// message's body is shown, without its scripts or style sheets and with nothing from the web.
 pub(crate) fn show_attachment_html(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
     let place = Place::Attachment;
-    select::begin(app, ui, m, place);
+    select::begin(app, ui, m, place, true);
     view::page(app, place, ui).show(ui, |ui| {
         egui::ScrollArea::both().auto_shrink([false, false]).id_salt(("body", place)).show(ui, |ui| {
             egui::Frame::NONE.inner_margin(egui::Margin { left: 16, right: 16, top: 12, bottom: 24 }).show(ui, |ui| {
@@ -239,6 +242,7 @@ fn draft_bar(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
 /// The reading pane shows the selected message with it, and a message window its own.
 pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Place) {
     let ctx = ui.ctx().clone();
+    ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
     // Read by the owner: its files are scanned by Microsoft Defender (the desktop on Windows).
     if matches!(place, Place::Pane | Place::Window(_)) {
         crate::attachment_scan::notice(app, m.id);
@@ -248,7 +252,7 @@ pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Pla
     if place == Place::Pane && app.source_pane.showing(m.id) {
         // This precedes rendered-body layout, sender pictures and remote
         // image work. Source is only selectable plain text.
-        select::begin(app, ui, m, place);
+        select::begin(app, ui, m, place, false);
         header(app, ui, m, place, |_, _, _| {});
         let room = ui.available_rect_before_wrap().intersect(ui.clip_rect());
         crate::source_pane::show(app, ui);
@@ -261,12 +265,11 @@ pub fn show_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place: Pla
         let _ = app.session.load_for_display(m.id);
     }
     remote::tick(app, &ctx);
-    select::begin(app, ui, m, place);
+    select::begin(app, ui, m, place, true);
     let doc = view::doc_shown(&ctx, m, place, remote::available(app), view::env_of(app, ui, place));
     let access = if doc.remote.is_empty() { Access::Blocked } else { remote::access(app, m) };
     // Asked for: what has not come yet is sent for, while the message is on screen.
     let progress = if access == Access::Allowed { remote::want(app, &ctx, m, &doc) } else { remote::Progress::default() };
-    ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
     // A draft in the reading pane is not received mail: say so, and offer to go on writing it (#651).
     if place == Place::Pane && m.draft {
         draft_bar(app, ui, m);
@@ -416,7 +419,7 @@ pub(crate) fn show_quote(app: &mut MailApp, ui: &mut Ui) {
     let ctx = ui.ctx().clone();
     let Some(m) = quote_message(app, &ctx) else { return };
     remote::tick(app, &ctx);
-    select::begin(app, ui, &m, Place::Quote);
+    select::begin(app, ui, &m, Place::Quote, true);
     let doc = view::doc_shown(&ctx, &m, Place::Quote, remote::available(app), view::env_of(app, ui, Place::Quote));
     // A quote whose original isn't known (a reopened draft, an original since deleted) has no
     // folder or sender to judge by: it never fetches anything.
@@ -807,7 +810,7 @@ fn gmail_labels(app: &mut MailApp, ui: &mut Ui, m: &Message) {
     });
 }
 
-fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
+pub(crate) fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
     // The calendar part of a meeting is what its bar shows: it is not one of the files.
     let meeting = invitation::info(app, ui.ctx(), m);
     // The signature part of a message whose signature was checked (that very part, by its bytes)

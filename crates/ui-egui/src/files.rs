@@ -250,6 +250,10 @@ pub(crate) fn poll(app: &mut MailApp) -> Option<Result<Value, String>> {
     picked.truncate(1);
     let Some(mut path) = picked.pop() else {
         release_export(app, &d.after);
+        // A message's server copy fetched for this save isn't held any longer (#1561).
+        if matches!(&d.after, AfterPick::Export { command, .. } if command == "file.exportMessage") {
+            app.session.forget_for_save();
+        }
         return Some(Ok(json!({"cancelled": true})));
     };
     if let Some(ext) = &d.ext {
@@ -310,6 +314,11 @@ pub(crate) fn saved_said(command: &str, v: &Value, name: &str) -> String {
             let n = v.get("messages").and_then(Value::as_u64).unwrap_or(0);
             crate::i18n::fmt(&tln!(n, "Saved {n} message to {name}", "Saved {n} messages to {name}"), &[("name", name)])
         }
+        // Written from what this computer keeps rather than as it was received (#1561): said.
+        "file.exportMessage" if v.get("asReceived").and_then(Value::as_bool) == Some(false) => crate::i18n::fmt(
+            tl!("Saved the message to {name}, written from what this computer keeps of it: not byte for byte as it was received"),
+            &[("name", name)],
+        ),
         "file.exportMessage" => crate::i18n::fmt(tl!("Saved the message to {name}"), &[("name", name)]),
         "ui.backupFolder" => crate::i18n::fmt(tl!("Backups go to {name}"), &[("name", name)]),
         _ => crate::i18n::fmt(tl!("Saved {name}"), &[("name", name)]),

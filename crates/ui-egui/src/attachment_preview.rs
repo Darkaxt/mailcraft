@@ -351,10 +351,17 @@ pub(crate) struct Preview {
 pub(crate) struct Click {
     origin: Origin,
     index: usize,
+    window: u64,
     viewport: egui::ViewportId,
     spot: u64,
     mailbox: u64,
     attachment: Attachment,
+    return_tab: Option<String>,
+    warn: bool,
+}
+
+pub(crate) struct Click {
+    target: Selection,
     at: f64,
 }
 
@@ -427,7 +434,6 @@ pub(crate) fn options(app: &mut MailApp, ui: &mut egui::Ui) {
     app.hit.add("attachmentPreviewOption", 0, response.rect);
     if response.changed() && !app.ui.attachment_previews {
         app.attachment_preview = None;
-        app.pending_attachment_preview = None;
     }
 }
 
@@ -477,7 +483,7 @@ pub(crate) fn queue_click(app: &mut MailApp, ctx: &egui::Context, origin: Origin
         origin,
         index,
         viewport: ctx.viewport_id(),
-        spot: app.hit.current(),
+        spot: app.hit.window(),
         mailbox: app.session.openings(),
         attachment,
         at: ctx.input(|i| i.time) + delay,
@@ -492,7 +498,7 @@ pub(crate) fn cancel_click(app: &mut MailApp) {
 
 /// Start the queued action after checking that it still names the same attachment.
 pub(crate) fn finish_click(app: &mut MailApp, ctx: &egui::Context, origin: Origin) {
-    let spot = app.hit.current();
+    let spot = app.hit.window();
     let Some(click) =
         app.pending_attachment_preview.as_ref().filter(|click| click.viewport == ctx.viewport_id() && click.spot == spot && click.origin == origin)
     else {
@@ -522,7 +528,7 @@ fn attachment(app: &MailApp, origin: Origin, index: usize) -> Option<&Attachment
 
 /// Whether this chip owns the preview currently shown where it is drawn.
 pub(crate) fn selected(app: &MailApp, viewport: egui::ViewportId, origin: Origin, index: usize) -> bool {
-    let spot = app.hit.current();
+    let spot = app.hit.window();
     app.attachment_preview.as_ref().is_some_and(|p| p.viewport == viewport && p.spot == spot && p.origin == origin && p.index == index)
 }
 
@@ -538,7 +544,7 @@ pub(crate) fn open_in(app: &mut MailApp, viewport: egui::ViewportId, origin: Ori
     if !enabled(app) {
         return Err(tl!("Turn on the Preview Pane in the View tab.").into());
     }
-    let spot = app.hit.current();
+    let spot = app.hit.window();
     if refused(app, origin, index) {
         return Err(Error::Refused.text().into());
     }
@@ -566,8 +572,8 @@ pub(crate) fn open_in(app: &mut MailApp, viewport: egui::ViewportId, origin: Ori
     let name = mailcraft_engine::opening::file_name(&part.name);
     let size = mailcraft_model::size_label_in(crate::i18n::current(), part.size() as u64);
     let read = app.session.attachment_reader(part).map_err(|_| Error::Invalid.text())?;
-    let attachment = part.clone();
-    // Dropping a preview tells the worker to stop before the next render starts.
+    let selection = Selection::new(app, viewport, id, index).ok_or_else(|| Error::Invalid.text())?;
+    select(app, selection);
     app.attachment_preview = None;
     let mut preview = Preview {
         origin,
@@ -825,7 +831,7 @@ pub fn entries_of(bytes: &[u8]) -> Option<(Vec<(String, u64)>, usize)> {
 
 /// Release a preview or click drawn where `spot` of `viewport` now shows something else (`shown`).
 pub(crate) fn follow(app: &mut MailApp, viewport: egui::ViewportId, shown: Option<Origin>) {
-    let spot = app.hit.current();
+    let spot = app.hit.window();
     if app.attachment_preview.as_ref().is_some_and(|p| p.viewport == viewport && p.spot == spot && Some(p.origin) != shown) {
         app.attachment_preview = None;
     }
@@ -834,7 +840,17 @@ pub(crate) fn follow(app: &mut MailApp, viewport: egui::ViewportId, shown: Optio
     }
 }
 
-/// Drop stale attachment state before polling the active preview.
+/// The main window's selected message while the reading pane can show it.
+pub(crate) fn pane_message(app: &MailApp) -> Option<Id> {
+    (app.session.view.module == Module::Mail
+        && app.session.view.reading_pane != Pane::Off
+        && app.session.sel.messages.len() == 1
+        && crate::windows::compose_window::pane_compose(app).is_none())
+    .then(|| app.session.sel.focus())
+    .flatten()
+}
+
+/// Drop stale attachments before polling the active preview.
 pub(crate) fn poll(app: &mut MailApp, ctx: &egui::Context) {
     if app.pending_attachment_preview.is_none() && app.attachment_preview.is_none() {
         return;
@@ -877,7 +893,7 @@ pub(crate) fn show_draft(app: &mut MailApp, ui: &mut egui::Ui, compose: u64) -> 
 }
 
 fn show_in_place(app: &mut MailApp, ui: &mut egui::Ui, origin: Origin) -> bool {
-    let (viewport, spot) = (ui.ctx().viewport_id(), app.hit.current());
+    let (viewport, spot) = (ui.ctx().viewport_id(), app.hit.window());
     if app.session.view.preview_pane
         || !app.attachment_preview.as_ref().is_some_and(|p| p.viewport == viewport && p.spot == spot && p.origin == origin)
     {
@@ -906,7 +922,7 @@ pub(crate) fn pane(app: &mut MailApp, ui: &mut egui::Ui, salt: egui::Id) {
 
 /// The Preview Pane's contents: the preview shown where it is, or a word on how to show one.
 fn show_pane(app: &mut MailApp, ui: &mut egui::Ui) {
-    let (viewport, spot) = (ui.ctx().viewport_id(), app.hit.current());
+    let (viewport, spot) = (ui.ctx().viewport_id(), app.hit.window());
     app.hit.add("attachmentPreviewPane", 0, ui.max_rect());
     if app.attachment_preview.as_ref().is_some_and(|p| p.viewport == viewport && p.spot == spot) {
         draw(app, ui, false);
@@ -932,7 +948,6 @@ fn draw(app: &mut MailApp, ui: &mut egui::Ui, in_place: bool) {
     let Some(preview) = app.attachment_preview.as_mut() else { return };
     let key = preview.origin.key();
     let mut turn = None;
-    let mut close = false;
     egui::Frame::NONE.fill(tokens.panel).inner_margin(egui::Margin::symmetric(12, 8)).show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.spacing_mut().item_spacing = egui::vec2(8.0, 6.0);
@@ -1087,7 +1102,7 @@ fn show_picture(app: &mut MailApp, ui: &mut egui::Ui, texture: &egui::TextureHan
         // One scroll state for the preview, at the top again for another attachment: not one
         // in egui's memory for every attachment ever previewed.
         let mut area = egui::ScrollArea::both().auto_shrink([false, false]).id_salt("attachment-preview");
-        let shown = egui::Id::unique(("mailcraft-attachment-preview-shown", ui.ctx().viewport_id(), app.hit.current()));
+        let shown = egui::Id::unique(("mailcraft-attachment-preview-shown", ui.ctx().viewport_id(), app.hit.window()));
         if ui.ctx().data(|d| d.get_temp::<(u64, usize)>(shown)) != Some((key, index)) {
             ui.ctx().data_mut(|d| d.insert_temp(shown, (key, index)));
             area = area.scroll_offset(egui::Vec2::ZERO);
@@ -1105,3 +1120,42 @@ fn show_picture(app: &mut MailApp, ui: &mut egui::Ui, texture: &egui::TextureHan
 #[cfg(test)]
 #[path = "attachment_preview_tests.rs"]
 mod tests;
+
+/// The attachment of message `message` previewed in window `window` (0: the main window), if any:
+/// what the Attachments tab of the ribbon acts on (#1478).
+pub(crate) fn target(app: &MailApp, window: u64, message: Id) -> Option<usize> {
+    app.attachment_preview.as_ref().filter(|p| p.spot == window && p.origin == Origin::Message(message)).map(|p| p.index)
+}
+
+/// The main window's message and its previewed attachment, while the reading pane shows it.
+pub(crate) fn pane_target(app: &MailApp) -> Option<(Id, usize)> {
+    let id = pane_message(app)?;
+    Some((id, target(app, 0, id)?))
+}
+
+/// Release the preview of window `window` when it starts showing another message (`id`).
+pub(crate) fn follow_message(app: &mut MailApp, window: u64, id: Option<Id>) {
+    let shown = id.map(Origin::Message);
+    if app.attachment_preview.as_ref().is_some_and(|p| p.spot == window && matches!(p.origin, Origin::Message(_)) && Some(p.origin) != shown) {
+        app.attachment_preview = None;
+    }
+    if app
+        .pending_attachment_preview
+        .as_ref()
+        .is_some_and(|click| click.spot == window && matches!(click.origin, Origin::Message(_)) && Some(click.origin) != shown)
+    {
+        cancel_click(app);
+    }
+}
+
+/// Show Message is useful only while a preview hides this window's message body (the Preview
+/// Pane off).
+pub(crate) fn can_show_message(app: &MailApp) -> bool {
+    !app.session.view.preview_pane && app.attachment_preview.as_ref().is_some_and(|p| matches!(p.origin, Origin::Message(_)))
+}
+
+/// Close the preview and any click waiting to start one.
+pub(crate) fn close(app: &mut MailApp) {
+    cancel_click(app);
+    app.attachment_preview = None;
+}
