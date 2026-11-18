@@ -1,3 +1,7 @@
+**MailCraft 0.12.16 in short** — your folders are back in the unified mailbox
+- The unified mailbox shows your Outlook.com Inbox and every folder under it again. Since 0.12.13 they were hidden there (they were still in the account's own tab).
+- Everything from 0.12.15 stays.
+
 **MailCraft 0.12.15 in short** — the latest MailCraft improvements, merged in
 - Brings in 484 changes from the main MailCraft project. Among them: one message that fails to download no longer stops Send/Receive; File › Info says which messages were left out, with Try again.
 - Large mailboxes save with Save As without running out of memory, and Save Message As writes the message exactly as it was received.

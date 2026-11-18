@@ -1016,8 +1016,10 @@ fn without_special(rows: Vec<(Folder, usize, bool)>) -> Vec<(Folder, usize, bool
             under = None;
             // The server's own folders (Conversation History, Sync Issues and its three, Scheduled,
             // Clutter…, and Gmail's system labels such as Account Events) stay in their account's
-            // tab, out of the unified tree (v0.12.13).
-            if matches!(f.kind, FolderKind::Inbox | FolderKind::Custom) && !f.server_owned() && !gmail_system(&f.remote) {
+            // tab, out of the unified tree (v0.12.13). Not the Inbox, which Outlook counts among
+            // its own too: the filing tree is under it (v0.12.16).
+            let custom = f.kind == FolderKind::Custom && !f.server_owned() && !gmail_system(&f.remote);
+            if f.kind == FolderKind::Inbox || custom {
                 true
             } else {
                 under = Some(*depth);

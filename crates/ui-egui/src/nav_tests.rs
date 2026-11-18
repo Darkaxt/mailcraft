@@ -51,8 +51,11 @@ fn the_unified_tree_leaves_out_special_folders_and_what_is_under_them() {
         server: Some(mailcraft_model::ServerFolder { well_known: true, ..Default::default() }),
         ..folder(name, FolderKind::Custom)
     };
+    // Outlook's Inbox is one of its own folders too, and the filing tree is under it: it stays.
+    let inbox =
+        Folder { server: Some(mailcraft_model::ServerFolder { well_known: true, ..Default::default() }), ..folder("Inbox", FolderKind::Inbox) };
     let rows = vec![
-        (folder("Inbox", FolderKind::Inbox), 0, false),
+        (inbox, 0, false),
         (folder("Projects", FolderKind::Custom), 1, false),
         (folder("Sent Items", FolderKind::Sent), 0, false),
         (folder("Under sent", FolderKind::Custom), 1, false),
