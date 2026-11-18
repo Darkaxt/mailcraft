@@ -55,6 +55,8 @@ const STRIP_W: f32 = 30.0;
 /// folders' ids and the accounts' (an account's heading folds under the account's own id).
 /// Accounts and folders are numbered from 1 in one sequence, so none of the three collide.
 const FAVORITES: Id = 0;
+/// The id the Recent heading folds under (v0.12.14), one no account or folder reaches.
+const RECENT: Id = Id::MAX;
 /// The room an account's origin-colour swatch takes after its name in its heading (#893).
 const ACCOUNT_DOT_ROOM: f32 = 16.0;
 
@@ -333,8 +335,8 @@ fn heading(app: &mut MailApp, ui: &mut Ui, id: Id, name: &str, height: f32, text
     if resp.clicked() {
         let _ = app.execute("ui.toggleFolder", json!({"id": id}));
     }
-    // An account's heading (not the Favorites').
-    if id != FAVORITES {
+    // An account's heading (not the Favorites' or Recent's).
+    if id != FAVORITES && id != RECENT {
         resp.context_menu(|ui| {
             ui.set_min_width(190.0);
             account_menu(app, ui, id, movable);
@@ -504,7 +506,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     // Under Favorites a shared mailbox's folder says whose it is (#70), and so does one whose name
     // another account's folder has too (two Inboxes); in its tree, its name. In the unified
     // mailbox the filing account's Inbox lists what is not filed yet, beside the root's Inbox.
-    let name = if key == "fav" {
+    let name = if key == "fav" || key == "recent" {
         result_folder_label(&app.session.mailbox, f)
     } else if unified && f.kind == FolderKind::Inbox {
         tl!("Folders").to_string()
@@ -606,6 +608,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     // An account whose Favorites are Outlook's has them changed in Outlook: nothing to do here.
     let from_outlook = mailcraft_engine::cmd::folder::favorites_from_server(&app.session, f.account);
     let tag = f.tag.clone();
+    let recent_row = key == "recent";
     resp.context_menu(|ui| {
         ui.set_min_width(190.0);
         let item = |ui: &mut Ui, app: &mut MailApp, label: &str, cmd: &str, params: serde_json::Value, enabled: bool| {
@@ -634,6 +637,9 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
             item(ui, app, "Favorites Are Set in Outlook", "folder.favorite", json!({"id": id}), false);
         } else {
             item(ui, app, if favorite { "Remove from Favorites" } else { "Add to Favorites" }, "folder.favorite", json!({"id": id}), true);
+        }
+        if recent_row {
+            item(ui, app, "Remove from Recent", "folder.recent", json!({"remove": id}), true);
         }
         ui.separator();
         item(ui, app, "Properties…", "folder.properties", json!({"id": id}), true);
@@ -1323,6 +1329,22 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                             && favorite_selected
                             && f.id == current,
                     );
+                }
+            }
+            // The folders opened or filed into last (v0.12.14), those not among the Favorites,
+            // under their own heading; none in the tabs, nor while there are none.
+            let recent: Vec<Folder> = if tabs {
+                Vec::new()
+            } else {
+                mailcraft_engine::cmd::folder::recent(&app.session)
+                    .into_iter()
+                    .filter(|id| !favorites.iter().any(|f| f.id == *id))
+                    .filter_map(|id| app.session.mailbox.folder(id).cloned())
+                    .collect()
+            };
+            if !recent.is_empty() && head(app, ui, RECENT, tl!("Recent")) {
+                for f in &recent {
+                    folder_row(app, ui, f, 0, false, "recent", count(f), false);
                 }
             }
             // Where each of the owner's accounts starts, for a drag of one.

@@ -905,6 +905,7 @@ fn move_to(s: &mut Session, v: &Value) -> CmdResult {
     let waiting = waiting_for_microsoft(s);
     let into_microsoft = crossed.iter().filter(|id| waiting.contains(id)).count();
     select_after_removal(s, &before, &moved);
+    super::folder::note_recent(s, folder);
     Ok(json!({"moved": moved.len(), "folder": folder, "intoMicrosoft": into_microsoft}))
 }
 
@@ -917,6 +918,7 @@ fn copy_to(s: &mut Session, v: &Value) -> CmdResult {
     }
     let waiting = waiting_for_microsoft(s);
     let into_microsoft = copies.iter().filter(|c| waiting.contains(c)).count();
+    super::folder::note_recent(s, folder);
     Ok(json!({"copies": copies, "folder": folder, "intoMicrosoft": into_microsoft}))
 }
 

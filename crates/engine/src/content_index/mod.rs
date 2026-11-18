@@ -30,6 +30,9 @@ mod segments;
 #[cfg(test)]
 mod tests;
 
+/// The ZIP guard of the content index, for an attachment's preview too ([`crate::attachment_pages`]).
+#[cfg(windows)]
+pub(crate) use extract::zip_bomb;
 pub use query::DetailRequest;
 
 struct Detail {

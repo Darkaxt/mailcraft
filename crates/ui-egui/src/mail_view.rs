@@ -122,6 +122,7 @@ pub fn show(app: &mut MailApp, ui: &mut Ui) {
         // Hidden: a narrow strip stays, with the button that brings the pane back.
         crate::nav::folder_pane_strip(app, ui);
     }
+    crate::attachment_preview::pane(app, ui, egui::Id::unique("attachment_preview_pane"));
     // The reading pane's message being written (#286): one in a window of its own isn't here.
     let composing = crate::windows::compose_window::pane_compose(app).is_some_and(|c| app.session.compose_id() == Some(c));
     let pane = app.session.view.reading_pane;

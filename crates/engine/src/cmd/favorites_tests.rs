@@ -213,8 +213,11 @@ fn a_download_is_taken_in_for_its_own_account_only() {
     assert_eq!(favorites(&t.s), before);
 
     // A folder that goes takes its place in the list along; so does an account.
-    run(&mut t.s, "folder.delete", json!({"id": t.projects}));
-    run(&mut t.s, "folder.delete", json!({"id": t.projects}));
+    // (An IMAP account's folder goes at once, its mail into Deleted Items, v0.12.14; another's
+    // goes into Deleted Items first.)
+    while t.s.mailbox.folder(t.projects).is_some() {
+        run(&mut t.s, "folder.delete", json!({"id": t.projects}));
+    }
     assert_eq!(t.s.mailbox.server_favorites(t.account), Some(vec![deleted]));
     run(&mut t.s, "account.remove", json!({"id": t.account}));
     assert!(t.s.mailbox.favorites_from_server.is_empty());

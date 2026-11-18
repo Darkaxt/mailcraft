@@ -1177,6 +1177,18 @@ impl<S: Read + Write> Imap<S> {
         self.run(Command::new("SUBSCRIBE").string(raw_name.as_bytes()), &mut ignore).map(|_| ())
     }
 
+    /// RENAME <from> <to> (v0.12.14): the mailbox and those under it take the new name. Both are
+    /// raw names, as for [`create`](Self::create).
+    pub fn rename(&mut self, from_raw: &str, to_raw: &str) -> Result<(), ProtoError> {
+        self.run(Command::new("RENAME").string(from_raw.as_bytes()).string(to_raw.as_bytes()), &mut ignore).map(|_| ())
+    }
+
+    /// DELETE <mailbox> (v0.12.14): the mailbox goes, with whatever it holds. A raw name, as for
+    /// [`create`](Self::create).
+    pub fn delete(&mut self, raw_name: &str) -> Result<(), ProtoError> {
+        self.run(Command::new("DELETE").string(raw_name.as_bytes()), &mut ignore).map(|_| ())
+    }
+
     /// APPEND with a literal (handles the `+` continuation).
     pub fn append(&mut self, raw_name: &str, flags: &[&str], message: &[u8]) -> Result<(), ProtoError> {
         self.append_at(raw_name, flags, None, message).map(|_| ())

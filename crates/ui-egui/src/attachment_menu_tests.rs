@@ -300,7 +300,7 @@ fn long_and_reversed_names_keep_the_chip_bounded() {
 
 #[test]
 fn one_click_previews_the_attachment_and_can_turn_a_page() {
-    use crate::attachment_preview::{Format, Host, Page};
+    use crate::attachment_preview::{Format, Host, Page, Render};
     use std::sync::mpsc;
 
     let (mut h, opened_files) = window();
@@ -313,8 +313,9 @@ fn one_click_previews_the_attachment_and_can_turn_a_page() {
     app.services.attachment_preview = Some(Host {
         pdf: true,
         images: false,
+        craft: Vec::new(),
         render: Box::new(move |request| {
-            assert_eq!(request.format, Format::Pdf);
+            assert_eq!(request.render, Render::Helper(Format::Pdf));
             recorded.lock().unwrap().push((request.page, request.load().unwrap().to_vec()));
             let (send, receive) = mpsc::channel();
             send.send(Ok(Page { image: egui::ColorImage::filled([2, 2], egui::Color32::WHITE), pages: 2 })).unwrap();
@@ -357,7 +358,7 @@ fn a_disguised_pdf_and_an_oversized_attachment_never_start_the_helper() {
     let app = h.state_mut();
     app.ui.attachment_previews = true;
     app.services.attachment_preview =
-        Some(Host { pdf: true, images: false, render: Box::new(|_| panic!("an invalid attachment reached the helper")) });
+        Some(Host { pdf: true, images: false, craft: Vec::new(), render: Box::new(|_| panic!("an invalid attachment reached the helper")) });
     let file = app.session.mailbox.message_mut(A).unwrap().attachments.first_mut().unwrap();
     file.data = Arc::new(b"<html>not a PDF</html>".to_vec());
     assert!(app.execute("ui.previewAttachment", json!({"id":A, "index":0})).is_err());
@@ -375,7 +376,7 @@ fn previews_are_off_by_default_and_double_click_only_opens_the_file() {
     let bytes = b"%PDF-1.7 test input".to_vec();
     let app = h.state_mut();
     app.session.mailbox.message_mut(A).unwrap().attachments = vec![Attachment::new("notes.pdf", "application/pdf", bytes.clone())];
-    app.services.attachment_preview = Some(Host { pdf: true, images: false, render: Box::new(|_| panic!("no preview expected")) });
+    app.services.attachment_preview = Some(Host { pdf: true, images: false, craft: Vec::new(), render: Box::new(|_| panic!("no preview expected")) });
     h.run_steps(4);
     let at = chip(&h, A, 0).center();
     click(&mut h, at, PointerButton::Primary, 1);
@@ -421,6 +422,7 @@ fn assert_junk_preview_restrictions(in_subfolder: bool) {
     app.services.attachment_preview = Some(Host {
         pdf: true,
         images: false,
+        craft: Vec::new(),
         render: Box::new(|request| {
             let (send, receive) = mpsc::channel();
             send.send(request.load().map(|_| Page { image: egui::ColorImage::filled([2, 2], egui::Color32::WHITE), pages: 1 })).unwrap();
@@ -461,6 +463,7 @@ fn the_latest_preview_retries_busy_and_is_discarded_when_its_attachment_is_remov
     app.services.attachment_preview = Some(Host {
         pdf: true,
         images: false,
+        craft: Vec::new(),
         render: Box::new(move |request| {
             let bytes = request.load().unwrap();
             let (send, receive) = mpsc::channel();

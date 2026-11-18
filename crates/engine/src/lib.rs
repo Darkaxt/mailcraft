@@ -28,6 +28,8 @@ pub mod agent;
 pub mod aliases;
 pub mod arrivals;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod attachment_pages;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod backup;
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]

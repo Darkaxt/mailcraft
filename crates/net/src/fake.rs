@@ -839,6 +839,44 @@ fn serve_imap(stream: TcpStream, shared: Arc<Mutex<ImapWorld>>) {
                 world.subscribed.push(name);
                 reply.extend(format!("{tag} OK done\r\n").bytes());
             }
+            // The mailbox and those under it take the new name, keeping their UIDVALIDITY
+            // (v0.12.14). Never INBOX, nor onto a name there is.
+            "RENAME" => {
+                let said = words(args);
+                let (from, to) = (said.first().cloned().unwrap_or_default(), said.get(1).cloned().unwrap_or_default());
+                let below = format!("{from}{}", world.delimiter.unwrap_or('/'));
+                let open_raw = open.and_then(|i| world.mailboxes.get(i)).map(|m| m.raw.clone());
+                if from.eq_ignore_ascii_case("INBOX") || !world.mailboxes.iter().any(|m| m.raw == from) {
+                    reply.extend(format!("{tag} NO [NONEXISTENT] no such mailbox\r\n").bytes());
+                } else if to.is_empty() || world.mailboxes.iter().any(|m| m.raw.eq_ignore_ascii_case(&to)) {
+                    reply.extend(format!("{tag} NO [ALREADYEXISTS] there is such a mailbox\r\n").bytes());
+                } else {
+                    for mailbox in &mut world.mailboxes {
+                        if mailbox.raw == from {
+                            mailbox.raw = to.clone();
+                        } else if let Some(rest) = mailbox.raw.strip_prefix(&below) {
+                            mailbox.raw = format!("{to}{}{rest}", &below[from.len()..]);
+                        }
+                    }
+                    open = open_raw.and_then(|raw| world.mailboxes.iter().position(|m| m.raw == raw));
+                    reply.extend(format!("{tag} OK renamed\r\n").bytes());
+                }
+            }
+            // The mailbox goes with what it holds (v0.12.14); not the one open, nor INBOX.
+            "DELETE" => {
+                let name = words(args).into_iter().next().unwrap_or_default();
+                let at = world.mailboxes.iter().position(|m| m.raw == name);
+                match at {
+                    Some(i) if open == Some(i) => reply.extend(format!("{tag} NO [INUSE] the mailbox is open\r\n").bytes()),
+                    Some(i) if !name.eq_ignore_ascii_case("INBOX") => {
+                        let open_raw = open.and_then(|o| world.mailboxes.get(o)).map(|m| m.raw.clone());
+                        world.mailboxes.remove(i);
+                        open = open_raw.and_then(|raw| world.mailboxes.iter().position(|m| m.raw == raw));
+                        reply.extend(format!("{tag} OK deleted\r\n").bytes());
+                    }
+                    _ => reply.extend(format!("{tag} NO [NONEXISTENT] no such mailbox\r\n").bytes()),
+                }
+            }
             "APPEND" => {
                 // `"name" (flags) "date" {size}`, flags and date as the client likes: the message
                 // follows the go-ahead.

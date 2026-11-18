@@ -912,6 +912,14 @@ pub fn paint(p: &Painter, r: Rect, name: &str, c: Color32, accent: Color32) {
             pen.rect(2.5, 3.5, 17.5, 16.5, c);
             pen.line_c(&[(7.0, 3.5), (7.0, 16.5)], a);
         }
+        // The Preview Pane (v0.12.14): a pane on the right with lines of a page in it.
+        "previewPane" => {
+            pen.rect(2.5, 3.5, 17.5, 16.5, c);
+            pen.line_c(&[(11.5, 3.5), (11.5, 16.5)], a);
+            pen.line_c(&[(13.5, 7.5), (15.5, 7.5)], a);
+            pen.line_c(&[(13.5, 10.0), (15.5, 10.0)], a);
+            pen.line_c(&[(13.5, 12.5), (15.5, 12.5)], a);
+        }
         // The switch between the modules at the foot of the pane (#1174): the pane, with a row
         // of four dots along its lower edge where the modules sit.
         "navigationBar" => {
@@ -1420,6 +1428,7 @@ pub const NAMES: &[&str] = &[
     "filter",
     "readingPane",
     "folderPane",
+    "previewPane",
     "navigationBar",
     "conversations",
     "ribbon",

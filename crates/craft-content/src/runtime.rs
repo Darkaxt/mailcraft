@@ -312,7 +312,13 @@ impl Client {
     }
 
     pub fn render(&mut self, part: u32, page: u32) -> Result<Rendered> {
-        match self.call(Operation::Render { part, page, width: 3000 })? {
+        self.render_at(part, page, 3000)
+    }
+
+    /// A page drawn at most `width` pixels wide (the worker takes 1 to 4096): an attachment's
+    /// preview asks for less than the 3000 pixels recognition needs.
+    pub fn render_at(&mut self, part: u32, page: u32, width: u32) -> Result<Rendered> {
+        match self.call(Operation::Render { part, page, width })? {
             ResultValue::Rendered(rendered) => Ok(rendered),
             _ => Err("the native worker did not return a rendered page".into()),
         }

@@ -6,6 +6,7 @@ use egui::{Align2, Rect, Sense, Stroke, Ui, pos2, vec2};
 use mailcraft_engine::ComposeMode;
 use serde_json::json;
 
+use crate::attachment_preview::Origin;
 use crate::theme::{Tokens, paint_clipped, regular};
 use crate::{MailApp, icons};
 
@@ -174,6 +175,8 @@ fn recipient_field(app: &mut MailApp, ui: &mut Ui, key: &str, label: &str, text:
 /// What the window shows of the message being written besides its body (copied out of the
 /// session once a frame, so the commands it runs can change the message meanwhile).
 struct Shown {
+    /// The message being written's number ([`mailcraft_engine::Compose::id`]).
+    id: u64,
     mode: ComposeMode,
     dirty: bool,
     draft: bool,
@@ -194,6 +197,7 @@ impl Shown {
     fn of(app: &MailApp) -> Option<Shown> {
         let c = app.session.compose.as_ref()?;
         Some(Shown {
+            id: c.id,
             mode: c.mode,
             send_at: c.send_at,
             dirty: c.dirty,
@@ -227,6 +231,8 @@ pub(crate) fn show_in(app: &mut MailApp, ui: &mut Ui, window: Option<u64>, keybo
     let t = Tokens::get(ui.ctx());
     let Some(c) = Shown::of(app) else { return };
     ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+    // A preview of another message's file, drawn here before, goes.
+    crate::attachment_preview::follow(app, ui.ctx().viewport_id(), Some(Origin::Draft(c.id)));
 
     // In the reading pane, what this is and the actions; a window of its own has them in its
     // ribbon, and Send beside the lines, as a message's window has it (#286).
@@ -252,8 +258,9 @@ pub(crate) fn show_in(app: &mut MailApp, ui: &mut Ui, window: Option<u64>, keybo
         header(app, ui, &c, focus_to);
     }
 
-    // Attachments, each with a way to take it off again.
+    // Attachments, each previewed with a click (v0.12.14) and with a way to take it off again.
     if !c.attachments.is_empty() {
+        let origin = Origin::Draft(c.id);
         egui::Frame::NONE.inner_margin(egui::Margin { left: 16, right: 12, top: 6, bottom: 6 }).show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
@@ -261,7 +268,24 @@ pub(crate) fn show_in(app: &mut MailApp, ui: &mut Ui, window: Option<u64>, keybo
                     let label = format!("{name}  ({size})");
                     let w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(label.clone(), regular(12.0), t.text).size().x).min(260.0);
                     let (r, _) = ui.allocate_exact_size(vec2(w + 52.0, 26.0), Sense::hover());
+                    let body = Rect::from_min_max(r.min, pos2(r.max.x - 23.0, r.max.y));
+                    let resp = ui.interact(body, ui.make_persistent_id(("composeAttachment", c.id, i)), Sense::click());
+                    app.hit.add("composeAttachment", crate::reading::attachment_key(c.id, i), body);
                     ui.painter().rect(r, 5.0, t.panel, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
+                    let selected = crate::attachment_preview::selected(app, ui.ctx().viewport_id(), origin, i);
+                    if selected || resp.hovered() {
+                        let left = egui::CornerRadius { nw: 5, sw: 5, ne: 0, se: 0 };
+                        ui.painter().rect_filled(body.shrink(1.0), left, if selected { t.pressed } else { t.hover });
+                    }
+                    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, name));
+                    if crate::attachment_preview::single_click_allowed(app, origin, i) {
+                        let tip = crate::i18n::fmt(tl!("Click to preview {name}"), &[("name", name)]);
+                        if resp.on_hover_text(tip).clicked()
+                            && let Err(error) = crate::attachment_preview::open_in(app, ui.ctx().viewport_id(), origin, i)
+                        {
+                            app.status(error);
+                        }
+                    }
                     icons::paint(
                         ui.painter(),
                         Rect::from_center_size(pos2(r.min.x + 13.0, r.center().y), vec2(16.0, 16.0)),
@@ -284,6 +308,10 @@ pub(crate) fn show_in(app: &mut MailApp, ui: &mut Ui, window: Option<u64>, keybo
         });
         let r = ui.available_rect_before_wrap();
         ui.painter().line_segment([pos2(r.min.x + 16.0, r.min.y), pos2(r.max.x - 12.0, r.min.y)], Stroke::new(1.0, t.border));
+    }
+    // With the Preview Pane off, a file's preview takes the body's place, as in the reading pane.
+    if crate::attachment_preview::show_draft(app, ui, c.id) {
+        return;
     }
 
     // The body takes what is left: the owner's text, and under it the original of a reply or

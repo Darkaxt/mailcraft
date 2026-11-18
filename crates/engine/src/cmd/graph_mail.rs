@@ -248,6 +248,8 @@ pub(super) fn folder_changes(mb: &Mailbox, account: Id, limit: usize) -> (Vec<Fo
             Queued::DeleteFolder { id, shown, .. } => note(&|| FolderChange::Delete { id: id.clone(), shown: shown.clone() }),
             // Changes of messages: sent with the message changes (R3.3.2).
             Queued::CopyMessage { .. } | Queued::DeleteMessage { .. } | Queued::PlaceMessage { .. } => {}
+            // An IMAP account's (v0.12.14): never a Microsoft account's.
+            Queued::MoveFolder { .. } | Queued::DeleteMailbox { .. } => {}
         }
     }
     (changes, count)

@@ -602,7 +602,8 @@ impl SyncHost {
         let cancel = Arc::new(AtomicBool::new(false));
         let runner = self.fetch_runner.lock().unwrap_or_else(PoisonError::into_inner).clone();
         let flag = cancel.clone();
-        let answer = self.host.run_job("mailcraft-fetch", move |_| runner(access, work, flag), || {});
+        let pacer = self.pacer.clone();
+        let answer = self.host.run_job("mailcraft-fetch", move |_| runner(access, work, flag), move || pacer.poke());
         inner.fetch.running.insert(account, Job { what, opening: session.openings(), cancel, answer, most_bytes, most_total });
     }
 

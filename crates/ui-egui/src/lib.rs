@@ -981,6 +981,8 @@ pub struct UiState {
     /// The message list's height with the reading pane at the bottom, as the owner dragged it
     /// (#1372; 0: a share of the window's height).
     pub list_height: f32,
+    /// The Preview Pane's width, as the owner dragged it (v0.12.14).
+    pub preview_pane_width: f32,
     /// Send/Receive Progress's width, and the height of its list of accounts (0: as tall as what
     /// it lists, up to a limit), as the owner dragged them (#145).
     pub sync_panel_width: f32,
@@ -1115,6 +1117,7 @@ impl Default for UiState {
             folder_pane_width: 230.0,
             list_width: 380.0,
             list_height: 0.0,
+            preview_pane_width: 380.0,
             sync_panel_width: sync_panel::WIDTH,
             sync_panel_height: 0.0,
             collapsed_folders: Vec::new(),
@@ -2336,6 +2339,7 @@ impl MailApp {
         self.ui.list_width = if self.ui.list_width.is_finite() { self.ui.list_width.clamp(240.0, 900.0) } else { 380.0 };
         self.ui.list_height =
             if self.ui.list_height.is_finite() && self.ui.list_height > 0.0 { self.ui.list_height.clamp(120.0, 4000.0) } else { 0.0 };
+        self.ui.preview_pane_width = if self.ui.preview_pane_width.is_finite() { self.ui.preview_pane_width.clamp(200.0, 1600.0) } else { 380.0 };
         (self.ui.sync_panel_width, self.ui.sync_panel_height) = sync_panel::sane_size(self.ui.sync_panel_width, self.ui.sync_panel_height);
         self.ui.collapsed_folders.truncate(10_000);
         self.ui.collapsed_unified.truncate(10_000);
@@ -2365,6 +2369,8 @@ impl MailApp {
         v.gmail_tabs = saved.gmail_tabs;
         // Where the switch between the modules is (#1174).
         v.nav_foot = saved.nav_foot;
+        // The Preview Pane (v0.12.14).
+        v.preview_pane = saved.preview_pane;
         // One account's tasks and contacts only in the mailbox they were chosen in: in another,
         // the same id is somebody else's account, or none, and the list starts on All accounts.
         let mailbox = &self.session.mailbox;

@@ -148,7 +148,7 @@ msgid "(as the signer says)"
 msgstr "(come dichiara il firmatario)"
 
 #. interface, what a command says
-#: crates/engine/src/cmd/graph_mail.rs crates/ui-egui/src/people_view.rs
+#: crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/imap_folders.rs crates/ui-egui/src/people_view.rs
 #, fuzzy
 msgid "(no name)"
 msgstr "(senza nome)"
@@ -2106,11 +2106,6 @@ msgstr[0] "Allegato {n} file"
 msgstr[1] "Allegati {n} file"
 
 #. interface
-#: crates/ui-egui/src/send_preview.rs
-msgid "Attached: {files}"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Attachment keywords"
@@ -3381,6 +3376,11 @@ msgid "Clear search (Esc)"
 msgstr "Cancella ricerca (Esc)"
 
 #. interface
+#: crates/ui-egui/src/compose.rs
+msgid "Click to preview {name}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 msgid "Click to preview {name}; double-click to open it"
 msgstr "Un clic per vedere l’anteprima di {name}, doppio clic per aprirlo"
@@ -3419,6 +3419,11 @@ msgstr "Chiude MailCraft, installa la nuova versione e lo riavvia. Altrimenti vi
 #, fuzzy
 msgid "Close Message"
 msgstr "Chiudi messaggio"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Close Preview"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/view.rs
@@ -3875,6 +3880,11 @@ msgstr "Impossibile aggiornare il server"
 #, fuzzy
 msgid "Couldn't change flags in \"{name}\""
 msgstr "Impossibile modificare i flag in «{name}»"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "Couldn't change the folders on the server"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
@@ -5722,6 +5732,11 @@ msgstr "Preferito"
 #, fuzzy
 msgid "Favorites"
 msgstr "Preferiti"
+
+#. interface
+#: crates/ui-egui/src/ribbon.rs
+msgid "Favorites and recent"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/folder.rs
@@ -10673,6 +10688,11 @@ msgstr "Nessun contatto trovato."
 
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
+msgid "No preview for this file type."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
 msgid "No preview helper is available for this attachment."
 msgstr "Non è disponibile un programma per l’anteprima di questo allegato."
 
@@ -12553,6 +12573,13 @@ msgstr ""
 msgid "Preview"
 msgstr "Anteprima"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid ""
+"Preview\n"
+"Pane"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/reading.rs
 msgid "Preview Attachment"
@@ -12566,6 +12593,11 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Preview Message"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Preview Pane"
 msgstr ""
 
 #. command label
@@ -12955,7 +12987,7 @@ msgid "Receiving {name}: {read} of {total} · folder {number} of {folders}"
 msgstr "Ricezione di {name}: {read} di {total} · cartella {number} di {folders}"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Recent"
 msgstr "Recenti"
@@ -12969,6 +13001,11 @@ msgid ""
 msgstr ""
 "Ricerche\n"
 "recenti"
+
+#. command label
+#: crates/engine/src/cmd/folder.rs
+msgid "Recent Folders"
+msgstr ""
 
 #. command label, ribbon
 #: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/ribbon.rs
@@ -14594,6 +14631,11 @@ msgid "Select a task"
 msgstr "Seleziona un'attività"
 
 #. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Select an attachment to preview it"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Select an item to read"
@@ -15534,6 +15576,16 @@ msgstr "Mostra nomi utente, nomi visualizzati o nomi reali"
 #, fuzzy
 msgid "Show week numbers in the Month view and the date navigator"
 msgstr "Mostra i numeri di settimana nella visualizzazione Mese e nello spostamento data"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Showing the first {n} rows."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Showing the start of the file."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -17486,7 +17538,7 @@ msgid "The folder \"{folder}\" and everything in it will be deleted."
 msgstr "La cartella «{folder}» e tutto il suo contenuto verranno eliminati."
 
 #. what a command says
-#: crates/engine/src/cmd/graph_mail.rs
+#: crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/imap_folders.rs
 #, fuzzy
 msgid "The folder \"{name}\" wasn't deleted: the server has {n} new item in it that you hadn't seen. It comes back with it; delete it again if you still want it gone."
 msgid_plural "The folder \"{name}\" wasn't deleted: the server has {n} new items in it that you hadn't seen. It comes back with them; delete it again if you still want it gone."
@@ -18752,6 +18804,11 @@ msgstr "Impossibile visualizzare questo allegato in anteprima."
 msgid "This attachment is too large to preview."
 msgstr "Questo allegato è troppo grande per l’anteprima."
 
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "This attachment isn't previewed, to keep you safe."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/sync_driver/free_busy.rs
 #, fuzzy
@@ -19980,13 +20037,13 @@ msgid "Tuesday"
 msgstr "martedì"
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Turn on attachment previews in File › Options."
-msgstr "Attiva le anteprime degli allegati in File › Opzioni."
-
-#. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Turn on the Preview Pane in the View tab."
 msgstr ""
 
 #. interface
@@ -21660,8 +21717,8 @@ msgstr "la scheda di un contatto conserva al massimo 32 chiavi"
 msgid "a draft can't have a reminder: send it first, or use Follow Up in the message itself"
 msgstr "Una bozza non può avere un promemoria: inviala prima, oppure usa Completamento nel messaggio stesso"
 
-#. what a command says
-#: crates/model/src/mailbox.rs
+#. what a command says, why a mail server couldn't be used
+#: crates/model/src/mailbox.rs crates/net/src/imap_folders.rs
 #, fuzzy
 msgid "a folder can't move into itself"
 msgstr "una cartella non può essere spostata in se stessa"
@@ -21671,6 +21728,16 @@ msgstr "una cartella non può essere spostata in se stessa"
 #, fuzzy
 msgid "a folder can't move to another account"
 msgstr "una cartella non può essere spostata in un altro account"
+
+#. what a command says
+#: crates/model/src/mailbox.rs
+msgid "a folder in Deleted Items can only be moved out of it or deleted"
+msgstr ""
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "a folder isn't kept in the server's Trash; delete it instead"
+msgstr ""
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -21927,7 +21994,7 @@ msgid "and"
 msgstr "e"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TodayScreen.kt crates/ui-egui/src/reading.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TodayScreen.kt crates/ui-egui/src/attachment_preview.rs crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "and {n} more"
 msgid_plural "and {n} more"
@@ -22308,6 +22375,11 @@ msgstr "andrà sul server alla prossima connessione"
 msgid "it has two conditions of one kind, and the server would take either of them rather than both"
 msgstr "ha due condizioni dello stesso tipo, e il server accetterebbe l'una o l'altra invece di entrambe"
 
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "it holds more mail than can be checked"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/reading/images.rs
 #, fuzzy
@@ -22331,6 +22403,11 @@ msgstr "è un tipo di immagine che non può essere mostrato qui (AVIF o HEIC)"
 #, fuzzy
 msgid "it is damaged, or larger than can be shown"
 msgstr "è danneggiata, o troppo grande per essere mostrata"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "it is one of the server's own folders, or holds one"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/images.rs crates/ui-egui/src/reading/remote.rs
@@ -23472,11 +23549,21 @@ msgstr "il file è vuoto"
 msgid "the file is larger than a file of Public keys can be (1 MB)"
 msgstr "il file è più grande di quanto possa essere un file di chiavi pubbliche (1 MB)"
 
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the folder has no usable name"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/folder.rs
 #, fuzzy
 msgid "the folder is already empty"
 msgstr "la cartella è già vuota"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the folder it goes into is not on the server"
+msgstr ""
 
 #. name
 #: crates/engine/src/cmd/rules.rs
@@ -23942,10 +24029,20 @@ msgid "the server greeted with a refusal: {reason}"
 msgstr "il server ha salutato con un rifiuto: {reason}"
 
 #. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the server has a folder of that name there"
+msgstr ""
+
+#. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 #, fuzzy
 msgid "the server isn't idling"
 msgstr "il server non è in attesa (idle)"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the server keeps no folders inside others"
+msgstr ""
 
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/folder.rs
@@ -25384,8 +25481,8 @@ msgid_plural "{n} accounts have one"
 msgstr[0] "{n} account ne ha una"
 msgstr[1] "{n} account ne hanno una"
 
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/ui-egui/src/send_preview.rs
 #, fuzzy
 msgid "{n} attachment"
 msgid_plural "{n} attachments"
@@ -25580,6 +25677,13 @@ msgid "{n} event in view"
 msgid_plural "{n} events in view"
 msgstr[0] "{n} evento visualizzato"
 msgstr[1] "{n} eventi visualizzati"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "{n} file"
+msgid_plural "{n} files"
+msgstr[0] ""
+msgstr[1] ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -26566,6 +26670,9 @@ msgstr "«{subject}» era troppo grande da scaricare: qui c'è solo la sua intes
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "«{subject}» non è stato trovato sul suo server, quindi non può essere inoltrato come allegato"
+
+#~ msgid "Turn on attachment previews in File › Options."
+#~ msgstr "Attiva le anteprime degli allegati in File › Opzioni."
 
 #, fuzzy
 #~ msgid "Open a message you sent as a new one"

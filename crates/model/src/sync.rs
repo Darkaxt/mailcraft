@@ -137,6 +137,70 @@ pub struct SyncRequest {
     /// signs in with Google, and only while moves are switched on; empty otherwise.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub gmail_moves: Vec<GmailMove>,
+    /// Folders of the account renamed, moved or deleted here (v0.12.14), for the server to rename
+    /// or delete their mailboxes: after the moves into Gmail's categories, before anything is
+    /// read, the renames first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub folder_changes: Vec<ImapFolderChange>,
+}
+
+/// A change of an IMAP account's folder made here, for its server to make to the mailbox
+/// ([`SyncRequest::folder_changes`], v0.12.14). Mailboxes are named by their paths, as
+/// [`Folder::remote`](crate::Folder::remote) has them.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ImapFolderChange {
+    /// The folder `folder`, whose mailbox is `from`, now has the name `name` under the folder
+    /// whose mailbox is `parent` (empty: at the top level): the server renames `from` to that,
+    /// and the mailboxes under it go along.
+    Rename {
+        folder: Id,
+        from: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        parent: String,
+        name: String,
+    },
+    /// The mailbox `remote` goes, when it holds nothing beyond what the owner had of it here
+    /// (AU3-H7): its messages, by [`Shown::imap_message`].
+    Delete {
+        remote: String,
+        #[serde(default, skip_serializing_if = "Shown::is_empty")]
+        shown: Shown,
+    },
+}
+
+/// What became of an [`ImapFolderChange`] (v0.12.14).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ImapFolderOutcome {
+    /// The server made it. Of a rename: each mailbox's path before and after, the mailbox's and
+    /// those under it (none when the mailbox was where it was to go already).
+    Done {
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        renamed: Vec<MailboxRenamed>,
+    },
+    /// The server has no mailbox by that path (deleted or renamed elsewhere).
+    Gone,
+    /// The server wouldn't, or it isn't to be done (a mailbox of the server's own): why, in a
+    /// line to show.
+    Refused { why: String },
+    /// Not deleted: the mailbox holds `items` the owner hadn't seen here (mail that arrived
+    /// since, a mailbox under it).
+    NotShown { items: u32 },
+}
+
+/// A mailbox renamed on the server (v0.12.14): its path before and after.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MailboxRenamed {
+    pub from: String,
+    pub to: String,
+}
+
+/// An [`ImapFolderChange`] and what became of it ([`SyncResult::folders_changed`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImapFolderDone {
+    pub change: ImapFolderChange,
+    pub outcome: ImapFolderOutcome,
 }
 
 /// Most moves between Gmail's categories asked of Gmail's API in one run ([`SyncRequest::gmail_moves`]):
@@ -196,6 +260,7 @@ impl std::fmt::Debug for SyncRequest {
             .field("ops", &self.ops.len())
             .field("places", &self.places.len())
             .field("gmail_moves", &self.gmail_moves.len())
+            .field("folder_changes", &self.folder_changes.len())
             .finish()
     }
 }
@@ -801,6 +866,10 @@ pub struct SyncResult {
     /// one message are one.
     #[serde(skip_serializing_if = "is_zero_usize")]
     pub gmail_unsent: usize,
+    /// What became of [`SyncRequest::folder_changes`] (v0.12.14). A change that isn't here wasn't
+    /// tried, or its answer was lost, and is asked for again next time.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub folders_changed: Vec<ImapFolderDone>,
     /// Problems worth telling the user (one per failed step); empty when all went well. In a
     /// piece of an answer: the problems since the piece before. In English: what the CLI, MCP
     /// and the log read.
@@ -864,6 +933,7 @@ impl SyncResult {
             + self.placed.len()
             + self.unplaced.len()
             + self.gmail_moved.len()
+            + self.folders_changed.iter().filter(|d| matches!(d.outcome, ImapFolderOutcome::Done { .. } | ImapFolderOutcome::Gone)).count()
     }
 
     /// Whether there is anything in it for a mailbox to take in. A piece with only a line of
@@ -877,6 +947,7 @@ impl SyncResult {
             && self.unsure.is_empty()
             && self.gmail_refused.is_empty()
             && self.gmail_unsent == 0
+            && self.folders_changed.is_empty()
             && self.pushed_count() == 0)
     }
 
@@ -903,6 +974,7 @@ impl SyncResult {
             gmail_moved: _,
             gmail_refused: _,
             gmail_unsent: _,
+            folders_changed: _,
             errors: _,
             said: _,
             partial: _,
@@ -932,6 +1004,7 @@ impl SyncResult {
         self.gmail_moved.extend(later.gmail_moved);
         self.gmail_refused.extend(later.gmail_refused);
         self.gmail_unsent = self.gmail_unsent.saturating_add(later.gmail_unsent);
+        self.folders_changed.extend(later.folders_changed);
         self.errors.extend(later.errors);
         self.said.extend(later.said);
         for delta in later.folders {
@@ -1115,6 +1188,12 @@ impl Shown {
     /// not a secret: the ids are the mailbox's own.)
     pub fn key(id: &str) -> u64 {
         id.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |hash, b| (hash ^ u64::from(b)).wrapping_mul(0x0000_0100_0000_01b3))
+    }
+
+    /// The id an IMAP message is shown by ([`ImapFolderChange::Delete`], v0.12.14): its mailbox's
+    /// `UIDVALIDITY` and its UID there.
+    pub fn imap_message(uid_validity: u32, uid: u32) -> String {
+        format!("{uid_validity}/{uid}")
     }
 
     /// The keys of the folders and of the messages as sets, for the host's check (held to the

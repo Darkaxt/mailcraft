@@ -875,8 +875,9 @@ pub struct OAuth {
 }
 
 /// A change made here to what a Microsoft account's server has that comparing with what the
-/// server last said can't show (ADR 0003): it waits here until a run has told the server. Each
-/// names what it is about by its server id. A file written before a kind was added opens with
+/// server last said can't show (ADR 0003), or to an IMAP account's folders (v0.12.14): it waits
+/// here until a run has told the server. Each names what it is about by its server id, or an
+/// IMAP mailbox by its path. A file written before a kind was added opens with
 /// none of it; an entry of a kind this version doesn't know is left out ([`Mailbox::queued`]).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -937,6 +938,23 @@ pub enum Queued {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         from: Option<Id>,
     },
+    /// An IMAP account's folder `folder` was renamed or moved here (v0.12.14): its mailbox on the
+    /// server is to be renamed to match the folder's name and the mailbox of its parent now.
+    /// The server mailbox is the folder's [`Folder::remote`] until the server has renamed it.
+    MoveFolder { account: Id, folder: Id },
+    /// An IMAP account's folder was deleted here (v0.12.14): its server's mailbox `remote` is to
+    /// be deleted too, once the mail moved out of it here is out there, and only while it holds
+    /// nothing beyond what the owner had of it then (`shown`, AU3-H7). `uid_validity`: the
+    /// mailbox's, under which the moves out of it are made meanwhile.
+    #[serde(rename_all = "camelCase")]
+    DeleteMailbox {
+        account: Id,
+        remote: String,
+        #[serde(default)]
+        uid_validity: u32,
+        #[serde(default, skip_serializing_if = "crate::sync::Shown::is_empty")]
+        shown: crate::sync::Shown,
+    },
 }
 
 /// The copy a [`Queued::DeleteMessage`] keeps, as a file has it: to be fetched again, whatever it
@@ -987,7 +1005,9 @@ impl Queued {
             Queued::DeleteFolder { account, .. }
             | Queued::CopyMessage { account, .. }
             | Queued::DeleteMessage { account, .. }
-            | Queued::PlaceMessage { account, .. } => *account,
+            | Queued::PlaceMessage { account, .. }
+            | Queued::MoveFolder { account, .. }
+            | Queued::DeleteMailbox { account, .. } => *account,
         }
     }
 }
@@ -998,8 +1018,9 @@ impl Queued {
 /// the [`Folder::remote`] of a folder of `account`) and its UID there.
 ///
 /// Flag changes aren't listed: they show as a message whose flags differ from its
-/// [`Message::synced`]. Nor is anything done to a folder: removing or renaming one is not
-/// pushed to the server, and removing a folder or an account drops the changes that mention it.
+/// [`Message::synced`]. Nor is anything done to a folder: that is queued ([`Queued::MoveFolder`],
+/// [`Queued::DeleteMailbox`], v0.12.14). Removing an account drops the changes that mention it;
+/// removing a folder keeps the moves out of its mailbox, which go before the mailbox does.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Pending {
@@ -2045,19 +2066,52 @@ impl Mailbox {
             return Err(invalid(format!("a folder named \"{name}\" already exists here")));
         }
         self.folder_mut(id)?.name = name;
+        self.queue_imap_folder_move(id);
         Ok(())
     }
 
     /// Move a folder the user made under `parent` (or to the top level).
+    ///
+    /// An IMAP account's folder moved into Deleted Items is deleted ([`Mailbox::delete_folder`],
+    /// v0.12.14): its mail goes there, and its mailbox goes from the server, rather than the
+    /// mailbox being kept as one under the server's Trash. One already there can only come out.
     pub fn move_folder(&mut self, id: Id, parent: Option<Id>) -> Result<(), ModelError> {
         let f = self.folder(id).ok_or(not_found("folder", id))?.clone();
         if f.kind != FolderKind::Custom || f.server_owned() {
             return Err(invalid(format!("{} can't be moved", f.name)));
         }
+        if self.is_imap(f.account)
+            && let Some(d) = self.folder_of_kind(f.account, FolderKind::Deleted)
+            && parent.is_some_and(|p| self.subtree(d).contains(&p))
+        {
+            if self.subtree(d).contains(&id) {
+                return Err(invalid("a folder in Deleted Items can only be moved out of it or deleted"));
+            }
+            return self.delete_folder(id).map(|_| ());
+        }
         // Nor one holding what a JMAP account's server has: its server wouldn't hear of the move.
         if self.folder_stays_on_server(id) {
             return Err(invalid(FOLDERS_STAY_YET));
         }
+        self.place_folder(id, parent)?;
+        self.queue_imap_folder_move(id);
+        Ok(())
+    }
+
+    /// Move the folder `id` under `parent` as its server's list of folders has it (an IMAP
+    /// account's folder found under another there): as [`Mailbox::move_folder`], with nothing to
+    /// tell the server (v0.12.14).
+    pub fn move_folder_as_listed(&mut self, id: Id, parent: Option<Id>) -> Result<(), ModelError> {
+        let f = self.folder(id).ok_or(not_found("folder", id))?;
+        if f.kind != FolderKind::Custom || f.server_owned() {
+            return Err(invalid(format!("{} can't be moved", f.name)));
+        }
+        self.place_folder(id, parent)
+    }
+
+    /// [`Mailbox::move_folder`] here, once it may be moved at all.
+    fn place_folder(&mut self, id: Id, parent: Option<Id>) -> Result<(), ModelError> {
+        let f = self.folder(id).ok_or(not_found("folder", id))?.clone();
         if let Some(p) = parent {
             let pf = self.folder(p).ok_or(not_found("folder", p))?;
             if pf.account != f.account {
@@ -2085,17 +2139,45 @@ impl Mailbox {
         Ok(())
     }
 
+    /// Whether `account` is kept in step by IMAP.
+    fn is_imap(&self, account: Id) -> bool {
+        self.account(account).is_some_and(|a| a.kind == AccountKind::Imap)
+    }
+
+    /// Queue the renaming of the IMAP mailbox the folder `id` follows to its name and place here
+    /// ([`Queued::MoveFolder`], v0.12.14): once for a folder, however often it changes before
+    /// the next run. A folder that follows no mailbox has nothing to rename, nor one in Deleted
+    /// Items (put there by a version before this one): its mailbox isn't moved into the Trash.
+    fn queue_imap_folder_move(&mut self, id: Id) {
+        let Some(f) = self.folder(id) else { return };
+        if !self.is_imap(f.account) || f.remote.is_empty() {
+            return;
+        }
+        if self.folder_of_kind(f.account, FolderKind::Deleted).is_some_and(|d| self.subtree(d).contains(&id)) {
+            return;
+        }
+        let queued = Queued::MoveFolder { account: f.account, folder: id };
+        if !self.queued.contains(&queued) {
+            self.queued.push(queued);
+        }
+    }
+
     /// Delete a folder the user made: it moves into Deleted Items with its messages; a folder
     /// already there is removed for good. Returns `true` when it was removed permanently.
     ///
-    /// For an IMAP account none of this is pushed to the mail server (a mailbox there stays, and
-    /// comes back as a folder with the next synchronisation); the changes still waiting to be
-    /// pushed out of a removed folder are dropped with it, and a move still waiting into one
-    /// becomes a deletion where the server has the message, as for a message removed for good
-    /// (out of another account too, #451). For a Microsoft account the move
-    /// into Deleted Items is the change its next run sends (the folder's parent differs from what
-    /// the server last said), and a folder removed for good is queued for the server to delete
-    /// ([`Queued::DeleteFolder`]), as Outlook does (ADR 0003).
+    /// A move still waiting into a removed folder becomes a deletion where the server has the
+    /// message, as for a message removed for good (out of another account too, #451). For a
+    /// Microsoft account the move into Deleted Items is the change its next run sends (the
+    /// folder's parent differs from what the server last said), and a folder removed for good is
+    /// queued for the server to delete ([`Queued::DeleteFolder`]), as Outlook does (ADR 0003).
+    ///
+    /// For an IMAP account (v0.12.14) the folder doesn't go under Deleted Items: its mail does,
+    /// each message as a move its server makes, and the folder and those under it are removed
+    /// here and queued for the server to delete, the deepest first. The server deletes a mailbox
+    /// only once the mail moved out of it is out, and only while it holds nothing the owner
+    /// hasn't seen here (AU3-H7); else it stays, and comes back as a folder. On Gmail, mail
+    /// moved to the Trash leaves every label, as mail deleted one message at a time does.
+    /// Without a Deleted Items folder, the folder and its mail are removed for good.
     pub fn delete_folder(&mut self, id: Id) -> Result<bool, ModelError> {
         let f = self.folder(id).ok_or(not_found("folder", id))?.clone();
         if f.kind != FolderKind::Custom || f.server_owned() {
@@ -2107,10 +2189,11 @@ impl Mailbox {
         }
         let deleted = self.folder_of_kind(f.account, FolderKind::Deleted);
         let in_deleted = deleted.is_some_and(|d| self.subtree(d).contains(&id));
+        let imap = self.is_imap(f.account);
         let redirected = self.subtree(id);
         self.remove_rules_for_deleted_folders(&redirected);
         match deleted {
-            Some(d) if !in_deleted => {
+            Some(d) if !in_deleted && !imap => {
                 // A name already used in Deleted Items gets a number.
                 let mut name = f.name.clone();
                 let mut n = 1;
@@ -2126,8 +2209,18 @@ impl Mailbox {
             }
             _ => {
                 let gone = self.subtree(id);
+                let to_deleted = deleted.filter(|_| imap && !in_deleted);
+                if let Some(d) = to_deleted {
+                    let held: Vec<Id> = self.messages.values().filter(|m| gone.contains(&m.folder)).map(|m| m.id).collect();
+                    self.move_messages(&held, d)?;
+                }
                 let remotes: Vec<String> =
                     self.folders.iter().filter(|f| gone.contains(&f.id) && !f.remote.is_empty()).map(|f| f.remote.clone()).collect();
+                if imap {
+                    let deletes = self.imap_folder_deletes(f.account, &gone);
+                    self.queued.retain(|q| !matches!(q, Queued::MoveFolder { folder, .. } if gone.contains(folder)));
+                    self.queued.extend(deletes);
+                }
                 // The server deletes what it has of them: each folder it has whose parent it
                 // doesn't have among them (deleting that takes what is under it along).
                 if self.names_may_hold_slashes(f.account) {
@@ -2186,11 +2279,45 @@ impl Mailbox {
                 for list in &mut self.favorites_from_server {
                     list.folders.retain(|folder| !gone.contains(folder));
                 }
-                // What the server deletes with the folders needs no word of its own.
-                self.pending.retain(|p| !(p.account() == f.account && remotes.iter().any(|remote| remote == p.source().0)));
-                Ok(true)
+                // What the server deletes with the folders needs no word of its own. An IMAP
+                // account's mail moved out of them still goes: its server deletes a mailbox only
+                // once that is out.
+                self.pending.retain(|p| {
+                    !(p.account() == f.account
+                        && remotes.iter().any(|remote| remote == p.source().0)
+                        && (!imap || matches!(p, Pending::Delete { .. })))
+                });
+                // (An IMAP account's mail went to Deleted Items: not removed for good.)
+                Ok(to_deleted.is_none())
             }
         }
+    }
+
+    /// The deletions of the IMAP mailboxes the folders `gone` of `account` follow, the deepest
+    /// first (a mailbox is deleted without what is under it), each with what the owner has of it
+    /// (AU3-H7, v0.12.14): the messages of the folders that the server has, and those waiting to
+    /// be deleted there, by [`crate::sync::Shown::imap_message`].
+    fn imap_folder_deletes(&self, account: Id, gone: &[Id]) -> Vec<Queued> {
+        let gone_set: HashSet<Id> = gone.iter().copied().collect();
+        let mut folders: Vec<&Folder> = self.folders.iter().filter(|g| gone_set.contains(&g.id) && !g.remote.is_empty()).collect();
+        let validity: HashMap<&str, u32> = folders.iter().map(|g| (g.remote.as_str(), g.uid_validity)).collect();
+        let by_id: HashMap<Id, u32> = folders.iter().map(|g| (g.id, g.uid_validity)).collect();
+        let held = self.messages.values().filter(|m| m.uid != 0).filter_map(|m| by_id.get(&m.folder).map(|v| (*v, m.uid)));
+        let deleting = self.pending.iter().filter_map(|p| match p {
+            Pending::Delete { account: a, from, uid, .. } if *a == account && *uid != 0 => validity.get(from.as_str()).map(|v| (*v, *uid)),
+            _ => None,
+        });
+        let keys: Vec<String> = held.chain(deleting).map(|(v, uid)| crate::sync::Shown::imap_message(v, uid)).collect();
+        folders.sort_by_key(|g| std::cmp::Reverse(self.depth(g.id)));
+        folders
+            .into_iter()
+            .map(|g| Queued::DeleteMailbox {
+                account,
+                remote: g.remote.clone(),
+                uid_validity: g.uid_validity,
+                shown: crate::sync::Shown::of(&g.name, [], keys.iter().map(String::as_str)),
+            })
+            .collect()
     }
 
     /// What the owner has of the folders `gone` of `account` as they are deleted for good (AU3-H7):

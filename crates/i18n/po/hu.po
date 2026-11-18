@@ -151,7 +151,7 @@ msgid "(as the signer says)"
 msgstr "(Ahogy a jeladó mondja)"
 
 #. interface, what a command says
-#: crates/engine/src/cmd/graph_mail.rs crates/ui-egui/src/people_view.rs
+#: crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/imap_folders.rs crates/ui-egui/src/people_view.rs
 #, fuzzy
 msgid "(no name)"
 msgstr "(nincs név)"
@@ -2108,11 +2108,6 @@ msgstr[0] "{n} fájl csatolva"
 msgstr[1] "{n} fájl csatolva"
 
 #. interface
-#: crates/ui-egui/src/send_preview.rs
-msgid "Attached: {files}"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Attachment keywords"
@@ -3386,6 +3381,11 @@ msgid "Clear search (Esc)"
 msgstr "Keresés törlése (Esc)"
 
 #. interface
+#: crates/ui-egui/src/compose.rs
+msgid "Click to preview {name}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Click to preview {name}; double-click to open it"
@@ -3425,6 +3425,11 @@ msgstr "Zárd be a MailCraft-t, telepítsd az új verziót és indítsd újra. E
 #, fuzzy
 msgid "Close Message"
 msgstr "Üzenet bezárása"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Close Preview"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/view.rs
@@ -3880,6 +3885,11 @@ msgstr "Nem sikerült a szerverrel kapcsolatban"
 #, fuzzy
 msgid "Couldn't change flags in \"{name}\""
 msgstr "A(z) „{name}” mappában nem sikerült módosítani a jelölőket"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "Couldn't change the folders on the server"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
@@ -5719,6 +5729,11 @@ msgstr "Kedvenc"
 #, fuzzy
 msgid "Favorites"
 msgstr "Kedvencek"
+
+#. interface
+#: crates/ui-egui/src/ribbon.rs
+msgid "Favorites and recent"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/folder.rs
@@ -10670,6 +10685,11 @@ msgstr "Nem található névjegy."
 
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
+msgid "No preview for this file type."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
 #, fuzzy
 msgid "No preview helper is available for this attachment."
 msgstr "Ehhez a melléklethoz nem áll rendelkezésre előzetes segítő."
@@ -12553,6 +12573,13 @@ msgstr ""
 msgid "Preview"
 msgstr "Előnézet"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid ""
+"Preview\n"
+"Pane"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/reading.rs
 #, fuzzy
@@ -12567,6 +12594,11 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Preview Message"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Preview Pane"
 msgstr ""
 
 #. command label
@@ -12959,7 +12991,7 @@ msgid "Receiving {name}: {read} of {total} · folder {number} of {folders}"
 msgstr "{name} fogadása: {read} of {total} · {number} of {folders}"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Recent"
 msgstr "Nemrég"
@@ -12973,6 +13005,11 @@ msgid ""
 msgstr ""
 "Legutóbbi\n"
 "keresések"
+
+#. command label
+#: crates/engine/src/cmd/folder.rs
+msgid "Recent Folders"
+msgstr ""
 
 #. command label, ribbon
 #: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/ribbon.rs
@@ -14599,6 +14636,11 @@ msgid "Select a task"
 msgstr "Válasszon feladatot"
 
 #. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Select an attachment to preview it"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Select an item to read"
@@ -15538,6 +15580,16 @@ msgstr "Felhasználónevek, név vagy valódi nevek megjelenítése"
 #, fuzzy
 msgid "Show week numbers in the Month view and the date navigator"
 msgstr "Hetek sorszámának megjelenítése a havi nézetben és a kisnaptárban"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Showing the first {n} rows."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Showing the start of the file."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -17497,7 +17549,7 @@ msgid "The folder \"{folder}\" and everything in it will be deleted."
 msgstr "A \"{folder}\" mappát és benne mindent törölnek."
 
 #. what a command says
-#: crates/engine/src/cmd/graph_mail.rs
+#: crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/imap_folders.rs
 #, fuzzy
 msgid "The folder \"{name}\" wasn't deleted: the server has {n} new item in it that you hadn't seen. It comes back with it; delete it again if you still want it gone."
 msgid_plural "The folder \"{name}\" wasn't deleted: the server has {n} new items in it that you hadn't seen. It comes back with them; delete it again if you still want it gone."
@@ -18767,6 +18819,11 @@ msgstr "Ezt a mellékletet nem lehetett előre megnézni."
 msgid "This attachment is too large to preview."
 msgstr "Ez a melléklet túl nagy ahhoz, hogy megtekintse."
 
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "This attachment isn't previewed, to keep you safe."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/sync_driver/free_busy.rs
 #, fuzzy
@@ -19993,14 +20050,13 @@ msgid "Tuesday"
 msgstr "kedd"
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Turn on attachment previews in File › Options."
-msgstr "Kapcsolja be a melléklet előnézetét a File-ban › Beállítások."
-
-#. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Turn on the Preview Pane in the View tab."
 msgstr ""
 
 #. interface
@@ -21677,8 +21733,8 @@ msgstr "a kapcsolati kártya legfeljebb 32 kulcsot tartalmaz"
 msgid "a draft can't have a reminder: send it first, or use Follow Up in the message itself"
 msgstr "Piszkozathoz nem adható emlékeztető: előbb küldd el, vagy használd a Nyomon követés funkciót magában az üzenetben"
 
-#. what a command says
-#: crates/model/src/mailbox.rs
+#. what a command says, why a mail server couldn't be used
+#: crates/model/src/mailbox.rs crates/net/src/imap_folders.rs
 #, fuzzy
 msgid "a folder can't move into itself"
 msgstr "egy mappa nem tud magától mozogni"
@@ -21688,6 +21744,16 @@ msgstr "egy mappa nem tud magától mozogni"
 #, fuzzy
 msgid "a folder can't move to another account"
 msgstr "a mappa nem helyezhető át másik fiókba"
+
+#. what a command says
+#: crates/model/src/mailbox.rs
+msgid "a folder in Deleted Items can only be moved out of it or deleted"
+msgstr ""
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "a folder isn't kept in the server's Trash; delete it instead"
+msgstr ""
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -21944,7 +22010,7 @@ msgid "and"
 msgstr "valamint"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TodayScreen.kt crates/ui-egui/src/reading.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TodayScreen.kt crates/ui-egui/src/attachment_preview.rs crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "and {n} more"
 msgid_plural "and {n} more"
@@ -22326,6 +22392,11 @@ msgstr "a következő kapcsolatnál a kiszolgálóhoz kerül"
 msgid "it has two conditions of one kind, and the server would take either of them rather than both"
 msgstr "kétféle feltétel van, és a szerver mindkettő helyett mindkettőt elvenné."
 
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "it holds more mail than can be checked"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/reading/images.rs
 #, fuzzy
@@ -22349,6 +22420,11 @@ msgstr "Ez egy olyan kép, amit nem lehet itt megmutatni (AVIF vagy HEIC)"
 #, fuzzy
 msgid "it is damaged, or larger than can be shown"
 msgstr "sérült, vagy nagyobb, mint amit kimutathatunk"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "it is one of the server's own folders, or holds one"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/images.rs crates/ui-egui/src/reading/remote.rs
@@ -23490,11 +23566,21 @@ msgstr "a fájl üres"
 msgid "the file is larger than a file of Public keys can be (1 MB)"
 msgstr "a fájl nagyobb, mint egy fájl nyilvános billentyűk lehet (1 MB)"
 
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the folder has no usable name"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/folder.rs
 #, fuzzy
 msgid "the folder is already empty"
 msgstr "a mappa már üres"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the folder it goes into is not on the server"
+msgstr ""
 
 #. name
 #: crates/engine/src/cmd/rules.rs
@@ -23960,10 +24046,20 @@ msgid "the server greeted with a refusal: {reason}"
 msgstr "a szerver nem fogadta el: {reason}"
 
 #. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the server has a folder of that name there"
+msgstr ""
+
+#. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 #, fuzzy
 msgid "the server isn't idling"
 msgstr "a szerver nem üresjáratú"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the server keeps no folders inside others"
+msgstr ""
 
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/folder.rs
@@ -25403,8 +25499,8 @@ msgid_plural "{n} accounts have one"
 msgstr[0] "{n} fióknak van"
 msgstr[1] "{n} fióknak van"
 
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/ui-egui/src/send_preview.rs
 #, fuzzy
 msgid "{n} attachment"
 msgid_plural "{n} attachments"
@@ -25599,6 +25695,13 @@ msgid "{n} event in view"
 msgid_plural "{n} events in view"
 msgstr[0] "{n} esemény a nézetben"
 msgstr[1] "{n} esemény a nézetben"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "{n} file"
+msgid_plural "{n} files"
+msgstr[0] ""
+msgstr[1] ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -26587,6 +26690,10 @@ msgstr "a(z) „{subject}” üzenet túl nagy a letöltéshez, ezért csak a fe
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "~A {subject} ~ nem volt a szerveren, így nem lehet továbbítani, mint egy melléklet"
+
+#, fuzzy
+#~ msgid "Turn on attachment previews in File › Options."
+#~ msgstr "Kapcsolja be a melléklet előnézetét a File-ban › Beállítások."
 
 #, fuzzy
 #~ msgid "Open a message you sent as a new one"

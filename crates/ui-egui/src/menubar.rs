@@ -169,6 +169,7 @@ const VIEW: &[Row] = &[
     Sep,
     Cmd("view.readingPane"),
     Cmd("view.folderPane"),
+    Cmd("view.previewPane"),
     Cmd("view.conversations"),
     Cmd("view.reverseSort"),
     Sep,

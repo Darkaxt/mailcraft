@@ -898,6 +898,11 @@ pub(crate) fn viewports(app: &MailApp) -> Vec<egui::ViewportId> {
     app.windows.open.iter().map(|w| viewport_of(w.id)).collect()
 }
 
+/// The numbers of the windows that are open (v0.12.14).
+pub(crate) fn ids(app: &MailApp) -> Vec<u64> {
+    app.windows.open.iter().map(|w| w.id).collect()
+}
+
 /// Show the windows that are open, and close the ones whose subject is gone. Once a frame,
 /// before the main window's shortcuts: where the windows are inside the main one, the keys of
 /// the active one (Escape closes it) are not also the main window's.
@@ -1333,6 +1338,7 @@ fn contents(app: &mut MailApp, ui: &mut Ui, id: u64, what: &mut What, own_keys: 
             // What the message draws (its attachments' chips and `▾`, #785) is recorded as in this
             // window, apart from the same message in the reading pane.
             let scope = app.hit.scope(id);
+            crate::attachment_preview::pane(app, ui, egui::Id::unique(("mailcraft-window-preview", id)));
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.surface)).show(ui, |ui| {
                 crate::reading::show_message(app, ui, &m, Place::Window(id));
             });

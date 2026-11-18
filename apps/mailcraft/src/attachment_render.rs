@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Optional native attachment renderers. An invocation gets a private directory, a
-//! generated input filename and the attachment bytes. No mailbox path is passed to it.
+//! The attachment previews' worker (v0.12.14): pictures decoded off the window's thread, pages
+//! drawn by the Craft content runtime MailCraft comes with, and the optional native helpers
+//! (PdfCraft, PhotoCraft). A helper or Craft worker gets a private directory, a generated input
+//! filename and the attachment bytes. No mailbox path is passed to it.
 
 use std::ffi::OsString;
 use std::fs::{self, File};
@@ -12,39 +14,78 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use mailcraft_ui_egui::attachment_preview::{Error, Format, Host, MAX_PAGES, MAX_SIDE, Page, Request};
+use mailcraft_engine::attachment_pages;
+use mailcraft_ui_egui::attachment_preview::{Error, Format, Host, MAX_PAGES, MAX_SIDE, Page, Render, Request, decode_picture};
 
 const DEADLINE: Duration = Duration::from_secs(12);
 const MAX_PNG_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_INFO_BYTES: u64 = 64 * 1024;
 
-/// Expose the detected native helpers and reserve one renderer slot per window.
+/// Expose the Craft content runtime's types and the detected native helpers, and reserve one
+/// page renderer slot for the app (a picture needs none).
 pub(crate) fn service(ctx: &egui::Context) -> Option<Host> {
     let pdf = executable("MAILCRAFT_PDFCRAFT_CLI", "PdfCraft", "pdfcraft-cli");
     let photo = executable("MAILCRAFT_PHOTOCRAFT_CLI", "PhotoCraft", "photocraft-cli");
-    if pdf.is_none() && photo.is_none() {
-        return None;
-    }
+    let craft = if attachment_pages::installed() { attachment_pages::EXTENSIONS.iter().map(|e| e.to_string()).collect() } else { Vec::new() };
     let (has_pdf, has_photo) = (pdf.is_some(), photo.is_some());
     let busy = Arc::new(AtomicBool::new(false));
     let ctx = ctx.clone();
     Some(Host {
         pdf: has_pdf,
         images: has_photo,
+        craft,
         render: Box::new(move |request| {
-            let program = if request.format == Format::Pdf { pdf.clone() } else { photo.clone() };
+            if request.render == Render::Picture {
+                return crate::background(&ctx, "attachment preview", move || -> Result<Page, Error> {
+                    Ok(Page { image: decode_picture(&request.load()?)?, pages: 1 })
+                });
+            }
+            let program = match request.render {
+                Render::Helper(Format::Pdf) => pdf.clone(),
+                Render::Helper(_) => photo.clone(),
+                Render::Craft(_) | Render::Picture => None,
+            };
             // The guard is dropped even if spawning the worker fails.
             let Some(slot) = Slot::acquire(&busy) else {
                 let (send, receive) = std::sync::mpsc::channel();
                 let _ = send.send(Err(Error::Busy));
                 return receive;
             };
-            crate::background(&ctx, "attachment preview", move || {
+            crate::background(&ctx, "attachment preview", move || -> Result<Page, Error> {
                 let _slot = slot;
-                render(&program.ok_or(Error::Unavailable)?, request)
+                let render_as = request.render;
+                match render_as {
+                    Render::Craft(extension) => craft_page(extension, &request),
+                    Render::Helper(format) => render(&program.ok_or(Error::Unavailable)?, format, request),
+                    Render::Picture => Err(Error::Invalid),
+                }
             })
         }),
     })
+}
+
+/// A page drawn by the Craft content runtime's core for files of type `extension`.
+fn craft_page(extension: &'static str, request: &Request) -> Result<Page, Error> {
+    if request.page == 0 || request.page > MAX_PAGES || request.pages.is_some_and(|n| n > MAX_PAGES || request.page > n) {
+        return Err(Error::Invalid);
+    }
+    if request.cancel.load(Ordering::Relaxed) {
+        return Err(Error::TimedOut);
+    }
+    let bytes = request.load()?;
+    let page = attachment_pages::render(&bytes, extension, request.page, attachment_pages::MAX_WIDTH, &request.cancel).map_err(|why| {
+        if why.contains("resourceLimit") {
+            Error::TooLarge
+        } else {
+            log::warn!("attachment preview: {why}");
+            Error::Failed
+        }
+    })?;
+    let size = [usize::try_from(page.width).map_err(|_| Error::Invalid)?, usize::try_from(page.height).map_err(|_| Error::Invalid)?];
+    if page.rgba.len() != size[0] * size[1] * 4 {
+        return Err(Error::Invalid);
+    }
+    Ok(Page { image: egui::ColorImage::from_rgba_unmultiplied(size, &page.rgba), pages: page.pages })
 }
 
 struct Slot(Arc<AtomicBool>);
@@ -97,11 +138,11 @@ fn absolute_file(path: PathBuf) -> Option<PathBuf> {
 }
 
 /// Stage one attachment and render the requested page under the shared deadline.
-fn render(program: &Path, request: Request) -> Result<Page, Error> {
+fn render(program: &Path, format: Format, request: Request) -> Result<Page, Error> {
     if request.page == 0
         || request.page > MAX_PAGES
         || request.pages.is_some_and(|n| n > MAX_PAGES || request.page > n)
-        || request.format != Format::Pdf && request.page != 1
+        || format != Format::Pdf && request.page != 1
     {
         return Err(Error::Invalid);
     }
@@ -112,13 +153,13 @@ fn render(program: &Path, request: Request) -> Result<Page, Error> {
     }
     let bytes = request.load()?;
     let dir = tempfile::Builder::new().prefix("mailcraft-preview-").tempdir().map_err(|_| Error::Failed)?;
-    let input = dir.path().join(format!("attachment.{}", request.format.extension()));
+    let input = dir.path().join(format!("attachment.{}", format.extension()));
     let output = dir.path().join("preview.png");
     mailcraft_engine::mark::write_new_from_mail(&input, &bytes).map_err(|_| Error::Failed)?;
 
     let run =
         |args: &[OsString], watched: &Path, limit, stdout| run_helper(program, dir.path(), args, watched, limit, stdout, deadline, &request.cancel);
-    let pages = match request.format {
+    let pages = match format {
         Format::Pdf => {
             let pages = if let Some(n) = request.pages {
                 n
@@ -151,7 +192,7 @@ fn render(program: &Path, request: Request) -> Result<Page, Error> {
             run(
                 &[
                     "convert".into(),
-                    format!("attachment.{}", request.format.extension()).into(),
+                    format!("attachment.{}", format.extension()).into(),
                     "preview.png".into(),
                     "--no-gpu".into(),
                     "--metadata".into(),

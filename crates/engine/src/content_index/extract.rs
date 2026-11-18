@@ -557,7 +557,7 @@ const ZIP_RATIO: u64 = 200;
 /// entries, too much uncompressed data or an implausible compression ratio:
 /// the reason. Reads only the directory; nothing is decompressed. A
 /// directory that cannot be read is left to the importer's own checks.
-pub(super) fn zip_bomb(bytes: &[u8]) -> Option<String> {
+pub(crate) fn zip_bomb(bytes: &[u8]) -> Option<String> {
     if !bytes.starts_with(b"PK\x03\x04") {
         return None;
     }

@@ -298,6 +298,8 @@ const SAFE: &[&str] = &[
     "folder.rename",
     "folder.move",
     "folder.favorite",
+    // The recent folders: a list on this computer only, nothing in the mailbox changes.
+    "folder.recent",
     // A tag kept on this computer only, and taken off as easily.
     "folder.tag",
     // An account's place in the folder pane (#702): as moving a folder, nothing leaves this
@@ -319,6 +321,7 @@ const SAFE: &[&str] = &[
     "view.readingPane",
     "view.gmailCategories",
     "view.folderPane",
+    "view.previewPane",
     "view.navigationBar",
     "view.conversations",
     "view.sort",

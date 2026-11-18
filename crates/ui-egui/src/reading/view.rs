@@ -419,7 +419,7 @@ impl Store {
                 self.entries.retain(|e| e.place != place || e.message.id != message.id || message.id == 0);
                 let (kept, room) = match place {
                     Place::Pane => (self.entries.iter().filter(|e| e.place == Place::Pane).count(), KEPT),
-                    Place::Window(_) | Place::Quote | Place::Preview | Place::DraftPreview(_) => {
+                    Place::Window(_) | Place::Quote | Place::Preview | Place::DraftPreview(_) | Place::Attachment => {
                         // A window shows one message, and a window that is gone shows none.
                         self.entries.retain(|e| e.place == Place::Pane || (e.place != place && e.used.saturating_add(2) >= frame));
                         (self.entries.iter().filter(|e| e.place != Place::Pane).count(), KEPT_IN_WINDOWS)

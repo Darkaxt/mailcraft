@@ -38,6 +38,8 @@ pub fn specs() -> Vec<CommandSpec> {
             .when(crate::gmail::offered)
             .params(r#"{"value": "folders"|"tabs"} — Gmail's inbox categories as five folders under a Gmail account's Inbox in the folder pane, or as a row of tabs above its message list (#911)"#),
         CommandSpec::new("view.folderPane", "Folder Pane", "View › Layout", folder_pane).reads().params(TOGGLE),
+        // The pane on the right that shows an attachment clicked (v0.12.14).
+        CommandSpec::new("view.previewPane", "Preview Pane", "View › Layout", preview_pane).reads().key("Alt+P").params(TOGGLE),
         CommandSpec::new("view.navigationBar", "Navigation Bar", "View › Layout", navigation_bar)
             .reads()
             .params(r#"{"value": "bar"|"foot"} — the switch between Mail, Calendar, People and Tasks as the bar of icons down the window's left edge, or as a row of names at the foot of the pane on the left, where older mail programs had it (#1174)"#),
@@ -192,6 +194,11 @@ fn navigation_bar(s: &mut Session, v: &Value) -> CmdResult {
 fn folder_pane(s: &mut Session, v: &Value) -> CmdResult {
     s.view.folder_pane = p::bool(v, "value").unwrap_or(!s.view.folder_pane);
     Ok(json!({"value": s.view.folder_pane}))
+}
+
+fn preview_pane(s: &mut Session, v: &Value) -> CmdResult {
+    s.view.preview_pane = p::bool(v, "value").unwrap_or(!s.view.preview_pane);
+    Ok(json!({"value": s.view.preview_pane}))
 }
 
 fn conversations(s: &mut Session, v: &Value) -> CmdResult {

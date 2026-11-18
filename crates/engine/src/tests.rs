@@ -369,6 +369,26 @@ fn attachments_are_opened_only_in_the_window() {
     assert_eq!(crate::agent::access("mail.openAttachment"), Some(crate::agent::Access::Never));
 }
 
+/// Folders opened or filed into are listed first among the recent ones; the standard folders
+/// aren't, and one taken off or deleted is gone from the list (v0.12.14).
+#[test]
+fn recent_folders_follow_what_is_opened_and_filed_into() {
+    let mut s = session();
+    run(&mut s, "folder.select", json!({"path": "inbox/projects/atlas"}));
+    let atlas = s.view.folder;
+    let id = s.rows().iter().map(|r| r.id).find(|id| s.mailbox.message(*id).is_some()).unwrap();
+    let log = run(&mut s, "folder.new", json!({"name": "Log", "parent": null}))["id"].as_u64().unwrap();
+    run(&mut s, "folder.select", json!({"kind": "junk"}));
+    run(&mut s, "mail.copy", json!({"ids": [id], "folder": log}));
+    let listed: Vec<Id> = run(&mut s, "folder.recent", json!({}))["folders"].as_array().unwrap().iter().filter_map(|f| f["id"].as_u64()).collect();
+    assert_eq!(listed, [log, atlas]);
+    assert!(serde_json::to_string(&s.prefs).unwrap().contains("recentFolders"));
+    run(&mut s, "folder.recent", json!({"remove": log}));
+    assert_eq!(crate::cmd::folder::recent(&s), [atlas]);
+    run(&mut s, "folder.recent", json!({"clear": true}));
+    assert!(crate::cmd::folder::recent(&s).is_empty());
+}
+
 #[test]
 fn folders_and_views() {
     let mut s = session();

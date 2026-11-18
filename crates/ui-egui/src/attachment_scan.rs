@@ -237,6 +237,13 @@ pub(crate) fn flagged(app: &MailApp, id: Id, index: usize) -> Option<String> {
     (k.verdict == Verdict::Flagged).then(|| if k.threats.is_empty() { tl!("a threat").to_string() } else { k.threats.join(", ") })
 }
 
+/// Whether Microsoft Defender flagged a file with these very bytes: a file being sent, which has
+/// no message of its own (v0.12.14).
+pub(crate) fn flagged_file(app: &MailApp, a: &Attachment) -> bool {
+    app.scans.loaded.as_ref() == Some(&app.session.path)
+        && hash_of(a).and_then(|hash| app.scans.known.get(&hash)).is_some_and(|k| k.verdict == Verdict::Flagged)
+}
+
 /// Whether attachment `index` of message `id` is waiting to be scanned, or being scanned.
 pub(crate) fn scanning(app: &MailApp, id: Id, index: usize) -> bool {
     let Some(a) = app.session.mailbox.message(id).and_then(|m| m.attachments.get(index)) else { return false };

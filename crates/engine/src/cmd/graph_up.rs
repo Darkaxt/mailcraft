@@ -76,7 +76,7 @@ pub fn message_changes(s: &Session, account: Id, limit: usize) -> (Vec<MessageCh
             }
             Queued::DeleteMessage { id, .. } => note(&|| Some(MessageChange::Delete { id: id.clone() })),
             // (Made by the run with the whole message: `graph_place`.)
-            Queued::DeleteFolder { .. } | Queued::PlaceMessage { .. } => {}
+            Queued::DeleteFolder { .. } | Queued::PlaceMessage { .. } | Queued::MoveFolder { .. } | Queued::DeleteMailbox { .. } => {}
         }
     }
     // Moved out of the account, whole, and saved so: the server's copy goes. Moved into another

@@ -79,6 +79,7 @@ pub(crate) use signature::row_seal as signature_seal;
 pub(crate) use view::char_at;
 pub(crate) use warnings::row_mark as warning_mark;
 
+use crate::attachment_preview::Origin;
 use crate::theme::{Tokens, paint_clipped, regular, semibold};
 use crate::{MailApp, icons};
 
@@ -118,6 +119,8 @@ pub enum Place {
     Preview,
     /// The complete unsent message, isolated from signature samples and quoted text.
     DraftPreview(u64),
+    /// An attachment's preview (v0.12.14): an attached message, or an HTML file.
+    Attachment,
 }
 
 /// A message that is not in the mailbox (a message file opened without being filed, #515) in
@@ -152,12 +155,26 @@ pub fn show_file_message(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, place
     controls::overlay(app, ui, room, m, place, false, None);
 }
 
+/// An HTML file in an attachment's preview (v0.12.14): read-only through the display blocks, as a
+/// message's body is shown, without its scripts or style sheets and with nothing from the web.
+pub(crate) fn show_attachment_html(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
+    let place = Place::Attachment;
+    select::begin(app, ui, m, place);
+    view::page(app, place, ui).show(ui, |ui| {
+        egui::ScrollArea::both().auto_shrink([false, false]).id_salt(("body", place)).show(ui, |ui| {
+            egui::Frame::NONE.inner_margin(egui::Margin { left: 16, right: 16, top: 12, bottom: 24 }).show(ui, |ui| {
+                view::show(app, ui, m, place, Access::Blocked);
+            });
+        });
+    });
+}
+
 /// The reading pane: the selected message, or a word on why there is none to show.
 pub fn show(app: &mut MailApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     let picked = app.session.sel.messages.len();
     let preview_message = if picked == 1 { app.session.sel.focus() } else { None };
-    crate::attachment_preview::follow_message(app, ui.ctx().viewport_id(), preview_message);
+    crate::attachment_preview::follow(app, ui.ctx().viewport_id(), preview_message.map(crate::attachment_preview::Origin::Message));
     // What showing it needs (its body, the pictures in it, a calendar part) is brought into
     // memory first, when the mailbox keeps it on disk; the message then shows whole in this
     // very frame. (One that can't be read says so in its text, once.)
@@ -850,7 +867,7 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
             ui.painter().rect(r, 5.0, t.panel, frame, egui::StrokeKind::Inside);
             let left = egui::CornerRadius { nw: 5, sw: 5, ne: 0, se: 0 };
             let right = egui::CornerRadius { nw: 0, sw: 0, ne: 5, se: 5 };
-            let selected = crate::attachment_preview::selected(app, ui.ctx().viewport_id(), m.id, index);
+            let selected = crate::attachment_preview::selected(app, ui.ctx().viewport_id(), Origin::Message(m.id), index);
             if selected || resp.hovered() {
                 ui.painter().rect_filled(main_rect.shrink(1.0), left, if selected { t.pressed } else { t.hover });
             }
@@ -884,7 +901,7 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
                 drop.on_hover_text(why);
                 continue;
             }
-            let can_preview = crate::attachment_preview::single_click_allowed(app, m.id, index);
+            let can_preview = crate::attachment_preview::single_click_allowed(app, Origin::Message(m.id), index);
             let hint = if can_preview {
                 tl!("Click to preview {name}; double-click to open it")
             } else {
@@ -903,7 +920,7 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
                 crate::attachment_preview::cancel_click(app);
                 let _ = app.run("mail.openAttachment", json!({"id": m.id, "index": index}));
             } else if can_preview && resp.clicked() {
-                crate::attachment_preview::queue_click(app, ui.ctx(), m.id, index);
+                crate::attachment_preview::queue_click(app, ui.ctx(), Origin::Message(m.id), index);
             }
             resp.context_menu(|ui| attachment_menu(ui, app, m.id, index));
             // The `▾`: a click, or Enter or Space while it has the keyboard, opens the same menu.
@@ -913,7 +930,7 @@ fn attachments(app: &mut MailApp, ui: &mut Ui, m: &Message, t: &Tokens) {
             egui::Popup::menu(&drop).show(|ui| attachment_menu(ui, app, m.id, index));
         }
     });
-    crate::attachment_preview::finish_click(app, ui.ctx(), m.id);
+    crate::attachment_preview::finish_click(app, ui.ctx(), Origin::Message(m.id));
 }
 
 /// The key of attachment `index` of message `id` in the hit map (`attachment` for the chip,

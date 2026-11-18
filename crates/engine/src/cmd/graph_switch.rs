@@ -29,7 +29,7 @@
 
 use std::collections::HashSet;
 
-use mailcraft_model::{Account, AccountKind, Folder, FolderKind, GraphSwitch, Id, Mailbox, Message, clean_name};
+use mailcraft_model::{Account, AccountKind, Folder, FolderKind, GraphSwitch, Id, Mailbox, Message, Queued, clean_name};
 use serde_json::{Value, json};
 
 use super::{bad, fail};
@@ -284,6 +284,8 @@ pub fn switch(s: &mut Session, account: Id) -> Result<Switched, CmdError> {
     }
     // Nothing the IMAP server was still to be told is told anybody now.
     mb.pending.retain(|p| p.account() != account);
+    // Nor the changes of its folders that were for it (v0.12.14).
+    mb.queued.retain(|q| !(q.account() == account && matches!(q, Queued::MoveFolder { .. } | Queued::DeleteMailbox { .. })));
     let a = mb.account_mut(account).map_err(|e| fail(e.to_string()))?;
     a.kind = AccountKind::Microsoft;
     (a.incoming, a.outgoing) = (None, None);

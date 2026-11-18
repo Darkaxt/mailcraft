@@ -822,6 +822,7 @@ fn params(place: Place) -> Value {
         Place::Quote => json!({"quote": true}),
         Place::Preview => json!({"preview": true}),
         Place::DraftPreview(id) => json!({"draftPreview": id}),
+        Place::Attachment => json!({"attachment": true}),
     }
 }
 
@@ -1199,6 +1200,7 @@ pub(crate) fn inspect(app: &MailApp, ctx: &egui::Context) -> Value {
             Place::Quote => json!("quote"),
             Place::Preview => json!("preview"),
             Place::DraftPreview(id) => json!({"draftPreview":id}),
+            Place::Attachment => json!("attachment"),
         };
         let zone = match state.selection.as_ref().map(|s| s.zone) {
             Some(Zone::Header) => "header",

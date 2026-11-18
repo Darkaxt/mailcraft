@@ -934,7 +934,7 @@ pub fn sync_request(s: &Session, account: Id) -> Result<SyncRequest, CmdError> {
     }
     let mut again = super::imap_again::wanted(&s.mailbox, account, s.now());
     let now = s.now();
-    let folders = s
+    let mut folders: Vec<FolderState> = s
         .mailbox
         .folders
         .iter()
@@ -952,12 +952,25 @@ pub fn sync_request(s: &Session, account: Id) -> Result<SyncRequest, CmdError> {
             status: f.imap_status.filter(|st| (0..super::graph_mail::FULL_SWEEP_EVERY).contains(&now.saturating_sub(st.at))),
         })
         .collect();
+    // The mailboxes of folders deleted here that mail is still to leave (v0.12.14).
+    folders.extend(super::imap_folders::leaving(&s.mailbox, account));
     let (ops, _) = remote_ops(s, account, MAX_OPS);
     let (places, _) = place_ops(s, account, MAX_PLACES);
+    let folder_changes = super::imap_folders::changes(&s.mailbox, account, &ops, &places);
     // What is sent goes whole: the files a message keeps on disk are read for it.
     let outbox = s.loaded_outbox(outbox);
     let gmail_moves = gmail_moves(s, account);
-    Ok(SyncRequest { account: a.clone(), folders, outbox, max_per_folder: s.prefs.sync_limit, ops, places, gmail_moves, ..Default::default() })
+    Ok(SyncRequest {
+        account: a.clone(),
+        folders,
+        outbox,
+        max_per_folder: s.prefs.sync_limit,
+        ops,
+        places,
+        gmail_moves,
+        folder_changes,
+        ..Default::default()
+    })
 }
 
 /// The moves between Gmail's categories made in `account` that Gmail hasn't heard of (#911), for
@@ -1096,7 +1109,8 @@ pub fn unpushed(s: &Session, account: Id) -> usize {
     if s.mailbox.account(account).is_some_and(|a| a.kind == AccountKind::Jmap) {
         return super::jmap_up::unpushed(&s.mailbox, account);
     }
-    remote_ops(s, account, 0).1 + place_ops(s, account, 0).1
+    // (And the changes of its folders, v0.12.14: those that can go now.)
+    remote_ops(s, account, 0).1 + place_ops(s, account, 0).1 + super::imap_folders::changes(&s.mailbox, account, &[], &[]).len()
 }
 
 /// How many originals of messages moved out of `account` wait on its server for their message to
@@ -1171,7 +1185,12 @@ fn remote_ops(s: &Session, account: Id, limit: usize) -> (Vec<RemoteOp>, usize) 
     };
     let folders: HashMap<Id, &Folder> = mb.folders.iter().filter(|f| f.account == account).map(|f| (f.id, f)).collect();
     let followed = |f: &&Folder| !f.remote.is_empty() && f.uid_validity != 0;
-    let mailboxes: HashSet<&str> = folders.values().copied().filter(followed).map(|f| f.remote.as_str()).collect();
+    let mut mailboxes: HashSet<&str> = folders.values().copied().filter(followed).map(|f| f.remote.as_str()).collect();
+    // And those of folders deleted here, which the mail moved out of them leaves first (v0.12.14).
+    mailboxes.extend(mb.queued.iter().filter_map(|q| match q {
+        Queued::DeleteMailbox { account: a, remote, uid_validity, .. } if *a == account && *uid_validity != 0 => Some(remote.as_str()),
+        _ => None,
+    }));
     for pending in mb.pending.iter().filter(|p| p.account() == account) {
         let (from, uid) = pending.source();
         if uid == 0 || !mailboxes.contains(from) {
@@ -1487,11 +1506,18 @@ fn apply_sync_piece(s: &mut Session, run: &mut SyncTotals, mut result: SyncResul
 /// Take in what a result has for the mailbox. Returns what that changed, and how many messages
 /// were sent.
 fn take_in_news(s: &mut Session, account: Id, result: &mut SyncResult) -> (Counts, usize) {
-    let told =
-        !result.moved.is_empty() || !result.deleted.is_empty() || !result.sent.is_empty() || !result.placed.is_empty() || !result.unplaced.is_empty();
+    let told = !result.moved.is_empty()
+        || !result.deleted.is_empty()
+        || !result.sent.is_empty()
+        || !result.placed.is_empty()
+        || !result.unplaced.is_empty()
+        || !result.folders_changed.is_empty();
     let gmail_moves = gmail_moves_go(s, account);
     let now = s.now();
     let mb = &mut s.mailbox;
+    // Folders renamed and deleted on the server first (v0.12.14): what it lists and says of their
+    // mailboxes is under the new paths, or not to be taken in.
+    super::imap_folders::taken_in(mb, account, &result.folders_changed, s.interface_language, &mut result.errors);
     let sent = file_sent(mb, account, result, now);
     // Handed to the outgoing server, and the answer lost: it may have gone (AU3-26). (The run
     // said already that it couldn't send it.)
@@ -2134,8 +2160,9 @@ fn folder_for(mb: &mut Mailbox, account: Id, remote: &str, kind: FolderKind) -> 
 /// Give every folder of mail the server lists a folder here, in the same tree, before any of its
 /// mail has come: the standard folder of its kind when that follows no mailbox yet, else a new
 /// folder under the one its parent has here. A folder that is here already stays as it is,
-/// except one at the top whose place in the tree is now known (folders moved here are not moved
-/// on the server yet, so the server's tree is the one that holds).
+/// except one at the top whose place in the tree is now known (the server's tree holds, but for a
+/// folder renamed or moved here whose mailbox the server is yet to rename, v0.12.14). A mailbox
+/// waiting to be deleted is not taken for a folder.
 fn adopt_listed(mb: &mut Mailbox, account: Id, on_server: &mut OnServer, listed: &[mailcraft_model::sync::ListedFolder]) {
     let listed = listed.get(..listed.len().min(mailcraft_model::sync::MAX_LISTED_FOLDERS)).unwrap_or_default();
     // Each folder's parent by the folder's path, the first listed of a path being the one: one
@@ -2171,6 +2198,9 @@ fn adopt_listed(mb: &mut Mailbox, account: Id, on_server: &mut OnServer, listed:
     for f in order {
         let parent = on_server.by_remote.get(&f.parent).copied().filter(|_| !f.parent.is_empty());
         match on_server.by_remote.get(&f.remote).copied() {
+            // A folder renamed or moved here keeps its name and place until its server has it
+            // too (v0.12.14).
+            Some(id) if mb.queued.contains(&Queued::MoveFolder { account, folder: id }) => {}
             Some(id) => {
                 let here = find(mb, &at, id).and_then(|i| mb.folders.get(i)).cloned();
                 // A name an earlier version cut short at a dot is put right.
@@ -2181,18 +2211,22 @@ fn adopt_listed(mb: &mut Mailbox, account: Id, on_server: &mut OnServer, listed:
                     && here.name == cut_name(&f.remote)
                     && mb.rename_folder(id, &name).is_ok()
                 {
+                    // (The server's name: nothing to tell it.)
+                    mb.queued.retain(|q| *q != Queued::MoveFolder { account, folder: id });
                     names.entry(here.parent).or_default().insert(name.to_lowercase());
                 }
                 let at_top = here.as_ref().is_some_and(|here| here.parent.is_none() && here.kind == FolderKind::Custom);
                 if let Some(p) = parent
                     && at_top
                     && !mb.subtree(id).contains(&p)
-                    && mb.move_folder(id, Some(p)).is_ok()
+                    && mb.move_folder_as_listed(id, Some(p)).is_ok()
                     && let Some(moved) = find(mb, &at, id).and_then(|i| mb.folders.get(i))
                 {
                     names.entry(Some(p)).or_default().insert(moved.name.to_lowercase());
                 }
             }
+            // A mailbox of a folder deleted here, waiting for its server to delete it (v0.12.14).
+            None if super::imap_folders::waits_to_go(mb, account, &f.remote) => {}
             None => {
                 let standard = if f.kind == FolderKind::Custom { None } else { mb.folder_of_kind(account, f.kind) };
                 let standard = standard.filter(|id| find(mb, &at, *id).and_then(|i| mb.folders.get(i)).is_some_and(|here| here.remote.is_empty()));
@@ -2246,6 +2280,8 @@ fn take_in(
             Some(f) => f.id,
             None => return,
         },
+        // (Not a mailbox of a folder deleted here, waiting for its server to delete it, v0.12.14.)
+        None if follower.is_none() && super::imap_folders::waits_to_go(mb, account, &delta.remote) => return,
         None => match follower.or_else(|| folder_for(mb, account, &delta.remote, delta.kind)) {
             Some(id) => id,
             None => return,

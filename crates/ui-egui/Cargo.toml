@@ -15,6 +15,8 @@ mailcraft-i18n = { workspace = true }
 mailcraft-model = { workspace = true }
 mailcraft-html = { workspace = true }
 mailcraft-engine = { workspace = true }
+# A text file in an attachment's preview, in the set it is written in (v0.12.14).
+mailcraft-charset = { workspace = true }
 mailcraft-host = { workspace = true }
 # The emoji faces, behind a feature of their own since egui 0.37 (#832).
 egui = { workspace = true, features = ["monochrome_emoji_fonts"] }

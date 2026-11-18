@@ -1279,3 +1279,53 @@ fn the_default_calendar_and_the_one_orphans_go_to_are_never_a_subscribed_one() {
     let home = mb.event(orphan).unwrap().calendar;
     assert!(mb.calendar(home).is_some_and(|c| !c.is_subscribed()), "orphans are not put into a copy of a web calendar");
 }
+
+/// An IMAP account's folder renamed or moved here is queued once for its server to rename; one
+/// deleted has its mail moved to Deleted Items as moves the server makes, and its mailbox and
+/// those under it queued for the server to delete, the deepest first, never put under the
+/// server's Trash (v0.12.14).
+#[test]
+fn an_imap_folder_renamed_moved_or_deleted_here_is_queued_for_its_server() {
+    let (mut mb, account, _) = synced_mailbox();
+    mb.accounts[0].kind = AccountKind::Imap;
+    let deleted = mb.folder_of_kind(account, FolderKind::Deleted).unwrap();
+    let projects = mb.add_folder(account, None, "Projects").unwrap();
+    let apollo = mb.add_folder(account, Some(projects), "Apollo").unwrap();
+    let only_here = mb.add_folder(account, None, "Only here").unwrap();
+    for (id, remote) in [(projects, "Projects"), (apollo, "Projects/Apollo")] {
+        let f = mb.folder_mut(id).unwrap();
+        (f.remote, f.uid_validity) = (remote.into(), 9);
+    }
+
+    mb.rename_folder(projects, "Work").unwrap();
+    mb.rename_folder(projects, "Work 2").unwrap();
+    mb.move_folder(apollo, None).unwrap();
+    mb.move_folder(apollo, Some(projects)).unwrap();
+    // A folder the server doesn't have has nothing to rename there.
+    mb.rename_folder(only_here, "Still only here").unwrap();
+    assert_eq!(mb.queued, [Queued::MoveFolder { account, folder: projects }, Queued::MoveFolder { account, folder: apollo }]);
+
+    // Moved into Deleted Items: deleted, not kept as a folder under the Trash.
+    mb.move_folder(only_here, Some(deleted)).unwrap();
+    assert!(mb.folder(only_here).is_none() && mb.children(account, Some(deleted)).is_empty());
+
+    let plans = mb.add_message(Message { uid: 5, synced: Some(unread(5)), ..mail(apollo, "Plans", 2) }).unwrap();
+    assert_eq!(mb.delete_folder(projects), Ok(false));
+    assert!(mb.folder(projects).is_none() && mb.folder(apollo).is_none());
+    assert_eq!(mb.message(plans).map(|m| m.folder), Some(deleted));
+    assert!(
+        mb.pending.iter().any(
+            |p| matches!(p, Pending::Move { message, from, uid: 5, to, .. } if *message == plans && *from == "Projects/Apollo" && *to == deleted)
+        )
+    );
+    assert_eq!(
+        mb.queued,
+        [
+            Queued::DeleteMailbox { account, remote: "Projects/Apollo".into(), uid_validity: 9, shown: sync::Shown::of("Apollo", [], []) },
+            Queued::DeleteMailbox { account, remote: "Projects".into(), uid_validity: 9, shown: sync::Shown::of("Work 2", [], []) },
+        ]
+    );
+    // The moves out are what the server makes first; they are not dropped with the folders.
+    let json = serde_json::to_string(&mb).unwrap();
+    assert_eq!(serde_json::from_str::<Mailbox>(&json).unwrap().queued, mb.queued);
+}

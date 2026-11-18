@@ -674,6 +674,22 @@ fn exchange<'a>(run: &mut Run<'a>, sent: &[Message], host: Host) -> Option<Imap<
         }
         Err(()) => return None,
     };
+    // Folders renamed, moved or deleted here (v0.12.14), before the folders are listed: the list
+    // shows them as they are now. None of it is left half done because the run was called off.
+    let renamed_now = if request.folder_changes.is_empty() {
+        HashSet::new()
+    } else {
+        imap.get_mut().watch(None);
+        let changed = crate::imap_folders::change_folders(run, &mut imap);
+        imap.get_mut().watch(watched);
+        match changed {
+            Some(renamed) => renamed,
+            None => {
+                run.out.unfiled.extend(owed);
+                return None;
+            }
+        }
+    };
     let (mailboxes, dropped) = match imap.list_counted() {
         Ok(list) => list,
         Err(e) => {
@@ -740,8 +756,9 @@ fn exchange<'a>(run: &mut Run<'a>, sent: &[Message], host: Host) -> Option<Imap<
             break;
         }
         let remote = kinds::remote_name(mailbox);
-        // A folder without a name couldn't be told from one that only exists here.
-        if remote.is_empty() || (inbox_read && kind == FolderKind::Inbox) {
+        // A folder without a name couldn't be told from one that only exists here. A mailbox
+        // renamed now is read next time, when the folder here knows it by its new name.
+        if remote.is_empty() || (inbox_read && kind == FolderKind::Inbox) || renamed_now.contains(&remote) {
             continue;
         }
         let state = states.get(&remote, kind).filter(|state| claimed.insert(state.id));

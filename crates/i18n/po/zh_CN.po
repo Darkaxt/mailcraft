@@ -148,7 +148,7 @@ msgid "(as the signer says)"
 msgstr "（按签名者所述）"
 
 #. interface, what a command says
-#: crates/engine/src/cmd/graph_mail.rs crates/ui-egui/src/people_view.rs
+#: crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/imap_folders.rs crates/ui-egui/src/people_view.rs
 #, fuzzy
 msgid "(no name)"
 msgstr "（无名称）"
@@ -2105,11 +2105,6 @@ msgid_plural "Attached {n} files"
 msgstr[0] "已附加 {n} 个文件"
 
 #. interface
-#: crates/ui-egui/src/send_preview.rs
-msgid "Attached: {files}"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Attachment keywords"
@@ -3384,6 +3379,11 @@ msgid "Clear search (Esc)"
 msgstr "清除搜索 (Esc)"
 
 #. interface
+#: crates/ui-egui/src/compose.rs
+msgid "Click to preview {name}"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Click to preview {name}; double-click to open it"
@@ -3423,6 +3423,11 @@ msgstr "关闭 MailCraft，安装新版本并再次启动。否则，它会在�
 #, fuzzy
 msgid "Close Message"
 msgstr "关闭邮件"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Close Preview"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/view.rs
@@ -3880,6 +3885,11 @@ msgstr "无法使服务器保持最新状态"
 #, fuzzy
 msgid "Couldn't change flags in \"{name}\""
 msgstr "无法更改“{name}”中的标志"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "Couldn't change the folders on the server"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
@@ -5719,6 +5729,11 @@ msgstr "收藏"
 #, fuzzy
 msgid "Favorites"
 msgstr "收藏夹"
+
+#. interface
+#: crates/ui-egui/src/ribbon.rs
+msgid "Favorites and recent"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/folder.rs
@@ -10667,6 +10682,11 @@ msgstr "未找到联系人。"
 
 #. interface
 #: crates/ui-egui/src/attachment_preview.rs
+msgid "No preview for this file type."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
 #, fuzzy
 msgid "No preview helper is available for this attachment."
 msgstr "没有可用于预览此附件的辅助程序。"
@@ -12547,6 +12567,13 @@ msgstr ""
 msgid "Preview"
 msgstr "预览"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid ""
+"Preview\n"
+"Pane"
+msgstr ""
+
 #. command label, interface
 #: crates/ui-egui/src/lib.rs crates/ui-egui/src/reading.rs
 #, fuzzy
@@ -12561,6 +12588,11 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Preview Message"
+msgstr ""
+
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Preview Pane"
 msgstr ""
 
 #. command label
@@ -12955,7 +12987,7 @@ msgid "Receiving {name}: {read} of {total} · folder {number} of {folders}"
 msgstr "正在接收 {name}：{read}/{total} · 文件夹 {number}/{folders}"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Recent"
 msgstr "最近"
@@ -12969,6 +13001,11 @@ msgid ""
 msgstr ""
 "最近\n"
 "搜索"
+
+#. command label
+#: crates/engine/src/cmd/folder.rs
+msgid "Recent Folders"
+msgstr ""
 
 #. command label, ribbon
 #: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/ribbon.rs
@@ -14597,6 +14634,11 @@ msgid "Select a task"
 msgstr "选择任务"
 
 #. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Select an attachment to preview it"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Select an item to read"
@@ -15536,6 +15578,16 @@ msgstr "显示用户名、显示名称或真实姓名"
 #, fuzzy
 msgid "Show week numbers in the Month view and the date navigator"
 msgstr "在月视图和日期导航器中显示周数"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Showing the first {n} rows."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Showing the start of the file."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -17493,7 +17545,7 @@ msgid "The folder \"{folder}\" and everything in it will be deleted."
 msgstr "文件夹“{folder}”及其中的所有内容都将被删除。"
 
 #. what a command says
-#: crates/engine/src/cmd/graph_mail.rs
+#: crates/engine/src/cmd/graph_mail.rs crates/engine/src/cmd/imap_folders.rs
 #, fuzzy
 msgid "The folder \"{name}\" wasn't deleted: the server has {n} new item in it that you hadn't seen. It comes back with it; delete it again if you still want it gone."
 msgid_plural "The folder \"{name}\" wasn't deleted: the server has {n} new items in it that you hadn't seen. It comes back with them; delete it again if you still want it gone."
@@ -18762,6 +18814,11 @@ msgstr "无法预览此附件。"
 msgid "This attachment is too large to preview."
 msgstr "此附件过大，无法预览。"
 
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "This attachment isn't previewed, to keep you safe."
+msgstr ""
+
 #. what a command says
 #: crates/engine/src/sync_driver/free_busy.rs
 #, fuzzy
@@ -19983,14 +20040,13 @@ msgid "Tuesday"
 msgstr "星期二"
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-#, fuzzy
-msgid "Turn on attachment previews in File › Options."
-msgstr "请在“文件”→“选项”中启用附件预览。"
-
-#. interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/folder_properties.rs
 msgid "Turn on backups first."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "Turn on the Preview Pane in the View tab."
 msgstr ""
 
 #. interface
@@ -21670,8 +21726,8 @@ msgstr "联系人名片最多保留 32 个密钥"
 msgid "a draft can't have a reminder: send it first, or use Follow Up in the message itself"
 msgstr "草稿不能设置提醒：请先发送，或在邮件本身中使用“跟进”"
 
-#. what a command says
-#: crates/model/src/mailbox.rs
+#. what a command says, why a mail server couldn't be used
+#: crates/model/src/mailbox.rs crates/net/src/imap_folders.rs
 #, fuzzy
 msgid "a folder can't move into itself"
 msgstr "文件夹不能移入自身"
@@ -21681,6 +21737,16 @@ msgstr "文件夹不能移入自身"
 #, fuzzy
 msgid "a folder can't move to another account"
 msgstr "文件夹不能移至其他账户"
+
+#. what a command says
+#: crates/model/src/mailbox.rs
+msgid "a folder in Deleted Items can only be moved out of it or deleted"
+msgstr ""
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "a folder isn't kept in the server's Trash; delete it instead"
+msgstr ""
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -21937,7 +22003,7 @@ msgid "and"
 msgstr "和"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TodayScreen.kt crates/ui-egui/src/reading.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TodayScreen.kt crates/ui-egui/src/attachment_preview.rs crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "and {n} more"
 msgid_plural "and {n} more"
@@ -22316,6 +22382,11 @@ msgstr "下次连接时会发送到服务器"
 msgid "it has two conditions of one kind, and the server would take either of them rather than both"
 msgstr "它包含两个同类条件，而服务器只会满足其中任意一个，不会同时要求两者"
 
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "it holds more mail than can be checked"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/reading/images.rs
 #, fuzzy
@@ -22339,6 +22410,11 @@ msgstr "此图片类型无法在这里显示（AVIF 或 HEIC）"
 #, fuzzy
 msgid "it is damaged, or larger than can be shown"
 msgstr "图片已损坏或超过可显示的大小"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "it is one of the server's own folders, or holds one"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/images.rs crates/ui-egui/src/reading/remote.rs
@@ -23480,11 +23556,21 @@ msgstr "文件为空"
 msgid "the file is larger than a file of Public keys can be (1 MB)"
 msgstr "此文件超过公钥文件的大小上限（1 MB）"
 
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the folder has no usable name"
+msgstr ""
+
 #. why a command can't run
 #: crates/engine/src/cmd/folder.rs
 #, fuzzy
 msgid "the folder is already empty"
 msgstr "该文件夹已经是空的"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the folder it goes into is not on the server"
+msgstr ""
 
 #. name
 #: crates/engine/src/cmd/rules.rs
@@ -23950,10 +24036,20 @@ msgid "the server greeted with a refusal: {reason}"
 msgstr "服务器在问候响应中拒绝连接：{reason}"
 
 #. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the server has a folder of that name there"
+msgstr ""
+
+#. why a mail server couldn't be used
 #: crates/proto/src/imap/idle.rs
 #, fuzzy
 msgid "the server isn't idling"
 msgstr "服务器未处于空闲等待状态"
+
+#. why a mail server couldn't be used
+#: crates/net/src/imap_folders.rs
+msgid "the server keeps no folders inside others"
+msgstr ""
 
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/folder.rs
@@ -25386,8 +25482,8 @@ msgid "{n} account has one"
 msgid_plural "{n} accounts have one"
 msgstr[0] "{n} 个账户已设置"
 
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/ui-egui/src/send_preview.rs
 #, fuzzy
 msgid "{n} attachment"
 msgid_plural "{n} attachments"
@@ -25558,6 +25654,12 @@ msgstr[0] "已将 {n} 个事件添加到日历。"
 msgid "{n} event in view"
 msgid_plural "{n} events in view"
 msgstr[0] "视图中的 {n} 个日程"
+
+#. interface
+#: crates/ui-egui/src/attachment_preview.rs
+msgid "{n} file"
+msgid_plural "{n} files"
+msgstr[0] ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -26454,6 +26556,10 @@ msgstr "“{subject}”太大，无法下载：此处只有邮件头，因此无
 #, fuzzy
 msgid "“{subject}” wasn't found on its server, so it can't be forwarded as an attachment"
 msgstr "在其服务器上找不到“{subject}”，因此无法将其作为附件转发"
+
+#, fuzzy
+#~ msgid "Turn on attachment previews in File › Options."
+#~ msgstr "请在“文件”→“选项”中启用附件预览。"
 
 #, fuzzy
 #~ msgid "Open a message you sent as a new one"

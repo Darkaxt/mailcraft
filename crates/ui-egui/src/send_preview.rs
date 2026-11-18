@@ -11,14 +11,14 @@
 
 use std::sync::Arc;
 
-use egui::{Ui, vec2};
+use egui::{Align2, Rect, Sense, Stroke, Ui, pos2, vec2};
 use mailcraft_model::{Mailbox, Message};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::MailApp;
 use crate::reading::{self, Place};
-use crate::theme::{self, Tokens, regular};
+use crate::theme::{self, Tokens, paint_clipped, regular, semibold};
+use crate::{MailApp, icons};
 
 /// Most bytes of pictures shown in the body (`cid:`) that go with a preview to a question window;
 /// past it they are left out and shown as missing pictures.
@@ -90,10 +90,20 @@ pub(crate) fn show(app: &mut MailApp, ui: &mut Ui, preview: &SendPreview, height
     let width = ui.available_width();
     egui::Frame::NONE.stroke(egui::Stroke::new(1.0, t.border_strong)).corner_radius(4.0).show(ui, |ui| {
         ui.set_width(width - 2.0);
+        // The files, plain to see over the message (v0.12.14): how many, and each by its name and size.
         if !preview.files.is_empty() {
-            egui::Frame::NONE.inner_margin(egui::Margin { left: 12, right: 12, top: 8, bottom: 0 }).show(ui, |ui| {
-                let line = crate::i18n::fmt(tl!("Attached: {files}"), &[("files", &preview.files_line())]);
-                ui.add(egui::Label::new(egui::RichText::new(line).font(regular(12.0)).color(t.text)).wrap());
+            egui::Frame::NONE.fill(t.ribbon).inner_margin(egui::Margin { left: 12, right: 12, top: 8, bottom: 10 }).show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
+                let n = preview.files.len();
+                let heading = ui.label(egui::RichText::new(tln!(n, "{n} attachment", "{n} attachments")).font(semibold(13.0)).color(t.text));
+                app.hit.add("sendPreviewAttachments", 0, heading.rect);
+                ui.horizontal_wrapped(|ui| {
+                    for (index, file) in preview.files.iter().enumerate() {
+                        let chip = file_chip(ui, file, &t);
+                        app.hit.add("sendPreviewAttachment", index as u64, chip);
+                    }
+                });
             });
         }
         ui.allocate_ui(vec2(width - 2.0, height.max(120.0)), |ui| {
@@ -101,6 +111,25 @@ pub(crate) fn show(app: &mut MailApp, ui: &mut Ui, preview: &SendPreview, height
             reading::show_file_message(app, ui, &preview.message, Place::Preview);
         });
     });
+}
+
+/// A file the message carries, as a chip like the reading pane's: its name and its size under
+/// it. It only shows: nothing opens it. Answers where it is.
+fn file_chip(ui: &mut Ui, file: &File, t: &Tokens) -> Rect {
+    let name: String = mailcraft_engine::opening::file_name(&file.name).chars().filter(|c| !c.is_control()).collect();
+    let size = mailcraft_model::size_label_in(crate::i18n::current(), file.size);
+    let name_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(name.clone(), regular(12.0), t.text).size().x).min(220.0);
+    let size_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(size.clone(), regular(10.5), t.text_dim).size().x);
+    let w = name_w.max(size_w);
+    let (r, response) = ui.allocate_exact_size(vec2(w + 44.0, 38.0), Sense::hover());
+    ui.painter().rect(r, 5.0, t.panel, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
+    icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 17.0, r.center().y), vec2(20.0, 20.0)), "attach", t.icon, t.accent);
+    paint_clipped(ui.painter(), pos2(r.min.x + 34.0, r.min.y + 13.0), w + 4.0, &name, regular(12.0), t.text);
+    ui.painter().text(pos2(r.min.x + 34.0, r.min.y + 27.0), Align2::LEFT_CENTER, &size, regular(10.5), t.text_dim);
+    let said = format!("{name} ({size})");
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, &said));
+    response.on_hover_text(said);
+    r
 }
 
 /// A headless host's question window shows a send question's preview with this: an app of its

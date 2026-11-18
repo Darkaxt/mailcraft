@@ -28,6 +28,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("folder.favorite", "Add to Favorites", "Folder › Favorites", favorite).params(
             r#"{"value"?: bool (default: toggle), "id"?: number} — refused for a folder of an account whose Favorites come from its server (Outlook's list, which is changed in Outlook; `view.favorites` says which accounts those are). A shared mailbox's folders are favourites kept in MailCraft, whatever the account it is opened through has: nothing is written to any server for them"#,
         ),
+        CommandSpec::new("folder.recent", "Recent Folders", "Folder › Favorites", recent_command).pure().params(
+            r#"{"remove"?: number (takes that folder off the list), "clear"?: true (empties it)} — the owner's folders opened or filed into last, newest first, kept on this computer only: the folder pane lists them under Recent and Move to Folder offers them first. Answers {"folders": [{"id", "name", "account", "path"}]}"#,
+        ),
         CommandSpec::new("folder.tag", "Folder Tag", "Folder › Actions", tag).params(
             r#"{"tag": string (an emoji or a short word, at most 16 characters; "" takes it off), "id"?: number} — the folder's tag, kept on this computer only: shown before its name in the folder pane and on the rows of its mail in the unified mailbox (and of the mail of the folders under it that have none of their own), whose list `view.tag` narrows to one tag. Answers {"id", "tag"}"#,
         ),
@@ -43,6 +46,40 @@ pub fn specs() -> Vec<CommandSpec> {
 
 /// Most folders the pane lists under Favorites.
 const MAX_FAVORITES: usize = 1_000;
+
+/// Most folders listed under Recent.
+pub const MAX_RECENT: usize = 8;
+
+/// Put `id` first among the recent folders when it is one of the owner's own (v0.12.14): the
+/// standard folders have their buttons, and the server's own aren't filed into.
+pub fn note_recent(s: &mut Session, id: Id) {
+    if !s.mailbox.folder(id).is_some_and(|f| f.kind == FolderKind::Custom && !f.server_owned()) {
+        return;
+    }
+    s.prefs.recent_folders.retain(|r| *r != id);
+    s.prefs.recent_folders.insert(0, id);
+    s.prefs.recent_folders.truncate(MAX_RECENT);
+}
+
+/// The recent folders that are still there, newest first.
+pub fn recent(s: &Session) -> Vec<Id> {
+    s.prefs.recent_folders.iter().copied().filter(|id| s.mailbox.folder(*id).is_some()).collect()
+}
+
+fn recent_command(s: &mut Session, v: &Value) -> CmdResult {
+    if p::bool(v, "clear") == Some(true) {
+        s.prefs.recent_folders.clear();
+    }
+    if let Some(id) = p::id(v, "remove") {
+        s.prefs.recent_folders.retain(|r| *r != id);
+    }
+    let folders: Vec<Value> = recent(s)
+        .iter()
+        .filter_map(|id| s.mailbox.folder(*id))
+        .map(|f| json!({"id": f.id, "name": f.name, "account": f.account, "path": s.mailbox.folder_path(f.id)}))
+        .collect();
+    Ok(json!({"folders": folders}))
+}
 
 /// The rank of the folders that lead an account's list, in the order they lead it.
 fn lead_rank(kind: FolderKind) -> usize {
@@ -318,6 +355,7 @@ fn select(s: &mut Session, v: &Value) -> CmdResult {
         s.view.gmail = gmail;
         s.sel.messages.clear();
     }
+    note_recent(s, id);
     // A search belongs to the folder it was typed in.
     s.view.search.clear();
     s.view.scope = crate::Scope::Folder;

@@ -1577,10 +1577,18 @@ fn removing_the_account_mail_was_moved_into_lets_its_original_go_or_brings_it_ba
     assert!(graph_mail_request(&s, ms).unwrap().messages.is_empty(), "{:?}", graph_mail_request(&s, ms).unwrap().messages);
 }
 
-/// Delete `folder` for good: into Deleted Items first when it isn't there yet.
+/// Delete `folder` for good: into Deleted Items first when it isn't there yet. An IMAP account's
+/// folder goes at once and its mail into Deleted Items (v0.12.14): that mail is deleted for good
+/// from there.
 fn delete_for_good(s: &mut Session, folder: Id) {
+    let tree = s.mailbox.subtree(folder);
+    let held: Vec<Id> = s.mailbox.messages.values().filter(|m| tree.contains(&m.folder)).map(|m| m.id).collect();
     while s.mailbox.folder(folder).is_some() {
         s.run("folder.delete", &json!({"id": folder})).unwrap();
+    }
+    let left: Vec<Id> = held.into_iter().filter(|id| s.mailbox.message(*id).is_some()).collect();
+    if !left.is_empty() {
+        s.run("mail.deletePermanently", &json!({"ids": left})).unwrap();
     }
 }
 

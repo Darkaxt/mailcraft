@@ -1,9 +1,11 @@
-**MailCraft 0.12.13 in short** — a quieter status bar, a tidier folder tree
-- The status bar no longer shows a search coverage button all the time. It shows a bar while search is still reading your mail, and a button only when search needs you. Content it can't read (a picture, a message not downloaded yet) is retried on its own.
-- The search coverage window has no Retry button any more: retrying happens by itself.
-- The unified folder tree leaves out the server's own folders (Sync Issues, Conversation History, Scheduled and the like) and Gmail's system labels such as Account Events. They are still in their account's tab.
-- A folder whose old mail is kept on this computer can't be deleted until that mail is moved, so it is never left with nowhere to show.
-- Everything from 0.12.12 stays (special folders at hand, safer keys).
+**MailCraft 0.12.14 in short** — folders that reach the server, previews beside your mail
+- Renaming, moving or deleting a folder of a Gmail or other IMAP account now changes it on the server too. A deleted folder's mail goes to Deleted Items first, and the folder goes in the next Send/Receive, unless new mail arrived in it. The Inbox and the server's own folders are never changed.
+- A folder moved into Gmail's Trash is deleted instead, so no label is left under Trash.
+- A preview pane on the right (View › Preview Pane, Alt+P) shows the attachment you click: text, tables, pictures, PDF, Word, Excel, PowerPoint, Photoshop and SVG files, web pages, saved messages and the list of a ZIP. Drag its edge to make it wider; MailCraft remembers.
+- Attachments of a draft can be previewed too: click one in the message you are writing.
+- The question before sending lists each attached file with its size.
+- Recent folders: the folders you opened or filed into last are listed under Favorites, and Move to Folder and Copy to Folder offer your Favorites and recent folders first.
+- Everything from 0.12.13 stays (a quieter status bar, a tidier folder tree).
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

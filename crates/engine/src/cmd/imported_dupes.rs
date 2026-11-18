@@ -178,7 +178,7 @@ pub fn twins(mb: &Mailbox, folder: Option<Id>) -> Found {
             Queued::CopyMessage { copy, .. } => {
                 waited.insert(*copy);
             }
-            Queued::DeleteFolder { .. } | Queued::DeleteMessage { .. } => {}
+            Queued::DeleteFolder { .. } | Queued::DeleteMessage { .. } | Queued::MoveFolder { .. } | Queued::DeleteMailbox { .. } => {}
         }
     }
     let tasked: HashSet<Id> = mb.tasks.values().filter_map(|t| t.message).collect();

@@ -421,6 +421,10 @@ pub struct ViewState {
     pub tag: Option<String>,
     pub reading_pane: Pane,
     pub folder_pane: bool,
+    /// The Preview Pane (v0.12.14; `view.previewPane`): a pane on the right that shows the
+    /// attachment clicked in a message read or being written. Off: a preview takes the place of
+    /// the message's body, when the owner turned on the installed helpers.
+    pub preview_pane: bool,
     /// The switch between Mail, Calendar, People and Tasks at the foot of the pane on the left,
     /// in place of the bar of icons down the window's edge (#1174; `view.navigationBar`), so the
     /// bar's column is the window's. Where the module in view has no pane for it (Mail or the
@@ -477,6 +481,7 @@ impl Default for ViewState {
             tag: None,
             reading_pane: Pane::Right,
             folder_pane: true,
+            preview_pane: false,
             nav_foot: false,
             calendar: CalView::Week,
             date: Date::default(),
@@ -1028,6 +1033,10 @@ pub struct Prefs {
     /// owner turns it on: the server's list is shown where there is one.
     #[serde(skip_serializing_if = "is_false")]
     pub own_favorites: bool,
+    /// The owner's folders opened or filed into last, newest first (`folder.recent`, v0.12.14):
+    /// the folder pane lists them under Recent, and Move to Folder offers them first.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub recent_folders: Vec<Id>,
     /// The time zone the calendar is shown in, by name (`Europe/Berlin`; `view.timeZone`).
     /// Empty: this computer's own, followed when it changes.
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -1092,6 +1101,7 @@ impl Default for Prefs {
             own_work_hours: false,
             mailbox_hours: None,
             own_favorites: false,
+            recent_folders: Vec::new(),
             time_zone: String::new(),
             second_zone: String::new(),
             zone_label: String::new(),

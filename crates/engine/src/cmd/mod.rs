@@ -91,6 +91,9 @@ pub mod help;
 #[cfg(test)]
 mod hidden_selection_tests;
 pub mod imap_again;
+mod imap_folders;
+#[cfg(test)]
+mod imap_folders_tests;
 #[cfg(test)]
 mod imap_outbox_tests;
 pub mod imported_dupes;

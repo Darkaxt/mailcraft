@@ -545,6 +545,7 @@ pub(super) fn contents(app: &mut MailApp, ui: &mut Ui, window: &mut Open, keyboa
         run_keys(app, ui.ctx());
     }
     crate::ribbon::show_window(app, ui, id, tab);
+    crate::attachment_preview::pane(app, ui, egui::Id::unique(("mailcraft-window-preview", id)));
     egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.surface)).show(ui, |ui| {
         // Only while it is still open: what was done in its ribbon may have sent or closed it.
         if app.session.compose_id() == Some(compose) {

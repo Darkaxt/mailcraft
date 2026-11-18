@@ -97,6 +97,11 @@ impl HitMap {
         std::mem::replace(&mut self.scope, window)
     }
 
+    /// The window of its own being laid out now (0: the main window).
+    pub(crate) fn current(&self) -> u64 {
+        self.scope
+    }
+
     /// Where `kind` with `id` is: in the main window when it is there, else in a window of its own.
     pub fn rect(&self, kind: &str, id: u64) -> Option<egui::Rect> {
         let found = |main: bool| self.items.iter().find(|(k, i, _, w)| *k == kind && *i == id && (*w == 0) == main);

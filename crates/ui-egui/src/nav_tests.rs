@@ -672,3 +672,25 @@ fn a_folders_tag_shows_before_its_name_and_old_settings_get_tabs() {
     let restored: crate::UiState = serde_json::from_str("{}").unwrap();
     assert!(restored.folder_tabs && !crate::UiState::default().folder_tabs);
 }
+
+/// A folder opened is listed under Recent, at the top of the pane (v0.12.14).
+#[test]
+fn a_folder_opened_is_listed_under_recent() {
+    let mut app = MailApp::new(Session::at(mailcraft_engine::sample::mailbox(NOW, 0), NOW, 0), Services::default());
+    app.autosave = false;
+    let custom = app.session.mailbox.folders.iter().find(|f| f.kind == FolderKind::Custom && !f.server_owned()).map(|f| f.id).unwrap();
+    app.execute("folder.select", serde_json::json!({"id": custom})).unwrap();
+    let ctx = egui::Context::default();
+    crate::theme::install_fonts(&ctx);
+    let mut out = ctx.run_ui(egui::RawInput::default(), |ui| folder_pane(&mut app, ui));
+    out.textures_delta.clear();
+    let texts: Vec<String> = out
+        .shapes
+        .iter()
+        .filter_map(|c| match &c.shape {
+            egui::Shape::Text(t) => Some(t.galley.text().to_string()),
+            _ => None,
+        })
+        .collect();
+    assert!(texts.iter().any(|t| t == "Recent"), "{texts:?}");
+}

@@ -1177,6 +1177,7 @@ fn view_of_any(app: &MailApp) -> Tab {
     let mut layout = vec![
         Item::big("folderPane", "Folder\nPane", "view.folderPane", no()).checked(v.folder_pane).at(0, 1),
         Item::big_menu("readingPane", "readingPane", "Reading\nPane", "Reading Pane", Menu::ReadingPane).at(0, 2),
+        Item::big("previewPane", "Preview\nPane", "view.previewPane", no()).checked(v.preview_pane).at(0, 2),
         Item::big_menu("navigationBar", "navigationBar", "Navigation\nBar", "Navigation Bar", Menu::NavigationBar).at(0, 3),
     ];
     // Gmail's categories as folders or as tabs (#911): only with a Gmail account that shows them.
@@ -1385,11 +1386,16 @@ struct FolderList {
     many: bool,
 }
 
+/// Most folders Move to Folder offers above the full list: the Favorites, then the recent ones.
+const QUICK_FOLDERS: usize = 12;
+
 /// A search box and then the folders of `scope` as menu items; `pick` runs with the chosen one.
 /// Typing narrows the list to the folders whose place (or mailbox) matches, each shown with its
 /// place in the tree; the arrow keys and Enter choose, and Escape clears the search before it
 /// closes the menu (#74).
 fn folder_menu_scope(ui: &mut Ui, app: &mut MailApp, scope: FolderScope, mut pick: impl FnMut(&mut MailApp, Id)) {
+    // Move to Folder and Copy to Folder offer the Favorites and the recent folders first (v0.12.14).
+    let quick = matches!(scope, FolderScope::EveryAccount);
     let key = ui.scope_id().with("folder-search");
     let list_key = ui.scope_id().with("folder-list");
     let frame = ui.ctx().cumulative_frame_nr();
@@ -1454,6 +1460,24 @@ fn folder_menu_scope(ui: &mut Ui, app: &mut MailApp, scope: FolderScope, mut pic
     let mut chosen = if enter { marked.and_then(|i| list.get(i)).map(|row| row.id) } else { None };
 
     ui.add_space(2.0);
+    if quick && !searching {
+        let mut first: Vec<Id> = mailcraft_engine::cmd::folder::favorites(&app.session);
+        first.extend(mailcraft_engine::cmd::folder::recent(&app.session));
+        let mut seen = std::collections::HashSet::new();
+        first.retain(|id| *id != current && seen.insert(*id));
+        first.truncate(QUICK_FOLDERS);
+        if !first.is_empty() {
+            ui.label(egui::RichText::new(tl!("Favorites and recent")).small().color(Tokens::get(ui.ctx()).text_dim));
+            for id in first {
+                let Some(f) = app.session.mailbox.folder(id) else { continue };
+                let label = crate::nav::result_folder_label(&app.session.mailbox, f);
+                if ui.add(egui::Button::new(label).min_size(vec2(200.0, 0.0))).clicked() {
+                    chosen = Some(id);
+                }
+            }
+            ui.separator();
+        }
+    }
     egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
         if shown.is_empty() {
             ui.label(egui::RichText::new(tl!("No folders match")).color(Tokens::get(ui.ctx()).text_dim));

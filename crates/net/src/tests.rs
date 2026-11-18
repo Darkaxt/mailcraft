@@ -2668,3 +2668,6 @@ mod gmail_labels_sync;
 
 #[path = "protected_sync_tests.rs"]
 mod protected_sync;
+
+#[path = "imap_folders_tests.rs"]
+mod imap_folders;
