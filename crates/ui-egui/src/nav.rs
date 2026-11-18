@@ -994,7 +994,10 @@ fn without_special(rows: Vec<(Folder, usize, bool)>) -> Vec<(Folder, usize, bool
                 return false;
             }
             under = None;
-            if matches!(f.kind, FolderKind::Inbox | FolderKind::Custom) {
+            // The server's own folders (Conversation History, Sync Issues and its three, Scheduled,
+            // Clutter…, and Gmail's system labels such as Account Events) stay in their account's
+            // tab, out of the unified tree (v0.12.13).
+            if matches!(f.kind, FolderKind::Inbox | FolderKind::Custom) && !f.server_owned() && !gmail_system(&f.remote) {
                 true
             } else {
                 under = Some(*depth);
@@ -1002,6 +1005,12 @@ fn without_special(rows: Vec<(Folder, usize, bool)>) -> Vec<(Folder, usize, bool
             }
         })
         .collect()
+}
+
+/// A label Gmail keeps in its own `[Gmail]` (`[Google Mail]` in some countries) folder, such as
+/// Account Events: Gmail's, not the owner's.
+fn gmail_system(remote: &str) -> bool {
+    ["[Gmail]/", "[Google Mail]/"].iter().any(|prefix| remote.starts_with(prefix))
 }
 
 /// Whose special folders the buttons open: the account in view's tab, else every account's.

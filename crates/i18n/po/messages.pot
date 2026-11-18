@@ -10839,11 +10839,6 @@ msgid "Range"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/search_index_ui.rs
-msgid "Re-read retained missing or failed content. Does not download or change mail."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/advanced_search.rs
 msgid "Read"
 msgstr ""
@@ -11549,11 +11544,6 @@ msgstr ""
 msgid "Retry Missing or Failed Search Content"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/search_index_ui.rs
-msgid "Retry unavailable content"
-msgstr ""
-
 #. command label
 #: crates/engine/src/cmd/snooze.rs
 msgid "Return Now"
@@ -12180,7 +12170,7 @@ msgid "Search contacts"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/search_index_ui.rs
+#: crates/ui-egui/src/search_index_ui.rs
 msgid "Search coverage"
 msgstr ""
 
@@ -12197,11 +12187,6 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/move_items.rs crates/ui-egui/src/ribbon.rs
 msgid "Search folders"
-msgstr ""
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-msgid "Search has gaps"
 msgstr ""
 
 #. interface
@@ -21942,6 +21927,11 @@ msgstr[1] ""
 #. what a command says
 #: crates/engine/src/composing.rs
 msgid "{n} messages are being written already, the most there can be at once; send, save or close one first"
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/folder.rs
+msgid "{n} messages of this folder are kept on this computer (Local archive): move them to another folder first"
 msgstr ""
 
 #. date and time, interface

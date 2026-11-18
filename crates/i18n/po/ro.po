@@ -12881,11 +12881,6 @@ msgid "Range"
 msgstr "Interval"
 
 #. interface
-#: crates/ui-egui/src/search_index_ui.rs
-msgid "Re-read retained missing or failed content. Does not download or change mail."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Read"
@@ -13728,11 +13723,6 @@ msgstr "Reîncercare"
 msgid "Retry Missing or Failed Search Content"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/search_index_ui.rs
-msgid "Retry unavailable content"
-msgstr ""
-
 #. command label
 #: crates/engine/src/cmd/snooze.rs
 #, fuzzy
@@ -14477,7 +14467,7 @@ msgid "Search contacts"
 msgstr "Căutare contacte"
 
 #. interface
-#: crates/ui-egui/src/chrome.rs crates/ui-egui/src/search_index_ui.rs
+#: crates/ui-egui/src/search_index_ui.rs
 msgid "Search coverage"
 msgstr ""
 
@@ -14496,11 +14486,6 @@ msgstr ""
 #, fuzzy
 msgid "Search folders"
 msgstr "Căutare dosare"
-
-#. interface
-#: crates/ui-egui/src/chrome.rs
-msgid "Search has gaps"
-msgstr ""
 
 #. interface
 #: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/search_options.rs
@@ -26125,6 +26110,11 @@ msgstr[2] "{n} de mesaje pe care le scrieți au modificări nesalvate."
 #, fuzzy
 msgid "{n} messages are being written already, the most there can be at once; send, save or close one first"
 msgstr "Se scriu deja {n} mesaje, maximul posibil simultan; trimiteți, salvați sau închideți întâi unul"
+
+#. what a command says
+#: crates/engine/src/cmd/folder.rs
+msgid "{n} messages of this folder are kept on this computer (Local archive): move them to another folder first"
+msgstr ""
 
 #. date and time, interface
 #: crates/i18n/src/date.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/reminders.rs

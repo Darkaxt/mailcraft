@@ -184,7 +184,7 @@ fn shots_of_search_coverage_in_both_themes_and_compact_enlarged_windows() {
             let panel = h.ctx.memory(|memory| memory.area_rect(egui::Id::unique("search_content_coverage"))).unwrap();
             assert!(viewport.contains_rect(panel), "panel {panel:?} at {width}x{height}@{scale}");
             assert!(panel.width() <= 760.0 && panel.height() <= 600.0, "panel {panel:?} exceeds its design contract");
-            for label in ["Overview", "Missing content", "Case sensitive", "Retry unavailable content", "Close"] {
+            for label in ["Overview", "Missing content", "Case sensitive", "Close"] {
                 assert!(viewport.contains_rect(h.get_by_label(label).rect()), "{label} at {width}x{height}@{scale}");
             }
             let output = std::path::Path::new(&directory).join(format!("search-coverage-{theme}-{}-{}.png", width as u32, (scale * 100.0) as u32));

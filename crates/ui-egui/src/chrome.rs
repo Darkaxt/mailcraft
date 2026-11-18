@@ -800,21 +800,19 @@ fn progress_bar(ui: &mut Ui, t: &Tokens, label: &str, fraction: f32, key: &str) 
     (resp, track)
 }
 
-/// Progress and gaps remain discoverable even with an empty search. The panel
-/// explains current coverage rather than implying that missing data was read.
+/// The word index in the status bar: its bar while it reads, and a button only when it needs the
+/// owner. Gaps it can't fill (a picture, a message not downloaded) are retried on their own and
+/// shown where a search's results are incomplete, so they put nothing here (v0.12.13).
 fn indexing_bar(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     let key = "status_index_bar";
-    let label = match app.session.word_index() {
-        mailcraft_engine::WordIndex::Partial => tl!("Search has gaps"),
-        mailcraft_engine::WordIndex::Problem => tl!("Search needs attention"),
-        _ => tl!("Search coverage"),
-    };
-    // Reserve the action before the progress bar takes remaining space.
-    let compact = ui.available_width() < 140.0;
-    let response = ui.small_button(if compact { tl!("Search") } else { label }).on_hover_text(label);
-    app.hit.add("searchCoverage", 0, response.rect);
-    if response.clicked() {
-        let _ = app.execute("ui.searchIndex", json!({"view":"overview"}));
+    if app.session.word_index() == mailcraft_engine::WordIndex::Problem {
+        let label = tl!("Search needs attention");
+        let compact = ui.available_width() < 140.0;
+        let response = ui.small_button(if compact { tl!("Search") } else { label }).on_hover_text(label);
+        app.hit.add("searchCoverage", 0, response.rect);
+        if response.clicked() {
+            let _ = app.execute("ui.searchIndex", json!({"view":"overview"}));
+        }
     }
     if let mailcraft_engine::WordIndex::Building { done, total } = app.session.word_index() {
         if total > 0 && ui.available_width() > 180.0 {

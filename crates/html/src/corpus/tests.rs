@@ -1007,8 +1007,10 @@ fn hostile_style_sheets_are_bounded() {
         let started = std::time::Instant::now();
         let _ = to_text(&html);
         println!("{name}: parse {parsed:?}, to_text {:?}", started.elapsed());
-        // (Well under a second each in a release build; the bound is for a loaded debug one.)
-        assert!(parsed.as_secs() < 4 && started.elapsed().as_secs() < 4, "{name}: {parsed:?}");
+        // (Well under a second each in a release build. The bound is for a debug one on a single
+        // logical processor, as the gated build runs, with the machine busy: 4.5 s was seen there
+        // (v0.12.13). A runaway sheet takes minutes.)
+        assert!(parsed.as_secs() < 10 && started.elapsed().as_secs() < 10, "{name}: {parsed:?}");
     }
 }
 

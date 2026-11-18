@@ -42,10 +42,15 @@ fn folders_are_named_in_the_interface_language_by_their_kind() {
 }
 
 /// The unified tree leaves out the special folders and what is under them: the buttons over the
-/// pane open those (v0.12.12).
+/// pane open those (v0.12.12). The server's own folders stay in their account's tab (v0.12.13).
 #[test]
 fn the_unified_tree_leaves_out_special_folders_and_what_is_under_them() {
     let folder = |name: &str, kind: FolderKind| Folder { name: name.into(), kind, ..Default::default() };
+    // One of the server's own folders (Sync Issues and the like): out of the tree too.
+    let own = |name: &str| Folder {
+        server: Some(mailcraft_model::ServerFolder { well_known: true, ..Default::default() }),
+        ..folder(name, FolderKind::Custom)
+    };
     let rows = vec![
         (folder("Inbox", FolderKind::Inbox), 0, false),
         (folder("Projects", FolderKind::Custom), 1, false),
@@ -54,9 +59,13 @@ fn the_unified_tree_leaves_out_special_folders_and_what_is_under_them() {
         (folder("Deeper", FolderKind::Custom), 2, false),
         (folder("Archivo", FolderKind::Custom), 0, false),
         (folder("Junk Email", FolderKind::Junk), 0, false),
+        (own("Problemas de sincronización"), 0, false),
+        (own("Conflictos"), 1, false),
+        (Folder { remote: "[Gmail]/Account Events".into(), ..folder("Account Events", FolderKind::Custom) }, 0, false),
+        (folder("Legacy", FolderKind::Custom), 0, false),
     ];
     let names: Vec<String> = without_special(rows).into_iter().map(|(f, _, _)| f.name).collect();
-    assert_eq!(names, ["Inbox", "Projects", "Archivo"]);
+    assert_eq!(names, ["Inbox", "Projects", "Archivo", "Legacy"]);
 }
 
 /// The account of the mail kept on this computer, still called what the program named it, is the

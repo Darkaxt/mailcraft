@@ -437,6 +437,16 @@ fn move_folder(s: &mut Session, v: &Value) -> CmdResult {
 
 fn delete(s: &mut Session, v: &Value) -> CmdResult {
     let id = not_servers(s, v)?;
+    // Its old mail kept on this computer (its twin's, v0.12.10) would stay behind in the Local
+    // archive with no folder to show it in, and the question would have said none goes (v0.12.13).
+    let tree: HashSet<Id> = s.mailbox.subtree(id).into_iter().collect();
+    let kept = held_under(s, &super::archive::twins_of(&s.mailbox, &tree));
+    if !kept.is_empty() {
+        return Err(failed!(
+            "{n} messages of this folder are kept on this computer (Local archive): move them to another folder first",
+            n = kept.len()
+        ));
+    }
     let parent = s.mailbox.folder(id).and_then(|f| f.parent);
     let account = s.mailbox.folder(id).map(|f| f.account);
     let permanently = s.mailbox.delete_folder(id)?;

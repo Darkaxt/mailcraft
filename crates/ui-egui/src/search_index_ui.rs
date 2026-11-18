@@ -394,7 +394,6 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context) {
     let mut open = true;
     let mut close_clicked = false;
     let mut action = None;
-    let mut retry = false;
     let mut sensitive = mailcraft_model::search::Query::parse(&app.session.view.search).case_sensitive();
     let before = sensitive;
     egui::Window::new(tl!("Search coverage"))
@@ -461,13 +460,6 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context) {
                         pane.replace(Some(next));
                     }
                 }
-                if ui
-                    .button(tl!("Retry unavailable content"))
-                    .on_hover_text(tl!("Re-read retained missing or failed content. Does not download or change mail."))
-                    .clicked()
-                {
-                    retry = true;
-                }
                 if ui.button(tl!("Close")).clicked() {
                     close_clicked = true;
                 }
@@ -485,9 +477,6 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context) {
     if sensitive != before
         && let Err(why) = app.execute("ui.searchCase", json!({"sensitive":sensitive}))
     {
-        app.search_index_pane.error = Some(why);
-    }
-    if retry && let Err(why) = app.execute("search.retryIndex", json!({})) {
         app.search_index_pane.error = Some(why);
     }
 }

@@ -1,11 +1,9 @@
-**MailCraft 0.12.12 in short** — special folders at hand, safer keys
-- Buttons at the top of the folder pane open Drafts, Sent, Deleted, Junk, Archive and the Outbox (while it holds something): every account's at once, or the account of the tab you're on. The unified folder tree no longer repeats them.
-- Home's first buttons follow what you select: a draft has Send and Continue editing, Sent Items has Forward and Resend, Deleted Items has Restore, Delete permanently and Empty folder, Junk has Not junk, the Outbox has Edit and Cancel sending.
-- A draft in the reading pane has a Send button beside Continue editing.
-- No single key changes mail any more: Delete is Ctrl+D, Send/Receive is Ctrl+M, and Archive, Flag and Rename have no key until you give them one. File › Options › Keyboard shortcuts changes any command's keys; it refuses a key alone for a command that changes mail.
-- Archive leaves drafts where they are, and the status bar offers Undo after archiving.
-- The mail kept on this computer is called Local archive. Special folders take the interface language's names (Borradores shows as Drafts in English); folders you named keep their names.
-- Everything from 0.12.11 stays (settings saved at once, backups only where you choose).
+**MailCraft 0.12.13 in short** — a quieter status bar, a tidier folder tree
+- The status bar no longer shows a search coverage button all the time. It shows a bar while search is still reading your mail, and a button only when search needs you. Content it can't read (a picture, a message not downloaded yet) is retried on its own.
+- The search coverage window has no Retry button any more: retrying happens by itself.
+- The unified folder tree leaves out the server's own folders (Sync Issues, Conversation History, Scheduled and the like) and Gmail's system labels such as Account Events. They are still in their account's tab.
+- A folder whose old mail is kept on this computer can't be deleted until that mail is moved, so it is never left with nowhere to show.
+- Everything from 0.12.12 stays (special folders at hand, safer keys).
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

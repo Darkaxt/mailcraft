@@ -49,6 +49,18 @@ fn mailbox() -> (Session, Id, Id, Id, Id) {
     (s, account, m, bill, bills)
 }
 
+/// A folder whose old mail is kept on this computer isn't deleted while that mail is there: it
+/// would be left with no folder to show it in (v0.12.13).
+#[test]
+fn a_folder_with_archived_mail_is_not_deleted() {
+    let (mut s, account, _, bill, bills) = mailbox();
+    s.run("archive.set", &json!({"account": account, "years": 3})).unwrap();
+    s.run("archive.step", &json!({})).unwrap();
+    let why = s.run("folder.delete", &json!({"id": bills})).unwrap_err().to_string();
+    assert!(why.contains("1 messages of this folder are kept on this computer"), "{why}");
+    assert!(s.mailbox.folder(bills).is_some() && s.mailbox.message(bill).is_some());
+}
+
 #[test]
 fn the_cutoff_is_the_same_day_years_before() {
     // 2027-01-15 → 2024-01-15.
