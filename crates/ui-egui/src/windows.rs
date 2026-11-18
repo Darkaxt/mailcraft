@@ -1408,7 +1408,7 @@ fn actions(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>, own_keys: bool) -> 
             keys.take(8).collect()
         });
         for (.., command, action, _) in &row {
-            let bound = app.session.registry.get(command).map(|spec| spec.shortcut).unwrap_or_default();
+            let bound = app.session.registry.get(command).map(|spec| spec.keys()).unwrap_or_default();
             if !bound.is_empty() && bound.split(" / ").any(|key| pressed.iter().any(|p| p.eq_ignore_ascii_case(key))) {
                 asked = Some(*action);
             }

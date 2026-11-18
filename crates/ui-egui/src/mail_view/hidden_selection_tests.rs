@@ -3,7 +3,7 @@
 //! In the window: a read message clicked in the All tab, the Unread tab, a Ctrl+click on a message
 //! there and Delete take only the message the list shows.
 
-use egui::{Event, Key, Modifiers, PointerButton};
+use egui::{Event, Modifiers, PointerButton};
 use mailcraft_model::{FolderKind, Id};
 use serde_json::json;
 
@@ -44,7 +44,7 @@ fn delete_after_the_unread_tab_takes_only_what_the_list_shows() {
     w.input_mut().events.push(Event::ModifiersChanged(Modifiers::NONE));
     w.run_steps(3);
 
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let s = &w.state().session;
     let kind = |id: Id| s.mailbox.message(id).and_then(|m| s.mailbox.folder(m.folder)).map(|f| f.kind);

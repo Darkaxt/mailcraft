@@ -1,10 +1,11 @@
-**MailCraft 0.12.11 in short** — settings that stay, and backups only where you choose
-- Your settings are saved as soon as you change them, not only when MailCraft closes.
-- Backups are a choice: off until you turn them on and pick a folder. MailCraft never picks a folder for you. If the folder can't be reached (a drive not connected), a bar says so and nothing is written anywhere else.
-- While old mail waits for a backup before leaving the cloud, a backup is made within minutes, not hours.
-- File › Options is reorganized: General, Appearance, Mail, then Mail on this computer, where each account shows what it keeps here and its Old mail choice. File › Info shows a short line with a link to it.
-- Saying yes to an agent's Old mail question works while mail keeps arriving.
-- Everything from 0.12.10 stays (old mail kept on this computer).
+**MailCraft 0.12.12 in short** — special folders at hand, safer keys
+- Buttons at the top of the folder pane open Drafts, Sent, Deleted, Junk, Archive and the Outbox (while it holds something): every account's at once, or the account of the tab you're on. The unified folder tree no longer repeats them.
+- Home's first buttons follow what you select: a draft has Send and Continue editing, Sent Items has Forward and Resend, Deleted Items has Restore, Delete permanently and Empty folder, Junk has Not junk, the Outbox has Edit and Cancel sending.
+- A draft in the reading pane has a Send button beside Continue editing.
+- No single key changes mail any more: Delete is Ctrl+D, Send/Receive is Ctrl+M, and Archive, Flag and Rename have no key until you give them one. File › Options › Keyboard shortcuts changes any command's keys; it refuses a key alone for a command that changes mail.
+- Archive leaves drafts where they are, and the status bar offers Undo after archiving.
+- The mail kept on this computer is called Local archive. Special folders take the interface language's names (Borradores shows as Drafts in English); folders you named keep their names.
+- Everything from 0.12.11 stays (settings saved at once, backups only where you choose).
 
 **What's new**
 - **All mail** (`view.allMail`): one list of every account's mail in any folder it arrives in or is filed to, newest first, with each row's folder named; Sent Items, Drafts, the Outbox, Deleted Items and Junk Email are left out.

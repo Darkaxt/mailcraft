@@ -2888,3 +2888,29 @@ fn a_reply_quotes_only_the_first_names_of_a_long_list() {
     let body = c.quote.as_ref().map_or_else(|| c.body.plain(), |q| q.text.clone());
     assert!(body.contains("(+4900)") && !body.contains("u4999@"), "{}", body.len());
 }
+
+/// The folder pane's special-folder buttons (v0.12.12): one special folder of every account in one
+/// list, and All inboxes back without it; archiving leaves a draft where it is.
+#[test]
+fn all_of_lists_one_special_folder_of_every_account() {
+    let mut s = session();
+    let sent = kind(&s, FolderKind::Sent);
+    let v = run(&mut s, "view.allOf", json!({"kind": "sent"}));
+    assert_eq!(v["kind"], "sent");
+    assert_eq!(s.view.kind, Some(FolderKind::Sent));
+    let folders = crate::list::unified_folders(&s);
+    assert!(folders.contains(&sent) && folders.iter().all(|f| s.mailbox.folder(*f).unwrap().kind == FolderKind::Sent));
+    let rows = s.rows();
+    assert!(rows.iter().all(|r| s.mailbox.message(r.id).is_some_and(|m| m.folder == sent || folders.contains(&m.folder))));
+    assert!(s.run("view.allOf", &json!({"kind": "custom"})).is_err());
+    run(&mut s, "view.allInboxes", json!({}));
+    assert_eq!(s.view.kind, None);
+    assert!(crate::list::unified_folders(&s).iter().all(|f| s.mailbox.folder(*f).unwrap().kind == FolderKind::Inbox));
+    // A draft isn't archived.
+    let drafts = kind(&s, FolderKind::Drafts);
+    let draft = s.mailbox.messages.values().find(|m| m.folder == drafts).map(|m| m.id);
+    if let Some(draft) = draft {
+        assert!(s.run("mail.archive", &json!({"ids": [draft]})).is_err());
+        assert_eq!(s.mailbox.message(draft).unwrap().folder, drafts);
+    }
+}

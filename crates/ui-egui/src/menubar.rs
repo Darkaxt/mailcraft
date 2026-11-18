@@ -378,7 +378,7 @@ fn block(app: &MailApp, title: &str, rows: &[Row], taken: &mut HashSet<Chord>) -
             Row::Own(own) => Some(item(*own)),
             Row::Cmd(id) => app.session.registry.get(id).map(|spec| Item {
                 label: tl!(spec.label).to_string(),
-                chord: chord(spec.shortcut),
+                chord: chord(spec.keys()),
                 action: Action::Command { id: spec.id, params: "{}" },
             }),
         };

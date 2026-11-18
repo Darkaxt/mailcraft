@@ -22,7 +22,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("folder.new", "New Folder", "Folder › New", new)
             .key("Mod+Shift+E")
             .params(r#"{"name": string, "parent"?: number | null (default: the folder in view, when it is `account`'s or no account is named; otherwise the account's top level. null: the account's top level), "account"?: number} — `account` says whose folder it is, and is an account that is there; a `parent` of another account's is refused rather than quietly given. Answers {"id", "account", "path"}"#),
-        CommandSpec::new("folder.rename", "Rename Folder", "Folder › Actions", rename).key("F2").params(r#"{"name": string, "id"?: number}"#).selection(can_rename),
+        CommandSpec::new("folder.rename", "Rename Folder", "Folder › Actions", rename).params(r#"{"name": string, "id"?: number}"#).selection(can_rename),
         CommandSpec::new("folder.move", "Move Folder", "Folder › Actions", move_folder).params(r#"{"parent": number | null, "id"?: number}"#).selection(can_move),
         CommandSpec::new("folder.delete", "Delete Folder", "Folder › Actions", delete).params(FOLDER).selection(can_delete),
         CommandSpec::new("folder.favorite", "Add to Favorites", "Folder › Favorites", favorite).params(
@@ -321,6 +321,7 @@ fn select(s: &mut Session, v: &Value) -> CmdResult {
     // A search belongs to the folder it was typed in.
     s.view.search.clear();
     s.view.scope = crate::Scope::Folder;
+    s.view.kind = None;
     s.view.filing = None;
     s.view.search_folder = None;
     s.server_search.forget();

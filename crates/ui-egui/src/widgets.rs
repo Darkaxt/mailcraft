@@ -15,7 +15,7 @@ pub const LABEL_H: f32 = 22.0;
 
 /// Shortcut text for a command (`⌘R` on macOS, `Ctrl+R` elsewhere): its first key.
 pub fn shortcut_text(app: &MailApp, id: &str) -> String {
-    let key = app.session.registry.get(id).and_then(|s| s.shortcut.split(" / ").next()).filter(|k| !k.is_empty());
+    let key = app.session.registry.get(id).and_then(|s| s.keys().split(" / ").next()).filter(|k| !k.is_empty());
     // The keys the body of a message being written has for its formatting.
     key.or_else(|| crate::compose::editor::key_of(id)).map(key_text).unwrap_or_default()
 }

@@ -259,7 +259,7 @@ pub fn commands(app: &MailApp) -> Value {
         .all()
         .iter()
         .map(|c| {
-            let mut v = json!({"id": c.id, "label": c.label, "location": c.location, "shortcut": c.shortcut, "params": c.params, "enabled": (c.enabled)(&app.session).is_none()});
+            let mut v = json!({"id": c.id, "label": c.label, "location": c.location, "shortcut": c.keys(), "params": c.params, "enabled": (c.enabled)(&app.session).is_none()});
             mailcraft_engine::agent_fields(&mut v, c.id);
             v
         })

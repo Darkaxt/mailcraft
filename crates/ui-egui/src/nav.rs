@@ -474,7 +474,7 @@ fn account_ghost(app: &MailApp, ui: &Ui) {
     let Some(pos) = ui.ctx().pointer_interact_pos() else { return };
     let Some(a) = app.session.mailbox.account(drag.0) else { return };
     let t = Tokens::get(ui.ctx());
-    let name = if a.name.trim().is_empty() { tl!("Mailbox").to_string() } else { a.name.clone() };
+    let name = if a.name.trim().is_empty() { tl!("Mailbox").to_string() } else { shown_name(a).to_string() };
     egui::Area::new(egui::Id::unique("account_drag_ghost")).order(egui::Order::Tooltip).fixed_pos(pos + vec2(14.0, 16.0)).interactable(false).show(
         ui.ctx(),
         |ui| {
@@ -546,8 +546,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     if assigned {
         let cog = Rect::from_center_size(pos2(r.max.x - 12.0, r.center().y), vec2(22.0, 22.0));
         let button = ui.put(cog, egui::Button::new("").frame(false));
-        let account =
-            app.session.mailbox.account(f.account).map(|a| if a.email.is_empty() { a.name.as_str() } else { a.email.as_str() }).unwrap_or("");
+        let account = app.session.mailbox.account(f.account).map(|a| if a.email.is_empty() { shown_name(a) } else { a.email.as_str() }).unwrap_or("");
         let folder = format!("{} - {account}", folder_path(&app.session.mailbox, f.id));
         let label = crate::i18n::fmt(tl!("Rules for {folder}"), &[("folder", &folder)]);
         button.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &label));
@@ -979,11 +978,135 @@ fn sheet(painter: &Painter, r: Rect, t: &Tokens) {
     painter.add(Shape::line(line, Stroke::new(1.0, t.border_strong)));
 }
 
-/// The top of the pane: the button that puts the pane away.
+/// The special folders the pane's top row has a button for, in this order (v0.12.12).
+const SPECIAL: [FolderKind; 6] =
+    [FolderKind::Drafts, FolderKind::Sent, FolderKind::Deleted, FolderKind::Junk, FolderKind::Archive, FolderKind::Outbox];
+/// The side of a special folder's button.
+const SPECIAL_W: f32 = 24.0;
+
+/// The rows of the unified tree without the special folders and what is under them: the buttons
+/// over the pane open those, for every account at once.
+fn without_special(rows: Vec<(Folder, usize, bool)>) -> Vec<(Folder, usize, bool)> {
+    let mut under: Option<usize> = None;
+    rows.into_iter()
+        .filter(|(f, depth, _)| {
+            if under.is_some_and(|d| *depth > d) {
+                return false;
+            }
+            under = None;
+            if matches!(f.kind, FolderKind::Inbox | FolderKind::Custom) {
+                true
+            } else {
+                under = Some(*depth);
+                false
+            }
+        })
+        .collect()
+}
+
+/// Whose special folders the buttons open: the account in view's tab, else every account's.
+fn special_account(app: &MailApp) -> Option<Id> {
+    match current_tab(app) {
+        NavTab::Account(id) if app.ui.folder_tabs => Some(id),
+        _ => None,
+    }
+}
+
+/// The special folders' buttons, with what each says: the folder's kind, the number on it (how
+/// many drafts, how many in the Outbox, how many unread in Junk; 0 none), and whether it is in
+/// view. The Outbox has one only while something waits in it.
+fn special_buttons(app: &mut MailApp) -> Vec<(FolderKind, usize, bool)> {
+    let account = special_account(app);
+    let counts = app.session.folder_counts();
+    let view = &app.session.view;
+    let in_view = |kind: FolderKind| match account {
+        None => view.scope == mailcraft_engine::Scope::Inboxes && view.kind == Some(kind) && view.search_folder.is_none(),
+        Some(a) => {
+            view.scope != mailcraft_engine::Scope::Inboxes
+                && view.filing.is_none()
+                && app.session.mailbox.folder(view.folder).is_some_and(|f| f.account == a && f.kind == kind)
+        }
+    };
+    SPECIAL
+        .into_iter()
+        .filter_map(|kind| {
+            let folders: Vec<Id> =
+                app.session.mailbox.folders.iter().filter(|f| f.kind == kind && account.is_none_or(|a| f.account == a)).map(|f| f.id).collect();
+            if folders.is_empty() {
+                return None;
+            }
+            let total = folders.iter().fold(0usize, |n, f| n.saturating_add(counts.total(*f)));
+            let unread = folders.iter().fold(0usize, |n, f| n.saturating_add(counts.unread(*f)));
+            let number = match kind {
+                FolderKind::Drafts | FolderKind::Outbox => total,
+                FolderKind::Junk => unread,
+                _ => 0,
+            };
+            (kind != FolderKind::Outbox || total > 0).then_some((kind, number, in_view(kind)))
+        })
+        .collect()
+}
+
+/// The title of the view of one special folder of every account: "Drafts (all accounts)".
+pub(crate) fn all_of_title(kind: FolderKind) -> String {
+    special_tip(kind, None)
+}
+
+/// What a special folder's button says under the pointer: "Drafts (all accounts)", or the folder's
+/// name for one account.
+fn special_tip(kind: FolderKind, account: Option<Id>) -> String {
+    let name = crate::i18n::current().folder(kind.default_name());
+    match account {
+        None => crate::i18n::fmt(tl!("{folder} (all accounts)"), &[("folder", name)]),
+        Some(_) => name.to_string(),
+    }
+}
+
+/// One special folder's button in `r`: its icon, its number in a small badge, and a click opens it.
+fn special_button(app: &mut MailApp, ui: &mut Ui, r: Rect, (kind, number, on): (FolderKind, usize, bool), t: &Tokens) {
+    let account = special_account(app);
+    let resp = ui.interact(r, ui.scope_id().with(("special_folder", kind.code())), Sense::click());
+    if on {
+        ui.painter().rect_filled(r, 4.0, t.checked);
+    } else if resp.hovered() {
+        ui.painter().rect_filled(r, 4.0, if resp.is_pointer_button_down_on() { t.pressed } else { t.hover });
+    }
+    icons::paint(ui.painter(), Rect::from_center_size(r.center(), vec2(16.0, 16.0)), kind.code(), t.icon, t.accent);
+    if number > 0 {
+        let text = if number > 99 { "99+".to_string() } else { number.to_string() };
+        let galley = ui.painter().layout_no_wrap(text, regular(8.5), t.on_accent);
+        let w = (galley.size().x + 5.0).max(11.0);
+        let badge = Rect::from_min_size(pos2(r.max.x - w + 2.0, r.min.y - 1.0), vec2(w, 11.0));
+        ui.painter().rect_filled(badge, 5.5, t.accent);
+        ui.painter().galley(badge.center() - galley.size() / 2.0, galley, t.on_accent);
+    }
+    app.hit.add("specialFolder", SPECIAL.iter().position(|k| *k == kind).unwrap_or(0) as u64, r);
+    let tip = match number {
+        0 => special_tip(kind, account),
+        n => format!("{} · {n}", special_tip(kind, account)),
+    };
+    if resp.on_hover_text(tip).clicked() {
+        let _ = match account {
+            None => app.run("view.allOf", json!({"kind": kind.code()})),
+            Some(a) => app.run("folder.select", json!({"kind": kind.code(), "account": a})),
+        };
+    }
+}
+
+/// The top of the pane: the special folders' buttons (v0.12.12), and the button that puts the pane
+/// away.
 fn pane_top(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     // The line along the pane's top, and a little air under it.
     ui.add_space(4.0);
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+    let mut x = r.min.x + 6.0;
+    for b in special_buttons(app) {
+        if x + SPECIAL_W > r.max.x - 28.0 {
+            break;
+        }
+        special_button(app, ui, Rect::from_min_size(pos2(x, r.center().y - SPECIAL_W / 2.0), vec2(SPECIAL_W, SPECIAL_W)), b, t);
+        x += SPECIAL_W + 2.0;
+    }
     let button = Rect::from_center_size(pos2(r.max.x - 14.0, r.center().y), vec2(20.0, 20.0));
     let resp = ui.interact(button, ui.scope_id().with("hide_pane"), Sense::click());
     if resp.hovered() {
@@ -1017,6 +1140,12 @@ pub fn folder_pane_strip(app: &mut MailApp, ui: &mut Ui) {
         app.hit.add("folderPaneShow", 0, button);
         if resp.on_hover_text(tl!("Show the folder pane")).clicked() {
             let _ = app.run("view.folderPane", json!({"value": true}));
+        }
+        // The special folders' buttons, one under the other (v0.12.12).
+        ui.add_space(6.0);
+        for b in special_buttons(app) {
+            let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), SPECIAL_W + 4.0), Sense::hover());
+            special_button(app, ui, Rect::from_center_size(row.center(), vec2(SPECIAL_W, SPECIAL_W)), b, &t);
         }
     });
 }
@@ -1063,7 +1192,8 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
             let shows = |section: NavTab| !tabs || tab == section;
             if shows(NavTab::Unified) && (tabs || unified_heading(app, ui, &filing_accounts, filing_account)) {
                 let view = &app.session.view;
-                let unified_list = view.scope == mailcraft_engine::Scope::Inboxes && view.search_folder.is_none() && view.filing.is_none();
+                let unified_list =
+                    view.scope == mailcraft_engine::Scope::Inboxes && view.search_folder.is_none() && view.filing.is_none() && view.kind.is_none();
                 let all_mail = view.all_mail;
                 let unread = app
                     .session
@@ -1085,7 +1215,7 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                         });
                     let mut tree = trees(&app.session.mailbox, |a| a == account);
                     // (Folded apart from the account's own tree.)
-                    let rows = visible_in(tree.remove(&account).unwrap_or_default(), &app.ui.collapsed_unified.clone());
+                    let rows = without_special(visible_in(tree.remove(&account).unwrap_or_default(), &app.ui.collapsed_unified.clone()));
                     let in_view = app.session.view.filing.is_some() && app.session.view.search_folder.is_none();
                     for (f, depth, has_children) in &rows {
                         // (A row out of sight takes its place and is not drawn, as in an account's tree.)
@@ -1134,7 +1264,7 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                 .map(|a| {
                     let rows = visible_in(trees.remove(&a.id).unwrap_or_default(), &folded);
                     let heading = heading_name(app, a);
-                    let said = (heading != a.name).then(|| heading.clone());
+                    let said = (heading != shown_name(a)).then(|| heading.clone());
                     (a.id, heading, said, rows)
                 })
                 .collect();
@@ -1322,7 +1452,7 @@ fn default_tab_name(mb: &Mailbox, a: &mailcraft_model::Account) -> String {
         chars.next().map(|first| first.to_uppercase().chain(chars).collect::<String>()).unwrap_or_default()
     };
     let Some(own) = domain(a) else {
-        return if a.name.trim().is_empty() { tl!("Mailbox").to_string() } else { a.name.trim().to_string() };
+        return if a.name.trim().is_empty() { tl!("Mailbox").to_string() } else { shown_name(a).to_string() };
     };
     let same: Vec<Id> = mb.accounts_in_order().into_iter().filter(|o| domain(o).as_deref() == Some(own.as_str())).map(|o| o.id).collect();
     if same.len() > 1 {
@@ -1380,7 +1510,7 @@ fn tab_strip(app: &mut MailApp, ui: &mut Ui, t: &Tokens, current: NavTab, filing
         (NavTab::Favorites, tl!("Favorites").to_string(), None, tl!("Favorites").to_string()),
     ];
     for a in app.session.mailbox.accounts_in_order() {
-        let hint = if a.email.is_empty() { a.name.clone() } else { a.email.clone() };
+        let hint = if a.email.is_empty() { shown_name(a).to_string() } else { a.email.clone() };
         tabs.push((NavTab::Account(a.id), tab_name(app, a), Some(a.effective_row_color()), hint));
     }
     let own = owners(&app.session.mailbox);
@@ -1565,15 +1695,13 @@ fn alias_rows(app: &mut MailApp, ui: &mut Ui, account: Id, observed: &mailcraft_
     }
 }
 
-/// What the window calls a folder: in English always its own name; in another interface language,
-/// a folder of a standard kind (Inbox, Sent Items…) still called by its default name, or one the
-/// server has as its folder of that kind (whatever the server calls it), by the language's name
-/// for that kind, and the local folder imported mail goes to by the language's word. A folder the
-/// owner named keeps its name, and the name kept in the mailbox and on the server never changes.
+/// What the window calls a folder: a folder of a standard kind (Inbox, Sent Items…) still called by
+/// its default name, or one the server has as its folder of that kind (whatever the server calls
+/// it, Borradores or Sent Mail), by the interface language's name for that kind, English too
+/// (v0.12.12: every account's Drafts is Drafts), and the local folder imported mail goes to by the
+/// language's word. A folder the owner named keeps its name, and the name kept in the mailbox and
+/// on the server never changes.
 pub(crate) fn folder_name(f: &Folder) -> &str {
-    if crate::i18n::current() == crate::i18n::Lang::English {
-        return &f.name;
-    }
     match named_by(f) {
         Some(Named::Imported) => tl!("Imported"),
         Some(Named::Kind(kind)) => crate::i18n::current().folder(kind.default_name()),
@@ -1618,7 +1746,22 @@ pub(crate) fn folder_path(mb: &Mailbox, id: Id) -> String {
 /// What the folder pane calls an account: its name (Account Settings › Account name), and its
 /// address while none is (#1017).
 pub(crate) fn account_label(a: &Account) -> String {
-    if a.name.trim().is_empty() { a.email.trim().to_string() } else { a.name.trim().to_string() }
+    if a.name.trim().is_empty() { a.email.trim().to_string() } else { shown_name(a).to_string() }
+}
+
+/// The name the program gave the account of the mail kept on this computer, before v0.12.12.
+const LOCAL_NAME: &str = "On this computer";
+
+/// An account's name as the window shows it: the account of the mail kept on this computer, still
+/// called what the program named it, is the Local archive, in the interface language (v0.12.12);
+/// a name the owner gave stays. The name kept in the mailbox never changes.
+pub(crate) fn shown_name(a: &Account) -> &str {
+    let name = a.name.trim();
+    if a.kind == mailcraft_model::AccountKind::Local && a.email.trim().is_empty() && (name == LOCAL_NAME || name == "Local archive") {
+        tl!("Local archive")
+    } else {
+        name
+    }
 }
 
 /// The account as a folder row away from the pane names it: [`account_label`], and its address
@@ -1634,7 +1777,7 @@ pub(crate) fn account_name(a: &Account) -> String {
 /// mailbox it is in, so that its Inbox is never taken for the owner's (#70).
 pub(crate) fn folder_label(mb: &Mailbox, f: &Folder) -> String {
     let Some(a) = mb.account(f.account).filter(|a| a.is_shared()) else { return folder_name(f).to_string() };
-    let mailbox = if a.name.trim().is_empty() { a.email.trim() } else { a.name.trim() };
+    let mailbox = if a.name.trim().is_empty() { a.email.trim() } else { shown_name(a) };
     crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", folder_name(f)), ("mailbox", mailbox)])
 }
 
@@ -1648,7 +1791,7 @@ pub(crate) fn result_folder_label(mb: &Mailbox, f: &Folder) -> String {
     let twin = || mb.folders.iter().any(|o| o.account != f.account && own(o.account) && o.name.eq_ignore_ascii_case(&f.name));
     match mb.account(f.account) {
         Some(a) if !shared && twin() => {
-            let account = if a.name.trim().is_empty() { a.email.trim() } else { a.name.trim() };
+            let account = if a.name.trim().is_empty() { a.email.trim() } else { shown_name(a) };
             crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", folder_name(f)), ("mailbox", account)])
         }
         _ => folder_label(mb, f),
@@ -1659,11 +1802,11 @@ pub(crate) fn result_folder_label(mb: &Mailbox, f: &Folder) -> String {
 /// Microsoft won't open for the owner, No access (#70; the mail already here stays readable).
 pub(crate) fn heading_name(app: &MailApp, a: &mailcraft_model::Account) -> String {
     if app.shared_refused.contains_key(&a.id) {
-        crate::i18n::fmt(tl!("{account} · No access"), &[("account", &a.name)])
+        crate::i18n::fmt(tl!("{account} · No access"), &[("account", shown_name(a))])
     } else if app.sign_in_needed.contains(&a.id) {
-        crate::i18n::fmt(tl!("{account} · Sign in needed"), &[("account", &a.name)])
+        crate::i18n::fmt(tl!("{account} · Sign in needed"), &[("account", shown_name(a))])
     } else {
-        a.name.clone()
+        shown_name(a).to_string()
     }
 }
 

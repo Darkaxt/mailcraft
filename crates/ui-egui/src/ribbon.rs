@@ -421,46 +421,147 @@ fn pressed(ui: &Ui, command: &'static str) -> &'static str {
     }
 }
 
-fn home_mail(app: &MailApp) -> Tab {
+/// What the message selected is, for the first buttons of Home (v0.12.12): what can be done with
+/// it changes with where it is.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Selected {
+    /// Mail that came: Reply, Reply All, Forward, Archive, Delete.
+    Received,
+    /// A draft: Send, Continue Editing, Delete.
+    Draft,
+    /// In Sent Items: Forward, Resend, Delete.
+    Sent,
+    /// In Deleted Items: Restore, Delete Permanently, Empty Folder.
+    Deleted,
+    /// In Junk Email: Not Junk, Delete, Empty Folder.
+    Junk,
+    /// Waiting in the Outbox: Edit, Cancel Sending.
+    Outbox,
+}
+
+/// What is selected, by the message in focus (else the folder in view), with its folder.
+fn selected(app: &MailApp) -> (Selected, Option<&mailcraft_model::Folder>, Option<&mailcraft_model::Message>) {
+    let mb = &app.session.mailbox;
+    let message = app.session.focused_message();
+    let folder = match message {
+        Some(m) => mb.folder(m.folder),
+        None if app.session.view.scope == mailcraft_engine::Scope::Inboxes => None,
+        None => mb.folder(app.session.view.folder),
+    };
+    let kind = folder.map(|f| f.kind).or(if message.is_none() { app.session.view.kind } else { None });
+    let what = match kind {
+        _ if message.is_some_and(|m| m.draft) => Selected::Draft,
+        Some(FolderKind::Drafts) => Selected::Draft,
+        Some(FolderKind::Sent) => Selected::Sent,
+        Some(FolderKind::Deleted) => Selected::Deleted,
+        Some(FolderKind::Junk) => Selected::Junk,
+        Some(FolderKind::Outbox) => Selected::Outbox,
+        _ => Selected::Received,
+    };
+    (what, folder, message)
+}
+
+/// Home's first buttons, after New: what is done with the message selected (v0.12.12).
+fn first_groups(app: &MailApp) -> Vec<Group> {
     // Junk ▾: Block Sender, Never Block…, Not Junk and Junk E-mail Options (#504).
     let junk = Item::small_menu("junk", "junk", "Junk", "Junk", Menu::Junk);
-    let pinned = app.session.focused_message().is_some_and(|m| m.pinned);
-    Tab::of(vec![
-        g(
-            "New",
+    let delete = || Item::big("delete", "Delete", "mail.delete", no()).at(1, 1).plain();
+    let permanently =
+        || Item::small("deletePermanently", "Delete Permanently", "Delete Permanently", "mail.deletePermanently", no()).under("mail.delete");
+    let (what, folder, message) = selected(app);
+    // Empty Folder empties the folder of the message selected, not the view of every account's.
+    let empty =
+        || Item::big("emptyFolder", "Empty\nFolder", "folder.empty", folder.map_or_else(no, |f| json!({"id": f.id}))).key("emptyFolder").at(1, 3);
+    match what {
+        Selected::Received => vec![
+            g(
+                "Delete",
+                vec![delete(), Item::big("archive", "Archive", "mail.archive", no()).at(1, 2).plain(), junk.under("mail.delete"), permanently()],
+            ),
+            respond(),
+        ],
+        Selected::Draft => vec![g(
+            "Draft",
             vec![
-                Item::big("newMail", "New\nEmail", "mail.new", no()).at(0, 1),
-                Item::big_menu("newItems", "plus", "New\nItems", "New Items", Menu::NewItems).under("mail.new"),
+                // The owner's press: the draft opens and goes as Send in its window does.
+                Item::big("send", "Send", "mail.editDraft", json!({(crate::AND_SEND): true})).key("sendDraft").at(1, 1).plain(),
+                Item::big("editDraft", "Continue\nEditing", "mail.editDraft", no()).at(1, 1).plain(),
+                delete(),
+                permanently(),
             ],
-        ),
-        g(
-            "Delete",
-            vec![
-                Item::big("delete", "Delete", "mail.delete", no()).at(1, 1).plain(),
-                Item::big("archive", "Archive", "mail.archive", no()).at(1, 2).plain(),
-                junk.under("mail.delete"),
-                Item::small("deletePermanently", "Delete Permanently", "Delete Permanently", "mail.deletePermanently", no()).under("mail.delete"),
-            ],
-        ),
-        g(
+        )],
+        Selected::Sent => vec![g(
             "Respond",
             vec![
-                Item::big("reply", "Reply", "mail.reply", no()).at(2, 1).plain(),
-                Item::big("replyAll", "Reply\nAll", "mail.replyAll", no()).at(2, 2).plain(),
-                Item::big("forward", "Forward", "mail.forward", no()).at(2, 2).plain(),
+                Item::big("forward", "Forward", "mail.forward", no()).at(2, 1).plain(),
                 Item::small("forwardAsAttachment", "Forward as Attachment", "", "mail.forwardAsAttachment", no()).under("mail.forward"),
-                Item::small("delete", "Reply and Delete", "", "mail.replyAndDelete", no()).under("mail.reply"),
-                Item::small("open", "View Source", "", "mail.viewSource", no()).under("mail.forward"),
-                Item::small("meeting", "Meeting", "Reply with Meeting", "calendar.fromMessage", no()).at(5, 6),
-                Item::small("newContact", "Add Sender", "Add to Contacts", "people.fromMessage", no()).at(5, 7),
+                Item::big("send", "Resend", "mail.resend", no()).at(2, 1).plain(),
+                delete(),
+                permanently(),
             ],
-        ),
+        )],
+        Selected::Deleted => {
+            // Back to its account's Inbox.
+            let inbox = folder.and_then(|f| app.session.mailbox.folders.iter().find(|i| i.account == f.account && i.kind == FolderKind::Inbox));
+            let restore = match inbox {
+                Some(i) => Item::big("inbox", "Restore", "mail.move", json!({"folder": i.id})),
+                None => Item::big("inbox", "Restore", "mail.move", no()),
+            };
+            vec![g(
+                "Delete",
+                vec![
+                    restore.key("restore").at(1, 1).plain(),
+                    Item::big("deletePermanently", "Delete\nPermanently", "mail.deletePermanently", no()).at(1, 1).plain(),
+                    empty(),
+                ],
+            )]
+        }
+        Selected::Junk => {
+            vec![g("Delete", vec![Item::big("notJunk", "Not\nJunk", "mail.notJunk", no()).at(1, 1).plain(), delete(), permanently(), empty()])]
+        }
+        Selected::Outbox => {
+            let cancel = match message {
+                Some(m) => Item::big("cancel", "Cancel\nSending", "mail.cancelSend", json!({"id": m.id})),
+                None => Item::big("cancel", "Cancel\nSending", "mail.cancelSend", no()),
+            };
+            vec![g("Outbox", vec![Item::big("edit", "Edit", "mail.editDraft", no()).at(1, 1).plain(), cancel.at(1, 1).plain()])]
+        }
+    }
+}
+
+/// Reply, Reply All and Forward, with what goes with them: for mail that came.
+fn respond() -> Group {
+    g(
+        "Respond",
+        vec![
+            Item::big("reply", "Reply", "mail.reply", no()).at(2, 1).plain(),
+            Item::big("replyAll", "Reply\nAll", "mail.replyAll", no()).at(2, 2).plain(),
+            Item::big("forward", "Forward", "mail.forward", no()).at(2, 2).plain(),
+            Item::small("forwardAsAttachment", "Forward as Attachment", "", "mail.forwardAsAttachment", no()).under("mail.forward"),
+            Item::small("delete", "Reply and Delete", "", "mail.replyAndDelete", no()).under("mail.reply"),
+            Item::small("open", "View Source", "", "mail.viewSource", no()).under("mail.forward"),
+            Item::small("meeting", "Meeting", "Reply with Meeting", "calendar.fromMessage", no()).at(5, 6),
+            Item::small("newContact", "Add Sender", "Add to Contacts", "people.fromMessage", no()).at(5, 7),
+        ],
+    )
+}
+
+fn home_mail(app: &MailApp) -> Tab {
+    let pinned = app.session.focused_message().is_some_and(|m| m.pinned);
+    let mut groups = vec![g(
+        "New",
+        vec![
+            Item::big("newMail", "New\nEmail", "mail.new", no()).at(0, 1),
+            Item::big_menu("newItems", "plus", "New\nItems", "New Items", Menu::NewItems).under("mail.new"),
+        ],
+    )];
+    groups.extend(first_groups(app));
+    groups.extend([
         g(
             "Move",
             vec![
                 Item::big_menu("moveMessages", "move", "Move", "Move to Folder", Menu::MoveMessages).at(1, 2).plain(),
                 Item::big_menu("rules", "rules", "Rules", "Rules", Menu::Rules).at(4, 4),
-                Item::small("send", "Resend Message", "Open a message you sent as a new one", "mail.resend", no()).at(5, 7),
             ],
         ),
         g(
@@ -481,7 +582,8 @@ fn home_mail(app: &MailApp) -> Tab {
             ],
         ),
         g("Send/Receive", vec![Item::big("sync", "Send/Receive\nAll Folders", "ui.sync", no()).at(5, 5)]),
-    ])
+    ]);
+    Tab::of(groups)
 }
 
 /// The calendar's four views, the one in use marked, in `section` of the simplified row: Home has
@@ -3219,7 +3321,7 @@ mod tests {
                     "Respond",
                     vec!["Reply", "Reply\nAll", "Forward", "Forward as Attachment", "Reply and Delete", "View Source", "Meeting", "Add Sender"]
                 ),
-                ("Move", vec!["Move", "Rules", "Resend Message"]),
+                ("Move", vec!["Move", "Rules"]),
                 ("Tags", vec!["Unread/\nRead", "Categorize", "Follow\nUp", "Pin"]),
                 ("Find", vec!["Filter\nEmail", "Related", "From Sender"]),
                 ("Send/Receive", vec!["Send/Receive\nAll Folders"]),

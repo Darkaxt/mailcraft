@@ -67,8 +67,9 @@ go when a row has several (files, importance, categories) is ours, the reference
 - **Light, dark and follow-the-system** themes; every colour comes from `theme::Tokens`. The dark theme is neutral greys, as in the other Craft programs, with only the accent and its washes coloured, or the blue-tinted greys it had before (File › Options › General › Dark theme, `ui.darkStyle`, #1384). Follow-the-system is the system's own answer on Windows, macOS and in the browser, and on Linux and the BSDs the desktop portal's `color-scheme`, followed live (#73); no portal means light. In the dark theme, the owner may keep messages on a light page in their own colours while the rest of the window stays dark (File › Options, #634).
 - **Interface size** 80–200 % on top of the system scale.
 - **Keyboard:** the registry's shortcuts follow the target's where it has them (Ctrl+N, Ctrl+R,
-  Ctrl+Shift+R, Ctrl+F, Ctrl+Q/U, Ctrl+1–4, Ctrl+E, Ctrl+Shift+A/Q/C/K, F9, Delete, arrows).
-  Missing: keytips, Customize Keyboard, full keyboard access to every control, screen-reader
+  Ctrl+Shift+R, Ctrl+F, Ctrl+Q/U, Ctrl+1–4, Ctrl+E, Ctrl+Shift+A/Q/C/K, Ctrl+M, arrows); Delete
+  is Ctrl+D, as a key alone only moves around, and File › Options › Keyboard shortcuts changes
+  any of them. Missing: keytips, full keyboard access to every control, screen-reader
   labels beyond what egui/AccessKit give by default.
 - **Languages:** English, and French, German, Spanish, Italian, Dutch, Romanian, Hungarian, Polish, Czech and Simplified Chinese as preview languages (named
   "Français (aperçu)", "Deutsch (Vorschau)", "Nederlands (voorbeeld)", "Română (previzualizare)", "Magyar (előzetes)", "Polski (wersja zapoznawcza)", "Čeština (náhled)" and "简体中文（预览）" in File › Options; the initial Chinese catalogue was reviewed by its contributor and is offered on desktop only until the browser has a CJK font, and the others await native-speaker review; see `docs/translating.md`); Automatic follows the system. Every

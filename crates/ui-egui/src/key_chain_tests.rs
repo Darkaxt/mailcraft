@@ -684,6 +684,12 @@ fn without_tests(src: &str) -> String {
 #[test]
 fn escape_and_enter_are_read_through_the_gate_only() {
     let allowed: &[(&str, &str)] = &[
+        // File › Options › Keyboard shortcuts takes the next keys pressed as a command's new
+        // keys: Escape alone is left to cancel (v0.12.12).
+        (
+            "shortcuts_page.rs",
+            "egui::Event::Key { key, pressed: true, repeat: false, modifiers, .. } if !(*key == Key::Escape && modifiers.is_none()) => {",
+        ),
         // The names of the keys the control channel presses.
         ("control.rs", r#""enter" | "return" => Some(egui::Key::Enter),"#),
         ("control.rs", r#""esc" | "escape" => Some(egui::Key::Escape),"#),

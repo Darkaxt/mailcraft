@@ -158,7 +158,9 @@ pub fn object(id: &str) -> Option<Object> {
         | "ui.reportProblem"
         // The Public keys kept (File › Options › Security, #30): the question names the key.
         | "keys.import"
-        | "keys.remove" => Options,
+        | "keys.remove"
+        // A command's keys (File › Options › Keyboard shortcuts, v0.12.12).
+        | "ui.shortcut" => Options,
         _ => return None,
     })
 }

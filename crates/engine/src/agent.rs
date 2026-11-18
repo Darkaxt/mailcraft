@@ -312,6 +312,7 @@ const SAFE: &[&str] = &[
     "view.mail",
     "view.allInboxes",
     "view.allMail",
+    "view.allOf",
     "view.calendar",
     "view.people",
     "view.tasks",
@@ -612,6 +613,8 @@ const ACCOUNTS: &[&str] = &[
 const MAILBOX: &[&str] = &["file.new", "file.open", "file.save", "file.saveAs"];
 
 const SETTINGS: &[&str] = &[
+    // The keys that run commands: an agent could put Delete Permanently on the owner's Reply key.
+    "ui.shortcut",
     // Hides the sender-warning banner of a message (#508): an agent must not be able to quiet
     // the owner's phishing warning.
     "mail.dismissWarnings",
@@ -777,7 +780,7 @@ pub fn access(id: &str) -> Option<Access> {
         match id {
             // Public keys decide which Digital signatures check out: a trust anchor, not an
             // options-page setting, so the owner says yes to it (as with `ui.confirmServers`).
-            "keys.import" | "keys.remove" => Access::Owner(Class::Settings),
+            "keys.import" | "keys.remove" | "ui.shortcut" => Access::Owner(Class::Settings),
             _ => Access::Safe,
         }
     } else if is(NEVER) {

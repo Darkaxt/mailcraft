@@ -460,7 +460,10 @@ fn row(h: &Harness<'static, MailApp>, id: Id) -> egui::Pos2 {
 }
 
 fn key(h: &mut Harness<'static, MailApp>, key: Key) {
-    let m = egui::Modifiers::NONE;
+    key_with(h, egui::Modifiers::NONE, key);
+}
+
+fn key_with(h: &mut Harness<'static, MailApp>, m: egui::Modifiers, key: Key) {
     h.event(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: m });
     h.step();
     h.event(egui::Event::Key { key, physical_key: None, pressed: false, repeat: false, modifiers: m });
@@ -491,7 +494,7 @@ fn a_click_then_delete_deletes_the_message_shown() {
             h.state_mut().run("mail.delete", json!({})).unwrap();
             h.run_steps(3);
         } else {
-            key(&mut h, Key::Delete);
+            key_with(&mut h, egui::Modifiers::COMMAND, Key::D);
         }
         assert!(in_folder(h.state(), FolderKind::Deleted, "Second draft").is_some(), "ribbon: {ribbon}: the one shown is deleted");
         let first = draft(h.state(), "First draft").expect("the one written in stays in Drafts");

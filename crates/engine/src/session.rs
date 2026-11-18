@@ -407,6 +407,10 @@ pub struct ViewState {
     /// With [`Scope::Inboxes`]: All mail, every folder mail arrives in or is filed to
     /// ([`crate::list::unified_folders`]), not only the Inboxes (`view.allMail`).
     pub all_mail: bool,
+    /// With [`Scope::Inboxes`]: one special folder of every account (Drafts, Sent Items…) in
+    /// place of the Inboxes (`view.allOf`, v0.12.12).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<mailcraft_model::FolderKind>,
     /// Canonical real Outlook account for the unified filing tree; ordinary views have none.
     pub filing: Option<Id>,
     /// Selected saved virtual query. Typing a different search leaves its definition intact.
@@ -467,6 +471,7 @@ impl Default for ViewState {
             search_options: SearchOptions::default(),
             scope: Scope::Folder,
             all_mail: false,
+            kind: None,
             filing: None,
             search_folder: None,
             tag: None,
@@ -567,7 +572,7 @@ pub(crate) struct ListOf {
     filter: Filter,
     /// The Gmail category it shows, if any (#911).
     gmail: Option<(Id, mailcraft_model::GmailCategory)>,
-    virtual_view: (bool, bool, Option<Id>),
+    virtual_view: (bool, bool, Option<Id>, Option<mailcraft_model::FolderKind>),
     search: Option<(mailcraft_model::search::Query, Scope)>,
     /// The day, the first day of the week and the zone, for a search with dates in it:
     /// `received:today` is other messages tomorrow (#329).
@@ -585,7 +590,12 @@ impl ListOf {
             folder: view.folder,
             filter: view.filter,
             gmail: view.gmail,
-            virtual_view: (view.scope == Scope::Inboxes, view.scope == Scope::Inboxes && view.all_mail, view.filing),
+            virtual_view: (
+                view.scope == Scope::Inboxes,
+                view.scope == Scope::Inboxes && view.all_mail,
+                view.filing,
+                view.kind.filter(|_| view.scope == Scope::Inboxes),
+            ),
             search,
             when,
         }
@@ -1904,6 +1914,7 @@ impl Session {
         self.view.gmail = None;
         self.clear_search();
         self.view.scope = Scope::Folder;
+        self.view.kind = None;
     }
 
     /// No search: the list is the folder's again, and what the servers found for the search is

@@ -513,9 +513,7 @@ fn run_keys(app: &mut MailApp, ctx: &egui::Context) {
             continue;
         }
         let combo = crate::keys::combo(modifiers, name);
-        let bound = |c: &&mailcraft_engine::CommandSpec| {
-            c.writing && !c.shortcut.is_empty() && c.shortcut.split(" / ").any(|k| k.eq_ignore_ascii_case(&combo) && k != "Escape")
-        };
+        let bound = |c: &&mailcraft_engine::CommandSpec| c.writing && combo != "Escape" && c.bound_to(&combo);
         let found = app.session.registry.all().iter().filter(bound).find(|c| (c.enabled)(&app.session).is_none()).map(|c| c.id);
         if let Some(id) = found {
             ctx.input_mut(|i| {

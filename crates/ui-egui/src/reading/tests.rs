@@ -1742,8 +1742,9 @@ fn the_list_of_remembered_senders_pages_in_a_narrow_window() {
     harness.get_by_label_contains("Pictures are always downloaded from").click();
     harness.run_steps(3);
     let screen = harness.ctx.content_rect();
+    // (Previous and Next by their whole names: Keyboard shortcuts lists Previous Message.)
     for text in ["Gravatar is asked for", "Previous", "Next"] {
-        let r = harness.get_by_label_contains(text).rect();
+        let r = if text == "Previous" || text == "Next" { harness.get_by_label(text).rect() } else { harness.get_by_label_contains(text).rect() };
         assert!(r.min.x >= screen.min.x && r.max.x <= screen.max.x + 0.5, "{text}: {r:?} in {screen:?}");
     }
     harness.get_by_label("Next").click();

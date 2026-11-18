@@ -617,7 +617,7 @@ fn run(args: &[String]) -> Result<(), Failure> {
             } else {
                 write_stdout(|o| {
                     for c in s.registry.all() {
-                        writeln!(o, "{:<28} {:<30} {:<26} {}", c.id, c.label, c.location, c.shortcut)?;
+                        writeln!(o, "{:<28} {:<30} {:<26} {}", c.id, c.label, c.location, c.keys())?;
                     }
                     Ok(())
                 })

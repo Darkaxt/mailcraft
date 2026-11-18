@@ -1100,6 +1100,14 @@ pub(crate) mod testing {
         window.run_steps(2);
     }
 
+    /// Delete's keys (Ctrl+D: no command has a key of its own alone).
+    pub fn delete(window: &mut Harness<'_, MailApp>) {
+        for pressed in [true, false] {
+            window.input_mut().events.push(Event::Key { key: Key::D, physical_key: None, pressed, repeat: false, modifiers: Modifiers::COMMAND });
+        }
+        window.run_steps(2);
+    }
+
     /// `key` held down: the press, then the repeats the system sends, a frame apart, then the
     /// release. A held key is one press (#391, #393).
     pub fn held(window: &mut Harness<'_, MailApp>, key: Key) {

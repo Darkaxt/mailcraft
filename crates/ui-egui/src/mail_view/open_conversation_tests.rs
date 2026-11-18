@@ -94,13 +94,13 @@ fn a_message_under_the_row_is_selected_and_deleted_alone_without_a_question() {
     click(&mut w, "conversationArrow", newer);
     click(&mut w, "message", reply);
     assert_eq!(w.state().session.sel.focus(), Some(reply));
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     assert_eq!(testing::dialog(&w), None);
     assert_eq!([kind(&w, reply), kind(&w, newer), kind(&w, older)], [Some(FolderKind::Deleted), Some(FolderKind::Inbox), Some(FolderKind::Inbox)]);
     // One of the row's own messages, too.
     click(&mut w, "message", older);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     assert_eq!(testing::dialog(&w), None);
     assert_eq!([kind(&w, older), kind(&w, newer)], [Some(FolderKind::Deleted), Some(FolderKind::Inbox)]);
@@ -110,7 +110,7 @@ fn a_message_under_the_row_is_selected_and_deleted_alone_without_a_question() {
 fn delete_on_a_closed_conversation_asks_first_then_deletes_it_in_this_folder() {
     let (mut w, newer, older, reply) = release_checklist();
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert_eq!(
@@ -140,7 +140,7 @@ fn dont_ask_again_turns_the_question_off_for_the_account() {
     let (mut w, newer, older, _) = release_checklist();
     let account = w.state().session.mailbox.accounts[0].id;
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     click(&mut w, "questionTick", 0);
     click(&mut w, "questionAction", 0);
@@ -150,7 +150,7 @@ fn dont_ask_again_turns_the_question_off_for_the_account() {
     w.state_mut().execute("edit.undo", json!({})).unwrap();
     w.run_steps(3);
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     assert_eq!(testing::dialog(&w), None);
     assert_eq!(kind(&w, older), Some(FolderKind::Deleted));
@@ -193,7 +193,7 @@ fn delete_during_a_search_asks_about_what_the_search_found() {
     w.state_mut().execute("view.search", json!({"query": "checklist", "scope": "everywhere"})).unwrap();
     w.run_steps(3);
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert_eq!(ask.text, "This deletes the 3 messages of this conversation that are listed here. They go to Deleted Items.");
@@ -208,7 +208,7 @@ fn delete_with_the_reply_picked_as_well_asks_about_every_message_and_says_none_s
     click(&mut w, "conversationArrow", newer);
     w.state_mut().execute("mail.select", json!({"id": reply, "extend": true})).unwrap();
     w.run_steps(3);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert_eq!(ask.text, "This deletes 3 messages, including the conversation's messages listed here. They go to Deleted Items.");
@@ -230,7 +230,7 @@ fn delete_in_the_unread_tab_says_it_takes_what_is_listed_not_the_whole_conversat
     w.state_mut().execute("view.filter", json!({"value": "unread"})).unwrap();
     w.run_steps(3);
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert_eq!(
@@ -248,7 +248,7 @@ fn delete_of_every_message_picked_by_its_own_row_asks_nothing() {
     w.state_mut().execute("mail.select", json!({"id": newer, "copy": 1})).unwrap();
     w.state_mut().execute("mail.select", json!({"id": older, "extend": true})).unwrap();
     w.run_steps(3);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     assert_eq!(testing::dialog(&w), None);
     assert_eq!([kind(&w, newer), kind(&w, older), kind(&w, reply)], [Some(FolderKind::Deleted), Some(FolderKind::Deleted), Some(FolderKind::Sent)]);
@@ -277,7 +277,7 @@ fn the_account_on_this_computer_is_asked_with_no_box_as_it_has_no_account_settin
     }
     w.run_steps(3);
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert!(ask.tick.is_none());
@@ -288,7 +288,7 @@ fn the_account_on_this_computer_is_asked_with_no_box_as_it_has_no_account_settin
     }
     w.run_steps(3);
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert!(ask.tick.is_none());
@@ -305,7 +305,7 @@ fn delete_of_two_conversations_speaks_of_conversations() {
     w.state_mut().execute("mail.select", json!({"id": newer})).unwrap();
     w.state_mut().execute("mail.select", json!({"id": other, "extend": true})).unwrap();
     w.run_steps(3);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &w.state().dialog else { panic!("no question") };
     assert_eq!(
@@ -371,7 +371,7 @@ fn delete_for_good_takes_the_message_named_as_the_command_reads_it_never_the_sel
 fn a_question_goes_with_the_mailbox_it_was_asked_about() {
     let (mut w, newer, _, _) = release_checklist();
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     assert_eq!(testing::dialog(&w), Some("confirm"));
     w.state_mut().execute("file.new", json!({"sample": true})).unwrap();
@@ -386,7 +386,7 @@ fn a_message_of_the_conversation_that_leaves_the_folder_while_the_question_is_op
         let account = w.state().session.mailbox.message(older).unwrap().account;
         let folder = w.state().session.mailbox.folder_of_kind(account, to).unwrap();
         click(&mut w, "message", newer);
-        testing::key(&mut w, Key::Delete);
+        testing::delete(&mut w);
         w.run_steps(3);
         // Moved on another device while the question is open, which a Send/Receive brings in.
         w.state_mut().execute("mail.move", json!({"ids": [older], "folder": folder})).unwrap();
@@ -457,7 +457,7 @@ fn an_agents_delete_for_good_leaves_a_message_that_left_the_folder_while_the_own
 fn a_delete_goes_ahead_with_the_rest_when_one_it_counted_is_gone() {
     let (mut w, newer, older, _) = release_checklist();
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     w.state_mut().execute("mail.deletePermanently", json!({"ids": [older]})).unwrap();
     w.run_steps(3);
@@ -519,7 +519,11 @@ fn right_left_and_delete_under_an_agents_question_leave_the_list_as_it_is() {
         press(&mut w, Key::ArrowRight);
         w.run_steps(2);
         assert!(drawn_under(&mut w, newer).is_empty(), "Right opened the conversation under the agent's question");
-        press(&mut w, Key::Delete);
+        if held {
+            press(&mut w, Key::Delete);
+        } else {
+            testing::delete(&mut w);
+        }
         w.run_steps(2);
         assert_eq!(testing::dialog(&w), None, "Delete opened a question under the agent's question");
         assert_eq!([kind(&w, newer), kind(&w, older)], [Some(FolderKind::Inbox); 2]);
@@ -539,8 +543,8 @@ fn right_with_delete_in_the_same_frame_opens_nothing_under_its_question() {
     let (mut w, newer, _, _) = release_checklist();
     click(&mut w, "message", newer);
     for pressed in [true, false] {
-        for key in [Key::Delete, Key::ArrowRight] {
-            w.input_mut().events.push(egui::Event::Key { key, physical_key: None, pressed, repeat: false, modifiers: egui::Modifiers::NONE });
+        for (key, modifiers) in [(Key::D, egui::Modifiers::COMMAND), (Key::ArrowRight, egui::Modifiers::NONE)] {
+            w.input_mut().events.push(egui::Event::Key { key, physical_key: None, pressed, repeat: false, modifiers });
         }
         w.run_steps(1);
     }
@@ -553,7 +557,7 @@ fn right_with_delete_in_the_same_frame_opens_nothing_under_its_question() {
 fn a_delete_whose_counted_messages_are_all_gone_does_nothing_and_says_nothing_of_ids() {
     let (mut w, newer, older, _) = release_checklist();
     click(&mut w, "message", newer);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     assert_eq!(testing::dialog(&w), Some("confirm"));
     w.state_mut().execute("mail.deletePermanently", json!({"ids": [newer, older]})).unwrap();
@@ -651,7 +655,7 @@ fn the_question_doesnt_say_other_folders_stay_when_one_picked_there_goes() {
     w.state_mut().execute("mail.select", json!({"id": newer})).unwrap();
     w.state_mut().execute("mail.select", json!({"id": reply, "extend": true})).unwrap();
     w.run_steps(3);
-    testing::key(&mut w, Key::Delete);
+    testing::delete(&mut w);
     w.run_steps(3);
     let text = question(&w);
     click(&mut w, "questionAction", 0);

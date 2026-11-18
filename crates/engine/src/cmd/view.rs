@@ -26,6 +26,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.allMail", "All mail", "Folder Pane", all_mail).reads().params(
             "{} — every account's recent mail in one list, newest first, whatever folder it is in (each row names it); leaves out Sent Items, Drafts, the Outbox, Deleted Items and Junk Email",
         ),
+        CommandSpec::new("view.allOf", "Special Folder (All Accounts)", "Folder Pane", all_of).reads().params(
+            r#"{"kind": "drafts"|"sent"|"deleted"|"junk"|"archive"|"outbox"} — that folder of every account in one list (the folder pane's buttons over the folders); "inbox" is All inboxes"#,
+        ),
         CommandSpec::new("view.calendar", "Calendar", "Navigation", calendar).reads().key("Mod+2"),
         CommandSpec::new("view.people", "People", "Navigation", people).reads().key("Mod+3"),
         CommandSpec::new("view.tasks", "Tasks", "Navigation", tasks).reads().key("Mod+4"),
@@ -51,7 +54,7 @@ pub fn specs() -> Vec<CommandSpec> {
         ),
         CommandSpec::new("view.search", "Search", "Search", search)
             .reads()
-            .key("Mod+E / F3")
+            .key("Mod+E")
             .params(r#"{"query": string, "scope"?: "folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes"}"#),
         CommandSpec::new("view.searchOptions", "Search Options", "Search", search_options).reads().params(
             r#"{"matchCase"?: bool, "wholeWord"?: bool, "regex"?: bool, "searchIn"?: ["subject"|"people"|"body"|"attachments"]} — how the search's free text is compared with the indexed text; what is not given stays as it is. Default: case- and accent-insensitive substring matching in every part. wholeWord is ignored with regex. Answers the options in force"#,
@@ -106,6 +109,24 @@ fn all_mail(s: &mut Session, _: &Value) -> CmdResult {
     unified(s, true)
 }
 
+/// One special folder of every account in one list: Drafts, Sent Items, Deleted Items… of them all.
+fn all_of(s: &mut Session, v: &Value) -> CmdResult {
+    let kind = v
+        .get("kind")
+        .and_then(Value::as_str)
+        .and_then(mailcraft_model::FolderKind::parse)
+        .filter(|k| *k != mailcraft_model::FolderKind::Custom)
+        .ok_or_else(|| bad("`kind` is drafts, sent, deleted, junk, archive or outbox"))?;
+    let mut r = unified(s, false)?;
+    if kind != mailcraft_model::FolderKind::Inbox {
+        s.view.kind = Some(kind);
+        let counts = s.folder_counts();
+        let unread = crate::list::unified_folders(s).into_iter().fold(0usize, |total, f| total.saturating_add(counts.unread(f)));
+        r = json!({"scope": "inboxes", "kind": kind.code(), "unread": unread, "shown": crate::list::listed(&s.rows())});
+    }
+    Ok(r)
+}
+
 /// The unified mailbox's list: every Inbox, or with `all_mail` every folder mail arrives in or
 /// is filed to ([`crate::list::unified_folders`]).
 fn unified(s: &mut Session, all_mail: bool) -> CmdResult {
@@ -115,6 +136,7 @@ fn unified(s: &mut Session, all_mail: bool) -> CmdResult {
     s.view.module = Module::Mail;
     s.view.scope = Scope::Inboxes;
     s.view.all_mail = all_mail;
+    s.view.kind = None;
     s.view.search.clear();
     s.view.open.clear();
     s.sel.messages.clear();

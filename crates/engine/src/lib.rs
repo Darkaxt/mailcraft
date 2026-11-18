@@ -200,6 +200,16 @@ impl CommandSpec {
         self.shortcut = s;
         self
     }
+    /// The keys that run it now: the owner's own (File › Options › Keyboard shortcuts) or else
+    /// [`CommandSpec::shortcut`], its default. `""` is none.
+    pub fn keys(&self) -> &'static str {
+        keymap::get(self.id).unwrap_or(self.shortcut)
+    }
+    /// Whether `key` (as [`CommandSpec::keys`] writes it) runs it now.
+    pub fn bound_to(&self, key: &str) -> bool {
+        let keys = self.keys();
+        !keys.is_empty() && keys.split(" / ").any(|k| k.eq_ignore_ascii_case(key))
+    }
     pub const fn params(mut self, p: &'static str) -> Self {
         self.params = p;
         self
@@ -264,7 +274,7 @@ impl Registry {
             self.specs
                 .iter()
                 .map(|s| {
-                    let mut v = serde_json::json!({"id": s.id, "label": s.label, "location": s.location, "shortcut": s.shortcut, "params": s.params, "mutates": s.mutates});
+                    let mut v = serde_json::json!({"id": s.id, "label": s.label, "location": s.location, "shortcut": s.keys(), "params": s.params, "mutates": s.mutates});
                     agent_fields(&mut v, s.id);
                     v
                 })
@@ -273,7 +283,54 @@ impl Registry {
     }
     /// The command bound to a shortcut, if any.
     pub fn by_shortcut(&self, key: &str) -> Option<&CommandSpec> {
-        self.specs.iter().find(|s| !s.shortcut.is_empty() && s.shortcut.split(" / ").any(|k| k.eq_ignore_ascii_case(key)))
+        self.specs.iter().find(|s| s.bound_to(key))
+    }
+}
+
+/// The owner's own keys for commands (File › Options › Keyboard shortcuts), over the defaults.
+/// One map for the whole program: the keys are the owner's, whichever window reads them.
+pub mod keymap {
+    use std::collections::HashMap;
+    use std::sync::{OnceLock, RwLock};
+
+    fn map() -> &'static RwLock<HashMap<String, &'static str>> {
+        static MAP: OnceLock<RwLock<HashMap<String, &'static str>>> = OnceLock::new();
+        MAP.get_or_init(Default::default)
+    }
+
+    /// The owner's keys for `id`, when they changed them (`""`: none).
+    pub fn get(id: &str) -> Option<&'static str> {
+        map().read().ok()?.get(id).copied()
+    }
+
+    /// Takes the owner's keys for `id` (written as the registry writes them, `""` for none), or
+    /// with `None` gives it its default back. A text seen before is reused, so setting the same
+    /// keys again costs nothing.
+    pub fn put(id: &str, keys: Option<&str>) {
+        static TEXTS: OnceLock<RwLock<HashMap<String, &'static str>>> = OnceLock::new();
+        let Some(k) = keys else {
+            if let Ok(mut m) = map().write() {
+                m.remove(id);
+            }
+            return;
+        };
+        let texts = TEXTS.get_or_init(Default::default);
+        let text = texts.read().ok().and_then(|t| t.get(k).copied());
+        let text = text.unwrap_or_else(|| {
+            let leaked: &'static str = Box::leak(k.to_owned().into_boxed_str());
+            if let Ok(mut t) = texts.write() {
+                t.insert(k.to_owned(), leaked);
+            }
+            leaked
+        });
+        if let Ok(mut m) = map().write() {
+            m.insert(id.to_owned(), text);
+        }
+    }
+
+    /// Whether a key (`Mod+Shift+D`, `F9`, `Delete`) is a single key, pressed with nothing held.
+    pub fn single(key: &str) -> bool {
+        !key.contains('+') || key == "+"
     }
 }
 

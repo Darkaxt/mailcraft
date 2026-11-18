@@ -509,13 +509,14 @@ fn search_bar(app: &mut MailApp, ui: &mut Ui, found: usize) {
         tl!("Inbox and unfiled").to_string()
     } else {
         match app.session.view.scope {
+            mailcraft_engine::Scope::Inboxes if let Some(kind) = app.session.view.kind => crate::nav::all_of_title(kind),
             mailcraft_engine::Scope::Inboxes if app.session.view.all_mail => tl!("All mail").to_string(),
             mailcraft_engine::Scope::Inboxes => tl!("All inboxes").to_string(),
             mailcraft_engine::Scope::Everywhere => tl!("All Mailboxes").to_string(),
             // The account in view, by the name the folder pane gives it (#493).
             mailcraft_engine::Scope::Mailbox => folder
                 .and_then(|f| mb.account(f.account))
-                .map(|a| if a.name.trim().is_empty() { a.email.trim().to_string() } else { a.name.trim().to_string() })
+                .map(crate::nav::account_label)
                 .filter(|n| !n.is_empty())
                 .unwrap_or_else(|| tl!("Current Mailbox").to_string()),
             mailcraft_engine::Scope::Subfolders => folder

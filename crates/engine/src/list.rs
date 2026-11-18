@@ -254,6 +254,10 @@ fn with_twins(mb: &Mailbox, everywhere: bool, mut folders: HashSet<Id>) -> HashS
 /// Outbox, Deleted Items, Junk Email and the folders under them.
 pub fn unified_folders(s: &Session) -> HashSet<Id> {
     let mb = &s.mailbox;
+    // One special folder of every account (`view.allOf`): those folders alone.
+    if let Some(kind) = s.view.kind {
+        return mb.folders.iter().filter(|f| f.kind == kind).map(|f| f.id).collect();
+    }
     if s.view.all_mail {
         mb.folders.iter().filter(|f| crate::cmd::filing::receiving_folder(s, f.id)).map(|f| f.id).collect()
     } else {

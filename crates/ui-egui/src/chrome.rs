@@ -623,6 +623,16 @@ pub fn status_bar(app: &mut MailApp, ui: &mut Ui) {
                     let shown = st_most(ui, msg, t.accent_text, full_w * STATUS_MSG_SHARE);
                     app.hit.add("statusMessage", 0, shown.rect);
                     ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
+                    // Mail just archived: Undo puts it back, as Ctrl+Z does.
+                    if app.status_undo && app.session.undo_label().is_some() {
+                        let undo = ui.link(egui::RichText::new(tl!("Undo")).size(STATUS_TEXT).strong().color(t.accent_text));
+                        app.hit.add("statusUndo", 0, undo.rect);
+                        if undo.clicked() {
+                            app.status_undo = false;
+                            app.status_msg = None;
+                            let _ = app.run("edit.undo", json!({}));
+                        }
+                    }
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.spacing_mut().item_spacing = vec2(4.0, 0.0);

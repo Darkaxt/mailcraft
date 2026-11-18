@@ -183,7 +183,7 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         let r = if a.is_shared() { Rect::from_min_max(pos2(row.min.x + 24.0, row.min.y), row.max) } else { row };
         ui.painter().rect(r, 6.0, t.panel, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
         crate::widgets::avatar(ui, pos2(r.min.x + 30.0, r.center().y), 17.0, &a.address());
-        let title = if a.email.is_empty() { tl!("Local mailbox").to_string() } else { a.address().full() };
+        let title = if a.email.is_empty() { crate::nav::account_label(a) } else { a.address().full() };
         // The text runs up to the buttons at the right: Settings, and Remove. The only account can
         // be removed too, leaving an empty mailbox (#313); the empty mailbox's own placeholder
         // can't. (A shared mailbox has both: its settings are its name and colour, #1385.)
@@ -981,6 +981,8 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         section(ui, tl!("Backups"), t);
         backups(app, ui, t);
     }
+    section(ui, tl!("Keyboard shortcuts"), t);
+    crate::shortcuts_page::options(app, ui, t);
     section(ui, tl!("Accounts"), t);
     let mut remember = app.ui.remember_sign_in;
     if ui

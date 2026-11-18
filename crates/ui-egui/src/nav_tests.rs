@@ -16,8 +16,8 @@ fn names(folders: &[&Folder]) -> Vec<String> {
 }
 
 /// A standard folder still called by its default name, or the server's folder of its kind,
-/// is named in the interface language; one the owner named keeps its name; English shows
-/// every folder by its own name. What is kept never changes.
+/// is named in the interface language, English too (v0.12.12); one the owner named keeps its
+/// name. What is kept never changes.
 #[test]
 fn folders_are_named_in_the_interface_language_by_their_kind() {
     let folder = |name: &str, kind: FolderKind, remote: &str| Folder { name: name.into(), kind, remote: remote.into(), ..Default::default() };
@@ -29,13 +29,46 @@ fn folders_are_named_in_the_interface_language_by_their_kind() {
     assert_eq!(named_by(&folder("Imported", FolderKind::Custom, "Imported")), None);
     assert_eq!(named_by(&folder("Projects", FolderKind::Custom, "")), None);
     assert_eq!(mailcraft_model::IMPORTED, "Imported", "the text `folder_name` translates");
-    // (The tests' window is in English: every folder by its own name.)
-    assert_eq!(folder_name(&folder("Sent Mail", FolderKind::Sent, "[Gmail]/Sent Mail")), "Sent Mail");
+    // In English too, a server's special folder is called by its kind (v0.12.12); one the owner
+    // named keeps its name.
+    assert_eq!(folder_name(&folder("Sent Mail", FolderKind::Sent, "[Gmail]/Sent Mail")), "Sent Items");
+    assert_eq!(folder_name(&folder("Borradores", FolderKind::Drafts, "Borradores")), "Drafts");
+    assert_eq!(folder_name(&folder("Historial de conversaciones", FolderKind::Custom, "Historial de conversaciones")), "Historial de conversaciones");
     // A tangled tree still ends.
     let mut mb = Mailbox::default();
     mb.folders.push(Folder { id: 1, parent: Some(2), ..folder("a", FolderKind::Custom, "") });
     mb.folders.push(Folder { id: 2, parent: Some(1), ..folder("b", FolderKind::Custom, "") });
     assert!(folder_path(&mb, 1).split('/').count() <= 33);
+}
+
+/// The unified tree leaves out the special folders and what is under them: the buttons over the
+/// pane open those (v0.12.12).
+#[test]
+fn the_unified_tree_leaves_out_special_folders_and_what_is_under_them() {
+    let folder = |name: &str, kind: FolderKind| Folder { name: name.into(), kind, ..Default::default() };
+    let rows = vec![
+        (folder("Inbox", FolderKind::Inbox), 0, false),
+        (folder("Projects", FolderKind::Custom), 1, false),
+        (folder("Sent Items", FolderKind::Sent), 0, false),
+        (folder("Under sent", FolderKind::Custom), 1, false),
+        (folder("Deeper", FolderKind::Custom), 2, false),
+        (folder("Archivo", FolderKind::Custom), 0, false),
+        (folder("Junk Email", FolderKind::Junk), 0, false),
+    ];
+    let names: Vec<String> = without_special(rows).into_iter().map(|(f, _, _)| f.name).collect();
+    assert_eq!(names, ["Inbox", "Projects", "Archivo"]);
+}
+
+/// The account of the mail kept on this computer, still called what the program named it, is the
+/// Local archive; a name the owner gave stays (v0.12.12).
+#[test]
+fn the_local_account_is_the_local_archive() {
+    let local = Account { name: "On this computer".into(), kind: mailcraft_model::AccountKind::Local, ..Default::default() };
+    assert_eq!(shown_name(&local), "Local archive");
+    let named = Account { name: "Old firm".into(), ..local.clone() };
+    assert_eq!(shown_name(&named), "Old firm");
+    let mail = Account { email: "avery@lumen.example".into(), ..local };
+    assert_eq!(shown_name(&mail), "On this computer");
 }
 
 /// The folders of `account` under `parent` (`None`: its top level), in the pane's order.

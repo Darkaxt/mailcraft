@@ -695,7 +695,7 @@ pub fn resolve(app: &MailApp, key: &str) -> Option<&'static str> {
     // (The main window's message being written is the reading pane's; one in a window of its
     // own has the keys of that window, #286.)
     let composing = crate::windows::compose_window::pane_compose(app).is_some_and(|c| app.session.compose_id() == Some(c));
-    let bound = |c: &&mailcraft_engine::CommandSpec| !c.shortcut.is_empty() && c.shortcut.split(" / ").any(|k| k.eq_ignore_ascii_case(key));
+    let bound = |c: &&mailcraft_engine::CommandSpec| c.bound_to(key);
     let fits = |c: &&mailcraft_engine::CommandSpec| window_command(app, c.id).is_some() && (composing || !c.writing);
     let mut hits: Vec<&mailcraft_engine::CommandSpec> = app.session.registry.all().iter().filter(bound).filter(fits).collect();
     // While writing, the Message commands win (Mod+S saves the draft); otherwise they are out.
@@ -703,8 +703,53 @@ pub fn resolve(app: &MailApp, key: &str) -> Option<&'static str> {
     hits.into_iter().find(|c| (c.enabled)(&app.session).is_none()).map(|c| c.id)
 }
 
-/// The same key in the other modules: Delete on a selected event, contact or task.
-fn module_delete(app: &MailApp) -> Option<&'static str> {
+/// Whether a command may have a key of its own alone (no Ctrl, Alt or Shift): only what moves in
+/// the list or reads, and closing the message being written (Escape). Whatever changes mail takes
+/// two keys or more, so a key brushed by accident does nothing to it.
+pub fn single_key_allowed(c: &mailcraft_engine::CommandSpec) -> bool {
+    c.reads || c.id == "compose.close"
+}
+
+/// The keys the owner asked for a command, written as the registry writes them (`Mod+Shift+D`,
+/// alternatives with ` / `), or why they can't be: a key that isn't one, a key alone for a
+/// command that changes mail, or keys another command has.
+pub fn check_keys(app: &MailApp, c: &mailcraft_engine::CommandSpec, keys: &str) -> Result<String, String> {
+    let names: Vec<&str> = Key::ALL.iter().filter_map(|k| key_name(*k)).collect();
+    let mut out: Vec<String> = Vec::new();
+    for k in keys.split('/').map(str::trim).filter(|k| !k.is_empty()) {
+        let mut parts: Vec<&str> = k.split('+').map(str::trim).collect();
+        let key = parts.pop().unwrap_or_default();
+        let Some(key) = names.iter().find(|n| n.eq_ignore_ascii_case(key)) else {
+            return Err(crate::i18n::fmt(tl!("“{key}” isn't a key"), &[("key", k)]));
+        };
+        let mut held = [false; 4];
+        for part in parts {
+            let Some(i) = ["Mod", "Ctrl", "Alt", "Shift"].iter().position(|m| m.eq_ignore_ascii_case(part)) else {
+                return Err(crate::i18n::fmt(tl!("“{key}” isn't a key"), &[("key", k)]));
+            };
+            held[i] = true;
+        }
+        // Ctrl is Mod on Windows: written once, as the registry writes it.
+        let (command, shift, alt) = (held[0] || held[1], held[3], held[2]);
+        let written = combo(Modifiers { command, shift, alt, ..Default::default() }, key);
+        if mailcraft_engine::keymap::single(&written) && !single_key_allowed(c) {
+            return Err(tl!("Use two keys or more, such as Ctrl+D: a key alone is too easy to press by accident").to_string());
+        }
+        if let Some(other) = app.session.registry.all().iter().find(|o| o.id != c.id && o.writing == c.writing && o.bound_to(&written)) {
+            return Err(crate::i18n::fmt(tl!("{key} is already used by {command}"), &[("key", &written), ("command", tl!(other.label))]));
+        }
+        if !out.iter().any(|o| o.eq_ignore_ascii_case(&written)) {
+            out.push(written);
+        }
+    }
+    Ok(out.join(" / "))
+}
+
+/// Delete's keys in the other modules: on a selected event, contact or task.
+fn module_delete(app: &MailApp, key: &str) -> Option<&'static str> {
+    if !app.session.registry.get("mail.delete").is_some_and(|c| c.bound_to(key)) {
+        return None;
+    }
     match app.session.view.module {
         Module::Calendar if app.session.sel.event.is_some() => Some("calendar.delete"),
         Module::People if app.session.sel.contact.is_some() => Some("people.delete"),
@@ -814,9 +859,7 @@ pub fn global_shortcuts(app: &mut MailApp, ctx: &egui::Context) {
         // A `+` typed with Shift is the same key as one without.
         let modifiers = if name == "Plus" { Modifiers { shift: false, ..modifiers } } else { modifiers };
         let k = combo(modifiers, name);
-        if k == "Delete"
-            && let Some(id) = module_delete(app)
-        {
+        if let Some(id) = module_delete(app, &k) {
             let _ = app.run(id, json!({}));
             continue;
         }
@@ -853,6 +896,41 @@ mod tests {
         assert_eq!(combo(m(true, false, true), "1"), "Mod+Alt+1");
         assert_eq!(combo(m(false, false, false), "Delete"), "Delete");
         assert_eq!(key_name(Key::F9), Some("F9"));
+    }
+
+    /// The owner's rule (v0.12.12): a key alone only moves around; whatever changes mail takes two
+    /// keys or more, by default and when the owner changes them.
+    #[test]
+    fn no_command_that_changes_mail_has_a_key_alone() {
+        let s = mailcraft_engine::Session::empty();
+        for c in s.registry.all() {
+            for k in c.shortcut.split(" / ").filter(|k| !k.is_empty()) {
+                assert!(!mailcraft_engine::keymap::single(k) || single_key_allowed(c), "{}: \"{k}\" is a key alone", c.id);
+            }
+        }
+        let app = crate::MailApp::new(mailcraft_engine::Session::empty(), crate::Services::default());
+        let flag = app.session.registry.get("mail.flag").unwrap();
+        assert!(check_keys(&app, flag, "Insert").is_err(), "a key alone that changes mail");
+        assert!(check_keys(&app, flag, "F7").is_err());
+        assert!(check_keys(&app, flag, "Mod+D").is_err(), "Delete's");
+        assert_eq!(check_keys(&app, flag, "ctrl+shift+f7").unwrap(), "Mod+Shift+F7");
+        assert!(check_keys(&app, flag, "Mod+Nothing").is_err());
+        let next = app.session.registry.get("mail.next").unwrap();
+        assert_eq!(check_keys(&app, next, "J").unwrap(), "J", "moving around may take a key alone");
+    }
+
+    #[test]
+    fn the_owners_keys_run_the_command_and_go_back_to_the_default() {
+        let mut app = crate::MailApp::new(mailcraft_engine::Session::empty(), crate::Services::default());
+        // (A command no other test gives keys: the keys are the whole program's.)
+        let id = "mail.toggleFlag";
+        assert!(app.execute("ui.shortcut", json!({"command": id, "keys": "Delete"})).is_err());
+        assert_eq!(app.execute("ui.shortcut", json!({"command": id, "keys": "Mod+Alt+F8"})).unwrap()["keys"], "Mod+Alt+F8");
+        assert_eq!(app.session.registry.by_shortcut("Mod+Alt+F8").map(|c| c.id), Some(id));
+        assert_eq!(app.ui.shortcuts.get(id).map(String::as_str), Some("Mod+Alt+F8"));
+        assert_eq!(app.execute("ui.shortcut", json!({"command": id, "keys": null})).unwrap()["keys"], "");
+        assert!(app.session.registry.by_shortcut("Mod+Alt+F8").is_none());
+        assert!(app.ui.shortcuts.is_empty());
     }
 
     #[test]

@@ -151,6 +151,10 @@ mod keep_offline;
 #[cfg(test)]
 mod key_chain_tests;
 pub mod keys;
+/// The parameter of Open Draft that Home's and the draft bar's Send add (v0.12.12): the owner's
+/// press opens the draft and sends it ([`MailApp::run`] alone reads it; an agent's Open Draft
+/// only opens).
+pub(crate) const AND_SEND: &str = "andSend";
 #[cfg(test)]
 #[path = "late_work_tests.rs"]
 mod late_work_tests;
@@ -253,6 +257,7 @@ mod shared_calendars;
 #[cfg(test)]
 mod shared_calendars_tests;
 mod shared_mailboxes;
+mod shortcuts_page;
 pub mod sign_in_notice;
 #[cfg(test)]
 mod sign_in_notice_tests;
@@ -1071,6 +1076,9 @@ pub struct UiState {
     /// The public facts of the private keys imported in File › Options › Security (#30): never
     /// a key or a passphrase, which the system's credential store holds ([`own_keys`]).
     pub imported_keys: Vec<own_keys::ImportedKey>,
+    /// The owner's own keys for commands (File › Options › Keyboard shortcuts): command id to
+    /// keys as the registry writes them, `""` for none. A command not here has its default.
+    pub shortcuts: std::collections::BTreeMap<String, String>,
 }
 
 impl Default for UiState {
@@ -1143,6 +1151,7 @@ impl Default for UiState {
             alert_new_mail: true,
             alert_reminders: true,
             imported_keys: Vec::new(),
+            shortcuts: Default::default(),
         }
     }
 }
@@ -1209,6 +1218,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ),
     ("ui.accent", "Accent Colour", "File › Options", r#"{"accent": "blue"|"teal"|"violet"|"graphite"}"#),
     ("ui.darkStyle", "Dark Theme Style", "File › Options", r#"{"value": "neutral"|"blue"}"#),
+    (
+        "ui.shortcut",
+        "Keyboard Shortcut",
+        "File › Options",
+        r#"{"command"?: string, "keys"?: string | null} — the keys that run `command` ("Mod+Shift+D", alternatives with " / ", "" for none, null for its default); no `command` with `keys` null gives every command its default. A key alone is refused for a command that changes mail, and so are keys another command has. Answers {"command", "keys"}"#,
+    ),
     (
         "ui.lightMessages",
         "Messages on a Light Background",
@@ -1703,6 +1718,8 @@ pub struct MailApp {
     /// command is given the ids (Merge Contacts…, #506).
     pub people_picked: Vec<Id>,
     pub status_msg: Option<(String, f64)>,
+    /// The status bar's note is of mail just archived: Undo is beside it.
+    pub status_undo: bool,
     /// macOS: the window has no title bar; leave room for the traffic lights.
     pub integrated_titlebar: bool,
     /// Windows: native caption behavior and controls share the existing top row.
@@ -2096,6 +2113,7 @@ impl MailApp {
             dialog: None,
             people_picked: Vec::new(),
             status_msg: None,
+            status_undo: false,
             integrated_titlebar: false,
             windows_titlebar: false,
             window_header: Default::default(),
@@ -2327,6 +2345,7 @@ impl MailApp {
         self.ui.confirmed_mailboxes.truncate(200);
         self.ui.collapsed_calendar_groups.truncate(200);
         updates::sanitize(&mut self.ui);
+        self.apply_shortcuts();
         self.session.prefs = self.ui.options.clone();
         // Layout choices carry over; the folder, the day and the search start fresh.
         // All inboxes is a folder-independent layout, so it can survive a restart without
@@ -2392,6 +2411,18 @@ impl MailApp {
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
         if self.opening.is_some() {
             return Err(opening::STILL_OPENING.into());
+        }
+        // Send on a draft (Home's and the draft bar's, v0.12.12): the owner's press opens it and
+        // presses Send in it, with the questions Send asks there. (Only here, the owner's way in: an
+        // agent's Open Draft never sends.)
+        if id == "mail.editDraft" && params.get(AND_SEND).and_then(Value::as_bool) == Some(true) {
+            let mut params = params;
+            if let Some(map) = params.as_object_mut() {
+                map.remove(AND_SEND);
+            }
+            let opened = self.run(id, params)?;
+            let Some(compose) = opened.get("compose").and_then(Value::as_u64) else { return Ok(opened) };
+            return self.run("compose.send", json!({"compose": compose}));
         }
         // Another window's mailbox is refused before anything is asked or read (#517).
         if let Some(e) = opening::claim_refused(self, id, &params) {
@@ -2550,6 +2581,7 @@ impl MailApp {
             Ok(v) => {
                 if let Some(msg) = feedback(id, v).or_else(|| self.stays_here_note(id, v)) {
                     self.status(msg);
+                    self.status_undo = id == "mail.archive" && v.get("moved").and_then(Value::as_u64).is_some_and(|n| n > 0);
                 }
             }
         }
@@ -2941,6 +2973,10 @@ impl MailApp {
                 }
                 None => Err("`accent` is blue, teal, violet or graphite".into()),
             },
+            "ui.shortcut" => Ok(match self.set_shortcut(s("command"), p.get("keys")) {
+                Ok(v) => v,
+                Err(e) => return Some(Err(e)),
+            }),
             "ui.darkStyle" => match s("value").and_then(theme::DarkStyle::from_code) {
                 Some(style) => {
                     self.ui.dark_style = style;
@@ -5189,6 +5225,56 @@ impl MailApp {
 
     pub fn status(&mut self, s: impl Into<String>) {
         self.status_msg = Some((s.into(), now_ms()));
+        self.status_undo = false;
+    }
+
+    /// The owner's keys kept in `ui.json`, given to the registry: what isn't a command, isn't a
+    /// key, or is a key alone for a command that changes mail is dropped.
+    fn apply_shortcuts(&mut self) {
+        let asked = std::mem::take(&mut self.ui.shortcuts);
+        let registry = self.session.registry.clone();
+        for (id, keys) in asked.into_iter().take(1000) {
+            let Some(c) = registry.get(&id) else { continue };
+            match keys::check_keys(self, c, &keys) {
+                Ok(k) => {
+                    mailcraft_engine::keymap::put(c.id, Some(&k));
+                    self.ui.shortcuts.insert(id, k);
+                }
+                Err(_) => mailcraft_engine::keymap::put(c.id, None),
+            }
+        }
+    }
+
+    /// `ui.shortcut`: the keys of one command, or every command's default back.
+    fn set_shortcut(&mut self, command: Option<&str>, keys: Option<&Value>) -> Result<Value, String> {
+        let keys = match keys {
+            None | Some(Value::Null) => None,
+            Some(Value::String(k)) if k.len() <= 200 => Some(k.as_str()),
+            Some(_) => return Err("`keys` is text, or null for the default".into()),
+        };
+        let Some(command) = command else {
+            if keys.is_some() {
+                return Err("missing `command`".into());
+            }
+            for id in std::mem::take(&mut self.ui.shortcuts).into_keys() {
+                mailcraft_engine::keymap::put(&id, None);
+            }
+            return Ok(json!({"reset": true}));
+        };
+        let registry = self.session.registry.clone();
+        let Some(c) = registry.get(command) else { return Err(format!("no command {command}")) };
+        match keys {
+            None => {
+                mailcraft_engine::keymap::put(c.id, None);
+                self.ui.shortcuts.remove(c.id);
+            }
+            Some(k) => {
+                let k = keys::check_keys(self, c, k)?;
+                mailcraft_engine::keymap::put(c.id, Some(&k));
+                self.ui.shortcuts.insert(c.id.to_string(), k);
+            }
+        }
+        Ok(json!({"command": c.id, "keys": c.keys()}))
     }
 
     /// Run a command the owner asked for that may well be refused, with another way to go when it
@@ -5228,6 +5314,9 @@ impl MailApp {
                     return format!("{} — {folder}", tl!("Folders"));
                 }
                 if self.session.view.scope == mailcraft_engine::Scope::Inboxes {
+                    if let Some(kind) = self.session.view.kind {
+                        return crate::nav::all_of_title(kind);
+                    }
                     return if self.session.view.all_mail { tl!("All mail") } else { tl!("All inboxes") }.to_owned();
                 }
                 let folder = self.session.mailbox.folder(self.session.view.folder).map_or(tl!("Mail"), crate::nav::folder_name);
@@ -6234,6 +6323,12 @@ fn feedback(id: &str, v: &Value) -> Option<String> {
         "compose.send" if v.get("queued").and_then(Value::as_bool) == Some(true) => Some(tl!("In the Outbox: it is on its way").to_string()),
         // Mail put into a Microsoft account from elsewhere: Microsoft's server makes it without
         // most of the original's headers, which is said rather than hidden (#451).
+        // Archive says what it did, with Undo beside it in the status bar; a draft stays in Drafts.
+        "mail.archive" => match (n("moved").unwrap_or(0), n("draftsLeft").unwrap_or(0)) {
+            (0, 0) => None,
+            (moved, 0) => Some(tln!(moved, "{n} message archived", "{n} messages archived")),
+            (moved, _) => Some(tln!(moved, "{n} message archived; drafts stay in Drafts", "{n} messages archived; drafts stay in Drafts")),
+        },
         "mail.move" => n("intoMicrosoft").filter(|c| *c > 0).map(|c| {
             tln!(
                 c,

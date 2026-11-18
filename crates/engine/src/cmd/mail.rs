@@ -39,12 +39,12 @@ pub fn specs() -> Vec<CommandSpec> {
             r#"{"id": number} — read stored placement/source-removal state for exactly one message, without fetching content, running sync or changing selection. Recorded provider ids are the last native server observation, not a new server lookup; pending placement is not a confirmed remote copy."#,
         ),
         CommandSpec::new("mail.list", "List Messages", "Mail", list).reads().params(r#"{"limit"?: number,"offset"?:number, "folder"?: number | "sent" | "Inbox/Projects", "account"?: number, "query"?: string,"scope"?:"folder"|"subfolders"|"mailbox"|"everywhere"|"inboxes", "matchCase"?: bool, "wholeWord"?: bool, "regex"?: bool, "searchIn"?: ["subject"|"people"|"body"|"attachments"]} — the search options apply to this call only (default: those of view.searchOptions). Rows of a search the index answered carry "score" (0-100) and "scoreDetail": [{"term","matched","extra","field"}]. inboxes is the virtual union of actual account inboxes; omit folder. Bounded pages and exact total, nextOffset and searchIndex coverage; pending search results must not be treated as a complete negative. Quoted phrases preserve punctuation/spacing, case:sensitive selects letter case. Leaves the window's folder, search and selection alone. `folder` is an id, a standard folder's kind (inbox, drafts, sent, deleted, junk, archive, outbox) in any language of the mailbox, of `account` or else the account in view, or a path; digits that name no folder are an id. A kind comes before a folder of that name, which is still reached by its id or by a path with its parent. `account` says whose folder `folder` means and goes with it: it is an account that is there, what it names must be that account's, a path without it is looked for in the account in view before any other, and `account` without `folder` is refused rather than left unused"#),
-        CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Delete / Mod+D").params(IDS_WHOLE).selection(needs_message),
+        CommandSpec::new("mail.delete", "Delete", "Home › Delete", delete).key("Mod+D").params(IDS_WHOLE).selection(needs_message),
         CommandSpec::new("mail.deletePermanently", "Delete Permanently", "Home › Delete", delete_permanently)
             .key("Shift+Delete")
             .params(IDS_WHOLE)
             .selection(needs_message),
-        CommandSpec::new("mail.archive", "Archive", "Home › Delete", archive).key("Backspace").params(IDS_WHOLE).selection(needs_message),
+        CommandSpec::new("mail.archive", "Archive", "Home › Delete", archive).params(IDS_WHOLE).selection(needs_message),
         CommandSpec::new("mail.move", "Move to Folder", "Home › Move", move_to)
             .key("Mod+Shift+V")
             .params(MOVE)
@@ -59,7 +59,6 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("mail.markAllRead", "Mark All as Read", "Folder › Clean Up", mark_all_read)
             .params(r#"{"folder"?: number} — a folder that is there, read strictly: an id as text, `null`, `0` or a fraction is refused rather than taken for the folder in view (default: the folder in view). Answers {"folder", "changed"}"#),
         CommandSpec::new("mail.flag", "Follow Up", "Home › Tags", flag)
-            .key("Insert")
             .params(r#"{"due"?: "YYYY-MM-DD", "ids"?: [number]}"#)
             .selection(needs_message),
         CommandSpec::new("mail.clearFlag", "Clear Flag", "Home › Tags", clear_flag).params(IDS).selection(needs_message),
@@ -763,6 +762,7 @@ fn list_with(s: &mut Session, v: &Value) -> CmdResult {
         s.view.filing = None;
         s.view.gmail = None;
         s.view.all_mail = false;
+        s.view.kind = None;
     }
     if explicit_folder || requested_scope.is_some() {
         s.view.search_folder = None;
@@ -864,9 +864,20 @@ fn move_to_kind(s: &mut Session, ids: &[Id], kind: FolderKind) -> CmdResult {
     Ok(json!({"moved": moved.len()}))
 }
 
+/// A draft is never archived (it is still being written): it stays in Drafts, and the rest goes.
 fn archive(s: &mut Session, v: &Value) -> CmdResult {
     let ids = targets_whole(s, v)?;
-    move_to_kind(s, &ids, FolderKind::Archive)
+    let is_draft =
+        |id: &Id| s.mailbox.message(*id).is_some_and(|m| m.draft || s.mailbox.folder(m.folder).is_some_and(|f| f.kind == FolderKind::Drafts));
+    let (drafts, ids): (Vec<Id>, Vec<Id>) = ids.into_iter().partition(is_draft);
+    if ids.is_empty() && !drafts.is_empty() {
+        return Err(failed!("drafts aren't archived: send it or delete it"));
+    }
+    let mut r = move_to_kind(s, &ids, FolderKind::Archive)?;
+    if let Some(map) = r.as_object_mut() {
+        map.insert("draftsLeft".into(), json!(drafts.len()));
+    }
+    Ok(r)
 }
 
 fn junk(s: &mut Session, v: &Value) -> CmdResult {

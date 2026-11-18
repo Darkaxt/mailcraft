@@ -79,6 +79,7 @@ fn view(s: &mut Session, v: &Value) -> CmdResult {
     s.view.filing = Some(account);
     s.view.search_folder = None;
     s.view.scope = Scope::Folder;
+    s.view.kind = None;
     s.view.search.clear();
     s.view.open.clear();
     s.sel.clear_messages();

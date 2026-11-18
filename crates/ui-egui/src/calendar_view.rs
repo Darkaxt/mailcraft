@@ -6139,7 +6139,7 @@ mod tests {
         assert_eq!((ones(&rig), skipped(&rig)), (vec![(at(monday, 10, 0), at(monday, 10, 15))], vec![monday]));
         // Delete, on Tuesday's: just this one goes.
         rig.click(spot(&rig, tuesday), 1);
-        rig.key(Key::Delete);
+        rig.chord(egui::Modifiers::COMMAND, Key::D);
         assert_eq!(asked(&mut rig, 0), ("calendar.delete".to_string(), "Delete Recurring Item".to_string()));
         assert_eq!((ones(&rig).len(), skipped(&rig)), (1, vec![monday, tuesday]));
         // Enter, a double click and Open, on Wednesday's: it opens once it is said which is meant.
@@ -6230,7 +6230,7 @@ mod tests {
         rig.click(spot(&rig, friday), 1);
         assert_eq!(rig.selected(), (Some(standup.id), Some(friday)));
         let own = ones(&rig).len();
-        rig.key(Key::Delete);
+        rig.chord(egui::Modifiers::COMMAND, Key::D);
         assert_eq!(rig.dialog(), Some("confirm"));
         assert_eq!(rig.answer(1).0, "calendar.delete");
         assert_eq!((series(&rig), ones(&rig).len()), (None, own));
@@ -6423,7 +6423,7 @@ mod tests {
         assert_eq!((rig.slot(), rig.selected().0), (None, Some(lunch)));
         rig.run("ui.closeWindow", json!({"all": true}));
         // Delete deletes it, in one step that can be undone.
-        rig.key(Key::Delete);
+        rig.chord(egui::Modifiers::COMMAND, Key::D);
         assert!(rig.app.session.mailbox.event(lunch).is_none());
         assert_eq!((rig.app.session.undo_label(), rig.selected()), (Some("Delete"), (None, None)));
         // With a field in use (an entry being typed), Tab is the field's: it ends the entry.

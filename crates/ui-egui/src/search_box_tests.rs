@@ -252,20 +252,18 @@ fn a_swap_puts_the_caret_at_the_end_with_the_same_letters_too() {
     assert_eq!(search(&h), "tras");
 }
 
-/// Ctrl+E and F3 in People put the keyboard in People's own search and leave People in front:
-/// what is typed searches the contacts (#555).
+/// Ctrl+E in People puts the keyboard in People's own search and leaves People in front: what is
+/// typed searches the contacts (#555). (F3 searched too until v0.12.12: a key alone only moves.)
 #[test]
 fn search_keys_in_people_search_the_contacts() {
-    for press in [|h: &mut Window| chord(h, Key::E), |h: &mut Window| testing::key(h, Key::F3)] {
-        let mut h = testing::window("view.people");
-        let _ = h.state_mut().execute("ui.dismissReminder", json!({"all": true}));
-        h.run_steps(3);
-        press(&mut h);
-        h.run_steps(3);
-        assert_eq!(h.state().session.view.module, mailcraft_engine::Module::People);
-        assert!(has_the_keyboard(&h), "the search box was not given the keyboard");
-        testing::text(&mut h, "harbor");
-        assert_eq!(h.state().session.view.people_search, "harbor");
-        assert_eq!(search(&h), "", "the mail's search was changed");
-    }
+    let mut h = testing::window("view.people");
+    let _ = h.state_mut().execute("ui.dismissReminder", json!({"all": true}));
+    h.run_steps(3);
+    chord(&mut h, Key::E);
+    h.run_steps(3);
+    assert_eq!(h.state().session.view.module, mailcraft_engine::Module::People);
+    assert!(has_the_keyboard(&h), "the search box was not given the keyboard");
+    testing::text(&mut h, "harbor");
+    assert_eq!(h.state().session.view.people_search, "harbor");
+    assert_eq!(search(&h), "", "the mail's search was changed");
 }

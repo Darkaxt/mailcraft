@@ -194,8 +194,9 @@ pub fn show(app: &mut MailApp, ui: &mut Ui) {
     show_message(app, ui, &m, Place::Pane);
 }
 
-/// The bar over a draft in the reading pane: it hasn't been sent, and the way to open it in the
-/// composer (the command `mail.editDraft`, as a double click runs it).
+/// The bar over a draft in the reading pane: it hasn't been sent, Send (v0.12.12: it opens and
+/// goes, as Send in its window does), and the way to open it in the composer (the command
+/// `mail.editDraft`, as a double click runs it).
 fn draft_bar(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
     let t = Tokens::get(ui.ctx());
     let id = m.id;
@@ -204,6 +205,11 @@ fn draft_bar(app: &mut MailApp, ui: &mut Ui, m: &Arc<Message>) {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
             ui.label(egui::RichText::new(tl!("This message hasn't been sent.")).font(crate::theme::regular(12.0)).color(t.text));
+            let send = ui.button(tl!("Send"));
+            app.hit.add("draftBarSend", 0, send.rect);
+            if send.clicked() {
+                let _ = app.run("mail.editDraft", serde_json::json!({"id": id, (crate::AND_SEND): true}));
+            }
             if ui.button(tl!("Continue editing")).clicked() {
                 let _ = app.run("mail.editDraft", serde_json::json!({"id": id}));
             }
