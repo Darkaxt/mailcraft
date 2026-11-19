@@ -487,6 +487,41 @@ fn an_account_is_dragged_up_the_folder_pane() {
     assert!(!harness.state().ui.collapsed_folders.contains(&work));
 }
 
+/// A favourite dragged onto another under Favorites goes before it from its upper half and after
+/// it from its lower half, and stays there (it was let go and lost before v0.12.19).
+#[test]
+fn a_favourite_is_dragged_up_and_down_the_favorites() {
+    let mut harness = window();
+    let listed = |h: &egui_kittest::Harness<'static, MailApp>| mailcraft_engine::cmd::folder::favorites(&h.state().session);
+    let mb = &harness.state().session.mailbox;
+    let account = mb.accounts[0].id;
+    let more: Vec<Id> = [FolderKind::Inbox, FolderKind::Sent].into_iter().filter_map(|k| mb.folder_of_kind(account, k)).collect();
+    for id in more {
+        harness.state_mut().execute("folder.favorite", serde_json::json!({"id": id, "value": true})).unwrap();
+    }
+    harness.run_steps(3);
+    let before = listed(&harness);
+    assert!(before.len() >= 3, "three favourites: {before:?}");
+    let row = |h: &egui_kittest::Harness<'static, MailApp>, id: Id| h.state().hit.rect("folder", id).unwrap();
+    // The last onto the upper half of the first: it leads.
+    let (first, last) = (before[0], *before.last().unwrap());
+    let from = row(&harness, last).center();
+    let to = pos2(from.x, row(&harness, first).min.y + 3.0);
+    press_and_move(&mut harness, from, to);
+    let_go(&mut harness, to);
+    let mut want = before.clone();
+    want.retain(|f| *f != last);
+    want.insert(0, last);
+    assert_eq!(listed(&harness), want);
+    // The one now leading onto the lower half of the last: it goes last again.
+    let end = *want.last().unwrap();
+    let from = row(&harness, last).center();
+    let to = pos2(from.x, row(&harness, end).max.y - 3.0);
+    press_and_move(&mut harness, from, to);
+    let_go(&mut harness, to);
+    assert_eq!(listed(&harness), before);
+}
+
 /// With one account of the owner's own there is nothing to put it beside: its heading doesn't drag.
 #[test]
 fn a_lone_account_doesnt_drag() {

@@ -1,3 +1,7 @@
+**MailCraft 0.12.19 in short** — sorting Favorites works
+- Dragging a favourite up or down Favorites now moves it. Before, the line showed but the folder stayed where it was.
+- Everything from 0.12.18 stays.
+
 **MailCraft 0.12.18 in short** — updates when you choose
 - When a new version is out, the update button at the bottom right shows a blue dot. Click it to see what's new.
 - Update now downloads it, closes MailCraft, installs it and opens it again with your mailbox. Windows asks for your OK first.

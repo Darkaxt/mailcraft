@@ -52,7 +52,7 @@ pub(crate) fn drop_target(app: &mut MailApp, ui: &Ui, resp: &egui::Response, rec
             ui.painter().rect_stroke(rect, 0.0, Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
         }
     }
-    if let Some(drag) = resp.dnd_release_payload::<crate::mail_view::MessageDrag>() {
+    if let Some(drag) = crate::drag_pointer::released::<crate::mail_view::MessageDrag>(resp) {
         let ids = movable(app, &drag.0, category);
         if !ids.is_empty() {
             // The selection dragged goes unnamed, so that in conversation view its whole

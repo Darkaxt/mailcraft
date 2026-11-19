@@ -16,6 +16,13 @@ use mailcraft_model::{Id, Mailbox};
 #[derive(Clone, Copy, Default)]
 struct OverFolder(Option<bool>);
 
+/// What of type `P` is let go over `resp` this frame. egui's own `dnd_release_payload` takes
+/// whatever is being dragged before it looks at its type, so a row that asks for messages first
+/// would throw away a favourite dragged onto it (v0.12.19).
+pub(crate) fn released<P: std::any::Any + Send + Sync>(resp: &egui::Response) -> Option<std::sync::Arc<P>> {
+    if egui::DragAndDrop::has_payload_of_type::<P>(&resp.ctx) { resp.dnd_release_payload::<P>() } else { None }
+}
+
 /// Of the dragged messages, those that are not in `folder` already: what a drop on it moves.
 pub(crate) fn movable(mailbox: &Mailbox, dragged: &[Id], folder: Id) -> Vec<Id> {
     dragged.iter().copied().filter(|m| mailbox.message(*m).is_some_and(|m| m.folder != folder)).collect()

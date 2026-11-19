@@ -633,7 +633,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
             ui.painter().rect_stroke(row, 0.0, Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
         }
     }
-    if let Some(drag) = resp.dnd_release_payload::<crate::mail_view::MessageDrag>() {
+    if let Some(drag) = crate::drag_pointer::released::<crate::mail_view::MessageDrag>(&resp) {
         // Only what isn't here already.
         let ids = crate::drag_pointer::movable(&app.session.mailbox, &drag.0, f.id);
         if !ids.is_empty() {
@@ -652,7 +652,7 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
             let at = if lower { r.max.y } else { r.min.y };
             ui.painter().line_segment([pos2(row.min.x, at), pos2(row.max.x, at)], Stroke::new(2.0, t.accent));
         }
-        if let Some(drag) = resp.dnd_release_payload::<FavoriteDrag>()
+        if let Some(drag) = crate::drag_pointer::released::<FavoriteDrag>(&resp)
             && drag.0 != f.id
         {
             let mut params = json!({"id": drag.0});
