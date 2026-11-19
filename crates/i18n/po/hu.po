@@ -550,12 +550,6 @@ msgid "A new message was asked for, but the one you are writing couldn't be save
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
-msgstr "A MailCraft a háttérben letölti az új verziót. Csak akkor tartja meg, ha a kiadás aláírása érvényes. A frissítés újraindításkor vagy kilépéskor települ."
-
-#. interface
 #: crates/ui-egui/src/dialogs.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "A note to go with it (optional)"
@@ -2828,7 +2822,7 @@ msgid "Can't sign"
 msgstr "Nem tudom aláírni."
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Cancel"
 msgstr "Mégse"
@@ -3266,6 +3260,11 @@ msgid "Check Rule Conflicts"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Check again"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Check both servers before you connect."
@@ -3278,9 +3277,8 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Check daily for new versions of MailCraft, and download and install them when you quit? Only GitHub is asked; nothing about you or your mail is sent."
-msgstr "A MailCraft naponta ellenőrizze, van-e új verzió, és kilépéskor telepítse a letöltött frissítéseket? Az ellenőrzés csak a GitHubot éri el. Sem személyes adatot, sem levelet nem küld."
+msgid "Check daily for new versions of MailCraft? Only GitHub is asked; nothing about you or your mail is sent."
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -3299,6 +3297,11 @@ msgstr "Frissítések ellenőrzése"
 #, fuzzy
 msgid "Check for new versions"
 msgstr "Új verziók ellenőrzése"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Check for updates"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3320,9 +3323,8 @@ msgstr "A tanúsító hatóságnál ellenőrizte"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Checking for a new version…"
-msgstr "Új verzió keresése…"
+msgid "Checking for updates…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3559,7 +3561,7 @@ msgid "Clipboard"
 msgstr "Vágólap"
 
 #. android, command label, interface, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/IncomingLayers.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/IncomingLayers.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/updates.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
 #, fuzzy
 msgid "Close"
 msgstr "Bezárás"
@@ -3569,12 +3571,6 @@ msgstr "Bezárás"
 #, fuzzy
 msgid "Close Dialog"
 msgstr "A párbeszédablak bezárása"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Close MailCraft, install the new version and start it again. Otherwise it is installed when you quit."
-msgstr "Zárd be a MailCraft-t, telepítsd az új verziót és indítsd újra. Ellenkező esetben a kilépéskor telepítve van."
 
 #. command label
 #: crates/engine/src/cmd/compose.rs
@@ -4065,6 +4061,11 @@ msgstr "Nem sikerült ellenőrizni"
 msgid "Couldn't check for new mail"
 msgstr "Nem tudtam új levelet keresni."
 
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Couldn't check for updates"
+msgstr ""
+
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs
 #, fuzzy
@@ -4085,9 +4086,8 @@ msgstr "A(z) „{name}” mappából nem sikerült újra letölteni egy üzenete
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Couldn't find out whether a new version is out: {why}."
-msgstr "Nem tudtam kideríteni, hogy kijött-e egy új verzió: {why}."
+msgid "Couldn't download it: {why}."
+msgstr ""
 
 #. why a mail server couldn't be used
 #: crates/net/src/sync.rs
@@ -5154,6 +5154,11 @@ msgstr "{done} letöltése {all}"
 #, fuzzy
 msgid "Downloading {done} of {all} · {large} large messages download when opened"
 msgstr "{done} letöltése {all} · {large} nagy üzenetek letöltése megnyitva"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Downloading…"
+msgstr ""
 
 #. interface, ribbon
 #: crates/ui-egui/src/compose.rs crates/ui-egui/src/ribbon.rs
@@ -7858,18 +7863,6 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
-msgid "Install Updates Automatically"
-msgstr "Frissítések automatikus telepítése"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Install updates automatically"
-msgstr "Frissítések automatikus telepítése"
-
-#. command label
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
 msgid "Interface Language"
 msgstr "Felület nyelve"
 
@@ -8525,7 +8518,7 @@ msgid "Last name"
 msgstr "Vezetéknév"
 
 #. interface, name
-#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs
+#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Later"
 msgstr "Később."
@@ -9043,6 +9036,11 @@ msgstr "A MailCraft még nem tud bejelentkezni erre a szerverre (a Kerberos-t ak
 msgid "MailCraft carries the software below. The Rust libraries of its core are listed with their versions in the source repository."
 msgstr "A MailCraft az alábbi szoftvereket tartalmazza. A mag Rust-könyvtárai a verziószámukkal együtt a forráskód-tárolóban vannak felsorolva."
 
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft closes, installs it and opens again. Windows asks for your OK first."
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 #, fuzzy
@@ -9122,12 +9120,6 @@ msgid "MailCraft is tested on real mail, by people who use it every day and tell
 msgstr "A MailCraft fejlesztését azok segítik, akik a saját leveleikkel használják nap mint nap, és jelzik a hibákat. Köszönjük!"
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "MailCraft is up to date ({version})."
-msgstr "MailCraft naprakész ({version})."
-
-#. interface
 #: crates/ui-egui/src/open_shared.rs crates/ui-egui/src/shared_permission.rs
 #, fuzzy
 msgid "MailCraft isn't allowed to read other people's calendars yet."
@@ -9180,12 +9172,6 @@ msgstr "MailCraft szüksége van az engedély, hogy változtasson az automatikus
 #, fuzzy
 msgid "MailCraft needs your system browser to sign in. You can also use a Google app password."
 msgstr "A MailCraft-nak szüksége van a rendszerböngészőjére, hogy bejelentkezzen. A Google alkalmazás jelszót is használhatja."
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "MailCraft now installs its updates itself. Turn this off in File › About."
-msgstr "A MailCraft mostantól automatikusan telepíti a frissítéseit. Ezt a Fájl › Névjegy alatt kapcsolhatja ki."
 
 #. name
 #: crates/engine/src/cmd/rules.rs
@@ -9296,6 +9282,21 @@ msgstr "MailCraft {version} elérhető"
 #, fuzzy
 msgid "MailCraft {version} is available and fixes a security problem"
 msgstr "MailCraft {version} elérhető és megoldja a biztonsági problémát"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is available: click to see what's new and update"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is up to date"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is up to date."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -10342,12 +10343,6 @@ msgstr "Tengerészkék"
 #, fuzzy
 msgid "Needed for Outlook.com and Microsoft 365 accounts"
 msgstr "Az Outlook.com- és Microsoft 365-fiókokhoz szükséges"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Needs Check for new versions."
-msgstr "Új verziók ellenőrzése szükséges."
 
 #. interface
 #: crates/ui-egui/src/gmail_move.rs
@@ -11402,12 +11397,6 @@ msgid "Not now"
 msgstr "Ne most."
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Not now: it is installed when you quit MailCraft."
-msgstr "Most nem. A frissítés a MailCraft bezárásakor települ."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Not on Outlook's list: mail, events and to-dos you give it still carry its name to the account's server, where it has no colour"
@@ -11642,7 +11631,7 @@ msgid "Numbering"
 msgstr "Számozás"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/auto_replies.rs crates/ui-egui/src/calendar_sync.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/move_items.rs crates/ui-egui/src/reminder_dialog.rs crates/ui-egui/src/send_later.rs crates/ui-egui/src/settings_notice.rs crates/ui-egui/src/software.rs crates/ui-egui/src/updates.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/auto_replies.rs crates/ui-egui/src/calendar_sync.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/move_items.rs crates/ui-egui/src/reminder_dialog.rs crates/ui-egui/src/send_later.rs crates/ui-egui/src/settings_notice.rs crates/ui-egui/src/software.rs
 #, fuzzy
 msgid "OK"
 msgstr "OK"
@@ -11803,14 +11792,13 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
-msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
-msgstr "Csak GitHub-ot kérdeznek, rólad és a leveledről semmit sem küldenek."
+msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is downloaded or installed."
+msgstr "Naponta egyszer. Csak GitHub-ot kérdeznek, rólad vagy a leveleidet nem küldik el. Semmit sem töltünk le vagy telepítünk."
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is downloaded or installed."
-msgstr "Naponta egyszer. Csak GitHub-ot kérdeznek, rólad vagy a leveleidet nem küldik el. Semmit sem töltünk le vagy telepítünk."
+msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is installed until you click Update now."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -12150,6 +12138,11 @@ msgstr "Ezzel a fiókkal megnyithat egy szervezeti postafiókot, például a csa
 #. interface
 #: crates/ui-egui/src/attachment_open.rs
 msgid "Open anyway"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Open download page"
 msgstr ""
 
 #. android
@@ -14119,24 +14112,6 @@ msgstr "Válaszbeállítások"
 #, fuzzy
 msgid "Response options are for a meeting: invite somebody first."
 msgstr "Válasz lehetőségek vannak egy találkozóra: meghívni valakit először."
-
-#. command label
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Restart to Update"
-msgstr "Frissítés újraindítása"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Restart to update"
-msgstr "Frissítés újraindítása"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Restart to update is the owner's click."
-msgstr "A frissítés újrakezdése a tulajdonos kattintása."
 
 #. interface, ribbon
 #: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/window_chrome.rs
@@ -16730,12 +16705,6 @@ msgstr "Állam vagy régió"
 msgid "Status bar"
 msgstr "Állapotsor"
 
-#. ribbon location
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Status bar · File"
-msgstr "Állapotsor · Fájl"
-
 #. what a command says
 #: crates/engine/src/cmd/tasks/status.rs
 #, fuzzy
@@ -19117,6 +19086,11 @@ msgstr "A feladatok nem vihetők be: {error}"
 msgid "The to-dos sent couldn't be noted: {error}"
 msgstr "A küldött feladatok nem voltak megjegyezve: {error}"
 
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "The update window"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
@@ -20612,7 +20586,7 @@ msgid "Try Signing In Again"
 msgstr "Próbáljon újra bejelentkezni!"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Try again"
 msgstr "Próbáld újra."
@@ -20933,7 +20907,12 @@ msgid "Upcoming"
 msgstr "Közelgő"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/calendar_view.rs
+#: crates/ui-egui/src/updates.rs
+msgid "Update"
+msgstr ""
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Update Now"
 msgstr "Frissítés most"
@@ -20943,6 +20922,16 @@ msgstr "Frissítés most"
 #, fuzzy
 msgid "Update Subscribed Calendars"
 msgstr "Előfizetett naptárak frissítése"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Update now"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Update now is the owner's click."
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Freshness.kt
@@ -20995,6 +20984,11 @@ msgstr "Frissítések"
 #. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Updating coverage. The last observed counts are shown below."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Updating to MailCraft {version}"
 msgstr ""
 
 #. interface
@@ -21178,18 +21172,6 @@ msgstr "Verzió"
 #, fuzzy
 msgid "Version {version}"
 msgstr "Verzió: {version}"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Version {version} fixes a security problem and is ready:"
-msgstr "A {version} verzió biztonsági problémát old meg és kész:"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Version {version} is ready:"
-msgstr "A {version} kész:"
 
 #. name, ribbon location
 #: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
@@ -21443,9 +21425,8 @@ msgstr "Mi újság?"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "What's new and how to get it:"
-msgstr "Mi új és hogyan lehet megszerezni:"
+msgid "What's new"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/reading/invitation.rs
@@ -21793,6 +21774,11 @@ msgstr "Kézzel módosította az aláírást, így az adatok átírása már nem
 #, fuzzy
 msgid "You forwarded this message."
 msgstr "Továbbította ezt az üzenetet."
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "You have MailCraft {version}."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -22219,9 +22205,8 @@ msgstr "A `newMail` és a `reminders` értéke true vagy false"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "`notice` is installsItself or didntStart"
-msgstr "A `notice` értéke installsItself vagy didntStart lehet"
+msgid "`notice` is didntStart"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -27350,6 +27335,86 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Sorok"
+
+#, fuzzy
+#~ msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
+#~ msgstr "A MailCraft a háttérben letölti az új verziót. Csak akkor tartja meg, ha a kiadás aláírása érvényes. A frissítés újraindításkor vagy kilépéskor települ."
+
+#, fuzzy
+#~ msgid "Check daily for new versions of MailCraft, and download and install them when you quit? Only GitHub is asked; nothing about you or your mail is sent."
+#~ msgstr "A MailCraft naponta ellenőrizze, van-e új verzió, és kilépéskor telepítse a letöltött frissítéseket? Az ellenőrzés csak a GitHubot éri el. Sem személyes adatot, sem levelet nem küld."
+
+#, fuzzy
+#~ msgid "Checking for a new version…"
+#~ msgstr "Új verzió keresése…"
+
+#, fuzzy
+#~ msgid "Close MailCraft, install the new version and start it again. Otherwise it is installed when you quit."
+#~ msgstr "Zárd be a MailCraft-t, telepítsd az új verziót és indítsd újra. Ellenkező esetben a kilépéskor telepítve van."
+
+#, fuzzy
+#~ msgid "Couldn't find out whether a new version is out: {why}."
+#~ msgstr "Nem tudtam kideríteni, hogy kijött-e egy új verzió: {why}."
+
+#, fuzzy
+#~ msgid "Install Updates Automatically"
+#~ msgstr "Frissítések automatikus telepítése"
+
+#, fuzzy
+#~ msgid "Install updates automatically"
+#~ msgstr "Frissítések automatikus telepítése"
+
+#, fuzzy
+#~ msgid "MailCraft is up to date ({version})."
+#~ msgstr "MailCraft naprakész ({version})."
+
+#, fuzzy
+#~ msgid "MailCraft now installs its updates itself. Turn this off in File › About."
+#~ msgstr "A MailCraft mostantól automatikusan telepíti a frissítéseit. Ezt a Fájl › Névjegy alatt kapcsolhatja ki."
+
+#, fuzzy
+#~ msgid "Needs Check for new versions."
+#~ msgstr "Új verziók ellenőrzése szükséges."
+
+#, fuzzy
+#~ msgid "Not now: it is installed when you quit MailCraft."
+#~ msgstr "Most nem. A frissítés a MailCraft bezárásakor települ."
+
+#, fuzzy
+#~ msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
+#~ msgstr "Csak GitHub-ot kérdeznek, rólad és a leveledről semmit sem küldenek."
+
+#, fuzzy
+#~ msgid "Restart to Update"
+#~ msgstr "Frissítés újraindítása"
+
+#, fuzzy
+#~ msgid "Restart to update"
+#~ msgstr "Frissítés újraindítása"
+
+#, fuzzy
+#~ msgid "Restart to update is the owner's click."
+#~ msgstr "A frissítés újrakezdése a tulajdonos kattintása."
+
+#, fuzzy
+#~ msgid "Status bar · File"
+#~ msgstr "Állapotsor · Fájl"
+
+#, fuzzy
+#~ msgid "Version {version} fixes a security problem and is ready:"
+#~ msgstr "A {version} verzió biztonsági problémát old meg és kész:"
+
+#, fuzzy
+#~ msgid "Version {version} is ready:"
+#~ msgstr "A {version} kész:"
+
+#, fuzzy
+#~ msgid "What's new and how to get it:"
+#~ msgstr "Mi új és hogyan lehet megszerezni:"
+
+#, fuzzy
+#~ msgid "`notice` is installsItself or didntStart"
+#~ msgstr "A `notice` értéke installsItself vagy didntStart lehet"
 
 #, fuzzy
 #~ msgid "A preview may omit some content from the original file."

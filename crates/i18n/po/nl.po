@@ -544,12 +544,6 @@ msgid "A new message was asked for, but the one you are writing couldn't be save
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
-msgstr "Een nieuwe versie wordt op de achtergrond gedownload, alleen bewaard wanneer de eigen releasesignatuur van MailCraft aangeeft dat die van ons is, en geïnstalleerd wanneer u opnieuw start om bij te werken of wanneer u afsluit."
-
-#. interface
 #: crates/ui-egui/src/dialogs.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "A note to go with it (optional)"
@@ -2737,7 +2731,7 @@ msgid "Can't sign"
 msgstr "Kan niet ondertekenen"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Cancel"
 msgstr "Annuleren"
@@ -3162,6 +3156,11 @@ msgid "Check Rule Conflicts"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Check again"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Check both servers before you connect."
 msgstr "Controleer beide servers voordat u verbindt."
@@ -3173,9 +3172,8 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Check daily for new versions of MailCraft, and download and install them when you quit? Only GitHub is asked; nothing about you or your mail is sent."
-msgstr "Wilt u dagelijks controleren op nieuwe versies van MailCraft, en die downloaden en installeren wanneer u afsluit? Alleen GitHub wordt geraadpleegd; er wordt niets over u of uw e-mail verzonden."
+msgid "Check daily for new versions of MailCraft? Only GitHub is asked; nothing about you or your mail is sent."
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -3192,6 +3190,11 @@ msgstr "Controleren op updates"
 #, fuzzy
 msgid "Check for new versions"
 msgstr "Controleren op nieuwe versies"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Check for updates"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3213,9 +3216,8 @@ msgstr "Gecontroleerd bij de certificeringsinstantie"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Checking for a new version…"
-msgstr "Bezig met controleren op een nieuwe versie…"
+msgid "Checking for updates…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3444,7 +3446,7 @@ msgid "Clipboard"
 msgstr "Klembord"
 
 #. android, command label, interface, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/IncomingLayers.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/IncomingLayers.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/updates.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
 msgid "Close"
 msgstr "Sluiten"
 
@@ -3452,12 +3454,6 @@ msgstr "Sluiten"
 #: crates/ui-egui/src/lib.rs
 msgid "Close Dialog"
 msgstr "Dialoogvenster sluiten"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Close MailCraft, install the new version and start it again. Otherwise it is installed when you quit."
-msgstr "Sluit MailCraft, installeer de nieuwe versie en start het programma opnieuw. Anders wordt die geïnstalleerd wanneer u afsluit."
 
 #. command label
 #: crates/engine/src/cmd/compose.rs
@@ -3922,6 +3918,11 @@ msgstr "Kon niet controleren"
 msgid "Couldn't check for new mail"
 msgstr "Er kon niet op nieuwe e-mail worden gecontroleerd"
 
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Couldn't check for updates"
+msgstr ""
+
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs
 #, fuzzy
@@ -3942,9 +3943,8 @@ msgstr "Een bericht uit \"{name}\" kon niet opnieuw worden gedownload"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Couldn't find out whether a new version is out: {why}."
-msgstr "Kan niet worden vastgesteld of er een nieuwe versie beschikbaar is: {why}."
+msgid "Couldn't download it: {why}."
+msgstr ""
 
 #. why a mail server couldn't be used
 #: crates/net/src/sync.rs
@@ -4981,6 +4981,11 @@ msgstr "Bezig {done} van {all} te downloaden"
 #, fuzzy
 msgid "Downloading {done} of {all} · {large} large messages download when opened"
 msgstr "Bezig {done} van {all} te downloaden · {large} grote berichten worden gedownload bij het openen"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Downloading…"
+msgstr ""
 
 #. interface, ribbon
 #: crates/ui-egui/src/compose.rs crates/ui-egui/src/ribbon.rs
@@ -7576,17 +7581,6 @@ msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
-msgid "Install Updates Automatically"
-msgstr "Updates automatisch installeren"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Install updates automatically"
-msgstr "Updates automatisch installeren"
-
-#. command label
-#: crates/ui-egui/src/lib.rs
 msgid "Interface Language"
 msgstr "Taal van de interface"
 
@@ -8230,7 +8224,7 @@ msgid "Last name"
 msgstr "Achternaam"
 
 #. interface, name
-#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs
+#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Later"
 msgstr "Later"
@@ -8732,6 +8726,11 @@ msgstr "MailCraft kan zich nog niet op deze manier aanmelden bij deze server (de
 msgid "MailCraft carries the software below. The Rust libraries of its core are listed with their versions in the source repository."
 msgstr "MailCraft bevat de onderstaande software. De Rust-bibliotheken van de kern staan met hun versies in de broncode-repository."
 
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft closes, installs it and opens again. Windows asks for your OK first."
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 #, fuzzy
@@ -8810,12 +8809,6 @@ msgid "MailCraft is tested on real mail, by people who use it every day and tell
 msgstr "MailCraft wordt getest op echte e-mail, door mensen die het elke dag gebruiken en ons vertellen wat er misgaat. Dank u."
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "MailCraft is up to date ({version})."
-msgstr "MailCraft is actueel ({version})."
-
-#. interface
 #: crates/ui-egui/src/open_shared.rs crates/ui-egui/src/shared_permission.rs
 #, fuzzy
 msgid "MailCraft isn't allowed to read other people's calendars yet."
@@ -8867,12 +8860,6 @@ msgstr "MailCraft heeft eerst uw toestemming nodig om uw automatische antwoorden
 #, fuzzy
 msgid "MailCraft needs your system browser to sign in. You can also use a Google app password."
 msgstr "MailCraft heeft uw systeembrowser nodig om aan te melden. U kunt ook een app-wachtwoord van Google gebruiken."
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "MailCraft now installs its updates itself. Turn this off in File › About."
-msgstr "MailCraft installeert updates nu zelf. Schakel dit uit in Bestand › Info."
 
 #. name
 #: crates/engine/src/cmd/rules.rs
@@ -8981,6 +8968,21 @@ msgstr "MailCraft {version} is beschikbaar"
 #, fuzzy
 msgid "MailCraft {version} is available and fixes a security problem"
 msgstr "MailCraft {version} is beschikbaar en verhelpt een beveiligingsprobleem"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is available: click to see what's new and update"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is up to date"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is up to date."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -9991,12 +9993,6 @@ msgstr "Marineblauw"
 #, fuzzy
 msgid "Needed for Outlook.com and Microsoft 365 accounts"
 msgstr "Nodig voor accounts van Outlook.com en Microsoft 365"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Needs Check for new versions."
-msgstr "Controleren op nieuwe versies is nodig."
 
 #. interface
 #: crates/ui-egui/src/gmail_move.rs
@@ -11023,12 +11019,6 @@ msgid "Not now"
 msgstr "Niet nu"
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Not now: it is installed when you quit MailCraft."
-msgstr "Niet nu: het wordt geïnstalleerd wanneer u MailCraft afsluit."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Not on Outlook's list: mail, events and to-dos you give it still carry its name to the account's server, where it has no colour"
@@ -11260,7 +11250,7 @@ msgid "Numbering"
 msgstr "Nummering"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/auto_replies.rs crates/ui-egui/src/calendar_sync.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/move_items.rs crates/ui-egui/src/reminder_dialog.rs crates/ui-egui/src/send_later.rs crates/ui-egui/src/settings_notice.rs crates/ui-egui/src/software.rs crates/ui-egui/src/updates.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/auto_replies.rs crates/ui-egui/src/calendar_sync.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/move_items.rs crates/ui-egui/src/reminder_dialog.rs crates/ui-egui/src/send_later.rs crates/ui-egui/src/settings_notice.rs crates/ui-egui/src/software.rs
 #, fuzzy
 msgid "OK"
 msgstr "OK"
@@ -11419,14 +11409,13 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
-msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
-msgstr "Eén keer per dag. Alleen GitHub wordt gevraagd; er wordt niets over u of uw e-mail verzonden."
+msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is downloaded or installed."
+msgstr "Eén keer per dag. Alleen GitHub wordt gevraagd; er wordt niets over u of uw e-mail verzonden. Er wordt niets gedownload of geïnstalleerd."
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is downloaded or installed."
-msgstr "Eén keer per dag. Alleen GitHub wordt gevraagd; er wordt niets over u of uw e-mail verzonden. Er wordt niets gedownload of geïnstalleerd."
+msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is installed until you click Update now."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -11755,6 +11744,11 @@ msgstr "Een postvak van uw organisatie openen waartoe u Volledige toegang hebt g
 #. interface
 #: crates/ui-egui/src/attachment_open.rs
 msgid "Open anyway"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Open download page"
 msgstr ""
 
 #. android
@@ -13658,23 +13652,6 @@ msgstr "Antwoordopties"
 #, fuzzy
 msgid "Response options are for a meeting: invite somebody first."
 msgstr "Antwoordopties zijn voor een vergadering: nodig eerst iemand uit."
-
-#. command label
-#: crates/ui-egui/src/lib.rs
-msgid "Restart to Update"
-msgstr "Opnieuw starten om bij te werken"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Restart to update"
-msgstr "Opnieuw starten om bij te werken"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Restart to update is the owner's click."
-msgstr "Opnieuw starten om bij te werken is de klik van de eigenaar."
 
 #. interface, ribbon
 #: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/window_chrome.rs
@@ -16188,11 +16165,6 @@ msgstr "Staat of regio"
 msgid "Status bar"
 msgstr "Statusbalk"
 
-#. ribbon location
-#: crates/ui-egui/src/lib.rs
-msgid "Status bar · File"
-msgstr "Statusbalk · Bestand"
-
 #. what a command says
 #: crates/engine/src/cmd/tasks/status.rs
 #, fuzzy
@@ -18552,6 +18524,11 @@ msgstr "De to-do's konden niet worden opgehaald: {error}"
 msgid "The to-dos sent couldn't be noted: {error}"
 msgstr "De verzonden to-do's konden niet worden genoteerd: {error}"
 
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "The update window"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
@@ -20028,7 +20005,7 @@ msgid "Try Signing In Again"
 msgstr "Opnieuw aanmelden"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Try again"
 msgstr "Opnieuw proberen"
@@ -20343,7 +20320,12 @@ msgid "Upcoming"
 msgstr "Aankomend"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/calendar_view.rs
+#: crates/ui-egui/src/updates.rs
+msgid "Update"
+msgstr ""
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Update Now"
 msgstr "Nu bijwerken"
@@ -20353,6 +20335,16 @@ msgstr "Nu bijwerken"
 #, fuzzy
 msgid "Update Subscribed Calendars"
 msgstr "Geabonneerde agenda's bijwerken"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Update now"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Update now is the owner's click."
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Freshness.kt
@@ -20405,6 +20397,11 @@ msgstr "Updates"
 #. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Updating coverage. The last observed counts are shown below."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Updating to MailCraft {version}"
 msgstr ""
 
 #. interface
@@ -20587,18 +20584,6 @@ msgstr "Versie"
 #, fuzzy
 msgid "Version {version}"
 msgstr "Versie {version}"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Version {version} fixes a security problem and is ready:"
-msgstr "Versie {version} verhelpt een beveiligingsprobleem en is gereed:"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Version {version} is ready:"
-msgstr "Versie {version} is gereed:"
 
 #. name, ribbon location
 #: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
@@ -20845,9 +20830,8 @@ msgstr "Wat is nieuw"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "What's new and how to get it:"
-msgstr "Wat er nieuw is en hoe u het krijgt:"
+msgid "What's new"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/reading/invitation.rs
@@ -21186,6 +21170,11 @@ msgstr "U hebt de handtekening handmatig bewerkt, waardoor de gegevens die niet 
 #, fuzzy
 msgid "You forwarded this message."
 msgstr "U hebt dit bericht doorgestuurd."
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "You have MailCraft {version}."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -21605,9 +21594,8 @@ msgstr "`newMail` en `reminders` zijn true of false"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "`notice` is installsItself or didntStart"
-msgstr "`notice` is installsItself of didntStart"
+msgid "`notice` is didntStart"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -26727,6 +26715,83 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Regels"
+
+#, fuzzy
+#~ msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
+#~ msgstr "Een nieuwe versie wordt op de achtergrond gedownload, alleen bewaard wanneer de eigen releasesignatuur van MailCraft aangeeft dat die van ons is, en geïnstalleerd wanneer u opnieuw start om bij te werken of wanneer u afsluit."
+
+#, fuzzy
+#~ msgid "Check daily for new versions of MailCraft, and download and install them when you quit? Only GitHub is asked; nothing about you or your mail is sent."
+#~ msgstr "Wilt u dagelijks controleren op nieuwe versies van MailCraft, en die downloaden en installeren wanneer u afsluit? Alleen GitHub wordt geraadpleegd; er wordt niets over u of uw e-mail verzonden."
+
+#, fuzzy
+#~ msgid "Checking for a new version…"
+#~ msgstr "Bezig met controleren op een nieuwe versie…"
+
+#, fuzzy
+#~ msgid "Close MailCraft, install the new version and start it again. Otherwise it is installed when you quit."
+#~ msgstr "Sluit MailCraft, installeer de nieuwe versie en start het programma opnieuw. Anders wordt die geïnstalleerd wanneer u afsluit."
+
+#, fuzzy
+#~ msgid "Couldn't find out whether a new version is out: {why}."
+#~ msgstr "Kan niet worden vastgesteld of er een nieuwe versie beschikbaar is: {why}."
+
+#~ msgid "Install Updates Automatically"
+#~ msgstr "Updates automatisch installeren"
+
+#, fuzzy
+#~ msgid "Install updates automatically"
+#~ msgstr "Updates automatisch installeren"
+
+#, fuzzy
+#~ msgid "MailCraft is up to date ({version})."
+#~ msgstr "MailCraft is actueel ({version})."
+
+#, fuzzy
+#~ msgid "MailCraft now installs its updates itself. Turn this off in File › About."
+#~ msgstr "MailCraft installeert updates nu zelf. Schakel dit uit in Bestand › Info."
+
+#, fuzzy
+#~ msgid "Needs Check for new versions."
+#~ msgstr "Controleren op nieuwe versies is nodig."
+
+#, fuzzy
+#~ msgid "Not now: it is installed when you quit MailCraft."
+#~ msgstr "Niet nu: het wordt geïnstalleerd wanneer u MailCraft afsluit."
+
+#, fuzzy
+#~ msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
+#~ msgstr "Eén keer per dag. Alleen GitHub wordt gevraagd; er wordt niets over u of uw e-mail verzonden."
+
+#~ msgid "Restart to Update"
+#~ msgstr "Opnieuw starten om bij te werken"
+
+#, fuzzy
+#~ msgid "Restart to update"
+#~ msgstr "Opnieuw starten om bij te werken"
+
+#, fuzzy
+#~ msgid "Restart to update is the owner's click."
+#~ msgstr "Opnieuw starten om bij te werken is de klik van de eigenaar."
+
+#~ msgid "Status bar · File"
+#~ msgstr "Statusbalk · Bestand"
+
+#, fuzzy
+#~ msgid "Version {version} fixes a security problem and is ready:"
+#~ msgstr "Versie {version} verhelpt een beveiligingsprobleem en is gereed:"
+
+#, fuzzy
+#~ msgid "Version {version} is ready:"
+#~ msgstr "Versie {version} is gereed:"
+
+#, fuzzy
+#~ msgid "What's new and how to get it:"
+#~ msgstr "Wat er nieuw is en hoe u het krijgt:"
+
+#, fuzzy
+#~ msgid "`notice` is installsItself or didntStart"
+#~ msgstr "`notice` is installsItself of didntStart"
 
 #, fuzzy
 #~ msgid "A preview may omit some content from the original file."

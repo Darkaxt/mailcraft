@@ -1,3 +1,9 @@
+**MailCraft 0.12.18 in short** — updates when you choose
+- When a new version is out, the update button at the bottom right shows a blue dot. Click it to see what's new.
+- Update now downloads it, closes MailCraft, installs it and opens it again with your mailbox. Windows asks for your OK first.
+- Nothing is downloaded or installed by itself any more, and nothing is installed when you close MailCraft.
+- Everything from 0.12.17 stays.
+
 **MailCraft 0.12.17 in short** — Favorites your way, every folder under Folders
 - Favorites stay in the order you add them. Drag one up or down to change the order.
 - A favourite folder can show the folders inside it under Favorites: click its arrow.

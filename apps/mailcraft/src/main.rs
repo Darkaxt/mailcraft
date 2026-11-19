@@ -1681,6 +1681,20 @@ fn main() -> eframe::Result {
         return Err(eframe::Error::AppCreation("headless mode requires --control and --control-agents-only, with no files or --hidden".into()));
     }
     let updates = (!headless).then(HostUpdates::of_this_copy).flatten();
+    // What a start after an update carries on: the same mailbox and control port (#fork).
+    if updates.is_some() {
+        let mut carried: Vec<std::ffi::OsString> = Vec::new();
+        if let Some(path) = mailbox_path.as_ref().filter(|p| p.is_absolute()) {
+            carried.extend(["--mailbox".into(), path.clone().into_os_string()]);
+        }
+        if let Some(port) = control_port {
+            carried.extend(["--control".into(), port.to_string().into()]);
+        }
+        if control_agents_only {
+            carried.push("--control-agents-only".into());
+        }
+        self_update::keep_start_args(carried);
+    }
     let update_start = match &updates {
         Some(updates) => {
             if after_update {

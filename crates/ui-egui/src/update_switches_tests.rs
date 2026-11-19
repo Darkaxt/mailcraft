@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! The two update switches sit in File › About under Check for Updates, and File › Options has
-//! none (#488).
+//! The update switch sits in File › About under Check for Updates, and File › Options has none
+//! (#488). Installing is the update window's Update now, never a switch.
 
 use egui_kittest::Harness;
 use mailcraft_engine::Session;
@@ -42,14 +42,13 @@ fn show(window: &mut Harness<'static, MailApp>, page: &str) {
 }
 
 #[test]
-fn about_holds_both_switches_below_check_for_updates() {
+fn about_holds_the_switch_below_check_for_updates() {
     let mut w = window();
     show(&mut w, "about");
     let check = w.state().hit.rect("checkForUpdates", 0).expect("Check for Updates");
     let option = w.state().hit.rect("updateOption", 0).expect("the check switch");
-    let install = w.state().hit.rect("updateInstallOption", 0).expect("the install switch");
     assert!(option.top() >= check.bottom(), "the check switch is under the button");
-    assert!(install.top() >= option.bottom(), "the install switch is under the check switch");
+    assert!(w.state().hit.rect("updateInstallOption", 0).is_none(), "no install switch");
 }
 
 #[test]

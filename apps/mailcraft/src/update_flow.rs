@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! A copy that updates itself, the whole way: the window's daily check finds a newer release,
-//! this host downloads the copy's file through `mailcraft-net` from a stand-in release server on
+//! A copy that updates itself, the whole way: the window's daily check finds a newer release, the
+//! owner presses Update now, this host downloads the copy's file through `mailcraft-net` from a stand-in release server on
 //! this machine, and it is kept only when the release's signature and checksum say it is the
 //! release's own. Keys are made here; nothing leaves this machine, and nothing is installed.
 
@@ -108,13 +108,21 @@ fn window(found: Release, trusted: [u8; 32], dir: &Path) -> MailApp {
     app
 }
 
-/// Frames until the download has come to something.
+/// Frames until the check has found the newer release, Update now is pressed, and the download
+/// has come to something.
 fn settle(app: &mut MailApp) -> serde_json::Value {
     let ctx = egui::Context::default();
+    let mut pressed = false;
     for _ in 0..1_000 {
         app.logic(&ctx);
         let state = app.execute("ui.updateCheck", json!({"value": true})).unwrap();
-        if state["install"]["downloading"] == false && state["newer"].is_object() {
+        if !pressed && state["newer"].is_object() {
+            assert_eq!(state["install"]["downloading"], false, "nothing is downloaded by itself: {state}");
+            pressed = true;
+            app.run("ui.restartToUpdate", json!({})).unwrap();
+            continue;
+        }
+        if pressed && state["install"]["downloading"] == false {
             return state;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));

@@ -545,12 +545,6 @@ msgid "A new message was asked for, but the one you are writing couldn't be save
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
-msgstr "ახალი ვერსია ფონურად ჩამოიტვირთება, ინახება მხოლოდ მაშინ, თუ MailCraft-ის საკუთარი გამოშვების ხელმოწერა ადასტურებს, რომ ჩვენია, და დაინსტალირდება, როცა განახლებისთვის გადატვირთავთ ან გახვალთ."
-
-#. interface
 #: crates/ui-egui/src/dialogs.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
 msgid "A note to go with it (optional)"
@@ -2819,7 +2813,7 @@ msgid "Can't sign"
 msgstr "ხელმოწერა შეუძლებელია"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Cancel"
 msgstr "გაუქმება"
@@ -3259,6 +3253,11 @@ msgid "Check Rule Conflicts"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Check again"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Check both servers before you connect."
@@ -3271,9 +3270,8 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Check daily for new versions of MailCraft, and download and install them when you quit? Only GitHub is asked; nothing about you or your mail is sent."
-msgstr "შევამოწმო ყოველდღე MailCraft-ის ახალი ვერსიები და გასვლისას ჩამოვტვირთო და დავაინსტალირო? მხოლოდ GitHub-ს მივმართავთ; თქვენზე ან თქვენს ფოსტაზე არაფერი იგზავნება."
+msgid "Check daily for new versions of MailCraft? Only GitHub is asked; nothing about you or your mail is sent."
+msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -3292,6 +3290,11 @@ msgstr "განახლებების შემოწმება"
 #, fuzzy
 msgid "Check for new versions"
 msgstr "ახალი ვერსიების შემოწმება"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Check for updates"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3313,9 +3316,8 @@ msgstr "შემოწმდა მისი სასერტიფიკა�
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Checking for a new version…"
-msgstr "ახალი ვერსიის შემოწმება…"
+msgid "Checking for updates…"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -3552,7 +3554,7 @@ msgid "Clipboard"
 msgstr "გაცვლის ბუფერი"
 
 #. android, command label, interface, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/IncomingLayers.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/IncomingLayers.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/find_replace.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/reminders.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/search_index_ui.rs crates/ui-egui/src/symbol.rs crates/ui-egui/src/sync_panel.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/updates.rs crates/ui-egui/src/view_source.rs crates/ui-egui/src/window_chrome.rs
 #, fuzzy
 msgid "Close"
 msgstr "დახურვა"
@@ -3562,12 +3564,6 @@ msgstr "დახურვა"
 #, fuzzy
 msgid "Close Dialog"
 msgstr "დიალოგის დახურვა"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Close MailCraft, install the new version and start it again. Otherwise it is installed when you quit."
-msgstr "MailCraft დაიხურება, ახალი ვერსია დაინსტალირდება და ხელახლა გაეშვება. სხვა შემთხვევაში ის გასვლისას დაინსტალირდება."
 
 #. command label
 #: crates/engine/src/cmd/compose.rs
@@ -4059,6 +4055,11 @@ msgstr "ვერ შემოწმდა"
 msgid "Couldn't check for new mail"
 msgstr "ახალი ფოსტის შემოწმება ვერ მოხერხდა"
 
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Couldn't check for updates"
+msgstr ""
+
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs
 #, fuzzy
@@ -4079,9 +4080,8 @@ msgstr "საქაღალდიდან „{name}“ წერილი ხ
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Couldn't find out whether a new version is out: {why}."
-msgstr "ვერ გავარკვიეთ, გამოვიდა თუ არა ახალი ვერსია: {why}."
+msgid "Couldn't download it: {why}."
+msgstr ""
 
 #. why a mail server couldn't be used
 #: crates/net/src/sync.rs
@@ -5150,6 +5150,11 @@ msgstr "ჩამოტვირთვა: {done} / {all}"
 #, fuzzy
 msgid "Downloading {done} of {all} · {large} large messages download when opened"
 msgstr "ჩამოტვირთვა: {done} / {all} · დიდი წერილები ({large}) გახსნისას ჩამოიტვირთება"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Downloading…"
+msgstr ""
 
 #. interface, ribbon
 #: crates/ui-egui/src/compose.rs crates/ui-egui/src/ribbon.rs
@@ -7856,18 +7861,6 @@ msgstr ""
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
-msgid "Install Updates Automatically"
-msgstr "განახლებების ავტომატური ინსტალაცია"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Install updates automatically"
-msgstr "განახლებების ავტომატური ინსტალაცია"
-
-#. command label
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
 msgid "Interface Language"
 msgstr "ინტერფეისის ენა"
 
@@ -8521,7 +8514,7 @@ msgid "Last name"
 msgstr "გვარი"
 
 #. interface, name
-#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs
+#: crates/ui-egui/src/graph_switch.rs crates/ui-egui/src/sign_in_notice.rs crates/ui-egui/src/tasks_view.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Later"
 msgstr "მოგვიანებით"
@@ -9032,6 +9025,11 @@ msgstr "MailCraft ამ სერვერზე ამ გზით შეს�
 msgid "MailCraft carries the software below. The Rust libraries of its core are listed with their versions in the source repository."
 msgstr "MailCraft შეიცავს ქვემოთ ჩამოთვლილ პროგრამებს. მისი ბირთვის Rust ბიბლიოთეკები ვერსიებით ჩამოთვლილია წყაროს რეპოზიტორიაში."
 
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft closes, installs it and opens again. Windows asks for your OK first."
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Accounts.kt
 #, fuzzy
@@ -9111,12 +9109,6 @@ msgid "MailCraft is tested on real mail, by people who use it every day and tell
 msgstr "MailCraft-ს რეალურ ფოსტაზე ცდიან ადამიანები, რომლებიც მას ყოველდღე იყენებენ და გვეუბნებიან, რა არ მუშაობს. გმადლობთ."
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "MailCraft is up to date ({version})."
-msgstr "MailCraft განახლებულია ({version})."
-
-#. interface
 #: crates/ui-egui/src/open_shared.rs crates/ui-egui/src/shared_permission.rs
 #, fuzzy
 msgid "MailCraft isn't allowed to read other people's calendars yet."
@@ -9169,12 +9161,6 @@ msgstr "MailCraft-ს ჯერ თქვენი ნებართვა ს�
 #, fuzzy
 msgid "MailCraft needs your system browser to sign in. You can also use a Google app password."
 msgstr "შესასვლელად MailCraft-ს თქვენი სისტემური ბრაუზერი სჭირდება. ასევე შეგიძლიათ Google-ის აპლიკაციის პაროლი გამოიყენოთ."
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "MailCraft now installs its updates itself. Turn this off in File › About."
-msgstr "MailCraft ახლა განახლებებს თავად აინსტალირებს. ამის გამორთვა შეგიძლიათ: ფაილი › შესახებ."
 
 #. name
 #: crates/engine/src/cmd/rules.rs
@@ -9285,6 +9271,21 @@ msgstr "ხელმისაწვდომია MailCraft {version}"
 #, fuzzy
 msgid "MailCraft {version} is available and fixes a security problem"
 msgstr "ხელმისაწვდომია MailCraft {version}, რომელიც უსაფრთხოების პრობლემას ასწორებს"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is available: click to see what's new and update"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is up to date"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "MailCraft {version} is up to date."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -10331,12 +10332,6 @@ msgstr ""
 #, fuzzy
 msgid "Needed for Outlook.com and Microsoft 365 accounts"
 msgstr "საჭიროა Outlook.com-ისა და Microsoft 365-ის ანგარიშებისთვის"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Needs Check for new versions."
-msgstr "საჭიროებს პარამეტრს „ახალი ვერსიების შემოწმება“."
 
 #. interface
 #: crates/ui-egui/src/gmail_move.rs
@@ -11387,12 +11382,6 @@ msgid "Not now"
 msgstr "ახლა არა"
 
 #. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Not now: it is installed when you quit MailCraft."
-msgstr "ახლა არა: ის MailCraft-იდან გასვლისას დაინსტალირდება."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Not on Outlook's list: mail, events and to-dos you give it still carry its name to the account's server, where it has no colour"
@@ -11627,7 +11616,7 @@ msgid "Numbering"
 msgstr "დანომვრა"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/auto_replies.rs crates/ui-egui/src/calendar_sync.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/move_items.rs crates/ui-egui/src/reminder_dialog.rs crates/ui-egui/src/send_later.rs crates/ui-egui/src/settings_notice.rs crates/ui-egui/src/software.rs crates/ui-egui/src/updates.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/auto_replies.rs crates/ui-egui/src/calendar_sync.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/move_items.rs crates/ui-egui/src/reminder_dialog.rs crates/ui-egui/src/send_later.rs crates/ui-egui/src/settings_notice.rs crates/ui-egui/src/software.rs
 #, fuzzy
 msgid "OK"
 msgstr "OK"
@@ -11788,14 +11777,13 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
-msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
-msgstr "დღეში ერთხელ. მხოლოდ GitHub-ს ეკითხება; თქვენ ან თქვენს ფოსტაზე არაფერი იგზავნება."
+msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is downloaded or installed."
+msgstr "დღეში ერთხელ. მხოლოდ GitHub-ს ეკითხება; თქვენ ან თქვენს ფოსტაზე არაფერი იგზავნება. არაფერი ჩამოიტვირთება და არ დაინსტალირდება."
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is downloaded or installed."
-msgstr "დღეში ერთხელ. მხოლოდ GitHub-ს ეკითხება; თქვენ ან თქვენს ფოსტაზე არაფერი იგზავნება. არაფერი ჩამოიტვირთება და არ დაინსტალირდება."
+msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent. Nothing is installed until you click Update now."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -12135,6 +12123,11 @@ msgstr "ამ ანგარიშში თქვენი ორგანი
 #. interface
 #: crates/ui-egui/src/attachment_open.rs
 msgid "Open anyway"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Open download page"
 msgstr ""
 
 #. android
@@ -14094,24 +14087,6 @@ msgstr "პასუხის პარამეტრები"
 #, fuzzy
 msgid "Response options are for a meeting: invite somebody first."
 msgstr "პასუხის პარამეტრები შეხვედრისთვისაა: ჯერ მოიწვიეთ ვინმე."
-
-#. command label
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Restart to Update"
-msgstr "განახლებისთვის გადატვირთვა"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Restart to update"
-msgstr "განახლებისთვის გადატვირთვა"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Restart to update is the owner's click."
-msgstr "განახლებისთვის გადატვირთვა მფლობელის გადასაწყვეტია."
 
 #. interface, ribbon
 #: crates/ui-egui/src/ribbon.rs crates/ui-egui/src/window_chrome.rs
@@ -16691,12 +16666,6 @@ msgstr "შტატი ან რეგიონი"
 msgid "Status bar"
 msgstr "სტატუსის ზოლი"
 
-#. ribbon location
-#: crates/ui-egui/src/lib.rs
-#, fuzzy
-msgid "Status bar · File"
-msgstr "სტატუსის ზოლი · ფაილი"
-
 #. what a command says
 #: crates/engine/src/cmd/tasks/status.rs
 #, fuzzy
@@ -19069,6 +19038,11 @@ msgstr "To Do-ს დავალებების ჩაწერა ვერ
 msgid "The to-dos sent couldn't be noted: {error}"
 msgstr "გაგზავნილი To Do-ს დავალებები ვერ აღირიცხა: {error}"
 
+#. ribbon location
+#: crates/ui-egui/src/lib.rs
+msgid "The update window"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
@@ -20561,7 +20535,7 @@ msgid "Try Signing In Again"
 msgstr "შესვლის ხელახლა ცდა"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Try again"
 msgstr "ხელახლა ცდა"
@@ -20881,7 +20855,12 @@ msgid "Upcoming"
 msgstr "მომავალი"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/calendar_view.rs
+#: crates/ui-egui/src/updates.rs
+msgid "Update"
+msgstr ""
+
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Update Now"
 msgstr "ახლავე განახლება"
@@ -20891,6 +20870,16 @@ msgstr "ახლავე განახლება"
 #, fuzzy
 msgid "Update Subscribed Calendars"
 msgstr "გამოწერილი კალენდრების განახლება"
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Update now"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Update now is the owner's click."
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Freshness.kt
@@ -20943,6 +20932,11 @@ msgstr "განახლებები"
 #. interface
 #: crates/ui-egui/src/search_index_ui.rs
 msgid "Updating coverage. The last observed counts are shown below."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "Updating to MailCraft {version}"
 msgstr ""
 
 #. interface
@@ -21126,18 +21120,6 @@ msgstr "ვერსია"
 #, fuzzy
 msgid "Version {version}"
 msgstr "ვერსია {version}"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Version {version} fixes a security problem and is ready:"
-msgstr "ვერსია {version} ასწორებს უსაფრთხოების პრობლემას და მზადაა:"
-
-#. interface
-#: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "Version {version} is ready:"
-msgstr "ვერსია {version} მზადაა:"
 
 #. name, ribbon location
 #: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
@@ -21393,9 +21375,8 @@ msgstr "რა არის ახალი"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "What's new and how to get it:"
-msgstr "რა არის ახალი და როგორ მიიღოთ:"
+msgid "What's new"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/reading/invitation.rs
@@ -21744,6 +21725,11 @@ msgstr "ხელმოწერა ხელით შეცვალეთ, �
 #, fuzzy
 msgid "You forwarded this message."
 msgstr "თქვენ ეს წერილი გადააგზავნეთ."
+
+#. interface
+#: crates/ui-egui/src/updates.rs
+msgid "You have MailCraft {version}."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
@@ -22168,9 +22154,8 @@ msgstr "`newMail` და `reminders` არის true ან false"
 
 #. interface
 #: crates/ui-egui/src/updates.rs
-#, fuzzy
-msgid "`notice` is installsItself or didntStart"
-msgstr "`notice` არის installsItself ან didntStart"
+msgid "`notice` is didntStart"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/updates.rs
@@ -27293,6 +27278,86 @@ msgstr ""
 #: crates/ui-egui/src/credits.rs
 msgid "−Lines"
 msgstr ""
+
+#, fuzzy
+#~ msgid "A new version is downloaded in the background, kept only when MailCraft's own release signature says it is ours, and installed when you restart to update or quit."
+#~ msgstr "ახალი ვერსია ფონურად ჩამოიტვირთება, ინახება მხოლოდ მაშინ, თუ MailCraft-ის საკუთარი გამოშვების ხელმოწერა ადასტურებს, რომ ჩვენია, და დაინსტალირდება, როცა განახლებისთვის გადატვირთავთ ან გახვალთ."
+
+#, fuzzy
+#~ msgid "Check daily for new versions of MailCraft, and download and install them when you quit? Only GitHub is asked; nothing about you or your mail is sent."
+#~ msgstr "შევამოწმო ყოველდღე MailCraft-ის ახალი ვერსიები და გასვლისას ჩამოვტვირთო და დავაინსტალირო? მხოლოდ GitHub-ს მივმართავთ; თქვენზე ან თქვენს ფოსტაზე არაფერი იგზავნება."
+
+#, fuzzy
+#~ msgid "Checking for a new version…"
+#~ msgstr "ახალი ვერსიის შემოწმება…"
+
+#, fuzzy
+#~ msgid "Close MailCraft, install the new version and start it again. Otherwise it is installed when you quit."
+#~ msgstr "MailCraft დაიხურება, ახალი ვერსია დაინსტალირდება და ხელახლა გაეშვება. სხვა შემთხვევაში ის გასვლისას დაინსტალირდება."
+
+#, fuzzy
+#~ msgid "Couldn't find out whether a new version is out: {why}."
+#~ msgstr "ვერ გავარკვიეთ, გამოვიდა თუ არა ახალი ვერსია: {why}."
+
+#, fuzzy
+#~ msgid "Install Updates Automatically"
+#~ msgstr "განახლებების ავტომატური ინსტალაცია"
+
+#, fuzzy
+#~ msgid "Install updates automatically"
+#~ msgstr "განახლებების ავტომატური ინსტალაცია"
+
+#, fuzzy
+#~ msgid "MailCraft is up to date ({version})."
+#~ msgstr "MailCraft განახლებულია ({version})."
+
+#, fuzzy
+#~ msgid "MailCraft now installs its updates itself. Turn this off in File › About."
+#~ msgstr "MailCraft ახლა განახლებებს თავად აინსტალირებს. ამის გამორთვა შეგიძლიათ: ფაილი › შესახებ."
+
+#, fuzzy
+#~ msgid "Needs Check for new versions."
+#~ msgstr "საჭიროებს პარამეტრს „ახალი ვერსიების შემოწმება“."
+
+#, fuzzy
+#~ msgid "Not now: it is installed when you quit MailCraft."
+#~ msgstr "ახლა არა: ის MailCraft-იდან გასვლისას დაინსტალირდება."
+
+#, fuzzy
+#~ msgid "Once a day. Only GitHub is asked; nothing about you or your mail is sent."
+#~ msgstr "დღეში ერთხელ. მხოლოდ GitHub-ს ეკითხება; თქვენ ან თქვენს ფოსტაზე არაფერი იგზავნება."
+
+#, fuzzy
+#~ msgid "Restart to Update"
+#~ msgstr "განახლებისთვის გადატვირთვა"
+
+#, fuzzy
+#~ msgid "Restart to update"
+#~ msgstr "განახლებისთვის გადატვირთვა"
+
+#, fuzzy
+#~ msgid "Restart to update is the owner's click."
+#~ msgstr "განახლებისთვის გადატვირთვა მფლობელის გადასაწყვეტია."
+
+#, fuzzy
+#~ msgid "Status bar · File"
+#~ msgstr "სტატუსის ზოლი · ფაილი"
+
+#, fuzzy
+#~ msgid "Version {version} fixes a security problem and is ready:"
+#~ msgstr "ვერსია {version} ასწორებს უსაფრთხოების პრობლემას და მზადაა:"
+
+#, fuzzy
+#~ msgid "Version {version} is ready:"
+#~ msgstr "ვერსია {version} მზადაა:"
+
+#, fuzzy
+#~ msgid "What's new and how to get it:"
+#~ msgstr "რა არის ახალი და როგორ მიიღოთ:"
+
+#, fuzzy
+#~ msgid "`notice` is installsItself or didntStart"
+#~ msgstr "`notice` არის installsItself ან didntStart"
 
 #, fuzzy
 #~ msgid "Building the index search answers from; until it is done, some older mail is searched more slowly"

@@ -154,7 +154,6 @@ pub fn object(id: &str) -> Option<Object> {
         | "ui.repliesInWindow"
         | "ui.swipeAction"
         | "ui.updateCheck"
-        | "ui.updateInstall"
         | "ui.dismissUpdateNotice"
         | "ui.dismissSettingsNotice"
         | "ui.dismissSoftwareNotice"

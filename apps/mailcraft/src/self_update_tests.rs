@@ -51,8 +51,30 @@ fn the_helpers_job_goes_through_its_arguments_and_nothing_else_does() {
         to: "0.5.0".into(),
         back: false,
         start: Some(Path::new(base).join("mailcraft.exe")),
+        start_args: Vec::new(),
     };
     assert_eq!(Job::parse(&job.args()), Some(job.clone()));
+    // What the run was started with is carried to the new version, and nothing else is.
+    let mailbox = Path::new(base).join("mailbox.mailcraft").into_os_string();
+    let with = Job {
+        start_args: vec!["--mailbox".into(), mailbox.clone(), "--control".into(), "7991".into(), "--control-agents-only".into()],
+        ..job.clone()
+    };
+    assert_eq!(Job::parse(&with.args()), Some(with.clone()));
+    assert_eq!(start_program_with(Path::new("/p/mailcraft"), &with.start_args).args.len(), 6);
+    for odd in [
+        vec!["--hidden".into()],
+        vec!["--mailbox".into(), "relative".into()],
+        vec!["--control".into(), "port".into()],
+        vec!["--control-agents-only".into(), "--control-agents-only".into()],
+        vec!["mailto:x@y".into()],
+    ] {
+        let odd: Vec<OsString> = odd;
+        assert_eq!(carried(&odd), None, "{odd:?}");
+        let mut bad = job.args();
+        bad.extend(odd);
+        assert_eq!(Job::parse(&bad), None);
+    }
     let back = Job { back: true, start: None, ..job.clone() };
     assert_eq!(Job::parse(&back.args()), Some(back));
     let mut bad = job.args();
@@ -134,7 +156,15 @@ fn the_installed_msi_is_kept_one_back() {
         fs::write(&path, name.as_bytes()).unwrap();
         path
     };
-    let job = |msi: PathBuf, from: &str, to: &str, back: bool| Job { sha256: sum(b"x"), msi, from: from.into(), to: to.into(), back, start: None };
+    let job = |msi: PathBuf, from: &str, to: &str, back: bool| Job {
+        sha256: sum(b"x"),
+        msi,
+        from: from.into(),
+        to: to.into(),
+        back,
+        start: None,
+        start_args: Vec::new(),
+    };
     // The first update: there was no `.msi` of the version it replaced.
     keep_installed_msi(&folders, &job(download("m-0.5.0.msi"), "0.4.3", "0.5.0", false)).unwrap();
     assert_eq!(read_kept(&folders.this_version()).unwrap().version, "0.5.0");
@@ -167,7 +197,15 @@ fn the_installer_is_handed_a_checked_copy_and_never_the_download() {
     let msi = folders.updates().join("mailcraft-0.5.0-windows-x64.msi");
     fs::create_dir_all(folders.updates()).unwrap();
     fs::write(&msi, b"the checked installer").unwrap();
-    let job = Job { msi: msi.clone(), sha256: sum(b"the checked installer"), from: "0.4.3".into(), to: "0.5.0".into(), back: false, start: None };
+    let job = Job {
+        msi: msi.clone(),
+        sha256: sum(b"the checked installer"),
+        from: "0.4.3".into(),
+        to: "0.5.0".into(),
+        back: false,
+        start: None,
+        start_args: Vec::new(),
+    };
     let mut handed = Vec::new();
     let installed = install_msi(&job, &folders, &mut |run| {
         let given = PathBuf::from(&run.args[1]);
@@ -217,7 +255,15 @@ fn the_signed_digest_is_trusted_even_when_the_download_changes_afterwards() {
     assert_eq!(verified.sha256, sum(b"the signed installer"));
     assert_eq!(verified.version, release.version);
     // So what is installed later is checked against what the release signed, and refused.
-    let job = Job { msi: verified.path, sha256: verified.sha256, from: "0.4.3".into(), to: "9.9.9".into(), back: false, start: None };
+    let job = Job {
+        msi: verified.path,
+        sha256: verified.sha256,
+        from: "0.4.3".into(),
+        to: "9.9.9".into(),
+        back: false,
+        start: None,
+        start_args: Vec::new(),
+    };
     assert!(!install_msi(&job, &folders, &mut |_| panic!("the installer was run on a file that wasn't signed")));
     let _ = fs::remove_dir_all(&dir);
 }

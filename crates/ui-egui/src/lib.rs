@@ -1067,14 +1067,9 @@ pub struct UiState {
     pub update_checked: i64,
     /// The last newer version the owner was told of (`0.4.3`), so it is said once.
     pub update_told: String,
-    /// Whether a copy that updates itself downloads a new version by itself, while the daily
-    /// check is on ([`updates`]): on unless the owner turns it off.
-    pub update_install: bool,
     /// A version that isn't installed by itself: the one the owner went back from because it
     /// didn't start ([`updates`]). Newer ones are.
     pub update_skip: String,
-    /// The owner has been told, once, that MailCraft now installs its updates itself.
-    pub update_install_told: bool,
     /// The owner has been told, once, that the window is drawn without the graphics card
     /// ([`software`]).
     pub software_told: bool,
@@ -1160,9 +1155,7 @@ impl Default for UiState {
             update_asked: 0,
             update_checked: 0,
             update_told: String::new(),
-            update_install: true,
             update_skip: String::new(),
-            update_install_told: false,
             software_told: false,
             alert_new_mail: true,
             alert_reminders: true,
@@ -1658,25 +1651,19 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.checkForUpdates",
         "Check for Updates",
         "File › About",
-        r#"{} — asks GitHub once which is the newest release of MailCraft (nothing about the owner or their mail is sent; nothing is downloaded or installed). A script or an agent may ask only while the owner has the daily check on (`ui.updateCheck`); otherwise refused: "The owner hasn't allowed update checks." Answers {"pending": "updateCheck", "version"}; a newer version is then said in the status bar and in File › About"#,
+        r#"{} — asks GitHub once which is the newest release of MailCraft (nothing about the owner or their mail is sent; nothing is downloaded or installed). A script or an agent may ask only while the owner has the daily check on (`ui.updateCheck`); otherwise refused: "The owner hasn't allowed update checks." Answers {"pending": "updateCheck", "version"}; a newer version then puts a dot on the status bar's update button. The owner's press opens the update window (`ui.dialog {"name": "update"}`)"#,
     ),
     (
         "ui.updateCheck",
         "Check for New Versions",
         "File › About",
-        r#"{"value"?: bool (default: toggle)} — whether MailCraft asks GitHub once a day which is the newest release (off until the owner turns it on). Answers {"value", "setting": "notAsked"|"on"|"off", "asked": number, "version", "newer": {"version", "security", "page"}|null, "checking": bool, "install": {"value": bool, "setting": "on"|"off"|"needsCheck"|"organisation"|"notThisCopy", "downloading": bool, "downloaded": version|null}}"#,
-    ),
-    (
-        "ui.updateInstall",
-        "Install Updates Automatically",
-        "File › About",
-        r#"{"value"?: bool (default: toggle)} — whether a copy that updates itself (the Windows .msi, the macOS app, a Linux AppImage) downloads a newer release by itself while the daily check is on, and checks it by the release's own signature (on unless the owner turns it off). Refused when the organisation has turned it off ("Turned off by your organisation") and for a copy that doesn't update itself. Agents and scripts can't start a download. Answers what `ui.updateCheck` answers"#,
+        r#"{"value"?: bool (default: toggle)} — whether MailCraft asks GitHub once a day which is the newest release (off until the owner turns it on). Answers {"value", "setting": "notAsked"|"on"|"off", "asked": number, "version", "newer": {"version", "security", "page"}|null, "checking": bool, "dialog": bool, "install": {"value": bool (Update now is offered), "setting": "on"|"organisation"|"notThisCopy", "downloading": bool, "downloaded": version|null, "installing": bool}}"#,
     ),
     (
         "ui.restartToUpdate",
-        "Restart to Update",
-        "Status bar · File › About",
-        r#"{} — once a newer version has been downloaded and checked by its release signature: closes the window as quitting does (what is being written is asked about, Send/Receive stops, the mailbox is saved), installs the new version and starts it. The owner's click only: refused for agents and the control channel ("Restart to update is the owner's click."). Not pressed, the new version is installed when MailCraft is quit. MailCraft never restarts by itself"#,
+        "Update Now",
+        "The update window",
+        r#"{} — Update now, on a copy that updates itself, once this run's check found a newer version: downloads it and checks it by its release signature, then closes the window as quitting does (what is being written is asked about, Send/Receive stops, the mailbox is saved), installs the new version (Windows asks for an administrator's OK) and starts it again. Answers {"pending": "download"|"restart", "version"}. The owner's click only: refused for agents and the control channel ("Update now is the owner's click."). Nothing is downloaded or installed otherwise, quitting installs nothing, and MailCraft never restarts by itself"#,
     ),
     (
         "ui.goBackVersion",
@@ -1700,7 +1687,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.dismissUpdateNotice",
         "Dismiss Update Notice",
         "Above the status bar",
-        r#"{"notice": "installsItself" | "didntStart"} — puts away the line that says MailCraft now installs its updates itself (said once), or the offer to go back to the previous version (kept for this run)"#,
+        r#"{"notice": "didntStart"} — puts away the offer to go back to the previous version (for this run)"#,
     ),
     (
         "ui.toggleCalendarGroup",
@@ -2974,6 +2961,10 @@ impl MailApp {
                 if let Some(panel) = sync_panel::Panel::named(name) {
                     self.sync_panel = Some(panel);
                     return Some(Ok(json!({"panel": "syncProgress"})));
+                }
+                // The update window stands beside the dialogs: it may stay open while one is.
+                if name == updates::DIALOG {
+                    return Some(self.open_update_dialog());
                 }
                 // The New rule filled in from a message: an id that is none is refused, never
                 // taken to mean the selection (#566).
@@ -6060,6 +6051,7 @@ impl MailApp {
         windows::compose_window::back(self, fronted);
         sync_panel::show(self, &ctx);
         search_index_ui::show(self, &ctx);
+        updates::dialog(self, &ctx);
         // (Unless a window of the system has drawn it over itself.)
         if !std::mem::take(&mut self.windows.dialog_shown) {
             dialogs::show(self, &ctx);

@@ -258,7 +258,6 @@ const ROWS: &[(&str, &str, Setup)] = &[
     ("ui.repliesInWindow", "{}", Setup::None),
     ("ui.swipeAction", r#"{"direction": "left", "action": "archive"}"#, Setup::None),
     ("ui.updateCheck", "{}", Setup::None),
-    ("ui.updateInstall", "{}", Setup::None),
     ("ui.dismissUpdateNotice", "{}", Setup::None),
     ("ui.dismissSettingsNotice", "{}", Setup::None),
     ("ui.dismissSoftwareNotice", "{}", Setup::None),

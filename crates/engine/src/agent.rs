@@ -672,7 +672,6 @@ const SETTINGS: &[&str] = &[
     "ui.repliesInWindow",
     "ui.swipeAction",
     "ui.updateCheck",
-    "ui.updateInstall",
     "ui.dismissUpdateNotice",
     "ui.dismissSettingsNotice",
     "ui.dismissSoftwareNotice",

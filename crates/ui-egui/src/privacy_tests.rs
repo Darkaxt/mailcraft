@@ -86,9 +86,10 @@ fn a_job_with_no_problems_makes_a_returning_one_new() {
     assert_eq!(count(), 2);
 }
 
-/// (A3-5) The question says what a Yes does: check, download and install.
+/// (A3-5) The question says what a Yes does: only a check with GitHub; nothing is installed by
+/// itself (Update now is the owner's click).
 #[test]
-fn the_update_question_names_installing() {
+fn the_update_question_names_what_is_asked() {
     let mut app = app();
     app.updates.asking = true;
     let mut harness =
@@ -101,7 +102,8 @@ fn the_update_question_names_installing() {
             app,
         );
     harness.run_steps(4);
-    assert!(harness.query_all_by_label_contains("download and install them when you quit").next().is_some());
+    assert!(harness.query_all_by_label_contains("Only GitHub is asked; nothing about you or your mail is sent.").next().is_some());
+    assert!(harness.query_all_by_label_contains("install").next().is_none());
 }
 
 /// Uses up the allowance of `account`'s mail, as a run of many problems does.

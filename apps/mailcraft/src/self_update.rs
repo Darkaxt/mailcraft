@@ -401,9 +401,58 @@ pub fn open_app(app: &Path) -> Run {
     Run::new("/usr/bin/open", &[OsStr::new("-n"), app.as_os_str(), OsStr::new("--args"), OsStr::new(AFTER_UPDATE)])
 }
 
-/// The program (an AppImage, `mailcraft.exe`) started again.
+/// The program (an AppImage, `mailcraft.exe`) started again, with what this run was started with
+/// ([`keep_start_args`]).
 pub fn start_program(program: &Path) -> Run {
-    Run::new(program, &[OsStr::new(AFTER_UPDATE)])
+    start_program_with(program, start_args())
+}
+
+/// The program started again with `args` after [`AFTER_UPDATE`].
+fn start_program_with(program: &Path, args: &[OsString]) -> Run {
+    let mut run = Run::new(program, &[OsStr::new(AFTER_UPDATE)]);
+    run.args.extend(args.iter().cloned());
+    run
+}
+
+/// What this run was started with that the new version is started with again.
+static START_ARGS: OnceLock<Vec<OsString>> = OnceLock::new();
+
+/// Keep what this run was started with that a start after an update carries on: the mailbox, the
+/// control port and agents-only (never files, nor `--hidden`). Only what [`carried`] takes.
+pub fn keep_start_args(args: Vec<OsString>) {
+    if let Some(args) = carried(&args) {
+        let _ = START_ARGS.set(args);
+    }
+}
+
+fn start_args() -> &'static [OsString] {
+    START_ARGS.get().map(Vec::as_slice).unwrap_or(&[])
+}
+
+/// `args` when they are only `--mailbox <absolute path>`, `--control <port>` and
+/// `--control-agents-only`, each once at most; `None` otherwise.
+pub fn carried(args: &[OsString]) -> Option<Vec<OsString>> {
+    let mut seen = [false; 3];
+    let mut i = 0;
+    while i < args.len() {
+        let which = match args[i].to_str()? {
+            "--mailbox" => {
+                i += 1;
+                Path::new(args.get(i)?).is_absolute().then_some(0)?
+            }
+            "--control" => {
+                i += 1;
+                args.get(i)?.to_str()?.parse::<u16>().ok().map(|_| 1)?
+            }
+            "--control-agents-only" => 2,
+            _ => return None,
+        };
+        if std::mem::replace(&mut seen[which], true) {
+            return None;
+        }
+        i += 1;
+    }
+    Some(args.to_vec())
 }
 
 /// What the copy of the program that installs an `.msi` is to do ([`finish`]).
@@ -417,6 +466,8 @@ pub struct Job {
     pub back: bool,
     /// The program to start once it is installed.
     pub start: Option<PathBuf>,
+    /// What it is started with ([`carried`]).
+    pub start_args: Vec<OsString>,
 }
 
 impl Job {
@@ -432,6 +483,7 @@ impl Job {
         ];
         if let Some(start) = &self.start {
             args.push(start.clone().into_os_string());
+            args.extend(self.start_args.iter().cloned());
         }
         args
     }
@@ -439,7 +491,7 @@ impl Job {
     /// The job its arguments (after the program's name) say, when they say one.
     pub fn parse(args: &[OsString]) -> Option<Job> {
         let text = |i: usize| args.get(i).and_then(|a| a.to_str());
-        if text(0) != Some(FINISH_UPDATE) || args.len() > 7 {
+        if text(0) != Some(FINISH_UPDATE) || args.len() > 12 {
             return None;
         }
         let msi = PathBuf::from(args.get(1)?);
@@ -454,6 +506,7 @@ impl Job {
             to: version(text(4))?,
             back,
             start: args.get(6).map(PathBuf::from).filter(|p| p.is_absolute()),
+            start_args: carried(args.get(7..).unwrap_or_default())?,
             msi,
         };
         (job.msi.is_absolute() && job.msi.extension() == Some(OsStr::new("msi"))).then_some(job)
@@ -470,7 +523,7 @@ pub fn finish(job: &Job, folders: &Folders) -> i32 {
         let _ = keep_installed_msi(folders, job);
     }
     if let Some(start) = &job.start {
-        let _ = start_program(start).spawn_detached();
+        let _ = start_program_with(start, &job.start_args).spawn_detached();
     }
     if installed { 0 } else { 1 }
 }
@@ -939,8 +992,15 @@ pub fn on_exit(folders: &Folders, install: Install, what: OnExit, verified: Opti
             write_record(folders, &Record { from: running.into(), to: to.clone(), back: false, settled: false }).map_err(|e| e.kind().to_string())?;
             let started = match install {
                 Install::Msi => {
-                    let job =
-                        Job { msi: verified.path, sha256: verified.sha256, from: running.into(), to, back: false, start: restart.then_some(target) };
+                    let job = Job {
+                        msi: verified.path,
+                        sha256: verified.sha256,
+                        from: running.into(),
+                        to,
+                        back: false,
+                        start: restart.then_some(target),
+                        start_args: start_args().to_vec(),
+                    };
                     return windows_helper(folders, &job);
                 }
                 Install::AppImage => {
@@ -973,7 +1033,7 @@ pub fn on_exit(folders: &Folders, install: Install, what: OnExit, verified: Opti
             let started = match install {
                 Install::Msi => {
                     let sha256 = kept.sha256.ok_or("the kept installer has no checksum")?;
-                    let job = Job { msi: file, sha256, from: running.into(), to, back: true, start: Some(target) };
+                    let job = Job { msi: file, sha256, from: running.into(), to, back: true, start: Some(target), start_args: start_args().to_vec() };
                     return windows_helper(folders, &job);
                 }
                 Install::AppImage => {

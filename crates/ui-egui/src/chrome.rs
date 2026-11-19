@@ -685,7 +685,7 @@ pub fn status_bar(app: &mut MailApp, ui: &mut Ui) {
                         }
                         ui.add_space(10.0);
                     }
-                    // A new version downloaded and checked: Restart to update.
+                    // The update button, with a dot while a newer version is known.
                     crate::updates::status_item(app, ui, &t);
                     // Automatic replies are on for an account: said, and a click opens them.
                     crate::auto_replies::status_item(app, ui, &t, STATUS_TEXT);
