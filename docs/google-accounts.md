@@ -292,6 +292,7 @@ Both registration values can be supplied when building or launching the desktop 
 |---|---|
 | `MAILCRAFT_GOOGLE_CLIENT_ID` | Build-time default or process-environment override for the Desktop client ID. |
 | `MAILCRAFT_GOOGLE_CLIENT_SECRET` | Build-time default or process-environment override for its matching registration value. |
+| `MAILCRAFT_GOOGLE_CLIENT_FILE` | The whole path of the Desktop registration's JSON as Google gives it (`{"installed": {"client_id", "client_secret"}}`). Used for whichever of the two variables above is unset, before the compiled default. |
 | Google Desktop application ID in File → Options | A nonempty local override of the public client ID; it cannot supply or change the host's registration secret. |
 
 The host takes a present process-environment value before its compiled default. Unset an
@@ -309,6 +310,13 @@ a usable pair keeps the explained app-password fallback. `--sample` and
 `MAILCRAFT_NO_PREFS=1` are temporary testing modes, not a way to prove saved preferences across
 restarts. To reopen a chosen saved mailbox directly, use the supported
 `--mailbox <path>` argument rather than importing it as an unrelated positional file.
+
+A start with an absolute `--mailbox` is remembered in `start.json` in the settings folder: the
+mailbox, `--control`, `--control-agents-only`, the path in `MAILCRAFT_GOOGLE_CLIENT_FILE`
+(never the file's contents) and the temporary folder (`TEMP`). A later start that names no mailbox (the Start Menu, a `mailto:`
+link, a message file opened from the file manager) takes these back while that mailbox file
+exists, so it reaches the same window or opens the same mailbox
+(`apps/mailcraft/src/start_setup.rs`). Not with `--sample`, `--headless` or `MAILCRAFT_NO_PREFS`.
 
 ## What has been verified, and what has not
 

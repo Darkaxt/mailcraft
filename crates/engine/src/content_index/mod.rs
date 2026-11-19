@@ -228,7 +228,7 @@ impl Index {
                     events
                         .send(Event::Ready { revision: extractor.revision().into(), stored: database.stored_versions()? })
                         .map_err(|why| why.to_string())?;
-                    let temporary_root = std::env::temp_dir();
+                    let temporary_root = tempfile::env::temp_dir();
                     while let Ok(job) = jobs.recv() {
                         if stop.load(Ordering::Acquire) {
                             return Ok(());

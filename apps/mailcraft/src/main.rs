@@ -108,6 +108,7 @@ mod shared_calendar_flow;
 #[cfg(test)]
 mod shared_send_flow;
 mod single_instance;
+mod start_setup;
 mod startup;
 mod system_locale;
 mod system_motion;
@@ -565,18 +566,35 @@ fn microsoft_client_id() -> String {
     if id.len() <= 200 && id.chars().all(|c| c.is_ascii_alphanumeric() || "-._".contains(c)) { id.to_string() } else { String::new() }
 }
 
+/// The Google Desktop registration's file a plain start took back from the owner's last start
+/// (`start_setup`), when `MAILCRAFT_GOOGLE_CLIENT_FILE` names none.
+static GOOGLE_FILE: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// The client id and secret in the Google Desktop registration's file
+/// (`MAILCRAFT_GOOGLE_CLIENT_FILE`, else the one kept), read once. Used where the environment
+/// names no client id or secret of its own.
+fn google_from_file() -> Option<&'static (String, String)> {
+    static READ: std::sync::OnceLock<Option<(String, String)>> = std::sync::OnceLock::new();
+    READ.get_or_init(|| {
+        let file = std::env::var_os(start_setup::GOOGLE_FILE_ENV).map(PathBuf::from).or_else(|| GOOGLE_FILE.get().cloned())?;
+        start_setup::google_client(&file)
+    })
+    .as_ref()
+}
+
 /// The MailCraft-owned Google Desktop registration. Its built-in client secret is a
 /// public installed-app identifier, NEVER an account's password or OAuth refresh token.
 fn google_client_id() -> String {
     let built_in = option_env!("MAILCRAFT_GOOGLE_CLIENT_ID").unwrap_or_default();
-    let id = std::env::var("MAILCRAFT_GOOGLE_CLIENT_ID").unwrap_or_else(|_| built_in.into());
+    let id = std::env::var("MAILCRAFT_GOOGLE_CLIENT_ID").ok().or_else(|| google_from_file().map(|g| g.0.clone())).unwrap_or_else(|| built_in.into());
     let id = id.trim();
     if id.len() <= 200 && id.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_')) { id.to_string() } else { String::new() }
 }
 
 fn google_client_secret() -> String {
     let built_in = option_env!("MAILCRAFT_GOOGLE_CLIENT_SECRET").unwrap_or_default();
-    let secret = std::env::var("MAILCRAFT_GOOGLE_CLIENT_SECRET").unwrap_or_else(|_| built_in.into());
+    let secret =
+        std::env::var("MAILCRAFT_GOOGLE_CLIENT_SECRET").ok().or_else(|| google_from_file().map(|g| g.1.clone())).unwrap_or_else(|| built_in.into());
     if secret.len() <= 512 && secret.bytes().all(|b| b.is_ascii_graphic()) { secret } else { String::new() }
 }
 
@@ -1673,6 +1691,41 @@ fn main() -> eframe::Result {
                 return Ok(());
             }
             _ => files.push(a),
+        }
+    }
+    // A start that names its mailbox is kept; a plain one (the Start Menu, a mailto: link, a file
+    // opened from the file manager) takes that back, and so opens the owner's mailbox as their
+    // own shortcut does (start_setup, #fork).
+    if !sample
+        && !headless
+        && prefs_enabled()
+        && let Some(dir) = mailcraft_control_key::settings_dir()
+    {
+        match &mailbox_path {
+            Some(path) => start_setup::remember(
+                &dir,
+                &start_setup::Setup {
+                    mailbox: path.clone(),
+                    control: control_port,
+                    agents_only: control_agents_only,
+                    google_file: std::env::var_os(start_setup::GOOGLE_FILE_ENV).map(PathBuf::from),
+                    temp: Some(std::env::temp_dir()),
+                },
+            ),
+            None => {
+                if let Some(kept) = start_setup::recall(&dir) {
+                    mailbox_path = Some(kept.mailbox);
+                    control_port = control_port.or(kept.control);
+                    control_agents_only |= kept.agents_only;
+                    if let Some(file) = kept.google_file {
+                        let _ = GOOGLE_FILE.set(file);
+                    }
+                    // Temporary files go where the owner's start puts them, while that folder is there.
+                    if let Some(temp) = kept.temp.filter(|t| t.is_dir()) {
+                        let _ = tempfile::env::override_temp_dir(&temp);
+                    }
+                }
+            }
         }
     }
     // A copy that updates itself: a new version waits for the one it replaced to have gone, and

@@ -326,6 +326,10 @@ impl Run {
     fn command(&self) -> Command {
         let mut command = Command::new(&self.program);
         command.args(&self.args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        // The installer and the restarted MailCraft use the temporary folder this run uses, which
+        // a plain start takes back from the owner's (start_setup).
+        let temp = tempfile::env::temp_dir();
+        command.env("TEMP", &temp).env("TMP", &temp);
         command
     }
 

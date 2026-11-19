@@ -556,6 +556,10 @@ An `.eml`, `.mbox`, `.ics`, `.vcf` or `.mailcraft` file from somewhere else.
   already open and does not open the mailbox twice; a crashed run's lock is gone, and its stale
   `.instance` is replaced. The sample mailbox and a run without preferences that names no
   `--mailbox` take no lock and don't listen at the start (`apps/mailcraft/src/single_instance.rs`). A
+  start that names no mailbox uses the one the owner's last `--mailbox` start named, with its control
+  port, agents-only and temporary folder, while that file exists (`start.json` in the owner's
+  settings folder, which holds paths and never a secret; `apps/mailcraft/src/start_setup.rs`), so it takes the same lock and
+  hands over to the same window. A
   `.mailcraft` file the window opens later (File › Open, a recent one, a drop, a hand-over) or saves
   to has its lock taken first, before anything is read or asked, while the open mailbox's is still
   held; one another window has open is refused and the open mailbox stays as it was. Once the

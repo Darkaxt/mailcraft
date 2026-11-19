@@ -1,3 +1,8 @@
+**MailCraft 0.12.20 in short** — MailCraft opens your mailbox however you start it
+- The Start Menu, a mailto: link or a message file you open now bring up your own mailbox, with the same setup as your usual shortcut. If MailCraft is already open, they go to that window.
+- Its temporary files go to the same folder as with your usual shortcut.
+- Everything from 0.12.19 stays.
+
 **MailCraft 0.12.19 in short** — sorting Favorites works
 - Dragging a favourite up or down Favorites now moves it. Before, the line showed but the folder stayed where it was.
 - Everything from 0.12.18 stays.
