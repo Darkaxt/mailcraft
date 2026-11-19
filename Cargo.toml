@@ -7,7 +7,7 @@ exclude = ["apps/mailcraft-android", "vendor/winit", "vendor/winit/dpi", "vendor
 default-members = ["crates/*", "apps/mailcraft", "apps/mailcraft-cli", "xtask"]
 
 [workspace.package]
-version = "0.12.20"
+version = "0.12.21"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"

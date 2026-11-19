@@ -1,3 +1,7 @@
+**MailCraft 0.12.21 in short** — favourites show their star in the unified mailbox
+- A folder you added to Favorites now has its small star in the unified mailbox's folder list too, not only in its account's list.
+- Everything from 0.12.20 stays.
+
 **MailCraft 0.12.20 in short** — MailCraft opens your mailbox however you start it
 - The Start Menu, a mailto: link or a message file you open now bring up your own mailbox, with the same setup as your usual shortcut. If MailCraft is already open, they go to that window.
 - Its temporary files go to the same folder as with your usual shortcut.

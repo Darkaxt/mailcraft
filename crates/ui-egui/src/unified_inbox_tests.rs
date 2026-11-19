@@ -107,6 +107,30 @@ fn the_unified_mailbox_root_holds_inbox_filing_tree_and_search_folders_and_folds
     assert!(restored.collapsed_folders.contains(&UNIFIED_ROOT));
 }
 
+/// A favourite wears its star in the unified tree as in its account's, and not under Favorites,
+/// where every row is one (v0.12.21).
+#[test]
+fn a_favourite_wears_its_star_in_the_unified_tree() {
+    let mut s = mailcraft_engine::Session::empty();
+    let account = s.run("account.add", &json!({"email":"owner@example.org"})).unwrap()["id"].as_u64().unwrap();
+    s.mailbox.account_mut(account).unwrap().kind = AccountKind::Microsoft;
+    let inbox = s.mailbox.folder_of_kind(account, mailcraft_model::FolderKind::Inbox).unwrap();
+    let company = s.mailbox.add_folder(account, Some(inbox), "Company").unwrap();
+    let other = s.mailbox.add_folder(account, Some(inbox), "Other").unwrap();
+    s.run("folder.favorite", &json!({"id": company, "value": true})).unwrap();
+    let mut h = crate::people_view::testing::window_on(s.mailbox, "view.mail");
+    h.state_mut().ui.folder_tabs = true;
+    h.state_mut().execute("ui.folderTab", json!({"tab": "unified"})).unwrap();
+    h.run_steps(3);
+    let row = h.state().hit.rect("unifiedFolder", company).expect("its unified row");
+    let star = h.state().hit.rect("folderStar", company).expect("its star");
+    assert!(row.contains(star.center()), "{star:?} in {row:?}");
+    assert!(h.state().hit.rect("folderStar", other).is_none(), "not a favourite: no star");
+    h.state_mut().execute("ui.folderTab", json!({"tab": "favorites"})).unwrap();
+    h.run_steps(3);
+    assert!(h.state().hit.rect("folder", company).is_some() && h.state().hit.rect("folderStar", company).is_none());
+}
+
 #[test]
 fn a_folder_folded_in_the_unified_tree_stays_open_in_its_accounts_own_tree() {
     let mut s = mailcraft_engine::Session::empty();

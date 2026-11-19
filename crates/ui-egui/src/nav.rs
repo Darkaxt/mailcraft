@@ -514,8 +514,9 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     let from_outlook = mailcraft_engine::cmd::folder::favorites_from_server(&app.session, f.account);
     // A favourite kept here is dragged up or down Favorites (v0.12.17); its children are not.
     let draggable = key == "fav" && depth == 0 && !from_outlook;
-    // In its account's tree a favourite wears a small star after its name (v0.12.17).
-    let starred = key == "tree"
+    // In its account's tree and in the unified mailbox's a favourite wears a small star after its
+    // name (v0.12.17; the unified tree's since v0.12.21).
+    let starred = (key == "tree" || unified)
         && if from_outlook { app.session.mailbox.server_favorites(f.account).is_some_and(|list| list.contains(&f.id)) } else { f.favorite };
     // Under Favorites a shared mailbox's folder says whose it is (#70), and so does one whose name
     // another account's folder has too (two Inboxes); in its tree, its name. In the unified
