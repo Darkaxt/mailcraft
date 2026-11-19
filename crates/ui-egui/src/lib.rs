@@ -114,6 +114,7 @@ mod draft_selection_tests;
 mod drag_pointer;
 #[cfg(test)]
 mod drag_pointer_tests;
+mod emoji_index;
 #[cfg(test)]
 mod ews_info_tests;
 pub mod ews_mail;

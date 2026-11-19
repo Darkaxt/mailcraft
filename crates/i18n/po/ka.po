@@ -825,6 +825,11 @@ msgstr "მოქმედებები"
 msgid "Active"
 msgstr "აქტიური"
 
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Activities"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/ribbon/view_menus.rs
 #, fuzzy
@@ -1533,6 +1538,11 @@ msgstr[1] "და კიდევ {n} მსგავსი ბმული."
 #, fuzzy
 msgid "Android closed MailCraft while Microsoft's page was open, so that sign-in could not be finished. Nothing was added."
 msgstr "Android-მა MailCraft დახურა, სანამ Microsoft-ის გვერდი ღია იყო, ამიტომ შესვლა ვერ დასრულდა. არაფერი დამატებულა."
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Animals & nature"
+msgstr ""
 
 #. command label, interface
 #: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
@@ -6179,6 +6189,11 @@ msgid "Flagged by Microsoft Defender: {threats}. The file is kept unchanged."
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Flags"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Fold the calendars of this group away"
@@ -6325,6 +6340,11 @@ msgstr "შრიფტის ფერი"
 #, fuzzy
 msgid "Font Size"
 msgstr "შრიფტის ზომა"
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Food & drink"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -10921,6 +10941,11 @@ msgid "No due date"
 msgstr "ვადის გარეშე"
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "No emoji found"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "No end date"
@@ -11626,6 +11651,11 @@ msgstr "OK"
 #, fuzzy
 msgid "Object"
 msgstr "ობიექტი"
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Objects"
+msgstr ""
 
 #. date and time
 #: crates/i18n/src/date.rs
@@ -12683,6 +12713,11 @@ msgstr "დამუშავების მოლოდინში"
 #, fuzzy
 msgid "People"
 msgstr "ადამიანები"
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "People & body"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt
@@ -14876,6 +14911,11 @@ msgid "Search covers retained messages on this device. Mail that has not been di
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Search emoji"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Search folder"
 msgstr ""
@@ -16445,6 +16485,11 @@ msgstr "ჯერ უმცირესი"
 msgid "Smartcard {label}"
 msgstr "სმარტ-ბარათი {label}"
 
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Smileys & emotion"
+msgstr ""
+
 #. android, command label, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReminderScheduler.kt crates/engine/src/cmd/snooze.rs crates/ui-egui/src/reminders.rs
 #, fuzzy
@@ -16856,6 +16901,11 @@ msgstr "ანგარიშის პარამეტრების შე�
 msgid "Suggest Recipients"
 msgstr "მიმღებთა შემოთავაზება"
 
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Suggested"
+msgstr ""
+
 #. date and time, name
 #: crates/i18n/src/date.rs crates/time/src/lib.rs
 #, fuzzy
@@ -16932,8 +16982,8 @@ msgstr "Google-ით შესვლაზე გადასვლისას
 msgid "Symbol"
 msgstr "სიმბოლო"
 
-#. ribbon, ribbon location
-#: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
+#. interface, ribbon, ribbon location
+#: crates/engine/src/cmd/format.rs crates/ui-egui/src/emoji_index.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Symbols"
 msgstr "სიმბოლოები"
@@ -20491,6 +20541,11 @@ msgstr "თარგმნა"
 #. interface
 #: crates/ui-egui/src/reading.rs
 msgid "Transport sender"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Travel & places"
 msgstr ""
 
 #. interface

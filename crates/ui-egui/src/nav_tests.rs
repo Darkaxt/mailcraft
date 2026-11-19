@@ -752,3 +752,33 @@ fn a_folder_opened_is_listed_under_recent() {
         .collect();
     assert!(texts.iter().any(|t| t == "Recent"), "{texts:?}");
 }
+
+/// A folder's Tag menu opens on the suggested emoji; a group's tab lists that group's, and a
+/// choice tags the folder (v0.12.22).
+#[test]
+fn the_tag_menu_lists_every_group_of_emoji() {
+    let app = window().into_state();
+    let account = app.session.mailbox.accounts.first().unwrap().id;
+    let folder = app.session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let mut harness =
+        egui_kittest::Harness::builder().with_accessibility_check(false).allow_missing_glyphs().with_size(egui::vec2(400.0, 600.0)).build_ui_state(
+            move |ui, app: &mut MailApp| {
+                app.hit.clear();
+                let now = app.session.mailbox.folder(folder).map(|f| f.tag.clone()).unwrap_or_default();
+                tag_menu(app, ui, folder, &now);
+            },
+            app,
+        );
+    harness.run_steps(2);
+    let tabs = crate::emoji_index::TABS.len() as Id;
+    assert!((0..tabs).all(|n| harness.state().hit.rect("tagTab", n).is_some()));
+    assert!(harness.state().hit.rect("tagChoice", 0).is_some(), "the suggested ones first");
+    let smileys = harness.state().hit.rect("tagTab", 1).unwrap();
+    click(&mut harness, smileys.center());
+    harness.run_steps(2);
+    let first = harness.state().hit.rect("tagChoice", 0).unwrap();
+    click(&mut harness, first.center());
+    harness.run_steps(2);
+    let tag = harness.state().session.mailbox.folder(folder).unwrap().tag.clone();
+    assert_eq!(emojis::get(&tag).map(emojis::Emoji::group), Some(emojis::Group::SmileysAndEmotion), "{tag}");
+}

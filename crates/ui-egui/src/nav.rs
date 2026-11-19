@@ -718,40 +718,75 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     });
 }
 
-/// The tags a folder's menu offers (`folder.tag`); any other can be typed.
-const TAG_CHOICES: &[&str] = &[
-    "⭐", "📌", "🔥", "✅", "💼", "🏦", "💳", "📄", "💰", "📦", "✈", "🚆", "🏠", "🎮", "🎬", "🎵", "📚", "🎓", "💻", "🔒", "☁", "📰", "📣", "🏥",
-    "⚽", "🍔", "🎁", "👪", "⚖", "📁",
-];
+/// How many emoji a row of the Tag menu has, and how big each one's button is.
+const TAG_COLS: usize = 8;
+const TAG_CELL: f32 = 30.0;
 
-/// A folder's Tag menu: the tags to choose from (the one it has, chosen again, takes it off),
-/// a field for any other, and No Tag.
+/// A folder's Tag menu: a search over every emoji and their groups (`emoji_index`, v0.12.22; the
+/// one it has, chosen again, takes it off), a field for any other tag, and No Tag.
 fn tag_menu(app: &mut MailApp, ui: &mut Ui, id: Id, now: &str) {
-    egui::Grid::new(("tag_choices", id)).spacing(vec2(2.0, 2.0)).show(ui, |ui| {
-        for (n, tag) in TAG_CHOICES.iter().enumerate() {
-            let on = *tag == now;
-            let button = ui.add(egui::Button::new(egui::RichText::new(*tag).size(16.0)).selected(on).min_size(vec2(28.0, 28.0)));
-            app.hit.add("tagChoice", n as Id, button.rect);
-            if button.clicked() {
-                let _ = app.run("folder.tag", json!({"id": id, "tag": if on { "" } else { *tag }}));
-                ui.close();
+    use crate::emoji_index::{TABS, Tab};
+    let width = TAG_COLS as f32 * (TAG_CELL + 2.0);
+    let state = egui::Id::unique(("tag_index", id));
+    let (mut query, mut tab): (String, Tab) = ui.data_mut(|d| d.get_temp(state)).unwrap_or_default();
+    let search = ui.add(egui::TextEdit::singleline(&mut query).hint_text(tl!("Search emoji")).desired_width(width));
+    app.hit.add("tagSearch", 0, search.rect);
+    let searching = !query.trim().is_empty();
+    if !searching {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 1.0;
+            for (n, (t, face, name)) in TABS.iter().enumerate() {
+                let button = ui
+                    .add(egui::Button::new(egui::RichText::new(*face).size(14.0)).selected(tab == *t).min_size(vec2(24.0, 24.0)))
+                    .on_hover_text(tl!(*name));
+                app.hit.add("tagTab", n as Id, button.rect);
+                if button.clicked() {
+                    tab = *t;
+                }
             }
-            if n % 6 == 5 {
-                ui.end_row();
+        });
+    }
+    let list = crate::emoji_index::listed(ui.ctx());
+    let shown = if searching { crate::emoji_index::search(&list, &query) } else { crate::emoji_index::in_tab(&list, tab) };
+    if shown.is_empty() {
+        ui.label(tl!("No emoji found"));
+    }
+    let rows = shown.len().div_ceil(TAG_COLS);
+    egui::ScrollArea::vertical().id_salt(("tag_rows", id)).max_height(TAG_CELL * 7.5).min_scrolled_width(width).show_rows(
+        ui,
+        TAG_CELL,
+        rows,
+        |ui, range| {
+            for row in range {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 2.0;
+                    for (n, (tag, name)) in shown.iter().enumerate().skip(row * TAG_COLS).take(TAG_COLS) {
+                        let on = *tag == now;
+                        let button =
+                            ui.add(egui::Button::new(egui::RichText::new(*tag).size(16.0)).selected(on).min_size(vec2(TAG_CELL, TAG_CELL - 2.0)));
+                        let button = if name.is_empty() { button } else { button.on_hover_text(*name) };
+                        app.hit.add("tagChoice", n as Id, button.rect);
+                        if button.clicked() {
+                            let _ = app.run("folder.tag", json!({"id": id, "tag": if on { "" } else { *tag }}));
+                            ui.close();
+                        }
+                    }
+                });
             }
-        }
-    });
+        },
+    );
+    ui.data_mut(|d| d.insert_temp(state, (query, tab)));
     ui.separator();
     let key = egui::Id::unique(("tag_typed", id));
     let mut typed: String = ui.data_mut(|d| d.get_temp(key)).unwrap_or_else(|| now.to_string());
-    let field = ui.add(egui::TextEdit::singleline(&mut typed).hint_text(tl!("Or type one, then Enter")).char_limit(16).desired_width(180.0));
+    let field = ui.add(egui::TextEdit::singleline(&mut typed).hint_text(tl!("Or type one, then Enter")).char_limit(16).desired_width(width));
     ui.data_mut(|d| d.insert_temp(key, typed.clone()));
     if field.lost_focus() && crate::keys::enter(ui.ctx(), ui.layer_id()) {
         let _ = app.run("folder.tag", json!({"id": id, "tag": typed}));
         ui.data_mut(|d| d.remove::<String>(key));
         ui.close();
     }
-    if ui.add_enabled(!now.is_empty(), egui::Button::new(tl!("No Tag")).min_size(vec2(180.0, 0.0))).clicked() {
+    if ui.add_enabled(!now.is_empty(), egui::Button::new(tl!("No Tag")).min_size(vec2(width, 0.0))).clicked() {
         let _ = app.run("folder.tag", json!({"id": id, "tag": ""}));
         ui.close();
     }

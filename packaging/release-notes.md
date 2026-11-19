@@ -1,3 +1,7 @@
+**MailCraft 0.12.22 in short** — every emoji for folder tags
+- A folder's Tag menu now has every emoji your system can show, in groups (smileys, people, animals, food, travel, activities, objects, symbols, flags), with a search by name.
+- Everything from 0.12.21 stays.
+
 **MailCraft 0.12.21 in short** — favourites show their star in the unified mailbox
 - A folder you added to Favorites now has its small star in the unified mailbox's folder list too, not only in its account's list.
 - Everything from 0.12.20 stays.

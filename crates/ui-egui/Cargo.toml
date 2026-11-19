@@ -35,6 +35,8 @@ skrifa = { workspace = true }
 # A passphrase typed for importing a key, and the key file, overwritten when let go of (#30;
 # already in the tree).
 zeroize = "1"
+# The emoji a folder's Tag menu lists, with their names and groups (Unicode's emoji data).
+emojis = "=0.9.1"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Colour emoji from the system's emoji face, drawn in its own colours (#832).

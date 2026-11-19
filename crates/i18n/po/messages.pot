@@ -692,6 +692,11 @@ msgstr ""
 msgid "Active"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Activities"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/ribbon/view_menus.rs
 msgid "Actual Size"
@@ -1283,6 +1288,11 @@ msgstr[1] ""
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt
 msgid "Android closed MailCraft while Microsoft's page was open, so that sign-in could not be finished. Nothing was added."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Animals & nature"
 msgstr ""
 
 #. command label, interface
@@ -5226,6 +5236,11 @@ msgid "Flagged by Microsoft Defender: {threats}. The file is kept unchanged."
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Flags"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/calendar_view.rs
 msgid "Fold the calendars of this group away"
 msgstr ""
@@ -5344,6 +5359,11 @@ msgstr ""
 #. command label, ribbon
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
 msgid "Font Size"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Food & drink"
 msgstr ""
 
 #. interface
@@ -9229,6 +9249,11 @@ msgid "No due date"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "No emoji found"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "No end date"
 msgstr ""
@@ -9823,6 +9848,11 @@ msgstr ""
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 msgid "Object"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Objects"
 msgstr ""
 
 #. date and time
@@ -10727,6 +10757,11 @@ msgstr ""
 #. android, command label, interface, name, ribbon location
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/engine/src/cmd/view.rs crates/engine/src/session.rs crates/ui-egui/src/people_view.rs
 msgid "People"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "People & body"
 msgstr ""
 
 #. android
@@ -12593,6 +12628,11 @@ msgid "Search covers retained messages on this device. Mail that has not been di
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Search emoji"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Search folder"
 msgstr ""
@@ -13920,6 +13960,11 @@ msgstr ""
 msgid "Smartcard {label}"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Smileys & emotion"
+msgstr ""
+
 #. android, command label, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReminderScheduler.kt crates/engine/src/cmd/snooze.rs crates/ui-egui/src/reminders.rs
 msgid "Snooze"
@@ -14270,6 +14315,11 @@ msgstr ""
 msgid "Suggest Recipients"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Suggested"
+msgstr ""
+
 #. date and time, name
 #: crates/i18n/src/date.rs crates/time/src/lib.rs
 msgid "Sun"
@@ -14335,8 +14385,8 @@ msgstr ""
 msgid "Symbol"
 msgstr ""
 
-#. ribbon, ribbon location
-#: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
+#. interface, ribbon, ribbon location
+#: crates/engine/src/cmd/format.rs crates/ui-egui/src/emoji_index.rs crates/ui-egui/src/ribbon.rs
 msgid "Symbols"
 msgstr ""
 
@@ -17322,6 +17372,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading.rs
 msgid "Transport sender"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/emoji_index.rs
+msgid "Travel & places"
 msgstr ""
 
 #. interface
