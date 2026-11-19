@@ -10122,6 +10122,11 @@ msgstr "Mover todo el correo de {sender} de {from} a {to}, ahora y en adelante"
 msgid "Move before {rule} in this account's complete rule order"
 msgstr ""
 
+#. command label
+#: crates/engine/src/cmd/folder.rs
+msgid "Move in Favorites"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/filing.rs
 #, fuzzy

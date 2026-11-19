@@ -28,6 +28,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("folder.favorite", "Add to Favorites", "Folder › Favorites", favorite).params(
             r#"{"value"?: bool (default: toggle), "id"?: number} — refused for a folder of an account whose Favorites come from its server (Outlook's list, which is changed in Outlook; `view.favorites` says which accounts those are). A shared mailbox's folders are favourites kept in MailCraft, whatever the account it is opened through has: nothing is written to any server for them"#,
         ),
+        CommandSpec::new("folder.favoriteMove", "Move in Favorites", "Folder › Favorites", favorite_move).params(
+            r#"{"id": number, "before"?: number, "after"?: number (one of them; neither: to the end)} — puts a folder among the Favorites marked here before or after another of them, as dragging it under Favorites does. Only for Favorites kept in MailCraft (not Outlook's own list). Answers {"favorites": [id]} in their new order"#,
+        ),
         CommandSpec::new("folder.recent", "Recent Folders", "Folder › Favorites", recent_command).pure().params(
             r#"{"remove"?: number (takes that folder off the list), "clear"?: true (empties it)} — the owner's folders opened or filed into last, newest first, kept on this computer only: the folder pane lists them under Recent and Move to Folder offers them first. Answers {"folders": [{"id", "name", "account", "path"}]}"#,
         ),
@@ -119,9 +122,17 @@ pub fn favorites(s: &Session) -> Vec<Id> {
             }
         }
     }
-    out.extend(s.mailbox.folders.iter().filter(|f| f.favorite && !served.contains(&f.account)).map(|f| f.id));
+    out.extend(marked(s, |f| !served.contains(&f.account)));
     out.truncate(MAX_FAVORITES);
     out
+}
+
+/// The folders marked as favourites here that `keep` keeps, in the order they were added or
+/// dragged into ([`Folder::favorite_rank`]); those marked before that was kept lead, as they were.
+fn marked(s: &Session, keep: impl Fn(&Folder) -> bool) -> Vec<Id> {
+    let mut list: Vec<&Folder> = s.mailbox.folders.iter().filter(|f| f.favorite && keep(f)).collect();
+    list.sort_by_key(|f| f.favorite_rank);
+    list.into_iter().map(|f| f.id).collect()
 }
 
 fn favorites_json(s: &Session) -> Value {
@@ -506,9 +517,41 @@ fn favorite(s: &mut Session, v: &Value) -> CmdResult {
     if s.mailbox.folder(id).is_some_and(|f| favorites_from_server(s, f.account)) {
         return Err(fail(FROM_OUTLOOK));
     }
+    // A new one goes last (v0.12.17).
+    let last = s.mailbox.folders.iter().filter(|f| f.favorite).map(|f| f.favorite_rank).max().unwrap_or(0);
     let f = s.mailbox.folder_mut(id)?;
-    f.favorite = p::bool(v, "value").unwrap_or(!f.favorite);
+    let on = p::bool(v, "value").unwrap_or(!f.favorite);
+    if on != f.favorite {
+        f.favorite_rank = if on { last.saturating_add(1) } else { 0 };
+    }
+    f.favorite = on;
     Ok(json!({"id": id, "favorite": f.favorite}))
+}
+
+/// Puts a favourite kept here before another (`before`), or last: the order the pane lists them in.
+fn favorite_move(s: &mut Session, v: &Value) -> CmdResult {
+    p::only(v, &["id", "before", "after"])?;
+    let id = p::req_id(v, "id")?;
+    let (before, after) = (p::id_strict(v, "before")?, p::id_strict(v, "after")?);
+    if before.is_some() && after.is_some() {
+        return Err(bad("name `before` or `after`, not both"));
+    }
+    let mut order = marked(s, |f| !favorites_from_server(s, f.account));
+    if [Some(id), before, after].into_iter().flatten().any(|f| !order.contains(&f)) {
+        return Err(bad("`id`, `before` and `after` are folders among the Favorites kept in MailCraft"));
+    }
+    order.retain(|f| *f != id);
+    let at = match (before, after) {
+        (Some(b), _) => order.iter().position(|f| *f == b),
+        (_, Some(a)) => order.iter().position(|f| *f == a).map(|at| at + 1),
+        _ => None,
+    }
+    .unwrap_or(order.len());
+    order.insert(at, id);
+    for (n, f) in order.iter().enumerate() {
+        s.mailbox.folder_mut(*f)?.favorite_rank = u32::try_from(n + 1).unwrap_or(u32::MAX);
+    }
+    Ok(json!({"favorites": order}))
 }
 
 /// Most characters a folder's tag has.

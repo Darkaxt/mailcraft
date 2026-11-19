@@ -298,6 +298,8 @@ const SAFE: &[&str] = &[
     "folder.rename",
     "folder.move",
     "folder.favorite",
+    // Where a favourite comes under Favorites: nothing leaves this computer.
+    "folder.favoriteMove",
     // The recent folders: a list on this computer only, nothing in the mailbox changes.
     "folder.recent",
     // A tag kept on this computer only, and taken off as easily.

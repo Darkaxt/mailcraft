@@ -108,6 +108,10 @@ pub struct Folder {
     pub name: String,
     pub kind: FolderKind,
     pub favorite: bool,
+    /// Where it comes among the Favorites marked here, lowest first: the order they were added
+    /// in, or dragged into (v0.12.17). 0 for one marked before then, which leads as it was.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub favorite_rank: u32,
     /// The owner's tag of it (an emoji, or a short word): shown before its name in the folder
     /// pane, and on the rows of its mail in the unified mailbox, whose list can be narrowed to it
     /// (`folder.tag`, `view.tag`). The folders under it without one of their own wear it too

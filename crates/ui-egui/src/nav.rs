@@ -373,6 +373,13 @@ fn account_menu(app: &mut MailApp, ui: &mut Ui, id: Id, movable: bool) {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct AccountDrag(pub Id);
 
+/// A favourite kept here being dragged up or down Favorites (v0.12.17).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct FavoriteDrag(pub Id);
+
+/// What a favourite's star takes after its name in its account's tree.
+const STAR_ROOM: f32 = 18.0;
+
 /// The owner's own accounts, top to bottom: what a drag puts in another order. A shared mailbox
 /// goes with the account it is opened through.
 fn owners(mb: &Mailbox) -> Vec<Id> {
@@ -503,10 +510,17 @@ fn picked_in_list(ui: &Ui) -> bool {
 /// tree (`unified`), whose rows open the filing view and file what is dropped on them.
 fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_children: bool, key: &str, count: Count, selected: bool) {
     let unified = key == "unified";
+    // An account whose Favorites are Outlook's has them changed in Outlook: nothing to do here.
+    let from_outlook = mailcraft_engine::cmd::folder::favorites_from_server(&app.session, f.account);
+    // A favourite kept here is dragged up or down Favorites (v0.12.17); its children are not.
+    let draggable = key == "fav" && depth == 0 && !from_outlook;
+    // In its account's tree a favourite wears a small star after its name (v0.12.17).
+    let starred = key == "tree"
+        && if from_outlook { app.session.mailbox.server_favorites(f.account).is_some_and(|list| list.contains(&f.id)) } else { f.favorite };
     // Under Favorites a shared mailbox's folder says whose it is (#70), and so does one whose name
     // another account's folder has too (two Inboxes); in its tree, its name. In the unified
     // mailbox the filing account's Inbox lists what is not filed yet, beside the root's Inbox.
-    let name = if key == "fav" || key == "recent" {
+    let name = if (key == "fav" && depth == 0) || key == "recent" {
         result_folder_label(&app.session.mailbox, f)
     } else if unified && f.kind == FolderKind::Inbox {
         tl!("Folders").to_string()
@@ -515,9 +529,20 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     };
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
-    let resp = ui.interact(r, ui.scope_id().with((key, f.id)), Sense::click());
+    let resp = ui.interact(r, ui.scope_id().with((key, f.id)), if draggable { Sense::click_and_drag() } else { Sense::click() });
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &name));
-    app.hit.add(if unified { "unifiedFolder" } else { "folder" }, f.id, r);
+    // (A favourite's folder under Favorites is told from its row in its account's tree.)
+    app.hit.add(
+        if unified {
+            "unifiedFolder"
+        } else if key == "fav" && depth > 0 {
+            "favoriteFolder"
+        } else {
+            "folder"
+        },
+        f.id,
+        r,
+    );
     let row = highlight(r).shrink2(vec2(0.0, ROW_HIGHLIGHT_INSET));
     if selected {
         ui.painter().rect_filled(row, 6.0, t.accent_soft);
@@ -534,11 +559,16 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     if has_children {
         let tr = Rect::from_min_max(pos2(x + HIGHLIGHT_LEFT, r.min.y), pos2(x + NAME_LEFT, r.max.y));
         let tresp = ui.interact(tr, ui.scope_id().with((key, "twisty", f.id)), Sense::click());
-        let folded = if unified { &app.ui.collapsed_unified } else { &app.ui.collapsed_folders };
-        let open = !folded.contains(&f.id);
+        // A favourite's own folders under Favorites are folded until opened (v0.12.17).
+        let top_favorite = key == "fav" && depth == 0;
+        let open = if top_favorite {
+            app.ui.open_favorites.contains(&f.id)
+        } else {
+            !(if unified { &app.ui.collapsed_unified } else { &app.ui.collapsed_folders }).contains(&f.id)
+        };
         chevron(ui.painter(), pos2(x + CHEVRON_X, r.center().y), ROW_CHEVRON, open, if tresp.hovered() { t.accent_text } else { t.text });
         if tresp.clicked() {
-            let _ = app.execute("ui.toggleFolder", json!({"id": f.id, "unified": unified}));
+            let _ = app.execute("ui.toggleFolder", json!({"id": f.id, "unified": unified, "favorites": top_favorite}));
         }
     }
     let y = r.center().y;
@@ -573,7 +603,20 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         app.hit.add("folderTag", f.id, Rect::from_min_max(pos2(name_x, r.min.y), pos2(name_x + w, r.max.y)));
         name_x += w + 5.0;
     }
-    paint_clipped(ui.painter(), pos2(name_x, y), (name_end - name_x).max(0.0), &name, font, if selected { t.accent_soft_text } else { t.text });
+    let room = if starred { STAR_ROOM } else { 0.0 };
+    let w = paint_clipped(
+        ui.painter(),
+        pos2(name_x, y),
+        (name_end - name_x - room).max(0.0),
+        &name,
+        font,
+        if selected { t.accent_soft_text } else { t.text },
+    );
+    if starred {
+        let star = Rect::from_center_size(pos2(name_x + w + STAR_ROOM / 2.0, y), vec2(12.0, 12.0));
+        icons::paint(ui.painter(), star, "starOn", t.icon, t.accent);
+        app.hit.add("folderStar", f.id, star);
+    }
     if resp.clicked() && !rules_clicked {
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("folder_picked_in_list"), key == "tree"));
         if unified {
@@ -601,12 +644,26 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
             }
         }
     }
+    // A favourite dragged onto another goes before it, or after it from the lower half.
+    if draggable {
+        resp.dnd_set_drag_payload(FavoriteDrag(f.id));
+        let lower = ui.ctx().pointer_hover_pos().is_some_and(|p| p.y > r.center().y);
+        if resp.dnd_hover_payload::<FavoriteDrag>().is_some_and(|drag| drag.0 != f.id) {
+            let at = if lower { r.max.y } else { r.min.y };
+            ui.painter().line_segment([pos2(row.min.x, at), pos2(row.max.x, at)], Stroke::new(2.0, t.accent));
+        }
+        if let Some(drag) = resp.dnd_release_payload::<FavoriteDrag>()
+            && drag.0 != f.id
+        {
+            let mut params = json!({"id": drag.0});
+            params[if lower { "after" } else { "before" }] = json!(f.id);
+            let _ = app.run("folder.favoriteMove", params);
+        }
+    }
     // (One of the server's own, Conversation History say, is left as it is, and takes no new
     // folder either: #756.)
     let (id, custom, favorite, kind) = (f.id, f.kind == FolderKind::Custom && !f.server_owned(), f.favorite, f.kind);
     let takes_folders = !(f.kind == FolderKind::Custom && f.server_owned());
-    // An account whose Favorites are Outlook's has them changed in Outlook: nothing to do here.
-    let from_outlook = mailcraft_engine::cmd::folder::favorites_from_server(&app.session, f.account);
     let tag = f.tag.clone();
     let recent_row = key == "recent";
     resp.context_menu(|ui| {
@@ -1029,6 +1086,28 @@ fn without_special(rows: Vec<(Folder, usize, bool)>) -> Vec<(Folder, usize, bool
         .collect()
 }
 
+/// The unified tree with everything under Folders (the filing account's Inbox): Outlook keeps
+/// folders such as Legacy beside its Inbox, but here they are the owner's folders like the rest
+/// (v0.12.17). Folding Folders folds them too.
+fn under_folders(rows: Vec<(Folder, usize, bool)>, folded: &[Id]) -> Vec<(Folder, usize, bool)> {
+    let Some(at) = rows.iter().position(|(f, depth, _)| *depth == 0 && f.kind == FolderKind::Inbox) else {
+        return rows;
+    };
+    let mut rows = rows;
+    let mut inbox: Vec<_> = rows.drain(at..).collect();
+    let end = inbox.iter().skip(1).position(|(_, depth, _)| *depth == 0).map_or(inbox.len(), |i| i + 1);
+    let after: Vec<_> = inbox.drain(end..).collect();
+    let others: Vec<_> = rows.into_iter().chain(after).collect();
+    if others.is_empty() {
+        return inbox;
+    }
+    inbox[0].2 = true;
+    if !folded.contains(&inbox[0].0.id) {
+        inbox.extend(others.into_iter().map(|(f, depth, kids)| (f, depth + 1, kids)));
+    }
+    inbox
+}
+
 /// A label Gmail keeps in its own `[Gmail]` (`[Google Mail]` in some countries) folder, such as
 /// Account Events: Gmail's, not the owner's.
 fn gmail_system(remote: &str) -> bool {
@@ -1246,7 +1325,8 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                         });
                     let mut tree = trees(&app.session.mailbox, |a| a == account);
                     // (Folded apart from the account's own tree.)
-                    let rows = without_special(visible_in(tree.remove(&account).unwrap_or_default(), &app.ui.collapsed_unified.clone()));
+                    let folded = app.ui.collapsed_unified.clone();
+                    let rows = under_folders(without_special(visible_in(tree.remove(&account).unwrap_or_default(), &folded)), &folded);
                     let in_view = app.session.view.filing.is_some() && app.session.view.search_folder.is_none();
                     for (f, depth, has_children) in &rows {
                         // (A row out of sight takes its place and is not drawn, as in an account's tree.)
@@ -1330,13 +1410,30 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                 if let Some((account, note)) = &note {
                     favorites_note(app, ui, *account, note);
                 }
-                for f in &favorites {
+                // Each with the folders under it once opened there, those folded as in its
+                // account's tree (v0.12.17).
+                let rows: Vec<(Folder, usize, bool)> = {
+                    let folded = app.ui.collapsed_folders.clone();
+                    let opened = app.ui.open_favorites.clone();
+                    let by_account = self::trees(&app.session.mailbox, |a| favorites.iter().any(|f| f.account == a));
+                    let mut rows = Vec::new();
+                    for f in &favorites {
+                        let tree = by_account.get(&f.account);
+                        let under = tree.is_some_and(|tree| tree.get(&Some(f.id)).is_some_and(|list| !list.is_empty()));
+                        rows.push((f.clone(), 0, under));
+                        if let Some(tree) = tree.filter(|_| under && opened.contains(&f.id)) {
+                            list_under(tree, &folded, Some(f.id), 1, &mut rows);
+                        }
+                    }
+                    rows
+                };
+                for (f, depth, under) in &rows {
                     folder_row(
                         app,
                         ui,
                         f,
-                        0,
-                        false,
+                        *depth,
+                        *under,
                         "fav",
                         count(f),
                         app.session.view.search_folder.is_none()

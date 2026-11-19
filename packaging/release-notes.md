@@ -1,3 +1,10 @@
+**MailCraft 0.12.17 in short** — Favorites your way, every folder under Folders
+- Favorites stay in the order you add them. Drag one up or down to change the order.
+- A favourite folder can show the folders inside it under Favorites: click its arrow.
+- A small star marks your favourite folders in each account's list.
+- In the unified mailbox, folders that Outlook.com keeps beside the Inbox (such as Legacy) now sit under Folders with the rest. Folding Folders folds them too.
+- Everything from 0.12.16 stays.
+
 **MailCraft 0.12.16 in short** — your folders are back in the unified mailbox
 - The unified mailbox shows your Outlook.com Inbox and every folder under it again. Since 0.12.13 they were hidden there (they were still in the account's own tab).
 - Everything from 0.12.15 stays.

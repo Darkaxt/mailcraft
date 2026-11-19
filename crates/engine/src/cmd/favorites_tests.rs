@@ -124,9 +124,10 @@ fn the_servers_list_is_what_the_pane_shows_and_the_marks_made_here_are_kept() {
         shown["accounts"],
         json!([{"account": t.s.mailbox.accounts[0].id, "from": "mailbox", "listed": 1}, {"account": t.account, "from": "mailbox", "listed": 2}])
     );
-    assert_eq!(favorites(&t.s), own);
+    // (The local Inbox, taken off and added again above, now comes last: v0.12.17.)
+    assert_eq!(favorites(&t.s), [t.inbox, t.apollo, t.local_inbox]);
     run(&mut t.s, "folder.favorite", json!({"id": t.team, "value": true}));
-    assert_eq!(favorites(&t.s), [t.local_inbox, t.inbox, t.apollo, t.team]);
+    assert_eq!(favorites(&t.s), [t.inbox, t.apollo, t.local_inbox, t.team]);
     // And Outlook's again: the server's list was kept meanwhile, and so were the owner's marks.
     let shown = run(&mut t.s, "view.favorites", json!({"own": false}));
     let ids: Vec<u64> = shown["favorites"].as_array().unwrap().iter().map(|f| f["id"].as_u64().unwrap()).collect();
@@ -402,4 +403,32 @@ fn whatever_a_mailbox_file_said_of_how_favorites_were_read_it_opens() {
         assert_eq!(mailbox.take_retired_favorites_choices(), told, "{said}");
         assert_eq!(mailbox, t.s.mailbox, "{said}");
     }
+}
+
+/// Favourites kept here are listed in the order they were added, those from before that was kept
+/// first; dragging one (`folder.favoriteMove`) puts it before or after another (v0.12.17).
+#[test]
+fn favorites_keep_the_order_they_were_added_and_dragged_in() {
+    let Setup { mut s, inbox, apollo, receipts, team, local_inbox, .. } = setup();
+    run(&mut s, "folder.favorite", json!({"id": team, "value": true}));
+    run(&mut s, "folder.favorite", json!({"id": receipts, "value": true}));
+    // Receipts was made before Team Lumen, but added after it.
+    assert_eq!(favorites(&s), [local_inbox, inbox, apollo, team, receipts]);
+    run(&mut s, "folder.favoriteMove", json!({"id": receipts, "before": local_inbox}));
+    assert_eq!(favorites(&s), [receipts, local_inbox, inbox, apollo, team]);
+    run(&mut s, "folder.favoriteMove", json!({"id": receipts, "after": apollo}));
+    assert_eq!(favorites(&s), [local_inbox, inbox, apollo, receipts, team]);
+    run(&mut s, "folder.favoriteMove", json!({"id": local_inbox}));
+    assert_eq!(favorites(&s), [inbox, apollo, receipts, team, local_inbox]);
+    // Taken off and added again, it goes last.
+    run(&mut s, "folder.favorite", json!({"id": apollo, "value": false}));
+    run(&mut s, "folder.favorite", json!({"id": apollo, "value": true}));
+    assert_eq!(favorites(&s), [inbox, receipts, team, local_inbox, apollo]);
+    // Only favourites are moved, and only one place is named.
+    assert!(s.run("folder.favoriteMove", &json!({"id": inbox, "before": team, "after": apollo})).is_err());
+    let sent = s.mailbox.folder_of_kind(s.mailbox.folder(inbox).unwrap().account, FolderKind::Sent).unwrap();
+    assert!(s.run("folder.favoriteMove", &json!({"id": sent})).is_err());
+    // And the order is kept in the mailbox file.
+    let saved: Mailbox = serde_json::from_value(serde_json::to_value(&s.mailbox).unwrap()).unwrap();
+    assert_eq!(saved.folder(apollo).unwrap().favorite_rank, s.mailbox.folder(apollo).unwrap().favorite_rank);
 }

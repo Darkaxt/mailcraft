@@ -999,6 +999,9 @@ pub struct UiState {
     /// Folders shown collapsed in the Unified mailbox's filing tree: folded there apart from the
     /// same folder in its account's own tree.
     pub collapsed_unified: Vec<Id>,
+    /// Favourites whose folders are shown under Favorites too (v0.12.17): folded until opened,
+    /// so the Inboxes, favourites by default, don't repeat their trees there.
+    pub open_favorites: Vec<Id>,
     /// Accounts whose observed SimpleLogin alias filters are expanded.
     pub expanded_alias_accounts: Vec<Id>,
     /// The Microsoft account whose real folder tree the "Unified mailbox" root shows, as the owner
@@ -1131,6 +1134,7 @@ impl Default for UiState {
             sync_panel_height: 0.0,
             collapsed_folders: Vec::new(),
             collapsed_unified: Vec::new(),
+            open_favorites: Vec::new(),
             expanded_alias_accounts: Vec::new(),
             unified_filing_account: None,
             folder_tabs: false,
@@ -1527,7 +1531,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.open", "Open Mailbox", "File › Open & Export", "{}"),
     ("ui.import", "Import", "File › Open & Export", "{}"),
     ("ui.attach", "Attach File", "Message › Include", "{}"),
-    ("ui.toggleFolder", "Expand or Collapse Folder", "Folder", r#"{"id": number, "unified"?: bool (in the Unified mailbox's tree)}"#),
+    (
+        "ui.toggleFolder",
+        "Expand or Collapse Folder",
+        "Folder",
+        r#"{"id": number, "unified"?: bool (in the Unified mailbox's tree), "favorites"?: bool (a favourite's folders under Favorites, folded until opened)}"#,
+    ),
     (
         "ui.source",
         "Message Source",
@@ -2366,6 +2375,7 @@ impl MailApp {
         (self.ui.sync_panel_width, self.ui.sync_panel_height) = sync_panel::sane_size(self.ui.sync_panel_width, self.ui.sync_panel_height);
         self.ui.collapsed_folders.truncate(10_000);
         self.ui.collapsed_unified.truncate(10_000);
+        self.ui.open_favorites.truncate(10_000);
         self.ui.expanded_alias_accounts.truncate(1000);
         nav::sane_tab_names(&mut self.ui.tab_names);
         self.ui.recent.truncate(20);
@@ -3309,6 +3319,16 @@ impl MailApp {
             "ui.toggleFolder" => {
                 let Some(id) = p.get("id").and_then(Value::as_u64) else { return Some(Err("missing `id`".into())) };
                 let unified = p.get("unified").and_then(Value::as_bool) == Some(true);
+                if p.get("favorites").and_then(Value::as_bool) == Some(true) {
+                    let open = &mut self.ui.open_favorites;
+                    match open.iter().position(|x| *x == id) {
+                        Some(i) => {
+                            open.remove(i);
+                        }
+                        None => open.push(id),
+                    }
+                    return Some(Ok(json!({"collapsed": !open.contains(&id)})));
+                }
                 let folded = if unified { &mut self.ui.collapsed_unified } else { &mut self.ui.collapsed_folders };
                 match folded.iter().position(|x| *x == id) {
                     Some(i) => {

@@ -71,6 +71,26 @@ fn the_unified_tree_leaves_out_special_folders_and_what_is_under_them() {
     assert_eq!(names, ["Inbox", "Projects", "Archivo", "Legacy"]);
 }
 
+/// The folders Outlook keeps beside its Inbox (Legacy) are under Folders in the unified tree, and
+/// folding Folders folds them too (v0.12.17).
+#[test]
+fn the_unified_tree_puts_every_folder_under_folders() {
+    let folder = |id: Id, name: &str, kind: FolderKind| Folder { id, name: name.into(), kind, ..Default::default() };
+    let rows = vec![
+        (folder(1, "Inbox", FolderKind::Inbox), 0, true),
+        (folder(2, "Projects", FolderKind::Custom), 1, false),
+        (folder(3, "Legacy", FolderKind::Custom), 0, true),
+        (folder(4, "Old", FolderKind::Custom), 1, false),
+    ];
+    let open: Vec<(String, usize, bool)> = under_folders(rows.clone(), &[]).into_iter().map(|(f, d, k)| (f.name, d, k)).collect();
+    assert_eq!(open, [("Inbox".into(), 0, true), ("Projects".into(), 1, false), ("Legacy".into(), 1, true), ("Old".into(), 2, false)]);
+    let shut: Vec<String> = under_folders(rows, &[1]).into_iter().map(|(f, _, _)| f.name).collect();
+    assert_eq!(shut, ["Inbox", "Projects"]);
+    // Without anything beside it, Folders keeps what it had.
+    let alone = under_folders(vec![(folder(1, "Inbox", FolderKind::Inbox), 0, false)], &[]);
+    assert!(!alone[0].2);
+}
+
 /// The account of the mail kept on this computer, still called what the program named it, is the
 /// Local archive; a name the owner gave stays (v0.12.12).
 #[test]

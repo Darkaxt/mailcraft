@@ -1052,6 +1052,9 @@ fn folders(out: &mut Mailbox, touched: &Touched, now: &Mailbox, g: &BTreeSet<Id>
                 if t.favorite != a.favorite {
                     f.favorite = t.favorite;
                 }
+                if t.favorite_rank != a.favorite_rank {
+                    f.favorite_rank = t.favorite_rank;
+                }
                 kept.push(f);
             }
             // Taken away by the change but put back since (the server refused).
