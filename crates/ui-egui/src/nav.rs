@@ -515,19 +515,14 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     // A favourite kept here is dragged up or down Favorites (v0.12.17); its children are not.
     let draggable = key == "fav" && depth == 0 && !from_outlook;
     // In its account's tree and in the unified mailbox's a favourite wears a small star after its
-    // name (v0.12.17; the unified tree's since v0.12.21).
+    // name (v0.12.17; the unified tree's since v0.12.21), which takes it out of Favorites when
+    // clicked (v0.12.24).
     let starred = (key == "tree" || unified)
         && if from_outlook { app.session.mailbox.server_favorites(f.account).is_some_and(|list| list.contains(&f.id)) } else { f.favorite };
     // Under Favorites a shared mailbox's folder says whose it is (#70), and so does one whose name
-    // another account's folder has too (two Inboxes); in its tree, its name. In the unified
-    // mailbox the filing account's Inbox lists what is not filed yet, beside the root's Inbox.
-    let name = if (key == "fav" && depth == 0) || key == "recent" {
-        result_folder_label(&app.session.mailbox, f)
-    } else if unified && f.kind == FolderKind::Inbox {
-        tl!("Folders").to_string()
-    } else {
-        folder_name(f).to_string()
-    };
+    // another account's folder has too (two Inboxes); in its tree, its name.
+    let name =
+        if (key == "fav" && depth == 0) || key == "recent" { result_folder_label(&app.session.mailbox, f) } else { folder_name(f).to_string() };
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
     let resp = ui.interact(r, ui.scope_id().with((key, f.id)), if draggable { Sense::click_and_drag() } else { Sense::click() });
@@ -615,8 +610,14 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     );
     if starred {
         let star = Rect::from_center_size(pos2(name_x + w + STAR_ROOM / 2.0, y), vec2(12.0, 12.0));
-        icons::paint(ui.painter(), star, "starOn", t.icon, t.accent);
+        let hit = ui.interact(star.expand(4.0), ui.scope_id().with((key, "star", f.id)), Sense::click());
+        let hint = if from_outlook { tl!("Favorites Are Set in Outlook") } else { tl!("Remove from Favorites") };
+        hit.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, !from_outlook, hint));
+        icons::paint(ui.painter(), star, "starOn", if hit.hovered() && !from_outlook { t.accent_text } else { t.icon }, t.accent);
         app.hit.add("folderStar", f.id, star);
+        if hit.on_hover_text(hint).clicked() && !from_outlook {
+            let _ = app.run("folder.favorite", json!({"id": f.id, "value": false}));
+        }
     }
     if resp.clicked() && !rules_clicked {
         ui.data_mut(|d| d.insert_temp(egui::Id::unique("folder_picked_in_list"), key == "tree"));
@@ -941,6 +942,69 @@ fn unified_heading(app: &mut MailApp, ui: &mut Ui, accounts: &[(Id, String)], cu
     }
     resp.context_menu(|ui| crate::unified_inbox::root_menu(app, ui, accounts, current));
     open
+}
+
+/// The unified mailbox's "Folders": the head of the folders for every account, which lists the mail
+/// of every account that is not filed in them yet. They are kept in the filing account's Inbox,
+/// but this row is not that Inbox (v0.12.24): no star, tag or rules of its, nor its menu or
+/// mail dropped on it; its menu makes a folder in it and is the unified mailbox's own.
+#[allow(clippy::too_many_arguments)]
+fn unified_folders_row(
+    app: &mut MailApp,
+    ui: &mut Ui,
+    inbox: &Folder,
+    has_children: bool,
+    count: Count,
+    selected: bool,
+    accounts: &[(Id, String)],
+    current: Option<Id>,
+) {
+    let t = Tokens::get(ui.ctx());
+    let name = tl!("Folders");
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), ROW_H), Sense::hover());
+    let resp = ui.interact(r, ui.scope_id().with(("unified_folders", inbox.id)), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, name));
+    app.hit.add("unifiedFolder", inbox.id, r);
+    let row = highlight(r).shrink2(vec2(0.0, ROW_HIGHLIGHT_INSET));
+    if selected {
+        ui.painter().rect_filled(row, 6.0, t.accent_soft);
+        ui.painter().rect_filled(Rect::from_center_size(pos2(row.min.x + 1.5, row.center().y), vec2(3.0, 14.0)), 1.5, t.selection_edge);
+    } else if resp.hovered() {
+        ui.painter().rect_filled(row, 6.0, t.hover_nav);
+    }
+    if resp.has_focus() {
+        ui.painter().rect_stroke(row, 6.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    if has_children {
+        let tr = Rect::from_min_max(pos2(r.min.x + HIGHLIGHT_LEFT, r.min.y), pos2(r.min.x + NAME_LEFT, r.max.y));
+        let tresp = ui.interact(tr, ui.scope_id().with(("unified_folders_twisty", inbox.id)), Sense::click());
+        let open = !app.ui.collapsed_unified.contains(&inbox.id);
+        chevron(ui.painter(), pos2(r.min.x + CHEVRON_X, r.center().y), ROW_CHEVRON, open, if tresp.hovered() { t.accent_text } else { t.text });
+        if tresp.clicked() {
+            let _ = app.execute("ui.toggleFolder", json!({"id": inbox.id, "unified": true}));
+        }
+    }
+    let name_end = count_pill(ui.painter(), &t, r, r.max.x, count, selected);
+    paint_clipped(
+        ui.painter(),
+        pos2(r.min.x + NAME_LEFT, r.center().y),
+        (name_end - r.min.x - NAME_LEFT).max(0.0),
+        name,
+        if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) },
+        if selected { t.accent_soft_text } else { t.text },
+    );
+    if resp.clicked() {
+        let _ = app.run("view.filing", json!({"account": inbox.account, "folder": inbox.id}));
+    }
+    let id = inbox.id;
+    resp.context_menu(|ui| {
+        if ui.add(egui::Button::new(tl!("New Folder…")).min_size(vec2(180.0, 0.0))).clicked() {
+            let _ = app.run("ui.dialog", json!({"name": "folder", "mode": "new", "parent": id}));
+            ui.close();
+        }
+        ui.separator();
+        crate::unified_inbox::root_menu(app, ui, accounts, current);
+    });
 }
 
 /// The unified mailbox's Inbox (`allInboxes`: every account's Inbox together, `view.allInboxes`)
@@ -1467,7 +1531,12 @@ pub fn folder_pane(app: &mut MailApp, ui: &mut Ui) {
                             let held = counts.folder(f.id);
                             Count::of(f.kind, held.total, held.unread)
                         };
-                        folder_row(app, ui, f, *depth, *has_children, "unified", count, in_view && f.id == app.session.view.folder);
+                        let selected = in_view && f.id == app.session.view.folder;
+                        if *depth == 0 && f.kind == FolderKind::Inbox {
+                            unified_folders_row(app, ui, f, *has_children, count, selected, &filing_accounts, filing_account);
+                        } else {
+                            folder_row(app, ui, f, *depth, *has_children, "unified", count, selected);
+                        }
                     }
                 }
                 crate::search_folders::rows(app, ui);

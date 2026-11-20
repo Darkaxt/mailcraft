@@ -177,8 +177,9 @@ fn the_waiting_page_says_what_to_do_about_an_approval_without_waiting() {
     assert!(says(&h, "Microsoft's sign-in page is open in your browser") && says(&h, "Sign in there as noor@example.org"));
     // Some systems can't say that no browser started, so the page says what to do if none did.
     assert!(says(&h, "If no browser opened, check that this computer has a default browser"));
-    // Nothing is said of a step about Outlook's Favorites: there is none.
-    assert!(!says(&h, "First you sign in at Microsoft") && !says(&h, "Favorites"));
+    // Nothing is said of a step about Outlook's Favorites: there is none. (The folder list's
+    // favourite stars are named "Remove from Favorites", v0.12.24.)
+    assert!(!says(&h, "First you sign in at Microsoft") && !says(&h, "how Outlook's Favorites are shown"));
     // And what to do if that page says no: why, in plain words, and the things to do, in view.
     for said in [
         "If that page says you need admin approval",

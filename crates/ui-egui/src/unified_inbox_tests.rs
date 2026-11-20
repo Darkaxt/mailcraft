@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use super::*;
+use egui_kittest::kittest::Queryable as _;
 use mailcraft_engine::Scope;
 
 #[test]
@@ -126,9 +127,66 @@ fn a_favourite_wears_its_star_in_the_unified_tree() {
     let star = h.state().hit.rect("folderStar", company).expect("its star");
     assert!(row.contains(star.center()), "{star:?} in {row:?}");
     assert!(h.state().hit.rect("folderStar", other).is_none(), "not a favourite: no star");
+    // The filing Inbox, shown as "Folders", wears none even when it is a favourite (v0.12.24).
+    h.state_mut().session.run("folder.favorite", &json!({"id": inbox, "value": true})).unwrap();
+    h.run_steps(3);
+    assert!(h.state().hit.rect("unifiedFolder", inbox).is_some() && h.state().hit.rect("folderStar", inbox).is_none());
     h.state_mut().execute("ui.folderTab", json!({"tab": "favorites"})).unwrap();
     h.run_steps(3);
     assert!(h.state().hit.rect("folder", company).is_some() && h.state().hit.rect("folderStar", company).is_none());
+    // A click on the star takes the folder out of Favorites (v0.12.24).
+    h.state_mut().execute("ui.folderTab", json!({"tab": "unified"})).unwrap();
+    h.run_steps(3);
+    let star = h.state().hit.rect("folderStar", company).unwrap().center();
+    h.event(egui::Event::PointerMoved(star));
+    h.step();
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton { pos: star, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+        h.step();
+    }
+    h.run_steps(3);
+    assert!(!h.state().session.mailbox.folder(company).unwrap().favorite, "the star's click unstars it");
+    assert!(h.state().hit.rect("folderStar", company).is_none());
+}
+
+/// The unified tree's Folders is its own row, not the filing account's Inbox (v0.12.24): no star,
+/// and its right-click menu makes a folder and is the unified mailbox's, not that Inbox's.
+#[test]
+fn the_unified_folders_row_is_not_the_filing_accounts_inbox() {
+    let mut s = mailcraft_engine::Session::empty();
+    let account = s.run("account.add", &json!({"email":"owner@example.org"})).unwrap()["id"].as_u64().unwrap();
+    s.mailbox.account_mut(account).unwrap().kind = AccountKind::Microsoft;
+    let inbox = s.mailbox.folder_of_kind(account, mailcraft_model::FolderKind::Inbox).unwrap();
+    s.mailbox.add_folder(account, Some(inbox), "Company").unwrap();
+    s.run("folder.favorite", &json!({"id": inbox, "value": true})).unwrap();
+    let mut h = crate::people_view::testing::window_on(s.mailbox, "view.mail");
+    h.state_mut().ui.folder_tabs = true;
+    h.state_mut().execute("ui.folderTab", json!({"tab": "unified"})).unwrap();
+    h.run_steps(3);
+    let at = h.state().hit.rect("unifiedFolder", inbox).expect("the Folders row").center();
+    assert!(h.state().hit.rect("folderStar", inbox).is_none(), "its Inbox is a favourite, Folders wears no star");
+    h.event(egui::Event::PointerMoved(at));
+    h.step();
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Secondary, pressed, modifiers: egui::Modifiers::NONE });
+        h.step();
+    }
+    h.run_steps(2);
+    assert!(h.query_by_label("New Folder…").is_some() && h.query_by_label("New search folder…").is_some());
+    for theirs in ["Rename Folder…", "Delete Folder", "Tag", "Remove from Favorites", "Properties…"] {
+        assert!(h.query_by_label(theirs).is_none(), "{theirs} is the Inbox's, not Folders'");
+    }
+    h.key_press(egui::Key::Escape);
+    h.run_steps(2);
+    // A click lists what every account has not filed yet, as before.
+    h.event(egui::Event::PointerMoved(at));
+    h.step();
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+        h.step();
+    }
+    h.run_steps(2);
+    assert_eq!(h.state().session.view.filing, Some(account));
 }
 
 #[test]

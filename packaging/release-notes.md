@@ -1,3 +1,9 @@
+**MailCraft 0.12.24** — one Folders for all accounts, clearer stars
+- The star after a folder's name means it is in Favorites. Click the star to remove it.
+- "Folders" in the unified mailbox is now its own entry for all accounts, not your Outlook Inbox. It has no star, and right-click offers New Folder.
+- The Tag menu no longer suggests a star, which looked like the Favorites star.
+- Everything from 0.12.23 stays.
+
 **MailCraft 0.12.23 in short** — the emoji browser stays open
 - Clicking a group or the search box in a folder's Tag menu no longer closes it. Only picking an emoji does.
 - All emoji now scroll in one list with a heading per group. The group buttons jump to it, and the emoji under the pointer shows its name.

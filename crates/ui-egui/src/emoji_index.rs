@@ -10,9 +10,10 @@ use std::sync::Arc;
 use egui::{Context, FontFamily, Id};
 use emojis::{Emoji, Group};
 
-/// The emoji first shown, and what tags there were before the index.
+/// The emoji first shown: what tags there were before the index, the star aside (v0.12.24), which
+/// looked like the star a favourite has after its name.
 pub(crate) const SUGGESTED: &[&str] = &[
-    "⭐", "📌", "🔥", "✅", "💼", "🏦", "💳", "📄", "💰", "📦", "✈", "🚆", "🏠", "🎮", "🎬", "🎵", "📚", "🎓", "💻", "🔒", "☁", "📰", "📣", "🏥",
+    "🔖", "📌", "🔥", "✅", "💼", "🏦", "💳", "📄", "💰", "📦", "✈", "🚆", "🏠", "🎮", "🎬", "🎵", "📚", "🎓", "💻", "🔒", "☁", "📰", "📣", "🏥",
     "⚽", "🍔", "🎁", "👪", "⚖", "📁",
 ];
 
@@ -26,7 +27,7 @@ pub(crate) enum Tab {
 
 /// Each tab, the emoji on its button and its name.
 pub(crate) const TABS: &[(Tab, &str, &str)] = &[
-    (Tab::Suggested, "⭐", tl_later!("Suggested")),
+    (Tab::Suggested, "✨", tl_later!("Suggested")),
     (Tab::Group(Group::SmileysAndEmotion), "😀", tl_later!("Smileys & emotion")),
     (Tab::Group(Group::PeopleAndBody), "👋", tl_later!("People & body")),
     (Tab::Group(Group::AnimalsAndNature), "🐻", tl_later!("Animals & nature")),
