@@ -753,15 +753,16 @@ fn a_folder_opened_is_listed_under_recent() {
     assert!(texts.iter().any(|t| t == "Recent"), "{texts:?}");
 }
 
-/// A folder's Tag menu opens on the suggested emoji; a group's tab lists that group's, and a
-/// choice tags the folder (v0.12.22).
+/// A folder's Tag menu is a browser of every emoji: the suggested ones first, then each group;
+/// a group's tab scrolls to it and is marked while it is in view, and a choice tags the folder
+/// (v0.12.22, v0.12.23).
 #[test]
-fn the_tag_menu_lists_every_group_of_emoji() {
+fn the_tag_menu_browses_every_group_of_emoji() {
     let app = window().into_state();
     let account = app.session.mailbox.accounts.first().unwrap().id;
     let folder = app.session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
     let mut harness =
-        egui_kittest::Harness::builder().with_accessibility_check(false).allow_missing_glyphs().with_size(egui::vec2(400.0, 600.0)).build_ui_state(
+        egui_kittest::Harness::builder().with_accessibility_check(false).allow_missing_glyphs().with_size(egui::vec2(500.0, 700.0)).build_ui_state(
             move |ui, app: &mut MailApp| {
                 app.hit.clear();
                 let now = app.session.mailbox.folder(folder).map(|f| f.tag.clone()).unwrap_or_default();
@@ -772,13 +773,52 @@ fn the_tag_menu_lists_every_group_of_emoji() {
     harness.run_steps(2);
     let tabs = crate::emoji_index::TABS.len() as Id;
     assert!((0..tabs).all(|n| harness.state().hit.rect("tagTab", n).is_some()));
+    let suggested = crate::emoji_index::SUGGESTED.len() as Id;
     assert!(harness.state().hit.rect("tagChoice", 0).is_some(), "the suggested ones first");
+    assert!(harness.state().hit.rect("tagChoice", suggested).is_some(), "the smileys follow them in the same list");
     let smileys = harness.state().hit.rect("tagTab", 1).unwrap();
     click(&mut harness, smileys.center());
     harness.run_steps(2);
-    let first = harness.state().hit.rect("tagChoice", 0).unwrap();
+    assert!(harness.state().hit.rect("tagChoice", 0).is_none(), "scrolled past the suggested ones");
+    let in_view = |h: &egui_kittest::Harness<'static, MailApp>| h.ctx.data(|d| d.get_temp::<usize>(egui::Id::unique(("tag_in_view", folder))));
+    assert_eq!(in_view(&harness), Some(1));
+    // The last group can't reach the top; scrolled to the end, it is the one marked.
+    let flags = harness.state().hit.rect("tagTab", tabs - 1).unwrap();
+    click(&mut harness, flags.center());
+    harness.run_steps(2);
+    assert_eq!(in_view(&harness), Some(tabs as usize - 1));
+    let smileys = harness.state().hit.rect("tagTab", 1).unwrap();
+    click(&mut harness, smileys.center());
+    harness.run_steps(2);
+    let first = harness.state().hit.rect("tagChoice", suggested).unwrap();
     click(&mut harness, first.center());
     harness.run_steps(2);
     let tag = harness.state().session.mailbox.folder(folder).unwrap().tag.clone();
     assert_eq!(emojis::get(&tag).map(emojis::Emoji::group), Some(emojis::Group::SmileysAndEmotion), "{tag}");
+}
+
+/// In a folder's right-click menu, a click on a tab of the Tag menu keeps it open; a choice of
+/// emoji tags the folder and closes it (v0.12.23: every click used to close it).
+#[test]
+fn a_tab_click_keeps_the_tag_menu_open() {
+    let mut harness = window();
+    let account = harness.state().session.mailbox.accounts.first().unwrap().id;
+    let inbox = harness.state().session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let at = harness.state().hit.rect("folder", inbox).unwrap().center();
+    right_click(&mut harness, at);
+    harness.get_by_label("Tag").hover();
+    harness.run_steps(4);
+    let tab = harness.state().hit.rect("tagTab", 2).expect("the Tag menu opens");
+    click(&mut harness, tab.center());
+    harness.run_steps(2);
+    assert!(harness.state().hit.rect("tagTab", 2).is_some(), "still open after a tab's click");
+    let search = harness.state().hit.rect("tagSearch", 0).unwrap();
+    click(&mut harness, search.center());
+    harness.run_steps(2);
+    assert!(harness.state().hit.rect("tagTab", 2).is_some(), "still open after a click in the search");
+    let choice = (0..2000).find_map(|n| harness.state().hit.rect("tagChoice", n)).unwrap();
+    click(&mut harness, choice.center());
+    harness.run_steps(3);
+    assert!(!harness.state().session.mailbox.folder(inbox).unwrap().tag.is_empty(), "the choice tags the folder");
+    assert!(harness.state().hit.rect("tagTab", 2).is_none(), "and closes the menu");
 }

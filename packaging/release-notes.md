@@ -1,3 +1,8 @@
+**MailCraft 0.12.23 in short** — the emoji browser stays open
+- Clicking a group or the search box in a folder's Tag menu no longer closes it. Only picking an emoji does.
+- All emoji now scroll in one list with a heading per group. The group buttons jump to it, and the emoji under the pointer shows its name.
+- Everything from 0.12.22 stays.
+
 **MailCraft 0.12.22 in short** — every emoji for folder tags
 - A folder's Tag menu now has every emoji your system can show, in groups (smileys, people, animals, food, travel, activities, objects, symbols, flags), with a search by name.
 - Everything from 0.12.21 stays.

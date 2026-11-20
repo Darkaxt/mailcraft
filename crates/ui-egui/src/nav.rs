@@ -682,7 +682,10 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         let deletable = custom && !app.session.mailbox.folder_stays_on_server(id);
         item(ui, app, tl_later!("Delete Folder"), "folder.delete", json!({"id": id}), deletable);
         ui.separator();
-        ui.menu_button(tl!("Tag"), |ui| tag_menu(app, ui, id, &tag));
+        // Its tabs and search take clicks: only a choice, or a click outside, closes it (v0.12.23).
+        egui::containers::menu::SubMenuButton::new(tl!("Tag"))
+            .config(egui::containers::menu::MenuConfig::new().close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| tag_menu(app, ui, id, &tag));
         item(ui, app, tl_later!("Mark All as Read"), "mail.markAllRead", json!({"folder": id}), true);
         item(
             ui,
@@ -718,64 +721,149 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     });
 }
 
-/// How many emoji a row of the Tag menu has, and how big each one's button is.
-const TAG_COLS: usize = 8;
-const TAG_CELL: f32 = 30.0;
+/// How many emoji a row of the Tag menu has, how big each one's button is, and how many rows show.
+const TAG_COLS: usize = 10;
+const TAG_CELL: f32 = 32.0;
+const TAG_ROWS: f32 = 9.5;
 
-/// A folder's Tag menu: a search over every emoji and their groups (`emoji_index`, v0.12.22; the
-/// one it has, chosen again, takes it off), a field for any other tag, and No Tag.
+/// A line of the Tag menu's emoji browser: a group's heading, or a row of its emoji (the section,
+/// and where the row starts in the list of every emoji shown).
+#[derive(Clone, Copy)]
+enum TagLine {
+    Head(usize),
+    Emoji(usize, usize),
+}
+
+/// A folder's Tag menu (`emoji_index`, v0.12.22): a browser of every emoji, the suggested ones
+/// first, then each group under its name; the tabs above jump to a group and show the one in view;
+/// a search over their names; a field for any other tag; and No Tag. The tag a folder has, chosen
+/// again, takes it off.
 fn tag_menu(app: &mut MailApp, ui: &mut Ui, id: Id, now: &str) {
     use crate::emoji_index::{TABS, Tab};
+    let t = Tokens::get(ui.ctx());
     let width = TAG_COLS as f32 * (TAG_CELL + 2.0);
     let state = egui::Id::unique(("tag_index", id));
-    let (mut query, mut tab): (String, Tab) = ui.data_mut(|d| d.get_temp(state)).unwrap_or_default();
+    // What is typed in the search, and the tab whose group to scroll to.
+    let (mut query, mut jump): (String, Option<Tab>) = ui.data_mut(|d| d.get_temp(state)).unwrap_or_default();
     let search = ui.add(egui::TextEdit::singleline(&mut query).hint_text(tl!("Search emoji")).desired_width(width));
     app.hit.add("tagSearch", 0, search.rect);
     let searching = !query.trim().is_empty();
+
+    let list = crate::emoji_index::listed(ui.ctx());
+    let sections: Vec<(usize, Vec<(&'static str, &'static str)>)> = if searching {
+        vec![(usize::MAX, crate::emoji_index::search(&list, &query))]
+    } else {
+        TABS.iter().enumerate().map(|(n, (tab, _, _))| (n, crate::emoji_index::in_tab(&list, *tab))).collect()
+    };
+    let mut lines = Vec::new();
+    let mut first = 0;
+    for (s, (n, shown)) in sections.iter().enumerate() {
+        if *n != usize::MAX {
+            lines.push(TagLine::Head(s));
+        }
+        for row in 0..shown.len().div_ceil(TAG_COLS) {
+            lines.push(TagLine::Emoji(s, first + row * TAG_COLS));
+        }
+        first += shown.len();
+    }
+    let starts: Vec<usize> = sections.iter().scan(0, |at, (_, shown)| Some(std::mem::replace(at, *at + shown.len()))).collect();
+
+    // The tabs: each group's face; the one in view is marked, and a click scrolls to it.
+    let in_view_key = egui::Id::unique(("tag_in_view", id));
+    let in_view: usize = ui.data_mut(|d| d.get_temp(in_view_key)).unwrap_or_default();
     if !searching {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 1.0;
-            for (n, (t, face, name)) in TABS.iter().enumerate() {
-                let button = ui
-                    .add(egui::Button::new(egui::RichText::new(*face).size(14.0)).selected(tab == *t).min_size(vec2(24.0, 24.0)))
-                    .on_hover_text(tl!(*name));
+            ui.spacing_mut().item_spacing.x = 2.0;
+            let tab_w = (width - 2.0 * (TABS.len() as f32 - 1.0)) / TABS.len() as f32;
+            for (n, (tab, face, name)) in TABS.iter().enumerate() {
+                let (r, button) = ui.allocate_exact_size(vec2(tab_w, 30.0), Sense::click());
+                let on = n == in_view;
+                if button.hovered() {
+                    ui.painter().rect_filled(r, 4.0, t.hover);
+                }
+                ui.painter().text(r.center() - vec2(0.0, 1.0), egui::Align2::CENTER_CENTER, *face, egui::FontId::proportional(17.0), t.text);
+                if on {
+                    ui.painter().rect_filled(Rect::from_min_max(pos2(r.min.x + 4.0, r.max.y - 3.0), pos2(r.max.x - 4.0, r.max.y)), 1.5, t.accent);
+                }
+                let label = tl!(*name);
+                button.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, on, label));
+                let button = button.on_hover_text(label);
                 app.hit.add("tagTab", n as Id, button.rect);
                 if button.clicked() {
-                    tab = *t;
+                    jump = Some(*tab);
                 }
             }
         });
+        ui.painter().hline(ui.min_rect().x_range(), ui.cursor().min.y, egui::Stroke::new(1.0, t.border));
+        ui.add_space(4.0);
     }
-    let list = crate::emoji_index::listed(ui.ctx());
-    let shown = if searching { crate::emoji_index::search(&list, &query) } else { crate::emoji_index::in_tab(&list, tab) };
-    if shown.is_empty() {
+    if lines.is_empty() {
         ui.label(tl!("No emoji found"));
     }
-    let rows = shown.len().div_ceil(TAG_COLS);
-    egui::ScrollArea::vertical().id_salt(("tag_rows", id)).max_height(TAG_CELL * 7.5).min_scrolled_width(width).show_rows(
-        ui,
-        TAG_CELL,
-        rows,
-        |ui, range| {
-            for row in range {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 2.0;
-                    for (n, (tag, name)) in shown.iter().enumerate().skip(row * TAG_COLS).take(TAG_COLS) {
-                        let on = *tag == now;
-                        let button =
-                            ui.add(egui::Button::new(egui::RichText::new(*tag).size(16.0)).selected(on).min_size(vec2(TAG_CELL, TAG_CELL - 2.0)));
-                        let button = if name.is_empty() { button } else { button.on_hover_text(*name) };
-                        app.hit.add("tagChoice", n as Id, button.rect);
-                        if button.clicked() {
-                            let _ = app.run("folder.tag", json!({"id": id, "tag": if on { "" } else { *tag }}));
-                            ui.close();
+
+    let mut scroll = egui::ScrollArea::vertical().id_salt(("tag_rows", id)).max_height(TAG_CELL * TAG_ROWS).min_scrolled_width(width);
+    if let Some(tab) = jump.take() {
+        let row_h = TAG_CELL + ui.spacing().item_spacing.y;
+        if let Some(line) = lines.iter().position(|l| matches!(l, TagLine::Head(s) if TABS[sections[*s].0].0 == tab)) {
+            scroll = scroll.vertical_scroll_offset(line as f32 * row_h);
+        }
+    }
+    let mut hovered: Option<(&str, &str)> = None;
+    let mut top_section = None;
+    let mut last_section = None;
+    let out = scroll.show_rows(ui, TAG_CELL, lines.len(), |ui, range| {
+        for line in &lines[range] {
+            match *line {
+                TagLine::Head(s) => {
+                    top_section.get_or_insert(s);
+                    last_section = Some(s);
+                    let (r, _) = ui.allocate_exact_size(vec2(width, TAG_CELL), Sense::hover());
+                    let name = tl!(TABS[sections[s].0].2);
+                    ui.painter().text(pos2(r.min.x + 4.0, r.max.y - 6.0), egui::Align2::LEFT_BOTTOM, name, bold(12.0), t.group_label);
+                }
+                TagLine::Emoji(s, start) => {
+                    top_section.get_or_insert(s);
+                    last_section = Some(s);
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 2.0;
+                        let shown = &sections[s].1;
+                        let from = start - starts[s];
+                        for (k, (tag, name)) in shown.iter().enumerate().skip(from).take(TAG_COLS) {
+                            let on = *tag == now;
+                            let button = ui.add(
+                                egui::Button::new(egui::RichText::new(*tag).size(18.0))
+                                    .frame_when_inactive(on)
+                                    .selected(on)
+                                    .min_size(vec2(TAG_CELL, TAG_CELL - 2.0)),
+                            );
+                            app.hit.add("tagChoice", (starts[s] + k) as Id, button.rect);
+                            if button.hovered() {
+                                hovered = Some((*tag, *name));
+                            }
+                            if button.clicked() {
+                                let _ = app.run("folder.tag", json!({"id": id, "tag": if on { "" } else { *tag }}));
+                                ui.close();
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
-        },
-    );
-    ui.data_mut(|d| d.insert_temp(state, (query, tab)));
+        }
+    });
+    // Scrolled to the end, the last groups can't reach the top: the last one in view is marked.
+    let at_end = out.state.clamped_offset().y + out.inner_rect.height() >= out.content_size.y - 1.0;
+    if let Some(s) = (if at_end { last_section } else { top_section }).filter(|_| !searching) {
+        ui.data_mut(|d| d.insert_temp(in_view_key, sections[s].0));
+    }
+    // What the pointer is on, by name, as a character map shows it.
+    ui.horizontal(|ui| {
+        ui.set_min_height(26.0);
+        if let Some((tag, name)) = hovered {
+            ui.label(egui::RichText::new(tag).size(20.0));
+            ui.label(egui::RichText::new(name).color(t.text_dim));
+        }
+    });
+    ui.data_mut(|d| d.insert_temp(state, (query, jump)));
     ui.separator();
     let key = egui::Id::unique(("tag_typed", id));
     let mut typed: String = ui.data_mut(|d| d.get_temp(key)).unwrap_or_else(|| now.to_string());
