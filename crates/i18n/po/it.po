@@ -3677,6 +3677,11 @@ msgid "Compact"
 msgstr "Compatta"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Compact (one line)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Company"
@@ -5888,6 +5893,11 @@ msgid "Export…"
 msgstr "Esporta…"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Extended (sender first)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "External"
@@ -7287,6 +7297,11 @@ msgstr "La ricorrenza la decide l'organizzatore."
 #, fuzzy
 msgid "How many messages each folder holds and the space they take"
 msgstr "Quanti messaggi contiene ogni cartella e lo spazio che occupano"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "How messages show in the list"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/unified_inbox.rs
@@ -9614,6 +9629,11 @@ msgid "Message Preview"
 msgstr "Anteprima messaggio"
 
 #. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Message Rows"
+msgstr ""
+
+#. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Message Source"
 msgstr ""
@@ -9628,6 +9648,11 @@ msgstr ""
 #, fuzzy
 msgid "Message queued. Sending from this phone is not available yet."
 msgstr "Messaggio in coda. L'invio da questo telefono non è ancora disponibile."
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Message rows"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
@@ -11265,6 +11290,11 @@ msgstr "Nessuna per ora."
 #, fuzzy
 msgid "Normal"
 msgstr "Normale"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Normal (subject first)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/tasks_view.rs
@@ -20284,8 +20314,8 @@ msgstr ""
 "Spaziatura\n"
 "ridotta"
 
-#. command label
-#: crates/engine/src/cmd/view/display.rs
+#. command label, interface
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Tighter Spacing"
 msgstr "Spaziatura ridotta"

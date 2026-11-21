@@ -3681,6 +3681,11 @@ msgid "Compact"
 msgstr "紧凑"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Compact (one line)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Company"
@@ -5885,6 +5890,11 @@ msgid "Export…"
 msgstr "导出…"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Extended (sender first)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "External"
@@ -7287,6 +7297,11 @@ msgstr "重复方式由组织者决定。"
 #, fuzzy
 msgid "How many messages each folder holds and the space they take"
 msgstr "每个文件夹包含的邮件数量及其占用空间"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "How messages show in the list"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/unified_inbox.rs
@@ -9611,6 +9626,11 @@ msgid "Message Preview"
 msgstr "邮件预览"
 
 #. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Message Rows"
+msgstr ""
+
+#. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Message Source"
 msgstr ""
@@ -9625,6 +9645,11 @@ msgstr ""
 #, fuzzy
 msgid "Message queued. Sending from this phone is not available yet."
 msgstr "邮件已排队。尚不支持从此手机发送。"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Message rows"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
@@ -11263,6 +11288,11 @@ msgstr "还没有。"
 #, fuzzy
 msgid "Normal"
 msgstr "正常"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Normal (subject first)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/tasks_view.rs
@@ -20290,8 +20320,8 @@ msgstr ""
 "缩小\n"
 "间距"
 
-#. command label
-#: crates/engine/src/cmd/view/display.rs
+#. command label, interface
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Tighter Spacing"
 msgstr "更紧密的间距"

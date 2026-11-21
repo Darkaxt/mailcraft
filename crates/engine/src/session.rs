@@ -1006,6 +1006,11 @@ pub struct Prefs {
     /// Each row of the list is one line: sender, subject, time and marks (`view.oneLine`).
     #[serde(skip_serializing_if = "is_false")]
     pub one_line: bool,
+    /// Rows of two lines put the subject first, after its folder and with the time, and the sender
+    /// before the preview under it (#fork, v0.12.26: the Normal rows of `view.rowStyle`). Off: the
+    /// sender's line first (Extended).
+    #[serde(skip_serializing_if = "is_false")]
+    pub subject_first: bool,
     /// Most messages one synchronisation downloads per folder (0: all).
     pub sync_limit: u32,
     /// Minutes between automatic Send/Receive runs (0: only when asked).
@@ -1093,6 +1098,7 @@ impl Default for Prefs {
             preview_lines: 1,
             show_groups: true,
             one_line: false,
+            subject_first: false,
             sync_limit: 500,
             sync_minutes: 5,
             time_scale: 30,

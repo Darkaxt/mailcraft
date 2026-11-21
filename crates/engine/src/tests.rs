@@ -101,6 +101,16 @@ fn the_single_line_list_is_a_toggled_preference() {
     assert_eq!(serde_json::to_value(&s.prefs).unwrap()["oneLine"], true);
     assert_eq!(s.run("view.oneLine", &json!({"value": false})).unwrap()["value"], false);
     assert!(serde_json::to_value(&s.prefs).unwrap().get("oneLine").is_none());
+    // The row styles (#fork, v0.12.26): Compact is the single line.
+    assert_eq!(s.run("view.rowStyle", &json!({})).unwrap()["value"], "extended");
+    assert_eq!(s.run("view.rowStyle", &json!({"value": "normal"})).unwrap()["value"], "normal");
+    assert!(s.prefs.subject_first && !s.prefs.one_line);
+    assert_eq!(s.run("view.rowStyle", &json!({"value": "compact"})).unwrap()["value"], "compact");
+    assert!(s.prefs.one_line);
+    assert_eq!(s.run("view.oneLine", &json!({"value": false})).unwrap()["value"], false);
+    assert_eq!(s.run("view.rowStyle", &json!({})).unwrap()["value"], "normal");
+    assert!(s.run("view.rowStyle", &json!({"value": "tall"})).is_err());
+    assert_eq!(s.run("view.rowStyle", &json!({"value": "extended"})).unwrap()["value"], "extended");
 }
 
 #[test]

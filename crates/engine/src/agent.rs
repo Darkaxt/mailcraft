@@ -339,6 +339,7 @@ const SAFE: &[&str] = &[
     "view.previewLines",
     "view.groups",
     "view.oneLine",
+    "view.rowStyle",
     "view.day",
     "view.workWeek",
     "view.week",

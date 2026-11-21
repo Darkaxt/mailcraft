@@ -3670,6 +3670,11 @@ msgid "Compact"
 msgstr "Compact"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Compact (one line)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Company"
@@ -5870,6 +5875,11 @@ msgid "Export…"
 msgstr "Exporter…"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Extended (sender first)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "External"
@@ -7260,6 +7270,11 @@ msgstr "C'est à l'organisateur de décider de sa périodicité."
 #, fuzzy
 msgid "How many messages each folder holds and the space they take"
 msgstr "Le nombre de messages que contient chaque dossier et l'espace qu'ils occupent"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "How messages show in the list"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/unified_inbox.rs
@@ -9579,6 +9594,11 @@ msgid "Message Preview"
 msgstr "Aperçu du message"
 
 #. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Message Rows"
+msgstr ""
+
+#. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Message Source"
 msgstr ""
@@ -9593,6 +9613,11 @@ msgstr ""
 #, fuzzy
 msgid "Message queued. Sending from this phone is not available yet."
 msgstr "Message en file d'attente. L'envoi depuis ce téléphone n'est pas encore disponible."
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Message rows"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
@@ -11227,6 +11252,11 @@ msgstr "Aucune pour l'instant."
 #, fuzzy
 msgid "Normal"
 msgstr "Normale"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Normal (subject first)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/tasks_view.rs
@@ -20223,8 +20253,8 @@ msgstr ""
 "Espacement\n"
 "réduit"
 
-#. command label
-#: crates/engine/src/cmd/view/display.rs
+#. command label, interface
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Tighter Spacing"
 msgstr "Espacement plus serré"

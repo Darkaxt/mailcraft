@@ -3680,6 +3680,11 @@ msgid "Compact"
 msgstr "Kompaktní"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Compact (one line)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Company"
@@ -5899,6 +5904,11 @@ msgid "Export…"
 msgstr "Exportovat…"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Extended (sender first)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "External"
@@ -7309,6 +7319,11 @@ msgstr "Jak se opakuje, určuje organizátor."
 #, fuzzy
 msgid "How many messages each folder holds and the space they take"
 msgstr "Kolik zpráv obsahuje každá složka a kolik místa zabírají"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "How messages show in the list"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/unified_inbox.rs
@@ -9639,6 +9654,11 @@ msgid "Message Preview"
 msgstr "Náhled zprávy"
 
 #. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Message Rows"
+msgstr ""
+
+#. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Message Source"
 msgstr ""
@@ -9653,6 +9673,11 @@ msgstr ""
 #, fuzzy
 msgid "Message queued. Sending from this phone is not available yet."
 msgstr "Zpráva zařazena k odeslání. Odesílání z tohoto telefonu zatím není k dispozici."
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Message rows"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
@@ -11292,6 +11317,11 @@ msgstr "Zatím nic."
 #, fuzzy
 msgid "Normal"
 msgstr "Normální"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Normal (subject first)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/tasks_view.rs
@@ -20340,8 +20370,8 @@ msgstr ""
 "Těsnější\n"
 "rozestupy"
 
-#. command label
-#: crates/engine/src/cmd/view/display.rs
+#. command label, interface
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Tighter Spacing"
 msgstr "Těsnější rozestupy"

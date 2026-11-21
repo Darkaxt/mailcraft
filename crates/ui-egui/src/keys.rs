@@ -632,6 +632,7 @@ pub const REARRANGES_LIST: &[&str] = &[
     "view.conversations",
     "view.groups",
     "view.oneLine",
+    "view.rowStyle",
     "view.previewLines",
     "view.changeView",
     "view.density",

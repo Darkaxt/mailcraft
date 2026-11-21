@@ -68,6 +68,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.previewLines", "Message Preview", "View › Arrangement", preview_lines).reads().params(r#"{"value": 0-3}"#),
         CommandSpec::new("view.groups", "Show in Groups", "View › Arrangement", groups).reads().params(TOGGLE),
         CommandSpec::new("view.oneLine", "Single Line", "View › Arrangement", one_line).reads().params(TOGGLE),
+        CommandSpec::new("view.rowStyle", "Message Rows", "View › Arrangement", row_style).reads().params(
+            r#"{"value"?: "compact"|"normal"|"extended"} — compact: a message on one line; normal: its folder and subject first, with the time, and under them the sender and the preview; extended: the sender first, then the subject and the preview. Omit to read it"#,
+        ),
         CommandSpec::new("view.day", "Day", "Home › Arrange", day).reads().key(mac_or("Mod+Ctrl+1", "Mod+Alt+1")),
         CommandSpec::new("view.workWeek", "Work Week", "Home › Arrange", work_week).reads().key(mac_or("Mod+Ctrl+2", "Mod+Alt+2")),
         CommandSpec::new("view.week", "Week", "Home › Arrange", week).reads().key(mac_or("Mod+Ctrl+3", "Mod+Alt+3")),
@@ -366,6 +369,25 @@ fn groups(s: &mut Session, v: &Value) -> CmdResult {
 fn one_line(s: &mut Session, v: &Value) -> CmdResult {
     s.prefs.one_line = p::bool(v, "value").unwrap_or(!s.prefs.one_line);
     Ok(json!({"value": s.prefs.one_line}))
+}
+
+/// The list's row style (#fork, v0.12.26): Compact is the single line, Normal and Extended rows of
+/// two or more lines with the subject or the sender first.
+fn row_style(s: &mut Session, v: &Value) -> CmdResult {
+    if let Some(code) = v.get("value").filter(|x| !x.is_null()) {
+        (s.prefs.one_line, s.prefs.subject_first) = match code.as_str() {
+            Some("compact") => (true, s.prefs.subject_first),
+            Some("normal") => (false, true),
+            Some("extended") => (false, false),
+            _ => return Err(bad("`value` is compact, normal or extended")),
+        };
+    }
+    let style = match (s.prefs.one_line, s.prefs.subject_first) {
+        (true, _) => "compact",
+        (false, true) => "normal",
+        (false, false) => "extended",
+    };
+    Ok(json!({"value": style}))
 }
 
 fn cal(s: &mut Session, view: CalView) -> CmdResult {

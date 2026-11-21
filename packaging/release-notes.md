@@ -1,4 +1,9 @@
-**MailCraft 0.12.25** — the folder leads the subject; previews without setup
+**MailCraft 0.12.26** — choose how messages show in the list
+- A new button beside the sort order picks the message rows: Compact (one line), Normal (subject first) or Extended (sender first, as before).
+- Normal shows the folder and subject with the time on top, and the sender and a line of the message under them. More mail fits on screen.
+- Everything from 0.12.25 stays.
+
+**MailCraft 0.12.25 in short** — the folder leads the subject; previews without setup
 - In the unified mailbox and in searches of every mailbox, a message's folder now starts its subject line: its emoji tag (or folder icon), its name, then the subject. Point at it to see whose account it is.
 - Clicking an attachment, in a message or in a draft, previews it right away. You no longer need to turn on the Preview Pane or attachment previews first.
 - After you sign in again, the account warning clears right away instead of a minute later.

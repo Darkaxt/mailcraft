@@ -93,8 +93,8 @@ fn one_account_never_mixes() {
 }
 
 /// In a combined view every row wears its origin colour: a solid stripe by default, and with
-/// full-row tints a stripe only where the tint is covered. The mode's dropdown sits beside the sort
-/// menu there, and nowhere else.
+/// full-row tints a stripe only where the tint is covered. The mode's dropdown sits by the sort
+/// menu there (beside the row style's button), and nowhere else.
 #[test]
 fn combined_views_stripe_rows_in_their_origin_colour_and_offer_the_mode() {
     let (mut harness, first, _, _) = window();
@@ -107,7 +107,10 @@ fn combined_views_stripe_rows_in_their_origin_colour_and_offer_the_mode() {
     assert!(!striped.is_empty() && striped.len() >= drawn.min(1), "{striped:?} of {drawn}");
     let mode = harness.state().hit.rect("originColors", 0).expect("the mode beside the sort menu");
     let sort = harness.state().hit.rect("listSort", 0).unwrap();
-    assert!(mode.max.x <= sort.min.x && sort.min.x - mode.max.x < 12.0, "{mode:?} beside {sort:?}");
+    // (Beside the row style's button since v0.12.26, which is beside the sort.)
+    let rows_button = harness.state().hit.rect("rowStyle", 0).expect("the row style beside the sort menu");
+    assert!(rows_button.max.x <= sort.min.x && sort.min.x - rows_button.max.x < 12.0, "{rows_button:?} beside {sort:?}");
+    assert!(mode.max.x <= rows_button.min.x && rows_button.min.x - mode.max.x < 12.0, "{mode:?} beside {rows_button:?}");
     // The stripe is the account's real colour, not a pastel of it.
     let color = harness.state().session.mailbox.account(first).unwrap().effective_row_color();
     assert_eq!(color, mailcraft_model::Rgb(0x2F, 0x6F, 0xD0));

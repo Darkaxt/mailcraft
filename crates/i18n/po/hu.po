@@ -3683,6 +3683,11 @@ msgid "Compact"
 msgstr "Kompakt"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Compact (one line)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs
 #, fuzzy
 msgid "Company"
@@ -5885,6 +5890,11 @@ msgid "Export…"
 msgstr "Exportálás…"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Extended (sender first)"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/reading/warnings.rs
 #, fuzzy
 msgid "External"
@@ -7287,6 +7297,11 @@ msgstr "A szervezőnek kell elmondania, hogy hogyan ismételi meg."
 #, fuzzy
 msgid "How many messages each folder holds and the space they take"
 msgstr "Hány üzenet van minden mappában és a hely, amit elvesznek"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "How messages show in the list"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/unified_inbox.rs
@@ -9615,6 +9630,11 @@ msgid "Message Preview"
 msgstr "Üzenetek előnézete"
 
 #. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Message Rows"
+msgstr ""
+
+#. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Message Source"
 msgstr ""
@@ -9629,6 +9649,11 @@ msgstr ""
 #, fuzzy
 msgid "Message queued. Sending from this phone is not available yet."
 msgstr "Az üzenet sorba került. Erről a telefonról még nem lehet küldeni."
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Message rows"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposeHost.kt
@@ -11266,6 +11291,11 @@ msgstr "Még nincs."
 #, fuzzy
 msgid "Normal"
 msgstr "Normál"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Normal (subject first)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/tasks_view.rs
@@ -20302,8 +20332,8 @@ msgstr ""
 "Sűrűbb\n"
 "elrendezés"
 
-#. command label
-#: crates/engine/src/cmd/view/display.rs
+#. command label, interface
+#: crates/engine/src/cmd/view/display.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Tighter Spacing"
 msgstr "Szorosabb szúrás"

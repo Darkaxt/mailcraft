@@ -201,6 +201,102 @@ fn row_height(preview_lines: u8) -> f32 {
 /// A row of the single-line list: the sender, the subject, the marks and the time on one line.
 const ONE_LINE_H: f32 = 32.0;
 
+/// Normal rows (#fork, v0.12.26: `view.rowStyle`): the middle of the subject's line (its folder,
+/// the subject, the marks and the time) and of the line under it (the sender and the preview),
+/// from a row's top; the row with one line of preview, or none, and the subject's text.
+const NORMAL_FIRST_Y: f32 = 17.0;
+const NORMAL_SECOND_Y: f32 = 35.0;
+const NORMAL_H: f32 = 52.0;
+const NORMAL_SUBJECT_TEXT: f32 = 13.0;
+
+/// A Normal row with `preview_lines` of the message's text (the first after the sender): 13 more
+/// for each line after the first.
+fn normal_row_height(preview_lines: u8) -> f32 {
+    NORMAL_H + f32::from(preview_lines.clamp(1, 3) - 1) * PREVIEW_PITCH
+}
+
+/// The list's row style: Compact (one line), Normal (subject first) or Extended (sender first).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RowStyle {
+    Compact,
+    Normal,
+    Extended,
+}
+
+impl RowStyle {
+    const ALL: [RowStyle; 3] = [RowStyle::Compact, RowStyle::Normal, RowStyle::Extended];
+
+    fn of(prefs: &mailcraft_engine::Prefs) -> RowStyle {
+        match (prefs.one_line, prefs.subject_first) {
+            (true, _) => RowStyle::Compact,
+            (false, true) => RowStyle::Normal,
+            (false, false) => RowStyle::Extended,
+        }
+    }
+
+    fn code(self) -> &'static str {
+        match self {
+            RowStyle::Compact => "compact",
+            RowStyle::Normal => "normal",
+            RowStyle::Extended => "extended",
+        }
+    }
+
+    /// Its name in the button's menu, in the interface language.
+    fn shown(self) -> &'static str {
+        match self {
+            RowStyle::Compact => tl!("Compact (one line)"),
+            RowStyle::Normal => tl!("Normal (subject first)"),
+            RowStyle::Extended => tl!("Extended (sender first)"),
+        }
+    }
+}
+
+/// The button for the row style, by the arrangement's: a small sample of the rows, and its menu.
+fn row_style_dropdown(app: &mut MailApp, ui: &mut Ui, r: Rect) {
+    let t = Tokens::get(ui.ctx());
+    let style = RowStyle::of(&app.session.prefs);
+    let resp = ui.interact(r, ui.scope_id().with("row_style"), Sense::click());
+    app.hit.add("rowStyle", 0, r);
+    let name = format!("{}: {}", tl!("Message rows"), style.shown());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, &name));
+    if resp.hovered() {
+        ui.painter().rect_filled(r, 4.0, t.hover);
+    }
+    if resp.has_focus() {
+        ui.painter().rect_stroke(r, 4.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Inside);
+    }
+    // The sample: lines as the rows have them, a strong line where a row starts.
+    let (x0, x1, top) = (r.min.x + 5.0, r.min.x + 18.0, r.center().y - 5.5);
+    let strong = Stroke::new(1.6, t.text);
+    let faint = Stroke::new(1.0, t.text_dim);
+    let lines: &[(f32, bool)] = match style {
+        RowStyle::Compact => &[(0.0, true), (3.7, true), (7.4, true), (11.0, true)],
+        RowStyle::Normal => &[(0.0, true), (3.0, false), (8.0, true), (11.0, false)],
+        RowStyle::Extended => &[(0.0, true), (3.7, false), (7.4, false), (11.0, false)],
+    };
+    for (dy, first) in lines {
+        let end = if *first { x1 } else { x1 - 3.0 };
+        ui.painter().line_segment([pos2(x0, top + dy), pos2(end, top + dy)], if *first { strong } else { faint });
+    }
+    let c = pos2(r.max.x - 7.0, r.center().y + 1.0);
+    ui.painter().line(vec![c + vec2(-3.5, -2.0), c + vec2(0.0, 2.0), c + vec2(3.5, -2.0)], Stroke::new(1.2, t.text));
+    let resp = resp.on_hover_text(tl!("How messages show in the list"));
+    egui::Popup::menu(&resp).show(|ui| {
+        ui.set_min_width(190.0);
+        ui.label(egui::RichText::new(tl!("Message rows")).font(regular(11.0)).weak());
+        for option in RowStyle::ALL {
+            if ui.selectable_label(style == option, option.shown()).clicked() {
+                let _ = app.run("view.rowStyle", json!({"value": option.code()}));
+                ui.close();
+            }
+        }
+        ui.separator();
+        let tight = app.session.prefs.tight_spacing;
+        crate::widgets::mi_check(ui, app, "Tighter Spacing", tight, "view.density", json!({"value": !tight}));
+    });
+}
+
 /// The least a single-line row leaves for the sender's name.
 const ONE_LINE_SENDER_MIN: f32 = 70.0;
 
@@ -328,11 +424,13 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
         }
     });
 
-    // In a combined view, how rows show their origin colour: a small dropdown right beside the
-    // arrangement's.
-    let mut controls_left = sr.min.x;
+    // The row style (#fork, v0.12.26), right beside the arrangement.
+    let at = Rect::from_min_max(pos2(sr.min.x - 34.0, sr.min.y), pos2(sr.min.x - 4.0, sr.max.y));
+    row_style_dropdown(app, ui, at);
+    let mut controls_left = at.min.x;
+    // In a combined view, how rows show their origin colour: a small dropdown beside it.
     if crate::unified_inbox::combined_view(&app.session) {
-        let at = Rect::from_min_max(pos2(sr.min.x - 34.0, sr.min.y), pos2(sr.min.x - 4.0, sr.max.y));
+        let at = Rect::from_min_max(pos2(controls_left - 34.0, sr.min.y), pos2(controls_left - 4.0, sr.max.y));
         crate::unified_inbox::mode_dropdown(app, ui, at);
         controls_left = at.min.x;
         // And beside it the tag filter (`view.tag`), once a folder has a tag.
@@ -611,8 +709,15 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     let one_line = app.session.prefs.one_line;
     // The rows of a search on the server keep the height the preview lines ask for.
     let server_h = row_height(app.session.prefs.preview_lines);
-    let row_h = if one_line { ONE_LINE_H } else { server_h };
-    let row_h = row_h - tightening(app.session.prefs.tight_spacing, one_line);
+    let normal = !one_line && app.session.prefs.subject_first;
+    let row_h = if one_line {
+        ONE_LINE_H
+    } else if normal {
+        normal_row_height(app.session.prefs.preview_lines)
+    } else {
+        server_h
+    };
+    let row_h = row_h - tightening(app.session.prefs.tight_spacing, one_line || normal);
     // Below the local results of a search: More results on the server, and what came (R6.2).
     let searching = !app.session.view.search.trim().is_empty();
     let local: std::collections::HashSet<Id> =
@@ -1047,10 +1152,17 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         .on_hover_text(if unread { tl!("Mark as read") } else { tl!("Mark as unread") });
     app.hit.add("messageRead", row.id, strip);
     let one = app.session.prefs.one_line;
-    let line1 = if one { rect.center().y } else { rect.min.y + SENDER_Y };
-    let line2 = if one { rect.center().y } else { rect.min.y + SUBJECT_Y };
+    // Normal rows (#fork, v0.12.26): the subject's line first, the sender's and the preview under it.
+    let normal = !one && app.session.prefs.subject_first;
+    let (line1, line2) = if one {
+        (rect.center().y, rect.center().y)
+    } else if normal {
+        (rect.min.y + NORMAL_FIRST_Y, rect.min.y + NORMAL_SECOND_Y)
+    } else {
+        (rect.min.y + SENDER_Y, rect.min.y + SUBJECT_Y)
+    };
     // With tighter spacing a row's lines move up by half of what it gave up (`view.density`).
-    let lift = tightening(app.session.prefs.tight_spacing, one) / 2.0;
+    let lift = tightening(app.session.prefs.tight_spacing, one || normal) / 2.0;
     let (line1, line2) = if one { (line1, line2) } else { (line1 - lift, line2 - lift) };
     // A conversation's row has an arrow between the read switch and the text (#503): a click opens
     // or closes it, as Right and Left do.
@@ -1195,7 +1307,8 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     let text_left = TEXT_LEFT + if row.under.is_some() { UNDER_INDENT } else { 0.0 };
     if pictured {
         let who = if outgoing { m.to.first().unwrap_or(&m.from) } else { &m.from };
-        let center = pos2(rect.min.x + text_left + AVATAR_RADIUS, rect.min.y + AVATAR_Y);
+        let y = if normal { (NORMAL_FIRST_Y + NORMAL_SECOND_Y) / 2.0 } else { AVATAR_Y };
+        let center = pos2(rect.min.x + text_left + AVATAR_RADIUS, rect.min.y + y);
         crate::sender_images::avatar(app, ui, center, AVATAR_RADIUS, &m, who);
     }
     let left = rect.min.x + text_left + if pictured { 2.0 * AVATAR_RADIUS + AVATAR_GAP } else { 0.0 };
@@ -1236,7 +1349,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     // In a single line the time comes before the marks, and the quick actions take its place
     // while the pointer is over the row.
     let mut one_date_w = 0.0;
-    if one && quick.is_none() {
+    if (one || normal) && quick.is_none() {
         one_date_w = p.text(pos2(sender_line_end, line1), Align2::RIGHT_CENTER, &date, date_font.clone(), date_color).width();
         x = sender_line_end - one_date_w - 10.0;
     }
@@ -1301,17 +1414,25 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         if one { plan_tags(p, &labels, labels_more, x - 4.0 - size_room - tail_after - (left + ONE_LINE_SENDER_MIN)) } else { TagPlan::default() };
     let who_font = if unread { semibold(SENDER_TEXT) } else { regular(SENDER_TEXT) };
     let who_end = if one { (left + one_line_sender_width(time_end - left)).min(x - 4.0 - size_room - one_tags.width) } else { text_end.min(x - 4.0) };
-    let mut who_x = left;
-    if m.draft {
-        let w = paint_clipped(p, pos2(left, line1), (who_end - left).max(0.0), tl!("[Draft]"), regular(SENDER_TEXT), t.red);
-        who_x += w + 5.0;
+    if !normal {
+        let mut who_x = left;
+        if m.draft {
+            let w = paint_clipped(p, pos2(left, line1), (who_end - left).max(0.0), tl!("[Draft]"), regular(SENDER_TEXT), t.red);
+            who_x += w + 5.0;
+        }
+        let w = paint_clipped(p, pos2(who_x, line1), (who_end - who_x).max(0.0), &who, who_font, if overdue { t.overdue } else { t.text });
+        app.hit.add("messageSender", row.id, Rect::from_min_max(pos2(left, line1 - 7.0), pos2(who_x + w, line1 + 7.0)));
     }
-    let w = paint_clipped(p, pos2(who_x, line1), (who_end - who_x).max(0.0), &who, who_font, if overdue { t.overdue } else { t.text });
-    app.hit.add("messageSender", row.id, Rect::from_min_max(pos2(left, line1 - 7.0), pos2(who_x + w, line1 + 7.0)));
 
     // The subject's line, with the time at its end.
-    let date_w = if one { one_date_w } else { p.text(pos2(time_end, line2), Align2::RIGHT_CENTER, &date, date_font, date_color).width() };
-    let mut subject_end = if one { time_end } else { text_end.min(time_end - date_w - 8.0) };
+    let date_w = if one || normal { one_date_w } else { p.text(pos2(time_end, line2), Align2::RIGHT_CENTER, &date, date_font, date_color).width() };
+    let mut subject_end = if one {
+        time_end
+    } else if normal {
+        x - 6.0
+    } else {
+        text_end.min(time_end - date_w - 8.0)
+    };
 
     // The size; in a search of every mailbox the folder it is in; then category marks and the
     // size of a conversation: at the right of the preview's first line, under the time, before
@@ -1320,6 +1441,8 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     let preview_y = rect.min.y + PREVIEW_TOP + PREVIEW_PITCH / 2.0 + 0.5;
     let (mut sx, tail_y) = if one {
         (x, line1)
+    } else if normal {
+        (time_end, line2)
     } else if lines > 0 {
         (time_end, preview_y)
     } else {
@@ -1401,43 +1524,64 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         p.text(br.center(), Align2::CENTER_CENTER, n, regular(10.0), t.text_dim);
         sx -= w + 5.0;
     }
-    if lines == 0 {
+    if lines == 0 && !normal {
         subject_end = subject_end.min(sx - 6.0);
     }
     let subject = if m.subject.trim().is_empty() { tl!("(no subject)") } else { m.subject.as_str() };
+    let subject_size = if normal { NORMAL_SUBJECT_TEXT } else { LIST_TEXT };
     let (sfont, scolor) = match (unread, overdue) {
-        (true, false) => (semibold(LIST_TEXT), t.text),
-        (true, true) => (semibold(LIST_TEXT), t.overdue),
-        (false, _) => (regular(LIST_TEXT), if overdue { t.overdue } else { t.text }),
+        (true, false) => (semibold(subject_size), t.text),
+        (true, true) => (semibold(subject_size), t.overdue),
+        (false, _) => (regular(subject_size), if overdue { t.overdue } else { t.text }),
     };
+    let subject_y = if normal { line1 } else { line2 };
     let mut subject_x = if one { who_end + 10.0 } else { left };
     if let Some((full, name, tag)) = &folder_prefix {
         let start = subject_x;
         let ink = origin_color.map(crate::theme::c32);
-        subject_x = paint_folder_prefix(p, pos2(start, line2), (subject_end - start).max(0.0), name, tag.as_deref(), ink, &t);
+        subject_x = paint_folder_prefix(p, pos2(start, subject_y), (subject_end - start).max(0.0), name, tag.as_deref(), ink, &t);
         if subject_x > start {
-            let at = Rect::from_min_max(pos2(start, line2 - 7.0), pos2(subject_x, line2 + 7.0));
+            let at = Rect::from_min_max(pos2(start, subject_y - 7.0), pos2(subject_x, subject_y + 7.0));
             let _ = ui.interact(at, ui.scope_id().with(("msg_folder", key)), Sense::hover()).on_hover_text(full.as_str());
             app.hit.add("messageFolder", row.id, at);
         }
     }
-    paint_clipped(p, pos2(subject_x, line2), (subject_end - subject_x).max(0.0), subject, sfont, scolor);
+    let w = paint_clipped(p, pos2(subject_x, subject_y), (subject_end - subject_x).max(0.0), subject, sfont, scolor);
+    app.hit.add("messageSubject", row.id, Rect::from_min_max(pos2(subject_x, subject_y - 7.0), pos2(subject_x + w, subject_y + 7.0)));
 
     // Then the preview: whole words, as many lines as asked for, and no mark where it stops.
-    let preview_end = text_end.min(sx - 6.0);
-    if lines > 0 && preview_end - left > 4.0 {
+    let preview_end = if normal { sx - 6.0 } else { text_end.min(sx - 6.0) };
+    // A Normal row's sender starts the line under the subject, in at most half of it, and the
+    // preview goes on after it; left out where the folder's name already says it (XDA › … from XDA).
+    let mut lead = 0.0;
+    if normal {
+        let said_by_folder = folder_prefix.as_ref().is_some_and(|(_, name, _)| !name.is_empty() && name.trim().eq_ignore_ascii_case(who.trim()));
+        if !said_by_folder || m.draft {
+            let room = ((preview_end - left) * 0.5).max(0.0);
+            let mut who_x = left;
+            if m.draft {
+                who_x += paint_clipped(p, pos2(left, line2), room, tl!("[Draft]"), regular(LIST_TEXT), t.red) + 5.0;
+            }
+            let who_font = if unread { semibold(LIST_TEXT) } else { regular(LIST_TEXT) };
+            let w = paint_clipped(p, pos2(who_x, line2), (left + room - who_x).max(0.0), &who, who_font, if overdue { t.overdue } else { t.text });
+            app.hit.add("messageSender", row.id, Rect::from_min_max(pos2(left, line2 - 7.0), pos2(who_x + w, line2 + 7.0)));
+            lead = who_x + w - left + 8.0;
+        }
+    }
+    if lines > 0 && preview_end - left - lead > 4.0 {
         let max_chars = usize::from(lines) * 200;
         let said: Arc<str> = app.session.indexed_preview(&m, max_chars).map(Arc::from).unwrap_or_else(|| preview(ui, &m, max_chars));
         let format =
             egui::text::TextFormat { font_id: regular(LIST_TEXT), color: t.text_dim, line_height: Some(PREVIEW_PITCH), ..Default::default() };
         let mut job = egui::text::LayoutJob::default();
-        job.append(&said, 0.0, format);
+        job.append(&said, lead, format);
         job.wrap =
             egui::text::TextWrapping { max_width: preview_end - left, max_rows: usize::from(lines), break_anywhere: false, overflow_character: None };
         let galley = p.layout_job(job);
         // A word too long for the column runs on: it stops at the column's edge.
         let clip = Rect::from_min_max(pos2(left, rect.min.y), pos2(preview_end, rect.max.y - 1.0)).intersect(p.clip_rect());
-        p.with_clip_rect(clip).galley(pos2(left, rect.min.y + PREVIEW_TOP), galley, t.text_dim);
+        let top = if normal { line2 - PREVIEW_PITCH / 2.0 - 0.5 } else { rect.min.y + PREVIEW_TOP };
+        p.with_clip_rect(clip).galley(pos2(left, top), galley, t.text_dim);
     }
 
     // Quick actions over the row under the pointer.
@@ -2177,6 +2321,35 @@ mod tests {
             let folder = at(&harness, "messageFolder", row.id);
             assert!(folder.max.x <= size.min.x, "row {}: {folder:?} before {size:?}", row.id);
         }
+    }
+
+    /// Normal rows (#fork, v0.12.26): the subject and the time on the first line, the sender
+    /// under it with the preview after it, rows shorter than Extended ones; the button by the
+    /// arrangement says which style is in use and Compact is the single line.
+    #[test]
+    fn normal_rows_put_the_subject_first() {
+        let mut a = app();
+        a.execute("view.groups", json!({"value": false})).unwrap();
+        let mut harness = window(a, (1280.0, 1100.0));
+        let extended = drawn(&mut harness);
+        assert!(harness.state().hit.rect("rowStyle", 0).is_some());
+        harness.state_mut().execute("view.rowStyle", json!({"value": "normal"})).unwrap();
+        harness.run_steps(3);
+        let rows = drawn(&mut harness);
+        assert!(rows.len() >= extended.len(), "{} rows, {} before", rows.len(), extended.len());
+        for (row, rect) in &rows {
+            assert_eq!(rect.height(), normal_row_height(1));
+            let subject = at(&harness, "messageSubject", row.id);
+            assert!(subject.center().y < rect.center().y, "row {}: the subject on the first line", row.id);
+            if let Some(sender) = harness.state().hit.rect("messageSender", row.id) {
+                assert!(sender.center().y > subject.center().y + 10.0, "row {}: the sender under the subject", row.id);
+                assert!((sender.min.x - subject.min.x).abs() <= 1.0, "row {}: both start at the text's left", row.id);
+            }
+        }
+        harness.state_mut().execute("view.rowStyle", json!({"value": "compact"})).unwrap();
+        harness.run_steps(3);
+        assert!(harness.state().session.prefs.one_line);
+        assert!(drawn(&mut harness).iter().all(|(_, rect)| rect.height() == ONE_LINE_H));
     }
 
     /// A row's folder leads its subject's line (#fork, v0.12.25): in a search of every mailbox
