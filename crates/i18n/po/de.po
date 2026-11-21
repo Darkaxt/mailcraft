@@ -19491,11 +19491,6 @@ msgid "Turn on backups first."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/attachment_preview.rs
-msgid "Turn on the Preview Pane in the View tab."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Turned off by your organisation"

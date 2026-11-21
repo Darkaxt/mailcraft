@@ -75,6 +75,15 @@ impl MailApp {
             log::info!("sign-in, account {account}: signed in again");
         }
         self.sign_in_asked.remove(&account);
+        // What the last Send/Receive said of the sign-in no longer holds (v0.12.25): the title
+        // bar's shield kept warning until the next run of the account went through, a minute
+        // on. The account's other problems stay until then.
+        if let Some(at) = self.sync_problems.iter().position(|(a, ..)| *a == account) {
+            self.sync_problems[at].3.retain(|line| !needs_new_sign_in(&line.to_string()));
+            if self.sync_problems[at].3.is_empty() {
+                self.sync_problems.remove(at);
+            }
+        }
     }
 
     /// The accounts that can't send or receive until the owner signs in again, in order.

@@ -56,6 +56,26 @@ fn only_the_errors_that_need_a_new_sign_in_count() {
     }
 }
 
+/// A sign-in that succeeds takes off what the last Send/Receive said of the sign-in at once
+/// (v0.12.25), not when the next run goes through; other problems of the account stay.
+#[test]
+fn signing_in_again_takes_off_the_sign_in_problem_at_once() {
+    let (mut app, _, account) = headless();
+    app.note_sync_problems(account, &[approval::GOOGLE_REAUTH_REQUIRED.to_string()], false);
+    app.note_sign_in_error(account, approval::GOOGLE_REAUTH_REQUIRED);
+    assert!(app.has_sync_problems() && app.sign_in_needed() == [account]);
+    app.note_signed_in(account);
+    assert!(app.sign_in_needed().is_empty() && !app.has_sync_problems(), "{:?}", app.sync_problem_lines());
+    assert!(app.account_troubles().is_empty());
+
+    let other = "The folder could not be read.";
+    app.note_sync_problems(account, &[approval::GOOGLE_REAUTH_REQUIRED.to_string(), other.to_string()], false);
+    app.note_signed_in(account);
+    let lines = app.sync_problem_lines();
+    assert!(lines.iter().any(|l| l.trim() == other), "{lines:?}");
+    assert!(!lines.iter().any(|l| l.trim() == approval::GOOGLE_REAUTH_REQUIRED), "{lines:?}");
+}
+
 #[test]
 fn the_owner_is_asked_once_until_signed_in_again() {
     let (mut app, shown, account) = headless();

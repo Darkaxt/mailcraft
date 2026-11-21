@@ -1,4 +1,10 @@
-**MailCraft 0.12.24** — one Folders for all accounts, clearer stars
+**MailCraft 0.12.25** — the folder leads the subject; previews without setup
+- In the unified mailbox and in searches of every mailbox, a message's folder now starts its subject line: its emoji tag (or folder icon), its name, then the subject. Point at it to see whose account it is.
+- Clicking an attachment, in a message or in a draft, previews it right away. You no longer need to turn on the Preview Pane or attachment previews first.
+- After you sign in again, the account warning clears right away instead of a minute later.
+- Everything from 0.12.24 stays.
+
+**MailCraft 0.12.24 in short** — one Folders for all accounts, clearer stars
 - The star after a folder's name means it is in Favorites. Click the star to remove it.
 - "Folders" in the unified mailbox is now its own entry for all accounts, not your Outlook Inbox. It has no star, and right-click offers New Folder.
 - The Tag menu no longer suggests a star, which looked like the Favorites star.

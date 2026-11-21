@@ -801,9 +801,9 @@ fn plan_tags(p: &egui::Painter, labels: &[&str], more: usize, room: f32) -> TagP
     }
 }
 
-/// A row's folder at its tail, ending at `end`: its name (`label`), and before it the folder's
-/// icon in the origin's colour (`ink`), or its tag (`folder.tag`) when it has one. Where it starts.
-fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Option<Color32>, tag: Option<&str>, t: &Tokens) -> f32 {
+/// A server row's folder at its tail, ending at `end`: its name (`label`), and before it the
+/// folder's icon in the origin's colour (`ink`). Where it starts.
+fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Option<Color32>, t: &Tokens) -> f32 {
     const ICON: f32 = 12.0;
     const GAP: f32 = 3.0;
     let width = FOLDER_W - ICON - GAP;
@@ -819,15 +819,33 @@ fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Opt
     let size = galley.size();
     let x = end.x - size.x;
     p.galley(pos2(x, end.y - size.y / 2.0), galley, t.text_dim);
-    if let Some(tag) = tag {
-        let galley = p.layout_no_wrap(tag.to_string(), regular(LIST_TEXT), t.text);
-        let at = x - GAP - galley.size().x.min(3.0 * ICON);
-        p.galley(pos2(at, end.y - galley.size().y / 2.0), galley, t.text);
-        return at;
-    }
     let icon = x - GAP - ICON;
     icons::paint(p, Rect::from_min_size(pos2(icon, end.y - ICON / 2.0), vec2(ICON, ICON)), "folder", ink.unwrap_or(t.text_dim), t.accent);
     icon
+}
+
+/// A row's folder at the start of its subject's line (#fork, v0.12.25), from `at`: its tag
+/// (`folder.tag`), or its icon in the origin's colour (`ink`), then its name, in at most two
+/// fifths of `room`, and "›". Where the subject starts: `at.x` when there is no room for it.
+fn paint_folder_prefix(p: &egui::Painter, at: egui::Pos2, room: f32, name: &str, tag: Option<&str>, ink: Option<Color32>, t: &Tokens) -> f32 {
+    const ICON: f32 = 12.0;
+    const GAP: f32 = 4.0;
+    if room < 60.0 {
+        return at.x;
+    }
+    let mut x = at.x;
+    match tag {
+        Some(tag) => x += paint_clipped(p, at, 3.0 * ICON, tag, regular(LIST_TEXT), t.text) + GAP,
+        None => {
+            icons::paint(p, Rect::from_min_size(pos2(x, at.y - ICON / 2.0), vec2(ICON, ICON)), "folder", ink.unwrap_or(t.text_dim), t.accent);
+            x += ICON + GAP;
+        }
+    }
+    if !name.is_empty() {
+        x += paint_clipped(p, pos2(x, at.y), (room * 0.4).min(180.0), name, regular(LIST_TEXT), t.text_dim);
+        x += GAP + p.text(pos2(x + GAP, at.y), Align2::LEFT_CENTER, "›", regular(LIST_TEXT), t.text_dim).width() + GAP;
+    }
+    x
 }
 
 /// What a row says of its message's size (#273): only while the list is arranged by size, and
@@ -1278,9 +1296,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     let (labels, labels_more) = list_labels(&app.session, &m);
     let elsewhere = row.under.is_some() && m.folder != app.session.view.folder;
     let shown_folder = (shows_folder(&app.session) || elsewhere).then(|| app.session.mailbox.folder(m.folder)).flatten();
-    let tail_after = shown_folder.map_or(0.0, |_| FOLDER_W + 6.0)
-        + m.categories.len().min(4) as f32 * 13.0
-        + if conversation { row.size().to_string().len() as f32 * 6.5 + 15.0 } else { 0.0 };
+    let tail_after = m.categories.len().min(4) as f32 * 13.0 + if conversation { row.size().to_string().len() as f32 * 6.5 + 15.0 } else { 0.0 };
     let one_tags =
         if one { plan_tags(p, &labels, labels_more, x - 4.0 - size_room - tail_after - (left + ONE_LINE_SENDER_MIN)) } else { TagPlan::default() };
     let who_font = if unread { semibold(SENDER_TEXT) } else { regular(SENDER_TEXT) };
@@ -1330,43 +1346,36 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         sx = at.min.x - 6.0;
     }
     // (And under an open conversation, a message of another folder: a reply in Sent Items, #503.)
-    if let Some(folder) = shown_folder {
-        let label = if app.session.view.search_folder.is_some()
-            || app.session.view.filing.is_some()
-            || app.session.view.scope == mailcraft_engine::Scope::Inboxes
-        {
-            let account = app
-                .session
-                .mailbox
-                .account(m.origin_account())
-                .map(|a| if a.email.is_empty() { a.name.clone() } else { a.email.clone() })
-                .unwrap_or_else(|| format!("{} #{}", tl!("Unavailable account"), m.origin_account()));
-            let origin = match m.origin_alias() {
-                Some(alias) => format!("{account} · {alias}"),
-                None => account.to_owned(),
-            };
-            // In a unified filing folder every row is in a folder of that name: the tag says only
-            // whose it is, so the account isn't cut off behind a folder name the list already shows.
-            let same_folder = app.session.view.filing.is_some()
-                && app.session.mailbox.folder(app.session.view.folder).is_some_and(|f| crate::nav::folder_name(f) == crate::nav::folder_name(folder));
-            if same_folder {
-                origin
-            } else {
-                crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", crate::nav::folder_name(folder)), ("mailbox", &origin)])
-            }
-        } else {
-            crate::nav::result_folder_label(&app.session.mailbox, folder)
+    // It leads the subject's line (#fork, v0.12.25): its tag, or its icon in the origin's colour,
+    // then its name and "›". The name is left out where the list already says it (an Inbox in
+    // All inboxes, a unified folder's own name); the whole label, with whose it is, comes under
+    // the pointer.
+    let folder_prefix = shown_folder.map(|folder| {
+        let view = &app.session.view;
+        let unified = view.search_folder.is_some() || view.filing.is_some() || view.scope == mailcraft_engine::Scope::Inboxes;
+        if !unified {
+            let label = crate::nav::result_folder_label(&app.session.mailbox, folder);
+            return (label.clone(), label, app.session.mailbox.tag_of(folder.id).map(str::to_owned));
+        }
+        let account = app
+            .session
+            .mailbox
+            .account(m.origin_account())
+            .map(|a| if a.email.is_empty() { a.name.clone() } else { a.email.clone() })
+            .unwrap_or_else(|| format!("{} #{}", tl!("Unavailable account"), m.origin_account()));
+        let origin = match m.origin_alias() {
+            Some(alias) => format!("{account} · {alias}"),
+            None => account,
         };
-        let end = sx;
-        // Its folder icon in the stripe's colour: which account it is, said twice.
-        let tag = app.session.mailbox.tag_of(folder.id).map(str::to_owned);
-        sx = paint_result_folder(p, pos2(end, tail_y), &label, origin_color.map(crate::theme::c32), tag.as_deref(), &t) - 6.0;
-        app.hit.add("messageFolder", row.id, Rect::from_min_max(pos2(sx + 6.0, tail_y - 7.0), pos2(end, tail_y + 7.0)));
-    }
+        let name = crate::nav::folder_name(folder);
+        let implied = (view.scope == mailcraft_engine::Scope::Inboxes && folder.kind == FolderKind::Inbox)
+            || (view.filing.is_some() && app.session.mailbox.folder(view.folder).is_some_and(|f| crate::nav::folder_name(f) == name));
+        let full = crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", name), ("mailbox", &origin)]);
+        (full, if implied { String::new() } else { name.to_string() }, app.session.mailbox.tag_of(folder.id).map(str::to_owned))
+    });
     // The labels' tags: planned above in a single line; under the time, in what is left down to
     // a little of the preview's line (never over the picture at the row's left).
-    let after_folder = tail_after - shown_folder.map_or(0.0, |_| FOLDER_W + 6.0);
-    let tags = if one { one_tags } else { plan_tags(p, &labels, labels_more, sx - after_folder - (left + PREVIEW_KEPT)) };
+    let tags = if one { one_tags } else { plan_tags(p, &labels, labels_more, sx - tail_after - (left + PREVIEW_KEPT)) };
     if tags.more > 0 {
         let w = p.text(pos2(sx, tail_y), Align2::RIGHT_CENTER, format!("+{}", tags.more), regular(10.0), t.text_dim).width();
         sx -= w + 4.0;
@@ -1401,7 +1410,17 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         (true, true) => (semibold(LIST_TEXT), t.overdue),
         (false, _) => (regular(LIST_TEXT), if overdue { t.overdue } else { t.text }),
     };
-    let subject_x = if one { who_end + 10.0 } else { left };
+    let mut subject_x = if one { who_end + 10.0 } else { left };
+    if let Some((full, name, tag)) = &folder_prefix {
+        let start = subject_x;
+        let ink = origin_color.map(crate::theme::c32);
+        subject_x = paint_folder_prefix(p, pos2(start, line2), (subject_end - start).max(0.0), name, tag.as_deref(), ink, &t);
+        if subject_x > start {
+            let at = Rect::from_min_max(pos2(start, line2 - 7.0), pos2(subject_x, line2 + 7.0));
+            let _ = ui.interact(at, ui.scope_id().with(("msg_folder", key)), Sense::hover()).on_hover_text(full.as_str());
+            app.hit.add("messageFolder", row.id, at);
+        }
+    }
     paint_clipped(p, pos2(subject_x, line2), (subject_end - subject_x).max(0.0), subject, sfont, scolor);
 
     // Then the preview: whole words, as many lines as asked for, and no mark where it stops.
@@ -2158,6 +2177,27 @@ mod tests {
             let folder = at(&harness, "messageFolder", row.id);
             assert!(folder.max.x <= size.min.x, "row {}: {folder:?} before {size:?}", row.id);
         }
+    }
+
+    /// A row's folder leads its subject's line (#fork, v0.12.25): in a search of every mailbox
+    /// it starts where the sender's name does, on the line under it, and not under the time; with
+    /// a tag, the tag is drawn there.
+    #[test]
+    fn a_rows_folder_leads_its_subject() {
+        let mut a = app();
+        let folder = a.session.mailbox.folders.iter().find(|f| f.kind == FolderKind::Inbox).map(|f| f.id).unwrap();
+        a.execute("folder.tag", json!({"id": folder, "tag": "🐱"})).unwrap();
+        a.execute("view.search", json!({"query": "the", "scope": "everywhere"})).unwrap();
+        let mut harness = window(a, (1200.0, 800.0));
+        let rows = drawn(&mut harness);
+        assert!(!rows.is_empty());
+        for (row, rect) in &rows {
+            let (place, sender) = (at(&harness, "messageFolder", row.id), at(&harness, "messageSender", row.id));
+            assert!((place.min.x - sender.min.x).abs() <= 1.0, "row {}: {place:?} starts the line, as {sender:?}", row.id);
+            assert!(place.center().y > sender.center().y + 6.0, "row {}: on the subject's line", row.id);
+            assert!(place.max.x < rect.center().x, "row {}: {place:?} not under the time in {rect:?}", row.id);
+        }
+        assert!(rows.iter().any(|(row, _)| message(&harness, row.id).folder == folder), "a row of the tagged folder is shown");
     }
 
     /// #273: in a single line, in a list as narrow as it goes, the sender's name stops short of

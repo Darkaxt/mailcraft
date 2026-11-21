@@ -131,6 +131,32 @@ fn with_the_pane_on_a_click_shows_a_text_file_beside_the_message() {
     assert!(h.state().hit.rect("attachmentPreviewText", A).is_none());
 }
 
+/// With nothing turned on (no Preview Pane, no PdfCraft or PhotoCraft), a click on a file of a
+/// message read or being written shows it in place of the body, with a way back (v0.12.25).
+#[test]
+fn a_click_previews_with_nothing_turned_on() {
+    let mut h = testing::window("view.mail");
+    let app = h.state_mut();
+    let _ = app.execute("ui.dismissReminder", json!({"all": true}));
+    assert!(!app.session.view.preview_pane && !app.ui.attachment_previews);
+    app.session.mailbox.message_mut(A).unwrap().attachments = vec![Attachment::new("notes.txt", "text/plain", b"hello".to_vec())];
+    app.run("mail.select", json!({"id": A})).unwrap();
+    h.run_steps(5);
+    let at = h.state().hit.rect_in(0, "attachment", attachment_key(A, 0)).unwrap().center();
+    click(&mut h, at, PointerButton::Primary, 1);
+    h.run_steps(30);
+    assert!(h.state().hit.rect("attachmentPreviewText", A).is_some() && h.state().hit.rect("attachmentPreviewBack", A).is_some());
+    let app = h.state_mut();
+    app.execute("mail.new", json!({"subject": "Notes"})).unwrap();
+    app.execute("compose.attach", json!({"name": "notes.txt", "data": "aGVsbG8gd29ybGQ="})).unwrap();
+    let compose = app.session.compose.as_ref().unwrap().id;
+    h.run_steps(5);
+    let at = h.state().hit.rect("composeAttachment", attachment_key(compose, 0)).unwrap().center();
+    click(&mut h, at, PointerButton::Primary, 1);
+    h.run_steps(30);
+    assert!(h.state().hit.rect("attachmentPreviewText", compose).is_some() && h.state().hit.rect("attachmentPreviewBack", compose).is_some());
+}
+
 /// A file of a message being written is previewed with a click on its chip (v0.12.14).
 #[test]
 fn a_file_being_written_is_previewed_from_its_chip() {

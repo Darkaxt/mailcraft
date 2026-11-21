@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! On-demand preview of an attachment: of a message read, or of a message being written
 //! (v0.12.14). It is shown in the Preview Pane beside the message (`view.previewPane`), or, with
-//! that pane off, in place of the message's body.
+//! that pane off, in place of the message's body. What MailCraft previews itself needs nothing
+//! turned on (#fork, v0.12.25); only PdfCraft and PhotoCraft wait for File › Options.
 //!
 //! What is shown and by what:
 //! - text, CSV and TSV, HTML, a message (`.eml`) and a ZIP file's list of files are read here, in
@@ -368,10 +369,6 @@ impl Drop for Preview {
 
 /// Whether attachments are previewed at all: the Preview Pane is on, or the owner turned on the
 /// installed helpers in File › Options.
-fn enabled(app: &MailApp) -> bool {
-    app.ui.attachment_previews || app.session.view.preview_pane
-}
-
 /// How a preview of a file of `kind` is made here, if it can be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Route {
@@ -406,8 +403,7 @@ fn route(app: &MailApp, kind: Kind) -> Option<Route> {
 /// flagged is never previewed: it is opened, if at all, through the owner's own "Open anyway".
 pub(crate) fn available(app: &MailApp, id: Id, index: usize) -> bool {
     let origin = Origin::Message(id);
-    enabled(app)
-        && !refused(app, origin, index)
+    !refused(app, origin, index)
         && attachment(app, origin, index)
             .filter(|part| (1..=MAX_INPUT_BYTES).contains(&part.size()))
             .is_some_and(|part| route(app, kind_of(&part.name, &part.mime)).is_some())
@@ -436,8 +432,7 @@ pub(crate) fn options(app: &mut MailApp, ui: &mut egui::Ui) {
 /// Pane on, any file can be clicked: the pane says when there is no preview for it.
 pub(crate) fn single_click_allowed(app: &MailApp, origin: Origin, index: usize) -> bool {
     let in_junk = matches!(origin, Origin::Message(id) if in_junk(app, id));
-    enabled(app)
-        && !in_junk
+    !in_junk
         && !refused(app, origin, index)
         && attachment(app, origin, index).is_some_and(|part| {
             app.session.view.preview_pane || (part.size() <= MAX_INPUT_BYTES && route(app, kind_of(&part.name, &part.mime)).is_some())
@@ -536,9 +531,6 @@ pub(crate) fn open(app: &mut MailApp, viewport: egui::ViewportId, id: Id, index:
 /// picture asked of the app's worker.
 pub(crate) fn open_in(app: &mut MailApp, viewport: egui::ViewportId, origin: Origin, index: usize) -> Result<(), String> {
     cancel_click(app);
-    if !enabled(app) {
-        return Err(tl!("Turn on the Preview Pane in the View tab.").into());
-    }
     let spot = app.hit.window();
     if refused(app, origin, index) {
         return Err(Error::Refused.text().into());
@@ -866,7 +858,6 @@ pub(crate) fn poll(app: &mut MailApp, ctx: &egui::Context) {
         preview.mailbox != app.session.openings()
             || !window_is_open(preview.viewport, preview.spot)
             || attachment(app, preview.origin, preview.index) != Some(&preview.attachment)
-            || !enabled(app)
     }) {
         app.attachment_preview = None;
     }
