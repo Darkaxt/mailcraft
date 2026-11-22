@@ -5725,7 +5725,7 @@ msgid "Everyone outside my organization"
 msgstr "我的组织之外的每个人"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/search_options.rs
+#: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Everything"
 msgstr "一切"
@@ -8819,6 +8819,11 @@ msgstr "在日历上查找此会议"
 #, fuzzy
 msgid "Look for your certificates and keys again"
 msgstr "再次查找您的证书和密钥"
+
+#. interface
+#: crates/ui-egui/src/advanced_search.rs
+msgid "Look in"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -14986,7 +14991,7 @@ msgid "Search folders"
 msgstr "搜索文件夹"
 
 #. interface
-#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/search_options.rs
+#: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Search in"
 msgstr "搜索范围"

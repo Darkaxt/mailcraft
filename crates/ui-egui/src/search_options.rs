@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! The search box's inline options (Match case, Match whole word, Regex, and where to look) and the
-//! relevance of free-text matches in the message list.
+//! The search box's inline options (Match case, Match whole word, Regex), where to look (picked in
+//! Advanced Search, whose button the box shares with it) and the relevance of free-text matches in the message list.
 //!
 //! Everything this UI reads from or sends to the engine about them is here, in one place: the
 //! session's `view.search_options` (read through its JSON form), the `view.searchOptions` command,
@@ -13,7 +13,7 @@ use mailcraft_engine::{Session, SortBy};
 use serde_json::{Value, json};
 
 use crate::MailApp;
-use crate::theme::{Tokens, TypeRung, regular, semibold};
+use crate::theme::{Tokens, regular, semibold};
 
 /// Where a free-text search looks, by the engine's code and by name.
 pub(crate) const FIELDS: [(&str, &str); 4] = [("subject", "Subject"), ("people", "People"), ("body", "Body"), ("attachments", "Attachments")];
@@ -91,13 +91,12 @@ pub(crate) fn sort_choices() -> Vec<SortBy> {
 }
 
 /// The width the option toggles take at the right end of the search box.
-pub(crate) const TOGGLES_W: f32 = 3.0 * TOGGLE + FIELDS_W + 4.0;
+pub(crate) const TOGGLES_W: f32 = 3.0 * TOGGLE + 4.0;
 const TOGGLE: f32 = 26.0;
-const FIELDS_W: f32 = 30.0;
 
 /// The inline toggles at the right end of the search box, ending at `right`: Match case (Aa),
-/// Match whole word, Regex (.*), and the "search in" dropdown. `free`: the window takes commands
-/// (no dialog over it).
+/// Match whole word and Regex (.*); where to look is picked in Advanced Search. `free`: the
+/// window takes commands (no dialog over it).
 pub(crate) fn toggles(app: &mut MailApp, ui: &mut Ui, rect: Rect, right: f32, free: bool) {
     let t = Tokens::get(ui.ctx());
     let options = Options::of(&app.session);
@@ -147,42 +146,24 @@ pub(crate) fn toggles(app: &mut MailApp, ui: &mut Ui, rect: Rect, right: f32, fr
             set(app, &next);
         }
     }
-    // Where to look: a small dropdown with a check for each part of a message.
-    let area = Rect::from_center_size(pos2(x + FIELDS_W / 2.0, rect.center().y), vec2(FIELDS_W - 2.0, 22.0));
-    let all = options.search_in.len() == FIELDS.len();
-    let response = ui.interact(area, ui.scope_id().with("search_in"), Sense::click());
-    let names: Vec<&str> = FIELDS.iter().filter(|(code, _)| options.search_in.iter().any(|c| c == code)).map(|(_, name)| tl!(name)).collect();
-    let summary = if all { tl!("Everything").to_string() } else { names.join(", ") };
-    let label = format!("{}: {summary}", tl!("Search in"));
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, &label));
-    app.hit.add("searchIn", 0, area);
-    if !all {
-        ui.painter().rect(area, 4.0, t.checked, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
-    } else if response.hovered() {
-        ui.painter().rect_filled(area, 4.0, t.hover);
-    }
-    if response.has_focus() {
-        ui.painter().rect_stroke(area.expand(1.0), 5.0, Stroke::new(1.5, t.focus_ring), egui::StrokeKind::Outside);
-    }
-    let ink = if all { t.text_dim } else { t.accent_text };
-    crate::icons::paint(
-        ui.painter(),
-        Rect::from_center_size(pos2(area.center().x - 4.0, area.center().y), vec2(13.0, 13.0)),
-        "filter",
-        ink,
-        t.accent,
-    );
-    let c = pos2(area.max.x - 6.0, area.center().y + 1.0);
-    ui.painter().line(vec![c + vec2(-3.0, -1.5), c + vec2(0.0, 1.5), c + vec2(3.0, -1.5)], Stroke::new(1.1, ink));
-    let response = response.on_hover_text(label.clone());
-    egui::Popup::menu(&response).show(|ui| {
-        ui.set_min_width(150.0);
-        ui.label(egui::RichText::new(tl!("Search in")).font(TypeRung::Caption.regular()).weak());
+}
+
+/// Whether the search looks in only some parts of a message: the Advanced Search button, where
+/// they are picked, then shows it.
+pub(crate) fn narrowed(s: &Session) -> bool {
+    Options::of(s).search_in.len() != FIELDS.len()
+}
+
+/// The parts of a message a search looks in, a check each (in the Advanced Search panel, which
+/// shares its button with them): the options with one changed, when one was. The last one left
+/// stays: a search looks somewhere.
+pub(crate) fn search_in_checks(ui: &mut Ui, options: &Options) -> Option<Options> {
+    let mut changed = None;
+    ui.horizontal_wrapped(|ui| {
         for (code, name) in FIELDS {
             let mut on = options.search_in.iter().any(|c| c == code);
-            // The last part left stays: a search looks somewhere.
             let last = on && options.search_in.len() == 1;
-            if ui.add_enabled(!last, egui::Checkbox::new(&mut on, tl!(name))).changed() && free {
+            if ui.add_enabled(!last, egui::Checkbox::new(&mut on, tl!(name))).changed() {
                 let mut next = options.clone();
                 next.search_in.retain(|c| c != code);
                 if on {
@@ -190,10 +171,16 @@ pub(crate) fn toggles(app: &mut MailApp, ui: &mut Ui, rect: Rect, right: f32, fr
                 }
                 // In the engine's order.
                 next.search_in.sort_by_key(|c| FIELDS.iter().position(|(known, _)| known == c));
-                set(app, &next);
+                changed = Some(next);
             }
         }
     });
+    changed
+}
+
+/// Sets the parts a search looks in ([`search_in_checks`]).
+pub(crate) fn set_search_in(app: &mut MailApp, options: &Options) {
+    set(app, options);
 }
 
 /// A row's relevance in a free-text search: its score (0 to 100) and, per term, how it matched

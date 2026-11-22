@@ -5727,7 +5727,7 @@ msgid "Everyone outside my organization"
 msgstr "Mindenki a szervezetemen kívül"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/search_options.rs
+#: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Everything"
 msgstr "Minden"
@@ -8821,6 +8821,11 @@ msgstr "Keresd meg ezt a találkozót a naptárban"
 #, fuzzy
 msgid "Look for your certificates and keys again"
 msgstr "Keresse meg a tanúsítványokat és kulcsokat újra"
+
+#. interface
+#: crates/ui-egui/src/advanced_search.rs
+msgid "Look in"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -14988,7 +14993,7 @@ msgid "Search folders"
 msgstr "Keresés a mappákban"
 
 #. interface
-#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/search_options.rs
+#: crates/ui-egui/src/advanced_search.rs
 #, fuzzy
 msgid "Search in"
 msgstr "Keresés helye"

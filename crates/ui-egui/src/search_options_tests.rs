@@ -68,7 +68,8 @@ fn the_toggles_set_the_engines_options_and_whole_word_waits_for_regex_to_be_off(
     let whole = at(&h, "searchWholeWord");
     click(&mut h, whole.center());
     assert!(!Options::of(&h.state().session).whole_word);
-    assert!(h.state().hit.rect("searchIn", 0).is_some());
+    // Where to look is picked in Advanced Search, behind the box's one filter button.
+    assert!(h.state().hit.rect("searchIn", 0).is_none());
     // Regex off: whole words can be asked for again.
     click(&mut h, regex.center());
     click(&mut h, whole.center());

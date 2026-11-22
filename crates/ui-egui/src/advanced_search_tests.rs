@@ -54,6 +54,22 @@ fn the_button_opens_and_closes_the_panel() {
     assert!(!is_open(&w));
 }
 
+/// Where a search looks is picked in the panel, which shares the one filter button with it: a
+/// check is set at once and the button shows it.
+#[test]
+fn the_panel_picks_the_parts_searched_and_the_button_shows_it() {
+    let mut w = window();
+    assert!(w.state().hit.rect("searchIn", 0).is_none(), "no second filter button in the box");
+    open(&mut w);
+    assert!(!crate::search_options::narrowed(&w.state().session));
+    w.get_by_role_and_label(egui::accesskit::Role::CheckBox, tl!("Body")).click();
+    w.run_steps(3);
+    let options = crate::search_options::Options::of(&w.state().session);
+    assert_eq!(options.search_in, vec!["subject".to_string(), "people".to_string(), "attachments".to_string()]);
+    assert!(crate::search_options::narrowed(&w.state().session));
+    assert!(is_open(&w), "a check leaves the panel open");
+}
+
 #[test]
 fn search_writes_the_box_sets_the_scope_and_closes_the_panel() {
     let mut w = window();

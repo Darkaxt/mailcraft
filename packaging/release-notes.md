@@ -1,4 +1,9 @@
-**MailCraft 0.12.27** — uses far less memory
+**MailCraft 0.12.28** — one filter button in the search box
+- The search box now has one filter button instead of two. It opens Advanced Search, which now also has the Look in checks (Subject, People, Body, Attachments).
+- The button lights up when a search doesn't look in every part of a message.
+- Everything from 0.12.27 stays.
+
+**MailCraft 0.12.27 in short** — uses far less memory
 - MailCraft no longer keeps the text of your newest mail in memory when it starts. The list takes its previews from the search index, and a message reads its text when you open it.
 - With a large mailbox this saves a few hundred MB of memory. Nothing looks or works differently.
 - Everything from 0.12.26 stays.

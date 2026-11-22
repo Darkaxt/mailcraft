@@ -210,7 +210,7 @@ fn search_box(app: &mut MailApp, ui: &mut Ui, rect: Rect) {
     // Advanced Search's button, at the right of the text as in Outlook: Mail's alone.
     let in_mail = app.session.view.module == Module::Mail;
     let advanced_w = if in_mail { 28.0 } else { 0.0 };
-    // Match case, Match whole word, Regex and where to look, at the right end of the text, while
+    // Match case, Match whole word and Regex, at the right end of the text, while
     // the box has room for them besides the text.
     let options_w = if in_mail && rect.width() >= 420.0 { crate::search_options::TOGGLES_W } else { 0.0 };
     let edit_rect =
@@ -226,10 +226,16 @@ fn search_box(app: &mut MailApp, ui: &mut Ui, rect: Rect) {
         let aresp = aresp.on_hover_text(tl!("Advanced Search"));
         app.hit.add("advancedSearchButton", 0, advanced);
         let open = app.advanced_search.is_some();
+        // Where a search looks is picked in the panel too: the button shows when only some parts
+        // of a message are searched, as the box's toggles show theirs.
+        let narrowed = crate::search_options::narrowed(&app.session);
         if aresp.hovered() || open {
             ui.painter().rect_filled(advanced, 4.0, if open { t.pressed } else { t.hover });
+        } else if narrowed {
+            ui.painter().rect(advanced, 4.0, t.checked, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
         }
-        icons::paint(ui.painter(), Rect::from_center_size(advanced.center(), vec2(15.0, 15.0)), "filter", t.text_dim, t.accent);
+        let ink = if narrowed { t.accent_text } else { t.text_dim };
+        icons::paint(ui.painter(), Rect::from_center_size(advanced.center(), vec2(15.0, 15.0)), "filter", ink, t.accent);
         if aresp.clicked()
             && let Err(e) = crate::advanced_search::set_open(app, !open)
         {

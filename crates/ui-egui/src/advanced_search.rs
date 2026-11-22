@@ -307,6 +307,9 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context, anchor: Rect, button:
     let mut filters = app.ui.advanced_filters;
     let (mut search, mut clear, mut enter) = (false, false, false);
     let mut save_folder = false;
+    // The parts of a message the search looks in: set at once, as the box's toggles are.
+    let options = crate::search_options::Options::of(&app.session);
+    let mut look_in = None;
     let problems = day_problems(&panel.received_from, &panel.received_to);
     let ok = problems == (None, None);
     // Taken before drawing: a list in the panel that a click closes in this frame was open.
@@ -326,6 +329,7 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context, anchor: Rect, button:
             // leaves too little for the fields, the labels go above them.
             let labels = [
                 tl!("Search in"),
+                tl!("Look in"),
                 tl!("From"),
                 tl!("To"),
                 tl!("Cc"),
@@ -353,6 +357,9 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context, anchor: Rect, button:
                 row(ui, label_w, tl!("Search in"), |ui, l| {
                     let scopes: Vec<(Scope, &str)> = crate::chrome::scopes().into_iter().map(|(s, name, _)| (s, name)).collect();
                     choice(ui, l, "advanced_scope", &mut panel.scope, &scopes, field_w);
+                });
+                row(ui, label_w, tl!("Look in"), |ui, _| {
+                    look_in = crate::search_options::search_in_checks(ui, &options);
                 });
                 row(ui, label_w, tl!("From"), |ui, l| {
                     field(ui, l, "advanced_from", &mut panel.fields.from, field_w, "", &mut enter);
@@ -486,6 +493,9 @@ pub(crate) fn show(app: &mut MailApp, ctx: &egui::Context, anchor: Rect, button:
     let rect = area.response.rect;
     app.hit.add("advancedSearch", 0, rect);
     app.ui.advanced_filters = filters;
+    if let Some(next) = look_in {
+        crate::search_options::set_search_in(app, &next);
+    }
     if save_folder {
         if let Some(query) = panel.query() {
             let _ = app.run("ui.dialog", json!({"name":"searchFolder","query":query,"scope":panel.scope}));
