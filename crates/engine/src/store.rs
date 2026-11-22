@@ -55,7 +55,7 @@
 //!   it are read: [`Opened::notice`]); either way the file is kept aside as
 //!   `mailbox.mailcraft.damaged-<time>` before it is next written.
 //! - **What comes into memory** ([`fill`]): every message's headers, and the bodies of the newest
-//!   mail (by date) up to a budget, the smaller of [`MAX_CONTENT`] and a sixteenth of the
+//!   mail (by date) up to a budget, the smaller of [`MAX_CONTENT`] (16 MB) and a sixteenth of the
 //!   machine's memory ([`body_budget`]). Attachments, and the bodies of older mail, stay on disk
 //!   and are named on the message ([`mailcraft_model::Attachment::kept`], [`Message::kept`]);
 //!   they are read when something needs them ([`fetch`], behind `Session::content`): a message
@@ -119,13 +119,15 @@ pub const INLINE_MAX: usize = 1024;
 /// Largest content file read.
 pub const MAX_BLOB: u64 = MAX_FILE;
 
-/// Most content one mailbox brings into memory when it opens (256 MB), whatever the machine has:
-/// a mailbox of 200,000 messages stays well under a gigabyte. The bodies beyond it stay on disk
-/// until they are wanted ([`body_budget`]).
-pub const MAX_CONTENT: u64 = 256 << 20;
+/// Most content one mailbox brings into memory when it opens (16 MB), whatever the machine has:
+/// the newest mail, which the window opens on. The bodies beyond it stay on disk until they are
+/// wanted ([`body_budget`]): the list takes its previews from the word index, and a message
+/// opened reads its body then (a few milliseconds). It was 256 MB, which kept 290 MB of bodies
+/// of a 95,000-message mailbox in memory for previews the index already had (0.12.27).
+pub const MAX_CONTENT: u64 = 16 << 20;
 
-/// What the bodies get when the machine's memory can't be read (128 MB).
-pub const FALLBACK_BUDGET: u64 = 128 << 20;
+/// What the bodies get when the machine's memory can't be read (16 MB).
+pub const FALLBACK_BUDGET: u64 = 16 << 20;
 
 /// Most bytes of fetched content kept in memory for the next time they are wanted (64 MB).
 pub const CACHE_MAX: u64 = 64 << 20;
@@ -2548,7 +2550,26 @@ const MIN_JSON_ITEMS: usize = 250_000;
 /// which a one-line `{}` message already costs. A file with more is refused while it is read, not
 /// after it has used the memory.
 pub(crate) fn max_json_items() -> usize {
-    usize::try_from(body_budget().saturating_mul(4) / mailcraft_model::MIN_ITEM_BYTES).unwrap_or(usize::MAX).max(MIN_JSON_ITEMS)
+    usize::try_from(items_budget().saturating_mul(4) / mailcraft_model::MIN_ITEM_BYTES).unwrap_or(usize::MAX).max(MIN_JSON_ITEMS)
+}
+
+/// What [`max_json_items`] counts from: the budget the bodies had before they were cut to
+/// [`MAX_CONTENT`] (a sixteenth of the machine's memory, at most 256 MB, or what the device
+/// allows when that is lower), so that the bodies brought in at opening shrinking doesn't shrink
+/// the largest mailbox that opens.
+fn items_budget() -> u64 {
+    #[cfg(test)]
+    {
+        let set = TEST_BUDGET.get();
+        if set > 0 {
+            return set;
+        }
+    }
+    let engine = physical_memory().map_or(128 << 20, |m| m / 16).min(256 << 20);
+    match DEVICE_BUDGET.load(std::sync::atomic::Ordering::Relaxed) {
+        0 => engine,
+        device => device.min(engine),
+    }
 }
 
 /// Bytes of parsed values (every list element, map entry and compound value of the mailbox, at any

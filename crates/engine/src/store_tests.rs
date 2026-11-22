@@ -1758,7 +1758,7 @@ fn every_content_name_in_a_damaged_file_is_found_wherever_it_falls() {
 #[test]
 fn what_a_session_brings_in_stays_within_its_budget_and_comes_back_when_wanted() {
     // Whatever the machine, what a mailbox brings in when it opens is modest.
-    assert!(body_budget() <= MAX_CONTENT && MAX_CONTENT <= 256 << 20 && CACHE_MAX <= 128 << 20);
+    assert!(body_budget() <= MAX_CONTENT && MAX_CONTENT <= 16 << 20 && CACHE_MAX <= 128 << 20);
     let tmp = Temp::new("evict");
     let path = tmp.file();
     let mut mb = mailbox(24);

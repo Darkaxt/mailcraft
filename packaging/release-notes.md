@@ -1,4 +1,9 @@
-**MailCraft 0.12.26** — choose how messages show in the list
+**MailCraft 0.12.27** — uses far less memory
+- MailCraft no longer keeps the text of your newest mail in memory when it starts. The list takes its previews from the search index, and a message reads its text when you open it.
+- With a large mailbox this saves a few hundred MB of memory. Nothing looks or works differently.
+- Everything from 0.12.26 stays.
+
+**MailCraft 0.12.26 in short** — choose how messages show in the list
 - A new button beside the sort order picks the message rows: Compact (one line), Normal (subject first) or Extended (sender first, as before).
 - Normal shows the folder and subject with the time on top, and the sender and a line of the message under them. More mail fits on screen.
 - Everything from 0.12.25 stays.
