@@ -5,8 +5,9 @@
 use eframe::{
     NativeOptions,
     egui_wgpu::WgpuSetup,
-    wgpu::{Backends, DeviceType},
+    wgpu::{Backends, DeviceDescriptor, DeviceType, MemoryHints},
 };
+use std::sync::Arc;
 
 /// What the start-up probe learned about one DirectX 12 adapter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,7 +55,17 @@ pub fn configure_backends(options: &mut NativeOptions, backends: Backends) {
         // out of the instance avoids it. This matches the verified WGPU_BACKEND=dx12
         // workaround without mutating process environment variables.
         create.instance_descriptor.backends = backends;
+        let device_descriptor = Arc::clone(&create.device_descriptor);
+        create.device_descriptor = Arc::new(move |adapter| with_small_gpu_blocks(device_descriptor(adapter)));
     }
+}
+
+/// `descriptor` asking the GPU allocator for small memory blocks. wgpu's default `Performance`
+/// hint reserves 128 MB and 64 MB blocks up front; on a GPU that shares system memory these are
+/// committed RAM (about 190 MB in a dump of the running app). The app draws a few small
+/// textures, so small blocks cost it nothing.
+fn with_small_gpu_blocks(descriptor: DeviceDescriptor<'static>) -> DeviceDescriptor<'static> {
+    DeviceDescriptor { memory_hints: MemoryHints::MemoryUsage, ..descriptor }
 }
 
 /// Chooses the backends ([`choose_backends`]) and applies them to `options`. Without a
@@ -117,6 +128,66 @@ mod tests {
 
     const fn adapter(device_type: DeviceType, meets_limits: bool) -> Dx12Adapter {
         Dx12Adapter { device_type, meets_limits }
+    }
+
+    /// What the GPU allocator holds for a window's worth of drawing (a font atlas uploaded, a
+    /// vertex buffer written) with each hint, measured on this machine's DirectX 12 adapter: the
+    /// small blocks must hold less. Skipped where there is none.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn small_gpu_blocks_hold_less_memory() {
+        use eframe::wgpu;
+        if !wgpu::Instance::enabled_backend_features().contains(Backends::DX12) {
+            return;
+        }
+        let reserved = |hint: MemoryHints| -> Option<u64> {
+            let instance =
+                wgpu::Instance::new(wgpu::InstanceDescriptor { backends: Backends::DX12, ..wgpu::InstanceDescriptor::new_without_display_handle() });
+            let adapter = crate::block_on::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default())).ok()?;
+            let (device, queue) =
+                crate::block_on::block_on(adapter.request_device(&DeviceDescriptor { memory_hints: hint, ..Default::default() })).ok()?;
+            let size = wgpu::Extent3d { width: 2048, height: 2048, depth_or_array_layers: 1 };
+            let atlas = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("atlas"),
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+            let texels = vec![0x80u8; 2048 * 2048 * 4];
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo { texture: &atlas, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                &texels,
+                wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(2048 * 4), rows_per_image: Some(2048) },
+                size,
+            );
+            let vertices = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("vertices"),
+                size: 1 << 20,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            queue.write_buffer(&vertices, 0, &vec![0u8; 1 << 20]);
+            queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
+            device.poll(wgpu::PollType::wait_indefinitely()).ok()?;
+            let report = device.generate_allocator_report()?;
+            Some(report.total_reserved_bytes)
+        };
+        let (Some(performance), Some(small)) = (reserved(MemoryHints::Performance), reserved(MemoryHints::MemoryUsage)) else {
+            return;
+        };
+        println!("GPU allocator reserved: Performance {} MiB, MemoryUsage {} MiB", performance >> 20, small >> 20);
+        assert!(small < performance, "MemoryUsage {small} bytes, Performance {performance} bytes");
+    }
+
+    #[test]
+    fn the_gpu_allocator_uses_small_blocks() {
+        let descriptor = with_small_gpu_blocks(DeviceDescriptor { label: Some("egui wgpu device"), ..Default::default() });
+        assert!(matches!(descriptor.memory_hints, MemoryHints::MemoryUsage));
+        assert_eq!(descriptor.label, Some("egui wgpu device"));
     }
 
     #[test]

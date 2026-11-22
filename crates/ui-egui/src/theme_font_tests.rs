@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use egui::FontFamily;
 
-use super::{FALLBACK_FACES, FALLBACK_FONTS_MAX, GEORGIAN_FACES, SystemFont, font_definitions, font_definitions_with, is_font, with_extra_face};
+use super::{FALLBACK_FACES, FALLBACK_FONTS_MAX, GEORGIAN_FACES, SystemFont, font_definitions_with, install_fonts_with, is_font, with_extra_face};
 
 /// A font that is certainly one: the bundled Inter, standing in for a system's face.
 const A_FONT: &[u8] = include_bytes!("../../../assets/fonts/Inter-Regular.ttf");
@@ -58,12 +58,19 @@ fn collection(face: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Lay out text of other scripts in every family `fonts` has: egui panics on font data it cannot
-/// open.
-fn draws(fonts: egui::FontDefinitions) {
-    let families: Vec<FontFamily> = fonts.families.keys().cloned().collect();
+/// A context with `fonts` and the fallback faces of `system`, as the window has them.
+fn context(fonts: egui::FontDefinitions, system: &SystemFont) -> egui::Context {
     let ctx = egui::Context::default();
     ctx.set_fonts(fonts);
+    ctx.set_font_providers(super::fallback_providers(system));
+    ctx
+}
+
+/// Lay out text of other scripts in every family `fonts` has, with the fallback faces of `system`:
+/// egui panics on font data it cannot open.
+fn draws(fonts: egui::FontDefinitions, system: &SystemFont) {
+    let families: Vec<FontFamily> = fonts.families.keys().cloned().collect();
+    let ctx = context(fonts, system);
     ctx.run_ui(egui::RawInput::default(), |_| {}).drop_without_applying_deltas();
     ctx.run_ui(egui::RawInput::default(), |ui| {
         for family in &families {
@@ -75,31 +82,41 @@ fn draws(fonts: egui::FontDefinitions) {
     .drop_without_applying_deltas();
 }
 
-fn fallback_names(fonts: &egui::FontDefinitions) -> Vec<&String> {
-    fonts.font_data.keys().filter(|name| name.starts_with("SystemFallback")).collect()
-}
-
-/// A fallback face found in a fonts folder, however deep and however its name is cased, goes
-/// behind every other font of every family, so that what those draw doesn't change.
+/// A fallback face found in a fonts folder, however deep and however its name is cased, changes
+/// none of the families: it is read only when text needs a letter no other font has, and egui
+/// puts it behind every other font then, so that what those draw doesn't change.
 #[test]
-fn a_fallback_face_goes_behind_every_other_font() {
+fn a_fallback_face_is_read_only_when_a_letter_needs_it() {
     let dir = FontsDir::new("behind");
-    dir.put("noto/hebrew/Hebrew-Face.TTF", A_FONT);
-    let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), &[&["missing.ttf", "hebrew-face.ttf"]]);
+    dir.put("noto/georgian/Georgian-Face.TTF", NOTO_GEORGIAN);
+    let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), &[&["missing.ttf", "georgian-face.ttf"]]);
     assert_eq!(system.fallback_count(), 1);
     assert!(!system.is_present(), "a fallback face is not the interface's own font");
     let fonts = font_definitions_with(&system);
-    assert_eq!(fallback_names(&fonts), ["SystemFallback0"]);
-    for (family, faces) in &fonts.families {
-        assert_eq!(faces.last().map(String::as_str), Some("SystemFallback0"), "{family:?}");
-        // What came before is as it was without it.
-        let without = font_definitions_with(&SystemFont::none());
-        assert_eq!(&faces[..faces.len() - 1], without.families[family].as_slice(), "{family:?}");
-    }
-    let proportional = &fonts.families[&FontFamily::Proportional];
-    assert_eq!(proportional.first().map(String::as_str), Some("Inter"));
-    assert_eq!(proportional.get(proportional.len() - 2).map(String::as_str), Some("Mono"));
-    draws(fonts);
+    assert_eq!(fonts.families, font_definitions_with(&SystemFont::none()).families);
+    assert!(!fonts.font_data.keys().any(|name| name.starts_with("SystemFallback")));
+    // Text the other fonts draw leaves it on the disk.
+    let ctx = context(fonts.clone(), &system);
+    ctx.run_ui(egui::RawInput::default(), |ui| {
+        let _ = ui.painter().layout_no_wrap("Inbox 3 Ελλάδα".into(), egui::FontId::proportional(12.0), egui::Color32::WHITE);
+    })
+    .drop_without_applying_deltas();
+    assert_eq!(system.fallbacks_in_memory(), 0);
+    // A letter only it has reads it, and every family draws that letter.
+    assert!(has_glyphs(fonts, &system, &GEORGIAN));
+    assert_eq!(system.fallbacks_in_memory(), 1);
+}
+
+/// Only what a face covers is kept from the start: the letters, as ranges, and none it lacks.
+#[test]
+fn a_fallback_face_knows_its_letters() {
+    let ranges = super::coverage(NOTO_GEORGIAN);
+    assert!(ranges.windows(2).all(|w| w[0].1 < w[1].0), "in order, apart: {ranges:?}");
+    let face = super::LazyFace::new(PathBuf::from("unused.ttf"), 0, NOTO_GEORGIAN);
+    assert!(GEORGIAN.iter().chain(&MTAVRULI).all(|c| face.covers(*c)));
+    assert!(!face.covers('斯'));
+    assert!(!face.covers('\u{10ffff}'));
+    assert!(super::coverage(b"not a font").is_empty());
 }
 
 /// #217: a collection of faces (`ttcf`, as Chinese, Japanese and Korean faces come) is read by
@@ -119,7 +136,7 @@ fn a_collection_is_read_by_its_first_face() {
     dir.put("NotoSansCJK-Regular.ttc", &ttc);
     let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), &[&["NotoSansCJK-Regular.ttc"]]);
     assert_eq!(system.fallback_count(), 1);
-    draws(font_definitions_with(&system));
+    draws(font_definitions_with(&system), &system);
 }
 
 /// A face too big, or a file that isn't a font, is passed over for the next face of its script,
@@ -136,14 +153,13 @@ fn a_face_too_big_or_not_a_font_is_passed_over() {
     let group: &[&str] = &["folder.ttf", "text.ttf", "empty.ttf", "big.ttc", "good.ttf"];
     let system = SystemFont::none().with_fallbacks_capped(&dir.dirs(), &[group], cap);
     assert_eq!(system.fallback_count(), 1);
-    draws(font_definitions_with(&system));
+    draws(font_definitions_with(&system), &system);
 
     let none_good: &[&str] = &["folder.ttf", "text.ttf", "empty.ttf", "big.ttc"];
     let system = SystemFont::none().with_fallbacks_capped(&dir.dirs(), &[none_good], cap);
     assert_eq!(system.fallback_count(), 0);
-    let fonts = font_definitions_with(&system);
-    assert!(fallback_names(&fonts).is_empty());
-    draws(fonts);
+    assert!(super::fallback_providers(&system).is_empty());
+    draws(font_definitions_with(&system), &system);
 
     // Folders that aren't there.
     let missing = vec![dir.0.join("no-such-folder"), PathBuf::new()];
@@ -169,7 +185,7 @@ fn faces_are_read_once_and_only_so_many() {
     let groups: Vec<&[&str]> = groups.iter().map(Vec::as_slice).collect();
     let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), &groups);
     assert_eq!(system.fallback_count(), FALLBACK_FONTS_MAX);
-    draws(font_definitions_with(&system));
+    draws(font_definitions_with(&system), &system);
 
     dir.put("1/2/3/4/shallow.ttf", A_FONT);
     dir.put("1/2/3/4/5/deep.ttf", A_FONT);
@@ -184,11 +200,11 @@ fn faces_are_read_once_and_only_so_many() {
     }
 }
 
-/// Whether every family of `fonts` has a glyph (not an empty box) for each of `chars`.
-fn has_glyphs(fonts: egui::FontDefinitions, chars: &[char]) -> bool {
+/// Whether every family of `fonts`, with the fallback faces of `system`, has a glyph (not an empty
+/// box) for each of `chars`.
+fn has_glyphs(fonts: egui::FontDefinitions, system: &SystemFont, chars: &[char]) -> bool {
     let families: Vec<FontFamily> = fonts.families.keys().cloned().collect();
-    let ctx = egui::Context::default();
-    ctx.set_fonts(fonts);
+    let ctx = context(fonts, system);
     ctx.run_ui(egui::RawInput::default(), |_| {}).drop_without_applying_deltas();
     let mut all = true;
     ctx.run_ui(egui::RawInput::default(), |ui| {
@@ -216,18 +232,16 @@ fn a_georgian_face_is_a_fallback_of_its_own() {
     assert!(FALLBACK_FACES.contains(&GEORGIAN_FACES));
     assert!(!GEORGIAN_FACES.is_empty());
     let none = font_definitions_with(&SystemFont::none());
-    assert!(!has_glyphs(none.clone(), &GEORGIAN));
+    assert!(!has_glyphs(none.clone(), &SystemFont::none(), &GEORGIAN));
     for (i, name) in GEORGIAN_FACES.iter().enumerate() {
         let dir = FontsDir::new(&format!("georgian{i}"));
         dir.put(name, NOTO_GEORGIAN);
         let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), FALLBACK_FACES);
         assert_eq!(system.fallback_count(), 1, "{name}");
         let fonts = font_definitions_with(&system);
-        assert!(has_glyphs(fonts.clone(), &GEORGIAN), "{name}");
-        assert!(has_glyphs(fonts.clone(), &MTAVRULI), "{name}");
-        for (family, faces) in &fonts.families {
-            assert_eq!(&faces[..faces.len() - 1], none.families[family].as_slice(), "{family:?}");
-        }
+        assert!(has_glyphs(fonts.clone(), &system, &GEORGIAN), "{name}");
+        assert!(has_glyphs(fonts.clone(), &system, &MTAVRULI), "{name}");
+        assert_eq!(fonts.families, none.families);
     }
 }
 
@@ -242,8 +256,8 @@ fn the_browsers_georgian_face_is_added_last_to_every_family() {
         assert_eq!(faces.last().map(String::as_str), Some("NotoSansGeorgian"), "{family:?}");
         assert_eq!(&faces[..faces.len() - 1], none.families[family].as_slice(), "{family:?}");
     }
-    assert!(has_glyphs(fonts.clone(), &GEORGIAN));
-    assert!(has_glyphs(fonts.clone(), &MTAVRULI));
+    assert!(has_glyphs(fonts.clone(), &SystemFont::none(), &GEORGIAN));
+    assert!(has_glyphs(fonts.clone(), &SystemFont::none(), &MTAVRULI));
     // A second time changes nothing.
     let again = with_extra_face(fonts.clone(), "NotoSansGeorgian", NOTO_GEORGIAN.to_vec()).expect("a font");
     assert_eq!(again.families, fonts.families);
@@ -268,7 +282,7 @@ fn the_variable_noto_collection_is_a_system_fallback() {
     dir.put("noto/NotoSansCJK-VF.otf.ttc", &collection(A_FONT));
     let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), super::FALLBACK_FACES);
     assert_eq!(system.fallback_count(), 1);
-    draws(font_definitions_with(&system));
+    draws(font_definitions_with(&system), &system);
 }
 
 /// What this system has, whatever that is, goes behind the other fonts and draws text in other
@@ -276,13 +290,16 @@ fn the_variable_noto_collection_is_a_system_fallback() {
 #[test]
 fn the_fallbacks_of_this_system_draw() {
     // The bundled fonts alone draw Chinese and Hebrew as empty boxes, which the check sees.
-    assert!(!has_glyphs(font_definitions_with(&SystemFont::none()), &['斯']));
-    assert!(!has_glyphs(font_definitions_with(&SystemFont::none()), &['ש']));
+    assert!(!has_glyphs(font_definitions_with(&SystemFont::none()), &SystemFont::none(), &['斯']));
+    assert!(!has_glyphs(font_definitions_with(&SystemFont::none()), &SystemFont::none(), &['ש']));
 
     let system = SystemFont::load();
-    let fonts = font_definitions();
-    assert_eq!(fallback_names(&fonts).len(), system.fallback_count());
-    draws(fonts.clone());
+    let fonts = font_definitions_with(&system);
+    draws(fonts.clone(), &system);
+    // The window's own install, as `install_fonts` does it.
+    let ctx = egui::Context::default();
+    install_fonts_with(&ctx, &system);
+    ctx.run_ui(egui::RawInput::default(), |_| {}).drop_without_applying_deltas();
     // Windows keeps its faces in one folder, which `font_dirs` doesn't name.
     #[cfg(not(windows))]
     {
@@ -293,13 +310,13 @@ fn the_fallbacks_of_this_system_draw() {
             names.iter().any(|name| found.get(&name.to_lowercase()).is_some_and(|path| super::read_font(path, super::FALLBACK_FONT_CAP).is_some()))
         };
         if super::FALLBACK_FACES.first().is_some_and(|chinese| has(chinese)) {
-            assert!(has_glyphs(fonts.clone(), &['斯', '洛', '票']), "Chinese is drawn with {found:?}");
+            assert!(has_glyphs(fonts.clone(), &system, &['斯', '洛', '票']), "Chinese is drawn with {found:?}");
         }
         if has(&["NotoSansCJK-Regular.ttc"]) {
-            assert!(has_glyphs(fonts.clone(), &['山', '田', 'の', 'ラ']), "Japanese is drawn with {found:?}");
+            assert!(has_glyphs(fonts.clone(), &system, &['山', '田', 'の', 'ラ']), "Japanese is drawn with {found:?}");
         }
         if has(&["NotoSansHebrew-Regular.ttf", "DejaVuSans.ttf", "ArialHB.ttc", "arial.ttf"]) {
-            assert!(has_glyphs(fonts, &['ש', 'ל', 'ו', 'ם']), "Hebrew is drawn with {found:?}");
+            assert!(has_glyphs(fonts, &system, &['ש', 'ל', 'ו', 'ם']), "Hebrew is drawn with {found:?}");
         }
     }
 }
@@ -328,14 +345,12 @@ fn a_collection_with_too_many_faces_is_refused() {
     let groups: &[&[&str]] = &[&["NotoSansCJK-Regular.ttc"], &["NotoSansHebrew-Regular.ttf"]];
     let system = SystemFont::none().with_fallbacks_from(&dir.dirs(), groups);
     assert_eq!(system.fallback_count(), 0);
-    let fonts = font_definitions_with(&system);
-    assert!(fallback_names(&fonts).is_empty());
-    draws(fonts);
+    draws(font_definitions_with(&system), &system);
     // Nor as the system's own interface font.
     dir.put("segoeui.ttf", &too_many);
     let system = SystemFont::from_dir(&dir.0);
     assert!(!system.is_present());
-    draws(font_definitions_with(&system));
+    draws(font_definitions_with(&system), &system);
 }
 
 /// Each fonts folder is looked through with its own count of entries: a crowded first folder

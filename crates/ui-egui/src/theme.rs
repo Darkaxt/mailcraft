@@ -684,7 +684,7 @@ pub struct SystemFont {
     regular: Option<Arc<FontData>>,
     semibold: Option<Arc<FontData>>,
     bold: Option<Arc<FontData>>,
-    fallbacks: Vec<Arc<FontData>>,
+    fallbacks: Vec<Arc<LazyFace>>,
     /// The system's colour emoji face ([`EMOJI_FACES`]), when there is one.
     emoji: Option<Arc<FontData>>,
     /// The installed face of each font a message can be written in (#582), by font and whether
@@ -793,11 +793,12 @@ impl SystemFont {
                 if used.contains(&path) {
                     break;
                 }
-                let Some(bytes) = read_font(path, cap.min(FALLBACK_FONTS_CAP.saturating_sub(total))) else { continue };
+                let face_cap = cap.min(FALLBACK_FONTS_CAP.saturating_sub(total));
+                let Some(bytes) = read_font(path, face_cap) else { continue };
                 total = total.saturating_add(bytes.len() as u64);
                 used.push(path);
-                // The first face of a collection: `FontData::from_owned` takes face 0.
-                self.fallbacks.push(Arc::new(FontData::from_owned(bytes)));
+                // Only what the face covers is kept; its bytes are read again when needed.
+                self.fallbacks.push(Arc::new(LazyFace::new(path.clone(), face_cap, &bytes)));
                 break;
             }
         }
@@ -850,6 +851,11 @@ impl SystemFont {
     /// How many fallback faces were found and read.
     pub fn fallback_count(&self) -> usize {
         self.fallbacks.len()
+    }
+
+    /// How many of the fallback faces text has needed so far, and so are in memory.
+    pub fn fallbacks_in_memory(&self) -> usize {
+        self.fallbacks.iter().filter(|face| face.in_memory()).count()
     }
 
     /// Segoe UI's faces as a Windows fonts folder names them, from `dir`.
@@ -1097,6 +1103,95 @@ pub fn install_fonts(ctx: &egui::Context) {
 /// interface in MailCraft's own fonts).
 pub fn install_fonts_with(ctx: &egui::Context, system: &SystemFont) {
     ctx.set_fonts(font_definitions_with(system));
+    ctx.set_font_providers(fallback_providers(system));
+}
+
+/// A system fallback face (#217, #452): found and checked at start, but held in memory only
+/// once text needs a letter that only it has. The Chinese, Japanese and Korean faces are tens
+/// of megabytes, and most mail never needs them.
+pub struct LazyFace {
+    path: std::path::PathBuf,
+    cap: u64,
+    /// The characters the face has, as ranges (first, last) in order.
+    covers: Vec<(u32, u32)>,
+    data: std::sync::OnceLock<Option<Arc<FontData>>>,
+}
+
+impl LazyFace {
+    fn new(path: std::path::PathBuf, cap: u64, bytes: &[u8]) -> Self {
+        LazyFace { path, cap, covers: coverage(bytes), data: std::sync::OnceLock::new() }
+    }
+
+    fn covers(&self, c: char) -> bool {
+        let c = u32::from(c);
+        let at = self.covers.partition_point(|&(_, last)| last < c);
+        self.covers.get(at).is_some_and(|&(first, _)| first <= c)
+    }
+
+    /// The face, read the first time it is asked for. `None` when it can no longer be read.
+    fn data(&self) -> Option<Arc<FontData>> {
+        self.data.get_or_init(|| self.read()).clone()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn read(&self) -> Option<Arc<FontData>> {
+        // The first face of a collection: `FontData::from_owned` takes face 0.
+        let data = read_font(&self.path, self.cap).map(|bytes| Arc::new(FontData::from_owned(bytes)));
+        log::info!(
+            "fonts: read the fallback face {:?} for a letter no other font has ({})",
+            self.path.file_name().unwrap_or_default(),
+            if data.is_some() { "ok" } else { "unreadable" }
+        );
+        data
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn read(&self) -> Option<Arc<FontData>> {
+        None
+    }
+
+    fn in_memory(&self) -> bool {
+        self.data.get().is_some_and(Option::is_some)
+    }
+}
+
+/// The characters face 0 of the font `bytes` has a glyph for, as ranges (first, last) in order.
+fn coverage(bytes: &[u8]) -> Vec<(u32, u32)> {
+    use skrifa::MetadataProvider as _;
+    let Ok(font) = skrifa::FontRef::from_index(bytes, 0) else { return Vec::new() };
+    let mut chars: Vec<u32> = font.charmap().mappings().filter(|(_, glyph)| glyph.to_u32() != 0).map(|(c, _)| c).collect();
+    chars.sort_unstable();
+    chars.dedup();
+    let mut ranges: Vec<(u32, u32)> = Vec::new();
+    for c in chars {
+        match ranges.last_mut() {
+            Some((_, last)) if last.checked_add(1) == Some(c) => *last = c,
+            _ => ranges.push((c, c)),
+        }
+    }
+    ranges
+}
+
+/// What egui asks when no installed font has a letter: the first of the system's fallback faces
+/// that has it, read then. egui puts it behind every other font of the family, so that nothing
+/// the other fonts draw changes, and asks once for each family and letter.
+struct Fallbacks(Vec<Arc<LazyFace>>);
+
+impl egui::FontProvider for Fallbacks {
+    fn font_for(&self, request: &egui::FallbackRequest<'_>) -> Option<egui::FontInsert> {
+        let c = request.cluster.chars().next()?;
+        let (i, face) = self.0.iter().enumerate().find(|(_, face)| face.covers(c))?;
+        let data = face.data()?;
+        Some(egui::FontInsert::new(&format!("SystemFallback{i}"), FontData::clone(&data), Vec::new()))
+    }
+}
+
+/// The font providers [`install_fonts_with`] installs for `system`: its fallback faces.
+pub fn fallback_providers(system: &SystemFont) -> Vec<Arc<dyn egui::FontProvider>> {
+    if system.fallbacks.is_empty() {
+        return Vec::new();
+    }
+    vec![Arc::new(Fallbacks(system.fallbacks.clone()))]
 }
 
 /// The interface fonts as [`install_fonts`] installs them on this system.
@@ -1202,15 +1297,8 @@ pub fn font_definitions_with(system: &SystemFont) -> FontDefinitions {
             fonts.families.insert(document_family(font, bold_face), chain);
         }
     }
-    // The system's fallback faces, behind everything else in every family, for the scripts none
-    // of the others has (#217, #452).
-    for (i, face) in system.fallbacks.iter().enumerate() {
-        let name = format!("SystemFallback{i}");
-        fonts.font_data.insert(name.clone(), face.clone());
-        for faces in fonts.families.values_mut() {
-            faces.push(name.clone());
-        }
-    }
+    // The system's fallback faces, for the scripts none of the others has (#217, #452), are not
+    // here: `fallback_providers` hands egui each one when text first needs it.
     fonts
 }
 

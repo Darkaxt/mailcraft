@@ -243,7 +243,7 @@ fn large_newsletter() -> Message {
 /// Run `f` inside a frame of a context that has the interface's fonts and theme.
 fn in_frame<R>(dark: bool, f: impl FnOnce(&egui::Context) -> R) -> R {
     let ctx = egui::Context::default();
-    ctx.set_fonts(crate::theme::font_definitions());
+    crate::theme::install_fonts(&ctx);
     crate::theme::apply(&ctx, if dark { Appearance::Dark } else { Appearance::Light }.preference(None), &crate::theme::ThemeChoice::default());
     ctx.run_ui(egui::RawInput::default(), |_| {}).drop_without_applying_deltas();
     let mut out = None;
@@ -1369,7 +1369,7 @@ fn the_reading_pane_names_nothing_that_could_fetch() {
 #[test]
 fn symbols_written_here_have_glyphs() {
     let ctx = egui::Context::default();
-    ctx.set_fonts(crate::theme::font_definitions());
+    crate::theme::install_fonts(&ctx);
     ctx.run_ui(egui::RawInput::default(), |_| {}).drop_without_applying_deltas();
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("reading");
     let font = crate::theme::regular(12.5);

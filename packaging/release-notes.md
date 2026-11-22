@@ -1,3 +1,8 @@
+**MailCraft 0.12.32** — uses less memory for drawing and fonts
+- The graphics card memory MailCraft reserves is now set aside in small pieces instead of big ones. In a test on this PC that was 28 MB instead of 192 MB.
+- Fonts for other languages (Chinese, Korean and more) load only when a message needs them.
+- Everything from 0.12.31 stays.
+
 **MailCraft 0.12.31** — the packed archive really frees its memory
 - 0.12.30 packed the Local archive, but MailCraft still held on to the memory the unpacked mail used. Now that memory is let go.
 - Everything from 0.12.30 stays.

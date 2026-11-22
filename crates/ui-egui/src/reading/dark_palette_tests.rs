@@ -94,7 +94,7 @@ fn native_layout_handles_newsletters_tables_highlights_images_and_author_dark_wi
     for dark in [false, true] {
         for high in [false, true] {
             let ctx = egui::Context::default();
-            ctx.set_fonts(crate::theme::font_definitions());
+            crate::theme::install_fonts(&ctx);
             crate::theme::apply(
                 &ctx,
                 if dark { Appearance::Dark } else { Appearance::Light }.preference(None),
