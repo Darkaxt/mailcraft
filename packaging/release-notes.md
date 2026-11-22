@@ -1,4 +1,8 @@
-**MailCraft 0.12.28** — one filter button in the search box
+**MailCraft 0.12.29** — a smaller search cache
+- The search index now keeps 8 MB of itself in memory instead of 64 MB, and each search 4 MB instead of 16 MB. Searches still read the index straight from the disk.
+- Everything from 0.12.28 stays.
+
+**MailCraft 0.12.28 in short** — one filter button in the search box
 - The search box now has one filter button instead of two. It opens Advanced Search, which now also has the Look in checks (Subject, People, Body, Attachments).
 - The button lights up when a search doesn't look in every part of a message.
 - Everything from 0.12.27 stays.

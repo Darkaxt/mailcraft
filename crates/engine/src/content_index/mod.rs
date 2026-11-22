@@ -983,7 +983,7 @@ impl Index {
     pub fn memory_profile(&self) -> Value {
         json!({"loaded":self.initialized,"engine":"SQLite FTS5","messages":self.messages.len(),
             "maximumQueuedBodyReferences":0,"maximumActiveMessageReferences":DOCUMENTS_PER_JOB,
-            "cachedQuerySnapshots":self.answers.len(),"sqliteCacheBytesPerConnection":8*1024*1024,
+            "cachedQuerySnapshots":self.answers.len(),"sqliteCacheBytes":{"writer":db::WRITER_CACHE_KIB*1024,"eachReader":db::READER_CACHE_KIB*1024},
             "sourceBufferBytes":db::SEGMENT_BYTES+db::OVERLAP_BYTES,"bodyLoadsForListPreviews":0})
     }
 

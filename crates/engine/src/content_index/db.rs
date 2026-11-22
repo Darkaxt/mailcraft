@@ -24,6 +24,13 @@ const APPLICATION_ID: i64 = 0x4d435831; // MCX1, never inferred from a filename.
 pub(crate) const SCHEMA: i64 = 2;
 pub const SEGMENT_BYTES: usize = 256 * 1024;
 pub const OVERLAP_BYTES: usize = 64 * 1024;
+/// The page cache of the connection that writes the index, in KiB. Reads come through the file's
+/// mapping (`mmap_size`) and the system's file cache, so a big cache buys little and stays held
+/// for as long as the mailbox is open: at 64 MiB it was the largest single part of the program's
+/// memory (2026-11-22, a heap census of a running mailbox: about 127 MB of cached pages).
+pub const WRITER_CACHE_KIB: i64 = 8 * 1024;
+/// The page cache of each connection that only reads the index (searches), in KiB.
+pub const READER_CACHE_KIB: i64 = 4 * 1024;
 const BATCH_TIME: Duration = Duration::from_millis(250);
 
 type Result<T> = std::result::Result<T, String>;
@@ -187,7 +194,7 @@ impl Database {
             .execute_batch(
                 "PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;
             PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF; PRAGMA secure_delete=FAST;
-            PRAGMA cache_size=-65536; PRAGMA mmap_size=268435456; PRAGMA temp_store=MEMORY;
+            PRAGMA mmap_size=268435456; PRAGMA temp_store=MEMORY;
             CREATE TABLE IF NOT EXISTS metadata(
                 id TEXT PRIMARY KEY, account TEXT NOT NULL, folder TEXT NOT NULL,
                 content_fp TEXT NOT NULL, metadata_fp TEXT NOT NULL,
@@ -220,6 +227,7 @@ impl Database {
             CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);",
             )
             .map_err(error)?;
+        connection.pragma_update(None, "cache_size", -WRITER_CACHE_KIB).map_err(error)?;
         if fresh {
             connection
                 .execute_batch(
@@ -243,9 +251,10 @@ impl Database {
         connection
             .execute_batch(
                 "PRAGMA query_only=ON; PRAGMA trusted_schema=OFF; PRAGMA busy_timeout=5000;
-            PRAGMA cache_size=-16384; PRAGMA mmap_size=268435456; PRAGMA temp_store=MEMORY;",
+            PRAGMA mmap_size=268435456; PRAGMA temp_store=MEMORY;",
             )
             .map_err(error)?;
+        connection.pragma_update(None, "cache_size", -READER_CACHE_KIB).map_err(error)?;
         Ok(Self { connection, batch: None })
     }
 
