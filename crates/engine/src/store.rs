@@ -2553,11 +2553,22 @@ pub(crate) fn max_json_items() -> usize {
     usize::try_from(items_budget().saturating_mul(4) / mailcraft_model::MIN_ITEM_BYTES).unwrap_or(usize::MAX).max(MIN_JSON_ITEMS)
 }
 
-/// What [`max_json_items`] counts from: the budget the bodies had before they were cut to
-/// [`MAX_CONTENT`] (a sixteenth of the machine's memory, at most 256 MB, or what the device
-/// allows when that is lower), so that the bodies brought in at opening shrinking doesn't shrink
-/// the largest mailbox that opens.
+/// What [`max_json_items`] counts from: [`engine_content_budget`], or what the device allows
+/// when that is lower.
 fn items_budget() -> u64 {
+    let engine = engine_content_budget();
+    match DEVICE_BUDGET.load(std::sync::atomic::Ordering::Relaxed) {
+        0 => engine,
+        device => device.min(engine),
+    }
+}
+
+/// The engine's budget for mail content in memory as a whole, whatever the device says: a
+/// sixteenth of the machine's memory, 128 MB when that can't be read, never more than 256 MB.
+/// The bodies brought in at opening were given all of it until they were cut to
+/// [`MAX_CONTENT`] (0.12.27); the rest still counts from it (the most items a mailbox file is
+/// read with, a host's budget for an attachment it reads), so that cut shrinks nothing else.
+pub fn engine_content_budget() -> u64 {
     #[cfg(test)]
     {
         let set = TEST_BUDGET.get();
@@ -2565,11 +2576,7 @@ fn items_budget() -> u64 {
             return set;
         }
     }
-    let engine = physical_memory().map_or(128 << 20, |m| m / 16).min(256 << 20);
-    match DEVICE_BUDGET.load(std::sync::atomic::Ordering::Relaxed) {
-        0 => engine,
-        device => device.min(engine),
-    }
+    physical_memory().map_or(128 << 20, |m| m / 16).min(256 << 20)
 }
 
 /// Bytes of parsed values (every list element, map entry and compound value of the mailbox, at any

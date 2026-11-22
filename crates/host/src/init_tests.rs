@@ -18,7 +18,7 @@ impl Platform for Fake {
 fn the_budget_is_the_lower_of_the_device_and_the_engine() {
     let engine = memory_budget(None);
     assert!(engine > 1 << 20);
-    assert_eq!(engine, mailcraft_engine::store::body_budget());
+    assert_eq!(engine, mailcraft_engine::store::engine_content_budget());
     assert_eq!(memory_budget(Some(1 << 20)), 1 << 20);
     assert_eq!(memory_budget(Some(u64::MAX)), engine);
 }
