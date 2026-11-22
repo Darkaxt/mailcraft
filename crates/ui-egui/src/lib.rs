@@ -5374,6 +5374,8 @@ impl MailApp {
     /// drops, saving.
     pub fn logic(&mut self, ctx: &egui::Context) {
         swipe::observe_cancelled(ctx);
+        // The Local archive goes away while it isn't used, and at once after an opening (0.12.30).
+        self.session.tend_archive(ctx.input(|i| i.time));
         attachment_preview::poll(self, ctx);
         self.apply_language();
         // The system's authorities for mail, once the host has read them: what was checked

@@ -148,6 +148,47 @@ impl Messages {
         was
     }
 
+    /// This map without those of `gone` that it has as `before` has them, where `after` is
+    /// `before` without them: a chunk this map shares with `before` becomes `after`'s, so the
+    /// two still share it (an Undo step as the Local archive is put away, 0.12.30). Those
+    /// `spare` says yes to stay.
+    pub fn without_as(&mut self, before: &Messages, after: &Messages, gone: &std::collections::BTreeSet<Id>, spare: impl Fn(&Id) -> bool) {
+        let keys: std::collections::BTreeSet<Id> = gone.iter().map(|id| chunk_of(*id)).collect();
+        for key in keys {
+            let Some(mine) = self.chunks.get(&key) else { continue };
+            let first = key << SHIFT;
+            let ids = gone.range(first..=first | (CHUNK - 1));
+            let spared = ids.clone().any(|id| mine.contains_key(id) && spare(id));
+            if !spared && before.chunks.get(&key).is_some_and(|b| Arc::ptr_eq(b, mine)) {
+                match after.chunks.get(&key) {
+                    Some(a) => {
+                        self.chunks.insert(key, a.clone());
+                    }
+                    None => {
+                        self.chunks.remove(&key);
+                    }
+                }
+            } else {
+                let strip: Vec<Id> =
+                    ids.filter(|id| !spare(id) && mine.get(id).is_some_and(|m| before.get(id).is_some_and(|b| Arc::ptr_eq(b, m)))).copied().collect();
+                if strip.is_empty() {
+                    continue;
+                }
+                if let Some(chunk) = self.chunks.get_mut(&key) {
+                    let own = Arc::make_mut(chunk);
+                    for id in &strip {
+                        own.remove(id);
+                    }
+                    if own.is_empty() {
+                        self.chunks.remove(&key);
+                    }
+                }
+            }
+            self.originals.stale.insert(key);
+        }
+        self.len = self.chunks.values().map(|c| c.len()).sum();
+    }
+
     pub fn clear(&mut self) {
         self.chunks.clear();
         self.len = 0;

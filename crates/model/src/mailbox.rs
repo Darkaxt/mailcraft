@@ -1417,6 +1417,10 @@ pub struct Mailbox {
     /// Reminders of mail sent whose copy the server files in Sent Items ([`PendingFollowUp`], #948).
     #[serde(skip_serializing_if = "Vec::is_empty", deserialize_with = "crate::sync::lenient_list")]
     pub follow_ups_pending: Vec<PendingFollowUp>,
+    /// The Local archive's messages kept packed while nobody looks at them (0.12.30): none of
+    /// them is in `messages`, and the mailbox file has each. Never written.
+    #[serde(skip)]
+    pub parked: crate::Parked,
 }
 
 impl Default for Mailbox {
@@ -1465,6 +1469,7 @@ impl Default for Mailbox {
             device_limits: None,
             next_id: 1,
             follow_ups_pending: Vec::new(),
+            parked: crate::Parked::default(),
         }
     }
 }
@@ -2482,12 +2487,13 @@ impl Mailbox {
         self.messages.values().filter(move |m| m.folder == folder)
     }
 
+    /// The messages of `folder`, parked ones (`Mailbox::parked`) counted too.
     pub fn count(&self, folder: Id) -> usize {
-        self.messages_in(folder).count()
+        self.messages_in(folder).count() + self.parked.in_folder(folder).0
     }
 
     pub fn unread_count(&self, folder: Id) -> usize {
-        self.messages_in(folder).filter(|m| !m.read).count()
+        self.messages_in(folder).filter(|m| !m.read).count() + self.parked.in_folder(folder).1
     }
 
     /// The number a folder shows beside its name: unread messages, or everything for Drafts and

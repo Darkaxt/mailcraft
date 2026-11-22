@@ -91,6 +91,11 @@ impl FolderCounts {
                 gmail.entry((m.folder, category)).or_default().add(m.read);
             }
         }
+        // The Local archive's parked messages are counted, not listed (0.12.30).
+        for (_, m) in mb.parked.iter() {
+            folders.entry(m.folder).or_default().held.add(m.read);
+            accounts.entry(m.account).or_default().add(m.read);
+        }
         FolderCounts { folders, accounts, gmail, messages: mb.messages.len() }
     }
 

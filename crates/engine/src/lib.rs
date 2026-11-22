@@ -64,6 +64,7 @@ pub mod opening;
 mod opening_tests;
 #[cfg(test)]
 mod openpgp_signature_tests;
+mod parking;
 mod picture_fit;
 pub mod private_keys;
 #[cfg(test)]

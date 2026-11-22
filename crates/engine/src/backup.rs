@@ -173,6 +173,19 @@ pub fn run(job: &Job) -> Result<Report, String> {
             ..Report::default()
         });
     }
+    // The Local archive put away (`crate::parking`) is backed up as it is, taken out for the while.
+    let whole;
+    let job = if job.mailbox.parked.is_empty() {
+        job
+    } else {
+        let mut mailbox = job.mailbox.clone();
+        for (id, m) in crate::parking::thaw_all(&job.mailbox.parked)? {
+            mailbox.messages.insert(id, m);
+        }
+        mailbox.parked = Default::default();
+        whole = Job { mailbox, path: job.path.clone(), folder: job.folder.clone(), now: job.now, force: job.force };
+        &whole
+    };
     let mut groups: BTreeMap<String, Vec<Id>> = BTreeMap::new();
     for (id, m) in job.mailbox.messages.iter() {
         groups.entry(period_of(when(m), job.now)).or_default().push(*id);

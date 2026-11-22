@@ -666,6 +666,10 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     list_header(app, ui);
     // Gmail's categories, when they are tabs above a Gmail Inbox's list (#911).
     crate::gmail_tabs::row(app, ui);
+    // A search, or a search folder, looks in the Local archive too: it is taken out for it.
+    if app.session.archive_parked() > 0 && (!app.session.view.search.trim().is_empty() || app.session.view.search_folder.is_some()) {
+        app.session.load_archive();
+    }
     let rows = app.session.rows();
     search_bar(app, ui, mailcraft_engine::list::listed(&rows));
     // Coverage is explicit: a pending or missing source cannot prove a negative
@@ -726,6 +730,17 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     let overlay = app.overlay_scroll_bars;
     let lane_w = lane_width(app);
     let swipe_scope = crate::swipe::Scope { opening: app.session.openings(), folder: app.session.view.folder, list: ui.scope_id() };
+    // The older mail of these folders put away with the Local archive: a row at the end of the
+    // list, which takes it out as it comes into view (0.12.30).
+    let parked = app.session.archive_parked_in_view();
+    let archive_h = if parked > 0 { row_h.max(36.0) } else { 0.0 };
+    if rows.is_empty() && parked > 0 {
+        let r = ui.available_rect_before_wrap();
+        ui.painter().text(pos2(r.center().x, r.min.y + 60.0), Align2::CENTER_CENTER, tl!("Loading older mail…"), regular(12.5), t.text_dim);
+        app.session.load_archive();
+        ui.ctx().request_repaint();
+        return;
+    }
     if rows.is_empty() {
         crate::swipe::reconcile(ui, swipe_scope, |_, _| false);
         let r = ui.available_rect_before_wrap();
@@ -765,7 +780,7 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
         y += row_h;
     }
     let rows_end = y;
-    let total = y + below;
+    let total = y + archive_h + below;
     let reveal = std::mem::take(&mut app.reveal_selection);
     // After a new arrangement the selected row goes to the middle of the list (#1511).
     let centered = std::mem::take(&mut app.reveal_centered);
@@ -794,6 +809,7 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     } else {
         scroll_style(ui, &t);
     }
+    let (mut take_out, mut saw_archive) = (false, false);
     let mut area = egui::ScrollArea::vertical().id_salt("message_list").auto_shrink([false, false]).scroll_bar_rect(travel);
     if let Some(to) = ui.ctx().data_mut(|d| d.remove_temp::<f32>(egui::Id::unique("message_list_scroll_to"))) {
         area = area.vertical_scroll_offset(to);
@@ -843,12 +859,25 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
                 );
             }
             let rect = Rect::from_min_size(pos2(origin.x, origin.y + top), vec2(width, row_h));
+            saw_archive = saw_archive || app.session.in_archive(row.id);
             message_row(app, ui, row, rect, &drawn, focus, swipe_scope);
         }
+        if archive_h > 0.0 {
+            let r = Rect::from_min_size(pos2(origin.x, origin.y + rows_end), vec2(width, archive_h));
+            ui.painter().text(r.center(), Align2::CENTER_CENTER, tl!("Loading older mail…"), regular(12.0), t.text_dim);
+            take_out = rows_end < viewport.max.y;
+        }
         if below > 0.0 {
-            server_rows::show(app, ui, &local, origin.x, origin.y + rows_end, width, server_h, viewport.translate(origin.to_vec2()));
+            let at = origin.y + rows_end + archive_h;
+            server_rows::show(app, ui, &local, origin.x, at, width, server_h, viewport.translate(origin.to_vec2()));
         }
     });
+    if take_out {
+        app.session.load_archive();
+        ui.ctx().request_repaint();
+    } else if saw_archive {
+        app.session.touch_archive();
+    }
     if arrows {
         scroll_arrows(app, ui, lane, &out, row_h);
     }

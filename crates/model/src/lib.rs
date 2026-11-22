@@ -33,6 +33,7 @@ pub mod messages;
 #[cfg(test)]
 mod messages_tests;
 mod note;
+mod parked;
 mod offline;
 pub mod outlook_colors;
 pub mod pictures;
@@ -98,6 +99,7 @@ pub use message::{
     size_label, size_label_in, text_hash,
 };
 pub use messages::{Messages, Whole};
+pub use parked::{Kept, Parked, ParkedMessage};
 pub use note::{JournalEntry, Note};
 pub use offline::{KeepOffline, OfflineWindow};
 pub use outlook_colors::preset_category_color;

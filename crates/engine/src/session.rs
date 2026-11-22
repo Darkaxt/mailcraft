@@ -1368,7 +1368,7 @@ pub struct Session {
     steps_moved: u64,
     /// What the last undo or redo couldn't do there (a delete for good, a message sent).
     undo_said: Vec<String>,
-    rev: u64,
+    pub(crate) rev: u64,
     list_cache: Option<ListCache>,
     /// What each folder holds, as of the revision and message count it was counted at
     /// ([`Session::folder_counts`]).
@@ -1414,8 +1414,10 @@ pub struct Session {
     /// How many bytes brought into messages are kept there ([`LOADED_MAX`]).
     pub loaded_budget: u64,
     /// Messages content was brought into, the longest unused first, with the bytes each took.
-    resident: std::collections::VecDeque<(Id, u64)>,
+    pub(crate) resident: std::collections::VecDeque<(Id, u64)>,
     resident_bytes: u64,
+    /// The Local archive's comings and goings ([`crate::parking`]).
+    pub(crate) archive: crate::parking::State,
     /// Messages whose showing couldn't bring in what it needs (a picture's or a calendar part's
     /// file missing or damaged): not asked for again every frame, until the mailbox is opened anew.
     display_failed: std::collections::HashSet<Id>,
@@ -1584,6 +1586,7 @@ impl Session {
             loaded_budget: LOADED_MAX,
             resident: std::collections::VecDeque::new(),
             resident_bytes: 0,
+            archive: Default::default(),
             display_failed: std::collections::HashSet::new(),
             swaps: None,
             search_pass: None,
@@ -3536,6 +3539,7 @@ impl Session {
         self.mailbox = mailbox;
         self.resident.clear();
         self.resident_bytes = 0;
+        self.forget_archive();
         self.display_failed.clear();
         self.search_pass = None;
         self.searched_for = None;
@@ -3790,6 +3794,8 @@ impl Session {
         let now = std::mem::take(&mut self.mailbox);
         let (back, said) = crate::undo::keep_in_step(u.mailbox, &u.touched, &now, self.interface_language);
         self.mailbox = back;
+        // What is put away is what was, but for what the step put back or took away.
+        self.settle_parked(&now.parked, &u.touched);
         self.recount(&now);
         // The counts of the mailbox as it was, brought in step with what this puts back, under
         // the revision after (rather than counted again over every message).
@@ -3805,6 +3811,10 @@ impl Session {
             .take()
             .filter(|(at, _)| *at == counted)
             .and_then(|(_, mut counts)| Arc::make_mut(&mut counts).apply(&changes).then_some((after, counts)));
+        // (Counted again when that changed what is put away: the counts hold it apart.)
+        if self.mailbox.parked != now.parked {
+            self.counts_cache = None;
+        }
         self.undo_said = said;
         self.tell_events_again(&now, &u.touched);
         // Undone, the step is to be done again from here: what that does is the way back (with
@@ -4276,6 +4286,9 @@ impl Session {
         }
         let reg = self.registry.clone();
         let Some(spec) = reg.get(id) else { return Err(CmdError::Unknown(id.to_string())) };
+        // The Local archive is taken out before a command that wants it takes its copy of the
+        // mailbox: no step sees it come ([`crate::parking`]).
+        self.archive_for(id, params, spec.mutates);
         // Work Offline: nothing that would go to a server is asked for (a host, a script, an agent).
         if self.prefs.offline && crate::cmd::send_receive::ASKS_A_SERVER.contains(&id) {
             return Err(CmdError::Disabled(crate::cmd::send_receive::OFFLINE.to_string()));

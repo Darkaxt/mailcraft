@@ -1516,6 +1516,14 @@ pub fn copy_content(from: &Path, to: &Path, mailbox: &Mailbox) -> Result<usize, 
         wanted.extend(m.original.as_ref().filter(|o| o.data.is_empty()).and_then(|o| o.kept.as_ref()).map(Ref::from_model));
         wanted.extend(m.header_block.kept.as_ref().filter(|_| m.header_block.data.is_empty()).map(Ref::from_model));
     }
+    // The Local archive put away (`crate::parking`) names its content the same way.
+    for (_, p) in mailbox.parked.iter() {
+        let k = &p.kept;
+        if let Some(b) = &k.body {
+            wanted.extend(b.text.iter().chain(&b.html).chain(&b.hidden).map(Ref::from_model));
+        }
+        wanted.extend(k.attachments.iter().flatten().chain(&k.original).chain(&k.headers).map(Ref::from_model));
+    }
     if wanted.is_empty() {
         return Ok(0);
     }
@@ -1681,7 +1689,7 @@ fn get_in(dir: &Path, r: &Ref, folders: &Folders) -> Option<Vec<u8>> {
 /// Do `work` for each of `0..n`, on a few threads when there is a lot of it: content files are
 /// many and mostly small, and one after another the disk spends its time waiting. Results come
 /// back by index; `None` where a thread gave up. A thread that can't start costs only speed.
-fn fan_out<T: Send>(n: usize, work: impl Fn(usize) -> T + Sync) -> Vec<Option<T>> {
+pub(crate) fn fan_out<T: Send>(n: usize, work: impl Fn(usize) -> T + Sync) -> Vec<Option<T>> {
     let threads = std::thread::available_parallelism().map_or(1, |p| p.get()).min(MAX_THREADS).min(n / 8).max(1);
     let next = AtomicUsize::new(0);
     let run = || {
@@ -3332,6 +3340,47 @@ pub fn load_whole(id: Id, m: &Message, take: &mut dyn FnMut(&ContentRef) -> Resu
     Ok((m, n))
 }
 
+/// Which of `items` the mailbox file at `path` has as they are: each was written from that very
+/// message, or read into it, and the file hasn't changed since. `None` when that isn't known (the
+/// file is being written, somebody else wrote it, or it was never read here): the Local archive is
+/// put away only as it is on disk ([`crate::parking`]), and the caller doesn't wait for the disk.
+pub fn saved_as(path: &Path, items: &[(Id, &Arc<Message>)]) -> Option<Vec<bool>> {
+    let shared = shared(path);
+    let st = match shared.state.try_lock() {
+        Ok(st) => st,
+        Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
+        Err(std::sync::TryLockError::WouldBlock) => return None,
+    };
+    if !st.stamp.as_ref().is_some_and(|s| s.still(&resolve(path))) {
+        return None;
+    }
+    let d = st.disk.as_ref()?;
+    Some(items.iter().map(|(id, m)| d.messages.get(id).is_some_and(|w| w.entry.is(m))).collect())
+}
+
+/// The messages of the Local archive taken out again ([`crate::parking`]): each is what the file
+/// at `path` has (it was put away only so, and nothing writes it while it is away), so the next
+/// save knows it at a glance instead of working it out again. Left alone when the file isn't the
+/// one put away from (somebody else wrote it) or is being written: that save works them out.
+pub fn relink(path: &Path, items: &[(Id, Arc<Message>)]) {
+    let shared = shared(path);
+    let mut st = match shared.state.try_lock() {
+        Ok(st) => st,
+        Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
+        Err(std::sync::TryLockError::WouldBlock) => return,
+    };
+    let st = &mut *st;
+    if !st.stamp.as_ref().is_some_and(|s| s.still(&resolve(path))) {
+        return;
+    }
+    let Some(d) = st.disk.as_mut() else { return };
+    for (id, m) in items {
+        if let Some(w) = d.messages.get_mut(id) {
+            w.entry.of = Arc::downgrade(m);
+        }
+    }
+}
+
 /// Message `m` (`id` in the mailbox kept at `path`) without the content of it that is in memory
 /// and safely on disk: the parts the mailbox file names for it, as they are, which a sweep
 /// leaves alone. Each becomes named on the message again, to be read when it is next wanted.
@@ -3906,6 +3955,9 @@ fn delta<'m>(st: &mut State, path: &Path, mailbox: &'m Mailbox, d: &Disk, pack: 
         messages.push((*id, Msg { entry: Entry { of: p.of, fp: p.fp, size }, parts: p.parts }));
         Ok(())
     })?;
+    // A message of the Local archive put away (`crate::parking`) isn't gone: the file keeps it.
+    let mut gone = gone;
+    gone.retain(|id| !mailbox.parked.contains(id));
     for id in &gone {
         index::delete(&mut group, (Coll::Message, *id)).map_err(io_error)?;
         records = records.saturating_add(1);
@@ -4398,8 +4450,10 @@ fn compact_with(
     let mut records: u32 = 1;
     let too_many = || "the mailbox holds too many items to be saved".to_string();
     let folders = Folders::new();
-    progress.begin(SaveStage::Messages, mailbox.messages.len());
-    for (id, m) in &mailbox.messages {
+    // The Local archive put away (`crate::parking`) is written as it is, taken out for the while.
+    let parked = crate::parking::thaw_all(&mailbox.parked)?;
+    progress.begin(SaveStage::Messages, mailbox.messages.len().saturating_add(parked.len()));
+    for (id, m) in mailbox.messages.iter().chain(parked.iter().map(|(id, m)| (id, m))) {
         progress.step();
         let p = prepare(*id, m, &mut st.hashes, Some(&mut *pack))?;
         for (r, bytes) in p.parts.content(m) {

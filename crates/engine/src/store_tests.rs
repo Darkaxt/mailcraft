@@ -2016,6 +2016,9 @@ mod format3;
 #[path = "store_session_tests.rs"]
 mod in_session;
 
+#[path = "store_parking_tests.rs"]
+mod parking;
+
 #[path = "store_undo_body_tests.rs"]
 mod undo_body;
 

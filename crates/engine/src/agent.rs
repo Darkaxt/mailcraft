@@ -2723,7 +2723,7 @@ pub(crate) fn overstep(before: &Mailbox, after: &Mailbox, allow: &[Class], saved
     }
     if !allow.contains(&Class::Delete) && !saved_replacement {
         // Drafts are left out here: `edit.undo` and `edit.redo` refuse earlier, drafts too (#473).
-        let gone = before.messages.iter().any(|(id, m)| !m.draft && !after.messages.contains_key(id));
+        let gone = before.messages.iter().any(|(id, m)| !m.draft && !after.messages.contains_key(id) && !after.parked.contains(id));
         if gone {
             return Some(Class::Delete);
         }

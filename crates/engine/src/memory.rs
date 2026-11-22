@@ -78,6 +78,7 @@ pub(crate) fn inspect(session: &Session) -> Value {
         "referencedAttachmentBytes": attachments, "uniqueAttachmentCapacityBytes": unique_attachments,
         "sessionResidentBytes": session.resident_bytes(), "sessionLoadedBudgetBytes": session.loaded_budget,
         "undoSteps": session.history.len(), "redoSteps": session.redo.len(),
+        "archivePutAway": session.mailbox.parked.len(), "archivePackedBytes": session.mailbox.parked.bytes(),
         "wordIndexConfigured": session.index_words, "wordIndex": session.word_memory_profile(),
         "accounting": "Resident data only; no content is loaded. Capacities are lower-bound attribution, not total heap. Session-resident and shared content-cache counters may overlap. Allocator/container slack, other mailbox structures, native services and renderer allocations are excluded."
     });

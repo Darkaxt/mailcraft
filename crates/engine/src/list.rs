@@ -205,7 +205,7 @@ pub fn in_view(s: &Session) -> impl Fn(&Message) -> bool + '_ {
 
 /// The folders the list looks in ([`in_view`]), or, for a search of every mailbox (`true`),
 /// the folders it leaves out.
-fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
+pub(crate) fn view_folders(s: &Session) -> (bool, HashSet<Id>) {
     if crate::cmd::search_folders::active_problem(s).is_some() {
         return (false, HashSet::new());
     }

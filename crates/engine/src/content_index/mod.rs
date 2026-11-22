@@ -165,6 +165,9 @@ pub struct Index {
     /// What the index file already holds, settled, from the last run: a message whose metadata
     /// still matches needs no write after a restart.
     settled: HashMap<Id, (String, String)>,
+    /// Messages of the Local archive put away (`crate::parking`) while the index had them as they
+    /// are, with nothing left to do for them: taken out again, each is known at once.
+    put_away: HashSet<Id>,
     /// Metadata rows sent to the writer this run (status only).
     metadata_written: usize,
     generation: u64,
@@ -354,6 +357,7 @@ impl Index {
             dirty: HashSet::new(),
             versions: HashMap::new(),
             settled: HashMap::new(),
+            put_away: HashSet::new(),
             metadata_written: 0,
             generation: 0,
             presentation: 0,
@@ -432,7 +436,12 @@ impl Index {
                 // Gone messages, and ones now in Junk/Deleted Items, leave the index.
                 let mut settled = HashMap::new();
                 for (id, version) in stored {
-                    if session.mailbox.messages.get(&id).is_none_or(|message| excluded(session, message.folder)) {
+                    // (A message of the Local archive put away isn't gone: it is as stored.)
+                    if session.mailbox.parked.contains(&id) {
+                        if let Some(version) = version {
+                            settled.insert(id, version);
+                        }
+                    } else if session.mailbox.messages.get(&id).is_none_or(|message| excluded(session, message.folder)) {
                         self.removals.insert(id);
                     } else if let Some(version) = version {
                         settled.insert(id, version);
@@ -494,12 +503,15 @@ impl Index {
         let zone = session.zone_key();
         let changed_zone = self.zone != zone;
         self.zone = zone;
+        if changed_zone {
+            self.put_away.clear();
+        }
         let now = session.mailbox.messages.chunks();
         let gone: Vec<_> = self.chunks.keys().filter(|key| !now.contains_key(key)).copied().collect();
         for key in gone {
             if let Some(chunk) = self.chunks.remove(&key) {
                 for id in chunk.ids {
-                    self.remove(id)
+                    self.leave(id, session)
                 }
             }
         }
@@ -511,7 +523,7 @@ impl Index {
             if let Some(previous) = self.chunks.get(&key) {
                 let removed: Vec<_> = previous.ids.iter().filter(|id| !chunk.contains_key(id)).copied().collect();
                 for id in removed {
-                    self.remove(id)
+                    self.leave(id, session)
                 }
             }
             for (&id, message) in chunk.iter() {
@@ -523,15 +535,34 @@ impl Index {
                 }
                 let pointer = Arc::downgrade(message);
                 if changed_zone || !self.messages.get(&id).is_some_and(|previous| previous.ptr_eq(&pointer)) {
+                    // Taken out of the Local archive as it was put away: the index has it.
+                    let known = !changed_zone && !self.messages.contains_key(&id) && self.put_away.remove(&id);
                     self.messages.insert(id, pointer);
-                    self.enqueue_metadata(id);
+                    if !known {
+                        self.enqueue_metadata(id);
+                    }
                 }
             }
             self.chunks.insert(key, Chunk { pointer, ids: chunk.keys().copied().collect() });
         }
     }
 
+    /// Message `id` is no longer among the mailbox's messages: gone, or put away with the Local
+    /// archive (`crate::parking`), which the index keeps as it holds it.
+    fn leave(&mut self, id: Id, session: &Session) {
+        if !session.mailbox.parked.contains(&id) {
+            return self.remove(id);
+        }
+        self.messages.remove(&id);
+        let idle =
+            !self.dirty.contains(&id) && !self.metadata_set.contains(&id) && !self.body_set.contains(&id) && !self.attachment_set.contains(&id);
+        if idle && self.versions.contains_key(&id) {
+            self.put_away.insert(id);
+        }
+    }
+
     fn remove(&mut self, id: Id) {
+        self.put_away.remove(&id);
         self.messages.remove(&id);
         self.versions.remove(&id);
         self.settled.remove(&id);

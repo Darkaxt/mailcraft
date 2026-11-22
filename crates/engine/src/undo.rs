@@ -77,6 +77,11 @@ struct CategoryStep {
 }
 
 impl Touched {
+    /// Whether the step changed message `id` (added it, took it away or changed it).
+    pub(crate) fn changed_message(&self, id: &Id) -> bool {
+        self.changed_messages.contains(id)
+    }
+
     /// The message `id` as the change left it, when it noted one: for letting go of its content.
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn message_mut(&mut self, id: Id) -> Option<&mut Arc<Message>> {

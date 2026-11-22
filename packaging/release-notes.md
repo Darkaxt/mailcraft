@@ -1,3 +1,8 @@
+**MailCraft 0.12.30** — old archive mail loads when you need it
+- Mail in the Local archive stays packed until you scroll to it, search, or open it. Folder counts stay the same.
+- After 15 minutes unused it is packed again.
+- Everything from 0.12.29 stays.
+
 **MailCraft 0.12.29** — a smaller search cache
 - The search index now keeps 8 MB of itself in memory instead of 64 MB, and each search 4 MB instead of 16 MB. Searches still read the index straight from the disk.
 - Everything from 0.12.28 stays.
