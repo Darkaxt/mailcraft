@@ -78,7 +78,7 @@
 //!
 //! Not in the browser, which has no folder to keep content in: there the mailbox stays one file.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::io::{Read, Write as _};
 use std::path::{Path, PathBuf};
@@ -3356,6 +3356,34 @@ pub fn saved_as(path: &Path, items: &[(Id, &Arc<Message>)]) -> Option<Vec<bool>>
     }
     let d = st.disk.as_ref()?;
     Some(items.iter().map(|(id, m)| d.messages.get(id).is_some_and(|w| w.entry.is(m))).collect())
+}
+
+/// The messages `ids` of the Local archive put away ([`crate::parking`]): what is known of them
+/// here stops pointing at them, which would keep the memory each took. Whether that was done
+/// (not while the file is being written: the caller asks again later).
+pub fn unlink(path: &Path, ids: &BTreeSet<Id>) -> bool {
+    let shared = shared(path);
+    let mut st = match shared.state.try_lock() {
+        Ok(st) => st,
+        Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
+        Err(std::sync::TryLockError::WouldBlock) => return false,
+    };
+    let st = &mut *st;
+    if let Some(d) = st.disk.as_mut() {
+        for id in ids {
+            if let Some(w) = d.messages.get_mut(id) {
+                w.entry.of = Weak::new();
+            }
+        }
+    }
+    if let Some(l) = st.loaded.as_mut() {
+        for (id, of) in l.messages.iter_mut() {
+            if ids.contains(id) {
+                *of = Weak::new();
+            }
+        }
+    }
+    true
 }
 
 /// The messages of the Local archive taken out again ([`crate::parking`]): each is what the file

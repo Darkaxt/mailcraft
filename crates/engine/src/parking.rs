@@ -41,6 +41,9 @@ pub(crate) struct State {
     used: Option<f64>,
     /// When the window last asked whether to put it away.
     tended: Option<f64>,
+    /// Put away, and still known to the mailbox file's record by where they were in memory
+    /// ([`crate::store::unlink`] couldn't be done yet).
+    unlink: BTreeSet<Id>,
 }
 
 /// Message `m`, packed: `None` when packing it doesn't give it back exactly as it is (it then
@@ -233,6 +236,7 @@ impl Session {
                 }
             }
             self.mailbox.parked = Parked::of(stay);
+            self.archive.unlink.clear();
             if let Some(path) = &self.path {
                 crate::store::relink(path, &out);
             }
@@ -247,8 +251,13 @@ impl Session {
     /// frame (`now` its clock, in seconds), and it looks at most every [`TEND_EVERY`]. A mailbox
     /// just opened puts it away at once. How many were put away.
     pub fn tend_archive(&mut self, now: f64) -> usize {
-        if self.in_command() || self.path.is_none() {
+        if self.in_command() {
             return 0;
+        }
+        let Some(_path) = self.path.clone() else { return 0 };
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.archive.unlink.is_empty() && crate::store::unlink(&_path, &self.archive.unlink) {
+            self.archive.unlink.clear();
         }
         let searching = !self.view.search.trim().is_empty();
         let reading = self.sel.messages.iter().any(|id| self.in_archive(*id));
@@ -322,6 +331,11 @@ impl Session {
             let gone: BTreeSet<Id> = away.iter().map(|(id, _)| *id).collect();
             self.mailbox.parked = self.mailbox.parked.with(away);
             self.archive.back.clear();
+            // The file's record lets go of them too: else each would keep the memory it took.
+            self.archive.unlink.extend(gone.iter().copied());
+            if crate::store::unlink(&path, &self.archive.unlink) {
+                self.archive.unlink.clear();
+            }
             // The steps of the history let go of them too (those that have them as they were put
             // away, and didn't change them), sharing what is left with the mailbox.
             let after = &self.mailbox.messages;

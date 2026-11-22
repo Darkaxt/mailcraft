@@ -183,3 +183,20 @@ fn only_what_the_file_has_as_it_is_goes_away() {
     clear_cache();
     assert_eq!(whole(&path).message(one).unwrap().subject, "Not saved yet");
 }
+
+#[test]
+fn nothing_keeps_the_memory_of_a_message_put_away() {
+    let tmp = Temp::new("park-weak");
+    let path = tmp.file();
+    let (mb, _, twin) = archived(10, 2);
+    save(&path, &mb).unwrap();
+    clear_cache();
+    let mut s = session_without_bodies(&path);
+    let _ = s.folder_counts();
+    let held: Vec<Arc<Message>> = s.mailbox.messages.values().filter(|m| m.folder == twin).cloned().collect();
+    assert_eq!(s.park_archive(), 8);
+    for m in &held {
+        assert_eq!(Arc::strong_count(m), 1, "only this test holds message {}", m.id);
+        assert_eq!(Arc::weak_count(m), 0, "nothing points at message {}", m.id);
+    }
+}

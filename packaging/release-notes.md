@@ -1,3 +1,7 @@
+**MailCraft 0.12.31** — the packed archive really frees its memory
+- 0.12.30 packed the Local archive, but MailCraft still held on to the memory the unpacked mail used. Now that memory is let go.
+- Everything from 0.12.30 stays.
+
 **MailCraft 0.12.30** — old archive mail loads when you need it
 - Mail in the Local archive stays packed until you scroll to it, search, or open it. Folder counts stay the same.
 - After 15 minutes unused it is packed again.
