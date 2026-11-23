@@ -668,7 +668,7 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     crate::gmail_tabs::row(app, ui);
     // A search, or a search folder, looks in the Local archive too: it is taken out for it.
     if app.session.archive_parked() > 0 && (!app.session.view.search.trim().is_empty() || app.session.view.search_folder.is_some()) {
-        app.session.load_archive();
+        app.session.load_archive(if app.session.view.search_folder.is_some() { "a search folder in view" } else { "a search in view" });
     }
     let rows = app.session.rows();
     search_bar(app, ui, mailcraft_engine::list::listed(&rows));
@@ -737,7 +737,7 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     if rows.is_empty() && parked > 0 {
         let r = ui.available_rect_before_wrap();
         ui.painter().text(pos2(r.center().x, r.min.y + 60.0), Align2::CENTER_CENTER, tl!("Loading older mail…"), regular(12.5), t.text_dim);
-        app.session.load_archive();
+        app.session.load_archive(&format!("a list in view with only mail put away ({parked} messages)"));
         ui.ctx().request_repaint();
         return;
     }
@@ -873,7 +873,7 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
         }
     });
     if take_out {
-        app.session.load_archive();
+        app.session.load_archive(&format!("the end of a list of {} rows in view", rows.len()));
         ui.ctx().request_repaint();
     } else if saw_archive {
         app.session.touch_archive();

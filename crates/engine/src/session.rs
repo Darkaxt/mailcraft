@@ -1373,6 +1373,9 @@ pub struct Session {
     /// What each folder holds, as of the revision and message count it was counted at
     /// ([`Session::folder_counts`]).
     pub(crate) counts_cache: Option<((u64, usize), Arc<crate::counts::FolderCounts>)>,
+    /// What each folder's mail says of the site its icon is of, with how many messages it had
+    /// ([`Session::folder_site`]).
+    pub(crate) site_cache: HashMap<Id, (usize, mailcraft_model::folder_sites::Verdict)>,
     pub(crate) aliases_cache: Option<((u64, usize), Arc<crate::aliases::Inventory>)>,
     /// Each message's parsed SimpleLogin facts, kept across revisions ([`Session::aliases`]).
     pub(crate) aliases_memo: crate::aliases::FactsMemo,
@@ -1568,6 +1571,7 @@ impl Session {
             rev: 0,
             list_cache: None,
             counts_cache: None,
+            site_cache: HashMap::new(),
             aliases_cache: None,
             aliases_memo: Default::default(),
             conversation_cache: None,
@@ -3540,6 +3544,7 @@ impl Session {
         self.resident.clear();
         self.resident_bytes = 0;
         self.forget_archive();
+        self.site_cache.clear();
         self.display_failed.clear();
         self.search_pass = None;
         self.searched_for = None;

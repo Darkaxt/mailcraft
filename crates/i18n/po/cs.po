@@ -440,6 +440,11 @@ msgid "A file dialog is already open."
 msgstr "Dialog souborů je už otevřený."
 
 #. interface
+#: crates/ui-egui/src/sender_images.rs
+msgid "A folder whose mail is nearly all from one company shows its website's icon. The website is asked first, then favicon.im and Google."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/shortcuts_page.rs
 msgid "A key alone only moves around. Anything that changes mail needs two keys, such as Ctrl+D."
 msgstr ""
@@ -15892,6 +15897,11 @@ msgstr ""
 
 #. command label
 #: crates/ui-egui/src/lib.rs
+msgid "Show Folder Icons"
+msgstr ""
+
+#. command label
+#: crates/ui-egui/src/lib.rs
 msgid "Show Folder Pane Tab"
 msgstr ""
 
@@ -16011,6 +16021,11 @@ msgstr "Zobrazit jako konverzace"
 #, fuzzy
 msgid "Show completed tasks"
 msgstr "Zobrazit dokončené úkoly"
+
+#. interface
+#: crates/ui-egui/src/sender_images.rs
+msgid "Show folder icons"
+msgstr ""
 
 #. command label
 #: crates/engine/src/cmd/calendar/invitation.rs

@@ -44,6 +44,7 @@ pub mod counts;
 mod digital_signature;
 #[cfg(test)]
 mod digital_signature_tests;
+mod folder_sites;
 pub mod gmail;
 pub mod import_pst;
 pub mod import_tree;
@@ -512,6 +513,8 @@ mod counts_tests;
 mod ews_account_tests;
 #[cfg(test)]
 mod focus_stays_tests;
+#[cfg(test)]
+mod folder_sites_tests;
 #[cfg(test)]
 mod gmail_labels_tests;
 #[cfg(test)]

@@ -171,15 +171,15 @@ impl AtOpen {
 }
 
 /// The commands that look at the whole mailbox, a whole folder or a whole account: the archive
-/// is taken out for them first.
+/// is taken out for them first. (Not `account.thinOffline` nor `account.trimDevice`: they look
+/// only at Microsoft and Exchange accounts' mail, never the Local archive's, and the first runs
+/// as the mailbox opens, 0.12.34.)
 const WHOLE: &[&str] = &[
     "file.saveAs",
     "file.exportFolder",
     "folder.delete",
     "folder.empty",
     "account.remove",
-    "account.thinOffline",
-    "account.trimDevice",
     "mail.markAllRead",
     "mail.findFromSender",
     "mail.findRelated",
@@ -231,30 +231,35 @@ impl Session {
         self.archive.touched = true;
     }
 
-    /// Whether command `id` with `params` wants the archive out first.
-    pub(crate) fn archive_wanted(&self, id: &str, params: &Value, mutates: bool) -> bool {
+    /// Why command `id` with `params` wants the archive out first, when it does.
+    pub(crate) fn archive_wanted(&self, id: &str, params: &Value, mutates: bool) -> Option<String> {
         let parked = &self.mailbox.parked;
         if parked.is_empty() {
-            return false;
+            return None;
         }
         if mutates && self.agent.is_some() {
-            return true;
+            return Some(format!("an agent's `{id}`"));
         }
         if WHOLE.contains(&id) {
-            return true;
+            return Some(format!("`{id}` looks at all the mail"));
         }
         let searched = params.get("query").or_else(|| params.get("text")).and_then(Value::as_str).is_some_and(|t| !t.trim().is_empty());
         if searched && matches!(id, "view.search" | "mail.list") {
-            return true;
+            return Some(format!("a search (`{id}`)"));
         }
-        if named_ids(params).iter().any(|i| parked.contains(i)) {
-            return true;
+        if let Some(one) = named_ids(params).into_iter().find(|i| parked.contains(i)) {
+            return Some(format!("`{id}` names message {one}, put away"));
         }
-        params.get("folder").and_then(Value::as_u64).is_some_and(|f| parked.in_folder(f).0 > 0)
+        params
+            .get("folder")
+            .and_then(Value::as_u64)
+            .filter(|f| parked.in_folder(*f).0 > 0)
+            .map(|f| format!("`{id}` names folder {f}, with mail put away"))
     }
 
     /// Take the archive out: every message put away is in the mailbox's messages again. How many.
-    pub fn load_archive(&mut self) -> usize {
+    /// `why`: what wants it, for the log.
+    pub fn load_archive(&mut self, why: &str) -> usize {
         if self.mailbox.parked.is_empty() {
             return 0;
         }
@@ -288,7 +293,7 @@ impl Session {
             }
             self.archive.touched = true;
             self.rev += 1;
-            log::info!("the local archive is out: {} messages", out.len());
+            log::info!("the local archive is out for {why}: {} messages", out.len());
             out.len()
         }
     }
@@ -406,8 +411,10 @@ impl Session {
 
     /// Before command `id`: the archive out, when it wants it ([`Session::archive_wanted`]).
     pub(crate) fn archive_for(&mut self, id: &str, params: &Value, mutates: bool) {
-        if !self.in_command() && self.archive_wanted(id, params, mutates) {
-            self.load_archive();
+        if !self.in_command()
+            && let Some(why) = self.archive_wanted(id, params, mutates)
+        {
+            self.load_archive(&why);
         }
     }
 

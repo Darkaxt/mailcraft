@@ -59,7 +59,7 @@ fn main() {
     if compare {
         let away: Vec<_> = s.mailbox.parked.ids().collect();
         let stay = s.mailbox.messages.len();
-        assert_eq!(s.load_archive(), away.len());
+        assert_eq!(s.load_archive("--compare"), away.len());
         let read = store::open_for_headless(&path, &OpenProgress::default()).expect("read").mailbox;
         let differ = away.iter().filter(|id| read.message(**id) != s.mailbox.message(**id)).count();
         let missing = read.messages.len().saturating_sub(away.len() + stay);

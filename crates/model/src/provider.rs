@@ -133,6 +133,15 @@ pub fn is_public_suffix(domain: &str) -> bool {
             .is_some_and(|(second, top)| top.len() == 2 && top.bytes().all(|b| b.is_ascii_lowercase()) && COUNTRY_SECOND_LEVELS.contains(&second))
 }
 
+/// The site a mail domain (in lower case) is part of, whose icon it wears: `mail.nutrient.io`
+/// sends for `nutrient.io`, and `news.bbc.co.uk` for `bbc.co.uk`. A name made up for one recipient
+/// alone (`u8f3a.spam.example`) comes to its site too.
+pub fn site(domain: &str) -> &str {
+    let last = |labels: usize| domain.rmatch_indices('.').nth(labels - 1).and_then(|(dot, _)| domain.get(dot + 1..)).unwrap_or(domain);
+    // The last two labels, or three under a suffix anybody may have a name under.
+    if is_public_suffix(last(2)) { last(3) } else { last(2) }
+}
+
 /// Whether `domain` (in lower case) is a hosting platform's or a name its customers have under
 /// it: what it serves there, its icon among the rest, is the platform's as much as theirs.
 pub fn on_hosting_platform(domain: &str) -> bool {

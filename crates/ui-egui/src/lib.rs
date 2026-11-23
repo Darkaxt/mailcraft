@@ -1057,6 +1057,10 @@ pub struct UiState {
     /// in the message list, from Gravatar, favicon.im and Google. Off unless the owner turns it on:
     /// asking tells those services whose pictures are looked at.
     pub sender_images: bool,
+    /// Show a folder whose mail is nearly all from one company with that company's web site's
+    /// icon before its name, when it has no emoji of its own (0.12.34, `folder_sites`): asked of
+    /// the site first, then favicon.im and Google. On unless the owner turns it off.
+    pub folder_icons: bool,
     pub attachment_previews: bool,
     /// The groups of the calendar list that are folded away under their headings.
     pub collapsed_calendar_groups: Vec<String>,
@@ -1150,6 +1154,7 @@ impl Default for UiState {
             picture_senders: Vec::new(),
             picture_domains: Vec::new(),
             sender_images: false,
+            folder_icons: true,
             attachment_previews: false,
             collapsed_calendar_groups: Vec::new(),
             update_check: updates::UpdateCheck::default(),
@@ -1604,6 +1609,12 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "Show Sender Images",
         "File › Options",
         r#"{"value"?: bool (default: toggle)} — the pictures of the senders you know (your contacts, and whoever mail in Sent Items went to), and of those whose mail's pictures are downloaded (for all mail, the sender, the domain or the message), in the message list, from Gravatar, else their domain's icon from favicon.im or Google; never for mail in Junk E-mail"#,
+    ),
+    (
+        "ui.folderIcons",
+        "Show Folder Icons",
+        "File › Options",
+        r#"{"value"?: bool (default: toggle)} — a folder whose mail is nearly all from one company (nine in ten, at least three messages, your own replies not counted) shows that company's web site's icon before its name when it has no emoji of its own; a folder with less mail shows its parent folder's. The icon is asked of the site itself first, then favicon.im, then Google, and kept for a month"#,
     ),
     (
         "ui.retryPictures",

@@ -83,7 +83,7 @@ fn the_archive_put_away_is_counted_kept_by_saves_and_taken_out_whole() {
     assert!(after.messages == expected.messages, "a whole rewrite keeps the archive");
 
     // Taken out: every message as it was.
-    assert_eq!(s.load_archive(), 32);
+    assert_eq!(s.load_archive("a test"), 32);
     assert_eq!(s.archive_parked(), 0);
     assert_eq!(s.mailbox.messages.len(), 40);
     for (id, m) in all.iter() {
@@ -126,7 +126,7 @@ fn an_undo_after_the_archive_went_away_puts_back_only_what_the_step_changed() {
     assert_eq!(s.mailbox.count(twin), 15);
     assert_eq!(s.mailbox.unread_count(twin), 15);
     // Nothing of the archive is lost to it: taken out, every message is there.
-    s.load_archive();
+    s.load_archive("a test");
     assert_eq!(s.mailbox.messages.len(), 20);
 }
 
@@ -147,6 +147,26 @@ fn a_command_naming_a_message_put_away_takes_the_archive_out_first() {
     s.run("edit.undo", &json!({})).unwrap();
     assert!(!s.mailbox.message(one).unwrap().read);
     assert_eq!(s.mailbox.messages.len(), 12);
+}
+
+#[test]
+fn keeping_mail_offline_leaves_the_archive_put_away() {
+    // Taking older mail back to its headers runs as the mailbox opens: it looks at Microsoft and
+    // Exchange accounts only, so the archive stays put away (0.12.34).
+    let tmp = Temp::new("park-thin");
+    let path = tmp.file();
+    let (mb, _, _) = archived(12, 2);
+    save(&path, &mb).unwrap();
+    clear_cache();
+    let mut s = session_without_bodies(&path);
+    assert_eq!(s.park_archive(), 10);
+    for id in ["account.thinOffline", "account.trimDevice"] {
+        assert_eq!(s.archive_wanted(id, &json!({"most": 200}), true), None, "{id}");
+        let _ = s.run(id, &json!({"most": 200}));
+        assert_eq!(s.archive_parked(), 10, "{id}");
+    }
+    // What does want it says why.
+    assert!(s.archive_wanted("file.saveAs", &json!({}), false).is_some_and(|why| why.contains("file.saveAs")));
 }
 
 #[test]
@@ -265,7 +285,7 @@ fn a_window_puts_the_archive_away_as_it_reads_the_file() {
     }
     assert_eq!(after.message(changed).unwrap().subject, "Changed with the archive away");
     // Taken out, every message is in memory as it was read.
-    assert_eq!(s.load_archive(), 32);
+    assert_eq!(s.load_archive("a test"), 32);
     assert!(s.mailbox.parked.is_empty());
     assert_eq!(s.mailbox.messages.len(), 40);
 }

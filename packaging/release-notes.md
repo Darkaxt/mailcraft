@@ -1,3 +1,9 @@
+**MailCraft 0.12.34** — folder icons, and the archive stays packed at startup
+- A folder whose mail is nearly all from one company now shows that company's icon before its name. Folders with an emoji keep their emoji. You can turn this off in File › Options.
+- The Local archive no longer unpacks a few seconds after startup. The check that trims old Outlook mail did it, though it never touches the archive.
+- The log now says why the archive was unpacked each time.
+- Everything from 0.12.33 stays.
+
 **MailCraft 0.12.33** — the archive never fully loads at startup
 - The Local archive is now packed while your mailbox opens, instead of being fully loaded and packed a minute later. The startup memory peak is gone.
 - On a copy of your mailbox the mail engine now holds 423 MB instead of 604 MB.

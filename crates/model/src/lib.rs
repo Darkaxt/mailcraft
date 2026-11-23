@@ -22,6 +22,9 @@ pub mod device_limits;
 mod device_limits_tests;
 pub mod digital_signature;
 mod ews_server;
+pub mod folder_sites;
+#[cfg(test)]
+mod folder_sites_tests;
 pub mod gmail;
 pub mod headers;
 mod jmap_server;

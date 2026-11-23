@@ -472,3 +472,34 @@ fn known_senders_of_200000_messages_during_a_send_receive() {
     is_known(&mut app, "nobody@spam.example");
     eprintln!("a sent message deleted for good: gathered again in {:?}", start.elapsed());
 }
+
+#[test]
+fn a_folder_of_one_companys_mail_wears_its_sites_icon_unless_turned_off() {
+    let (mut app, asked, _) = window(|_| Ok(png()));
+    let account = app.session.mailbox.accounts[0].id;
+    let folder = app.session.mailbox.add_folder(account, None, "Coinbase").unwrap();
+    let inbox = app.session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    for from in ["a@coinbase.com", "b@info.coinbase.com", "c@coinbase.com"] {
+        app.session.mailbox.add_message(Message { folder, from: Address::new("", from), date: NOW, ..Default::default() }).unwrap();
+    }
+    let ctx = egui::Context::default();
+    let icon = |app: &mut MailApp, id: Id| {
+        let mut got = false;
+        ctx.run_ui(egui::RawInput::default(), |ui| got = folder_icon(app, ui.ctx(), id).is_some()).drop_without_applying_deltas();
+        got
+    };
+    // Off: nobody is asked.
+    app.run("ui.folderIcons", json!({"value": false})).unwrap();
+    for _ in 0..4 {
+        assert!(!icon(&mut app, folder));
+    }
+    assert!(asked.lock().unwrap().is_empty());
+    assert_eq!(app.run("ui.folderIcons", json!({})).unwrap(), json!({"value": true}));
+    for _ in 0..4 {
+        icon(&mut app, folder);
+        icon(&mut app, inbox);
+    }
+    assert!(icon(&mut app, folder));
+    assert!(!icon(&mut app, inbox));
+    assert_eq!(*asked.lock().unwrap(), ["site:coinbase.com"]);
+}

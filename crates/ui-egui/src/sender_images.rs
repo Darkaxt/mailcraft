@@ -206,6 +206,18 @@ pub fn contact_picture(app: &mut MailApp, ctx: &egui::Context, who: &Address) ->
     look(app, ctx, address)
 }
 
+/// The icon of the site folder `id`'s mail comes from (`mailcraft_model::folder_sites`), while
+/// the owner keeps folder icons on. `None` while there is none; one still to be looked up is
+/// noted, and asked for at the next frame. The site is asked first, as the host does it.
+pub fn folder_icon(app: &mut MailApp, ctx: &egui::Context, id: mailcraft_model::Id) -> Option<egui::TextureHandle> {
+    if !app.ui.folder_icons || app.services.sender_images.is_none() {
+        return None;
+    }
+    let site = app.session.folder_site(id)?;
+    tick(app, ctx);
+    look(app, ctx, format!("{}{site}", mailcraft_model::folder_sites::ICON_KEY))
+}
+
 /// `who`'s address in lower case, as pictures are kept by; none for one too long to be anybody's.
 fn key(who: &Address) -> Option<String> {
     let email = who.email.trim();
@@ -281,10 +293,22 @@ pub fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         "Gravatar is asked for the sender's picture and told a hash of their address; else favicon.im, then Google, are asked for their website's icon and told the sender's domain. This tells those services whose pictures you look at. Only for the people you know (your contacts, and whoever you have written to) and the mail whose pictures you download, never for Junk E-mail, and a sender's picture only when your mail server confirms the mail is from them."
     );
     ui.label(egui::RichText::new(said).color(t.text_dim));
+    let mut on = app.ui.folder_icons;
+    if ui.checkbox(&mut on, tl!("Show folder icons")).changed() {
+        let _ = app.run("ui.folderIcons", json!({"value": on}));
+    }
+    let said =
+        tl!("A folder whose mail is nearly all from one company shows its website's icon. The website is asked first, then favicon.im and Google.");
+    ui.label(egui::RichText::new(said).color(t.text_dim));
 }
 
-/// `ui.senderImages`; forgetting what is in memory when it is turned off.
+/// `ui.senderImages`, forgetting what is in memory when it is turned off; `ui.folderIcons`.
 pub(crate) fn ui_command(app: &mut MailApp, id: &str, p: &Value) -> Option<Result<Value, String>> {
+    if id == "ui.folderIcons" {
+        let on = p.get("value").and_then(Value::as_bool).unwrap_or(!app.ui.folder_icons);
+        app.ui.folder_icons = on;
+        return Some(Ok(json!({"value": on})));
+    }
     (id == "ui.senderImages").then(|| {
         let on = p.get("value").and_then(Value::as_bool).unwrap_or(!app.ui.sender_images);
         app.ui.sender_images = on;
