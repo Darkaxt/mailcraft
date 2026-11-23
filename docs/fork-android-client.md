@@ -31,6 +31,23 @@ What the Windows fork already does that the phone app must honour (most of it is
 - The Local archive behaving as an archive (packed while unused, counts kept).
 - Test mail only among the owner's own accounts.
 
+## Target device: Galaxy Z Fold7
+
+The owner's phone. Design for the open inner screen first, the cover screen second.
+
+- **Inner screen open:** 8.0", 2184 × 1968, almost square (about 10:9; wider than tall when
+  held sideways). Android sizes this as an *expanded* window. Use it like the Windows window:
+  the folder tree, the message list and the reading pane side by side, not a stretched phone
+  list. Held upright, two panes (the list and the message), with the folder tree as a drawer.
+- **Cover screen:** 6.5", 2520 × 1080, 21:9, tall and narrow. One pane at a time (list, then
+  message), for quick triage.
+- **Folding and unfolding:** the app keeps the open message, selection and scroll position across
+  the change and does not reload.
+- **Half folded (Flex mode):** the message on the top half and the list or the reply box on the
+  bottom half.
+- Use Android's adaptive layouts (window size classes, Jetpack WindowManager for the fold), not
+  a check on the model name. The emulator has a matching foldable profile for screenshot tests.
+
 ## First steps (when it starts)
 
 1. Build the upstream Android app unchanged (Gradle gate) and try it with one account on an
