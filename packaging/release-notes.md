@@ -1,5 +1,9 @@
+**MailCraft 0.12.35** — folder icons replace the emoji
+- A folder whose mail is nearly all from one company now shows that company's icon in place of its emoji. The emoji still shows where there is no icon.
+- Everything from 0.12.34 stays.
+
 **MailCraft 0.12.34** — folder icons, and the archive stays packed at startup
-- A folder whose mail is nearly all from one company now shows that company's icon before its name. Folders with an emoji keep their emoji. You can turn this off in File › Options.
+- A folder whose mail is nearly all from one company now shows that company's icon before its name. You can turn this off in File › Options.
 - The Local archive no longer unpacks a few seconds after startup. The check that trims old Outlook mail did it, though it never touches the archive.
 - The log now says why the archive was unpacked each time.
 - Everything from 0.12.33 stays.

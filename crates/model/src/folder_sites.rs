@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! A folder's site (0.12.34): the one web site nearly all of a folder's mail comes from, whose
-//! icon the folder pane shows before the folder's name when the owner gave it no emoji of its own.
+//! icon the folder pane shows before the folder's name, in place of the owner's emoji (0.12.35).
 //!
 //! - A sender's site is its address's registrable domain ([`crate::provider::site`]:
 //!   `coinbase.com` for `no-reply@info.coinbase.com`); mail forwarded by SimpleLogin counts as

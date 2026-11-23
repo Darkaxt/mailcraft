@@ -595,16 +595,12 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     // (Drafts, Junk) in a quiet grey one.
     let name_end = count_pill(ui.painter(), &t, r, right_edge, count, selected);
     let font = if selected { bold(NAME_SIZE) } else { regular(NAME_SIZE) };
-    // Its tag (`folder.tag`), before its name; without one, the icon of the site its mail comes
-    // from (0.12.34).
+    // Before its name, the icon of the site its mail comes from (0.12.34); in its place, while
+    // there is none (mixed mail, a mail provider, an icon not found or still coming), its tag
+    // (`folder.tag`). The icon wins over the tag (0.12.35): the owner tags nearly every folder.
     let mut name_x = x + NAME_LEFT;
-    if !f.tag.is_empty() {
-        let w = paint_clipped(ui.painter(), pos2(name_x, y), (name_end - name_x).max(0.0), &f.tag, regular(NAME_SIZE), t.text);
-        app.hit.add("folderTag", f.id, Rect::from_min_max(pos2(name_x, r.min.y), pos2(name_x + w, r.max.y)));
-        name_x += w + 5.0;
-    } else if name_end - name_x > FOLDER_ICON + 5.0
-        && let Some(icon) = crate::sender_images::folder_icon(app, ui.ctx(), f.id)
-    {
+    let icon = if name_end - name_x > FOLDER_ICON + 5.0 { crate::sender_images::folder_icon(app, ui.ctx(), f.id) } else { None };
+    if let Some(icon) = icon {
         let at = Rect::from_center_size(pos2(name_x + FOLDER_ICON / 2.0, y), vec2(FOLDER_ICON, FOLDER_ICON));
         // On the avatars' backdrop, as a browser shows an icon: one with see-through parts stays
         // readable in the dark.
@@ -612,6 +608,10 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
         egui::Image::from_texture(egui::load::SizedTexture::from_handle(&icon)).corner_radius(2.0).paint_at(ui, at);
         app.hit.add("folderIcon", f.id, at);
         name_x += FOLDER_ICON + 6.0;
+    } else if !f.tag.is_empty() {
+        let w = paint_clipped(ui.painter(), pos2(name_x, y), (name_end - name_x).max(0.0), &f.tag, regular(NAME_SIZE), t.text);
+        app.hit.add("folderTag", f.id, Rect::from_min_max(pos2(name_x, r.min.y), pos2(name_x + w, r.max.y)));
+        name_x += w + 5.0;
     }
     let room = if starred { STAR_ROOM } else { 0.0 };
     let w = paint_clipped(

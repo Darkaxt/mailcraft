@@ -503,3 +503,34 @@ fn a_folder_of_one_companys_mail_wears_its_sites_icon_unless_turned_off() {
     assert!(!icon(&mut app, inbox));
     assert_eq!(*asked.lock().unwrap(), ["site:coinbase.com"]);
 }
+
+/// The site's icon takes the place of the folder's emoji (0.12.35); the emoji shows while there is
+/// no icon.
+#[test]
+fn a_folders_site_icon_takes_the_place_of_its_emoji() {
+    let (mut app, _, _) = window(|_| Ok(png()));
+    let account = app.session.mailbox.accounts[0].id;
+    let folder = app.session.mailbox.add_folder(account, None, "Coinbase").unwrap();
+    for from in ["a@coinbase.com", "b@info.coinbase.com", "c@coinbase.com"] {
+        app.session.mailbox.add_message(Message { folder, from: Address::new("", from), date: NOW, ..Default::default() }).unwrap();
+    }
+    app.execute("folder.tag", json!({"id": folder, "tag": "🪙"})).unwrap();
+    let ctx = egui::Context::default();
+    crate::theme::install_fonts(&ctx);
+    let pane = |app: &mut MailApp| {
+        app.hit.clear();
+        let mut out = ctx.run_ui(egui::RawInput::default(), |ui| crate::nav::folder_pane(app, ui));
+        out.textures_delta.clear();
+        (app.hit.rect("folderIcon", folder).is_some(), app.hit.rect("folderTag", folder).is_some())
+    };
+    assert_eq!(pane(&mut app), (false, true), "no icon yet: the emoji");
+    let mut shown = (false, true);
+    for _ in 0..20 {
+        shown = pane(&mut app);
+        if shown.0 {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    assert_eq!(shown, (true, false), "the icon, in the emoji's place");
+}

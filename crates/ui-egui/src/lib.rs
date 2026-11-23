@@ -1058,7 +1058,7 @@ pub struct UiState {
     /// asking tells those services whose pictures are looked at.
     pub sender_images: bool,
     /// Show a folder whose mail is nearly all from one company with that company's web site's
-    /// icon before its name, when it has no emoji of its own (0.12.34, `folder_sites`): asked of
+    /// icon before its name, in place of its emoji (0.12.34; over the emoji since 0.12.35, `folder_sites`): asked of
     /// the site first, then favicon.im and Google. On unless the owner turns it off.
     pub folder_icons: bool,
     pub attachment_previews: bool,
@@ -1614,7 +1614,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.folderIcons",
         "Show Folder Icons",
         "File › Options",
-        r#"{"value"?: bool (default: toggle)} — a folder whose mail is nearly all from one company (nine in ten, at least three messages, your own replies not counted) shows that company's web site's icon before its name when it has no emoji of its own; a folder with less mail shows its parent folder's. The icon is asked of the site itself first, then favicon.im, then Google, and kept for a month"#,
+        r#"{"value"?: bool (default: toggle)} — a folder whose mail is nearly all from one company (nine in ten, at least three messages, your own replies not counted) shows that company's web site's icon before its name, in place of its emoji; a folder with less mail shows its parent folder's. The icon is asked of the site itself first, then favicon.im, then Google, and kept for a month"#,
     ),
     (
         "ui.retryPictures",
