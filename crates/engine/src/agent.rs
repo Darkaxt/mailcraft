@@ -665,6 +665,7 @@ const SETTINGS: &[&str] = &[
     "ui.alwaysDownloadPictures",
     "ui.downloadPicturesAutomatically",
     "ui.senderImages",
+    "ui.folderIcons",
     "ui.desktopAlerts",
     "ui.closeToTray",
     // Backups off, or put somewhere else (v0.12.9).
