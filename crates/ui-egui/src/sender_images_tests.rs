@@ -514,7 +514,7 @@ fn a_folders_site_icon_takes_the_place_of_its_emoji() {
     for from in ["a@coinbase.com", "b@info.coinbase.com", "c@coinbase.com"] {
         app.session.mailbox.add_message(Message { folder, from: Address::new("", from), date: NOW, ..Default::default() }).unwrap();
     }
-    app.execute("folder.tag", json!({"id": folder, "tag": "🪙"})).unwrap();
+    app.execute("folder.tag", json!({"id": folder, "tag": "📌"})).unwrap();
     let ctx = egui::Context::default();
     crate::theme::install_fonts(&ctx);
     let pane = |app: &mut MailApp| {
