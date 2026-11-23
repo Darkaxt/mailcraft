@@ -200,3 +200,87 @@ fn nothing_keeps_the_memory_of_a_message_put_away() {
         assert_eq!(Arc::weak_count(m), 0, "nothing points at message {}", m.id);
     }
 }
+
+/// Whether nothing `parts` names is taken to be in memory.
+fn none_held(parts: &Parts) -> bool {
+    parts
+        .text
+        .iter()
+        .chain(&parts.html)
+        .chain(&parts.hidden)
+        .chain(parts.attachments.iter().flatten())
+        .chain(&parts.original)
+        .chain(&parts.headers)
+        .all(|p| !p.held)
+}
+
+#[test]
+fn a_window_puts_the_archive_away_as_it_reads_the_file() {
+    let tmp = Temp::new("park-at-open");
+    let path = tmp.file();
+    let (mb, inbox, twin) = archived(40, 8);
+    save(&path, &mb).unwrap();
+    clear_cache();
+    let as_read = open_for_headless(&path, &OpenProgress::default()).unwrap().mailbox;
+    assert!(as_read.parked.is_empty(), "only a window puts anything away");
+    clear_cache();
+    let opened = open_for_window(&path, &OpenProgress::default()).unwrap();
+    assert_eq!(opened.repaired, 0);
+    let mb = opened.mailbox;
+    assert_eq!((mb.messages.len(), mb.parked.len()), (8, 32));
+    // Each comes back as the file had it, filled in as any opening fills it.
+    for (id, p) in mb.parked.iter() {
+        assert_eq!(crate::parking::thaw(p).as_ref(), as_read.message(*id), "message {id} comes back as it was read");
+    }
+    for (id, m) in &mb.messages {
+        assert_eq!(m.folder, inbox);
+        assert_eq!(m.id, *id);
+    }
+    // Counted as before.
+    let (window, read) = (Session::new(mb.clone()), Session::new(as_read.clone()));
+    assert_eq!(held(&window, &[inbox, twin]), held(&read, &[inbox, twin]));
+    // Nothing of what it names is taken to be in memory: a save never writes it from nothing.
+    {
+        let shared = shared(&path);
+        let st = lock(&shared.state);
+        let disk = st.disk.as_ref().unwrap();
+        for id in mb.parked.ids() {
+            assert!(none_held(&disk.messages.get(&id).unwrap().parts), "message {id}");
+        }
+    }
+    // A change, saved: the file keeps every message of the archive as it was.
+    let mut s = window;
+    s.path = Some(path.clone());
+    let changed = *s.mailbox.messages.keys().next().unwrap();
+    Arc::make_mut(s.mailbox.messages.get_mut(&changed).unwrap()).subject = "Changed with the archive away".into();
+    save(&path, &s.mailbox).unwrap();
+    clear_cache();
+    let after = whole(&path);
+    let before = loaded(&path, &as_read);
+    assert_eq!(after.messages.len(), 40);
+    for (id, m) in &before.messages {
+        if *id != changed {
+            assert_eq!(after.message(*id), Some(&**m), "message {id} is kept");
+        }
+    }
+    assert_eq!(after.message(changed).unwrap().subject, "Changed with the archive away");
+    // Taken out, every message is in memory as it was read.
+    assert_eq!(s.load_archive(), 32);
+    assert!(s.mailbox.parked.is_empty());
+    assert_eq!(s.mailbox.messages.len(), 40);
+}
+
+#[test]
+fn a_file_put_right_as_it_opens_has_its_archive_taken_out_again() {
+    let tmp = Temp::new("park-at-open-repair");
+    let path = tmp.file();
+    let (mut mb, _, _) = archived(12, 2);
+    mb.search_folders.push(mailcraft_model::SearchFolder { id: 0, name: "Unread".into(), query: "is:unread".into(), ..Default::default() });
+    save(&path, &mb).unwrap();
+    clear_cache();
+    let opened = open_for_window(&path, &OpenProgress::default()).unwrap();
+    assert!(opened.repaired > 0, "the search folder's id is put right");
+    assert!(opened.mailbox.parked.is_empty());
+    assert_eq!(opened.mailbox.messages.len(), 12);
+    assert!(opened.mailbox.search_folders.iter().all(|f| f.id != 0 && !opened.mailbox.messages.contains_key(&f.id)));
+}

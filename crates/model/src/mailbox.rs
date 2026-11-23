@@ -4756,6 +4756,8 @@ impl Mailbox {
             .chain(self.notes.keys())
             .chain(self.journal.keys())
             .copied()
+            // (The Local archive put away keeps its messages' ids: none is given again.)
+            .chain(self.parked.ids())
             .chain(self.accounts.iter().map(|a| a.id))
             .chain(self.folders.iter().map(|f| f.id))
             .chain(self.calendars.iter().map(|c| c.id))
@@ -5141,6 +5143,7 @@ impl Mailbox {
             if search.id == 0
                 || !sane(&search.id)
                 || self.messages.contains_key(&search.id)
+                || self.parked.contains(&search.id)
                 || self.contacts.contains_key(&search.id)
                 || self.events.contains_key(&search.id)
                 || self.tasks.contains_key(&search.id)

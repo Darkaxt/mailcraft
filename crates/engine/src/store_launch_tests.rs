@@ -28,11 +28,11 @@ fn content_files_looked_for_later_are_counted_as_the_opening_would_have() {
     fs::remove_file(blob_file(&path, mb.message(old_text).unwrap().body.text.as_bytes())).unwrap();
     let rows = Some(3);
     // Looked for while opening, as always: three are missing.
-    let now = open_launched(&path, Launch { checks_later: false, rows });
+    let now = open_launched(&path, Launch { checks_later: false, rows, park: false });
     assert_eq!((now.unavailable, now.unchecked), (3, false));
     assert_eq!(check_parts(&path).count, 0);
     // Looked for later: none yet, and the same three once they are.
-    let later = open_launched(&path, Launch { checks_later: true, rows });
+    let later = open_launched(&path, Launch { checks_later: true, rows, park: false });
     assert_eq!((later.unavailable, later.unchecked), (0, true));
     assert_eq!(later.loaded + later.deferred, parts_outside(&mb));
     assert!(later.notice().is_none());
@@ -59,7 +59,7 @@ fn a_save_while_content_is_still_to_be_looked_for_is_not_held_up_and_loses_nothi
     let path = tmp.file();
     let mut mb = mailbox(12);
     save(&path, &mb).unwrap();
-    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(2) });
+    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(2), park: false });
     assert!(opened.unchecked);
     let first = *mb.messages.keys().next().unwrap();
     mb.message_mut(first).unwrap().read = true;
@@ -86,7 +86,7 @@ fn only_the_rows_the_window_opens_on_have_their_bodies_brought_in_and_the_rest_c
     clear_cache();
     let inbox = mb.inbox().unwrap();
     let rows: Vec<Id> = newest.iter().copied().filter(|id| mb.message(*id).unwrap().folder == inbox).take(4).collect();
-    let opened = open_launched(&path, Launch { checks_later: false, rows: Some(4) });
+    let opened = open_launched(&path, Launch { checks_later: false, rows: Some(4), park: false });
     assert_eq!(opened.unavailable, 0);
     for (id, m) in &opened.mailbox.messages {
         assert_eq!(!m.body_is_kept(), rows.contains(id) || body_outside(mb.message(*id).unwrap()) == 0, "message {id}");
@@ -95,7 +95,7 @@ fn only_the_rows_the_window_opens_on_have_their_bodies_brought_in_and_the_rest_c
     let all = open_launched(&path, Launch::default());
     assert!(all.mailbox.messages.values().all(|m| !m.body_is_kept()));
     // A message whose body wasn't brought in shows it when it is shown.
-    let opened = open_launched(&path, Launch { checks_later: false, rows: Some(4) });
+    let opened = open_launched(&path, Launch { checks_later: false, rows: Some(4), park: false });
     let mut s = Session::new(opened.mailbox);
     s.path = Some(path.clone());
     let not_in = *newest.iter().find(|id| !rows.contains(id) && body_outside(mb.message(**id).unwrap()) > 0).unwrap();
@@ -121,7 +121,7 @@ fn a_body_found_missing_later_reads_as_unavailable_and_the_mailbox_can_still_be_
     fs::remove_file(blob_file(&path, mb.message(old_html).unwrap().body.html.as_ref().unwrap().as_bytes())).unwrap();
     // As an opening that looks at once has it.
     let now = open_launched(&path, Launch::default());
-    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(3) });
+    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(3), park: false });
     let mut s = Session::new(opened.mailbox);
     s.path = Some(path.clone());
     assert!(s.loaded_mailbox().is_err(), "not yet known to be missing");
@@ -148,7 +148,7 @@ fn the_bodies_the_budget_holds_come_after_the_window_shows_as_an_opening_would_h
     save(&path, &mb).unwrap();
     clear_cache();
     let now = open_launched(&path, Launch::default());
-    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(OPENING_ROWS) });
+    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(OPENING_ROWS), park: false });
     let mut s = Session::new(opened.mailbox);
     s.path = Some(path.clone());
     // The oldest rows are past the first 200: no preview yet.
@@ -191,7 +191,7 @@ fn a_body_whose_file_is_damaged_reads_and_is_counted_as_an_opening_would_have_it
     fs::write(&file, bytes).unwrap();
     let now = open_launched(&path, Launch::default());
     assert_eq!(now.unavailable, 1);
-    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(1) });
+    let opened = open_launched(&path, Launch { checks_later: true, rows: Some(1), park: false });
     let mut s = Session::new(opened.mailbox);
     s.path = Some(path.clone());
     let (missing, bodies) = content_later(&path);
@@ -218,7 +218,7 @@ fn a_body_missing_outright_is_counted_once_though_its_read_fails_too() {
     let old_text = *newest_first(&mb).iter().rev().find(|id| mb.message(**id).unwrap().body.text.len() > INLINE_MAX).unwrap();
     fs::remove_file(blob_file(&path, mb.message(old_text).unwrap().body.text.as_bytes())).unwrap();
     let now = open_launched(&path, Launch::default());
-    open_launched(&path, Launch { checks_later: true, rows: Some(1) });
+    open_launched(&path, Launch { checks_later: true, rows: Some(1), park: false });
     assert_eq!(content_later(&path).0.count, now.unavailable);
 }
 

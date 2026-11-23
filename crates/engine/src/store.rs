@@ -416,7 +416,7 @@ struct Head {
     blobs: BTreeMap<Id, WireParts>,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 #[serde(default)]
 struct WireParts {
     text: Option<(String, u64)>,
@@ -1875,7 +1875,7 @@ pub fn open_with(path: &Path, progress: &OpenProgress) -> Result<Opened, String>
 /// opened and closed without a change would otherwise put them there again at every opening.
 pub fn open_for_window(path: &Path, progress: &OpenProgress) -> Result<Opened, String> {
     let old = crate::store_before::format_on_disk(path).is_some_and(|f| f < INDEX_VERSION);
-    let opened = open_as(path, progress, Launch { checks_later: true, rows: Some(OPENING_ROWS) })?;
+    let opened = open_as(path, progress, Launch { checks_later: true, rows: Some(OPENING_ROWS), park: true })?;
     if old && let Err(e) = save(path, &opened.mailbox) {
         log::warn!("{}: couldn't be written in this version's format yet ({e}); it opens as it is", path.display());
     }
@@ -1886,7 +1886,7 @@ pub fn open_for_window(path: &Path, progress: &OpenProgress) -> Result<Opened, S
 /// when a request needs them. Content validation still runs afterwards through
 /// [`check_content_later`], without retaining the validated payload in memory.
 pub fn open_for_headless(path: &Path, progress: &OpenProgress) -> Result<Opened, String> {
-    open_as(path, progress, Launch { checks_later: true, rows: Some(0) })
+    open_as(path, progress, Launch { checks_later: true, rows: Some(0), park: false })
 }
 
 /// How a mailbox file is opened: as it always was ([`Launch::default`]), or for a window that
@@ -1898,6 +1898,9 @@ struct Launch {
     /// Bodies are brought into memory only for this many of the Inbox's newest messages (within
     /// the budget); `None`: for the newest mail of the whole mailbox, as far as the budget goes.
     rows: Option<usize>,
+    /// The Local archive is put away as it is read ([`crate::parking::AtOpen`]): a window's
+    /// mailbox, which puts it away anyway, never has all of it in memory.
+    park: bool,
 }
 
 /// The Inbox's newest messages whose bodies a window brings in as it opens a mailbox: more than
@@ -2247,6 +2250,13 @@ fn open_index(st: &mut State, file: &Path, len: u64, progress: &OpenProgress, la
     let mut records: Vec<(Key, Fp, u64)> = Vec::with_capacity(items.len());
     let mut head = Head { version: INDEX_VERSION, blobs: BTreeMap::new() };
     let (mut messages, mut contacts, mut events, mut tasks) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    let dir = blob_dir(file);
+    // For a window, the Local archive is put away slice by slice as it is read: what it took to
+    // read is given back before the next slice is, and reused by it, instead of being left
+    // scattered between the mail that stays once all of it is put away (0.12.33).
+    let at_open = if launch.park && !old { crate::parking::AtOpen::of(&mailbox) } else { None };
+    let mut parked: BTreeMap<Id, Arc<mailcraft_model::ParkedMessage>> = BTreeMap::new();
+    let mut parked_parts: HashMap<Id, Parts> = HashMap::new();
     while !items.is_empty() {
         let mut slice = items.split_off(items.len().saturating_sub(OPEN_SLICE));
         slice.reverse();
@@ -2256,24 +2266,42 @@ fn open_index(st: &mut State, file: &Path, len: u64, progress: &OpenProgress, la
         // (The records' bytes are let go of, and what they cost given back.)
         budget.give_back(slice.iter().map(|(_, item)| item.cost()).fold(0u64, u64::saturating_add));
         drop(slice);
+        let (mut away, mut away_blobs) = (Vec::new(), BTreeMap::new());
         for one in parsed {
             let Some(Some((key, size, result))) = one else { return Err("the mailbox file couldn't be read".into()) };
             let (item, fp) = result?;
             records.push((key, fp, size));
             match item {
                 Parsed::Message(m, wire) => {
+                    let goes = at_open.as_ref().is_some_and(|at| at.may(key.1, &m));
                     if let Some(wire) = wire {
+                        if goes {
+                            away_blobs.insert(key.1, (*wire).clone());
+                        }
                         head.blobs.insert(key.1, *wire);
                     }
-                    messages.push((key.1, m));
+                    if goes { away.push((key.1, m)) } else { messages.push((key.1, m)) }
                 }
                 Parsed::Contact(c) => contacts.push((key.1, c)),
                 Parsed::Event(e) => events.push((key.1, e)),
                 Parsed::Task(t) => tasks.push((key.1, t)),
             }
         }
+        if let Some(at) = &at_open
+            && !away.is_empty()
+        {
+            messages.extend(put_away_as_read(&dir, away, away_blobs, at, &mut parked, &mut parked_parts));
+        }
     }
     drop(items);
+    if !parked.is_empty() {
+        mailbox.parked = mailcraft_model::Parked::of(parked);
+        log::info!(
+            "the local archive is put away as the mailbox opens: {} messages, {} KB packed",
+            mailbox.parked.len(),
+            mailbox.parked.bytes() / 1024
+        );
+    }
     // Sorted by key: the maps are built in one go.
     mailbox.messages = messages.into_iter().collect();
     mailbox.contacts = contacts.into_iter().collect();
@@ -2283,10 +2311,11 @@ fn open_index(st: &mut State, file: &Path, len: u64, progress: &OpenProgress, la
     // What each message keeps outside, to know it again at the next save without working it out
     // (`fill` marks which of it is in memory).
     let mut parts: HashMap<Id, Parts> = head.blobs.iter().map(|(id, wire)| (*id, wire.parts())).collect();
+    // (Those put away were filled in as they were put away: nothing of them is in memory.)
+    parts.extend(parked_parts);
     // Where the header blocks are in the packs beside the file (#1376), for whatever reads one;
     // what an opening put into a pack of its own is known as well, kept from every sweep as the
     // pack in use, and flushed before the save that first names it.
-    let dir = blob_dir(file);
     let mut at: HashMap<Digest, pack::Loc> = HashMap::new();
     let mut named: Option<u32> = None;
     for p in parts.values() {
@@ -2301,7 +2330,15 @@ fn open_index(st: &mut State, file: &Path, len: u64, progress: &OpenProgress, la
     }
     let filled = fill(st, &dir, &mut mailbox, head, Some(&mut parts), launch);
     mailbox.version = 1;
-    let fixed = mailbox.repair();
+    let mut fixed = mailbox.repair();
+    // A file that needed putting right has its archive taken out again and put right with the
+    // rest: some of what is put right looks at every message at once.
+    if !fixed.is_empty() && !mailbox.parked.is_empty() {
+        let back = crate::parking::thaw_all(&mailbox.parked)?;
+        mailbox.parked = mailcraft_model::Parked::default();
+        mailbox.messages.extend(back);
+        fixed.extend(mailbox.repair());
+    }
     for line in &fixed {
         log::warn!("mailbox repaired: {line}");
     }
@@ -2377,6 +2414,47 @@ fn open_index(st: &mut State, file: &Path, len: u64, progress: &OpenProgress, la
         repaired: fixed.len(),
         unchecked: st.unchecked.is_some(),
     })
+}
+
+/// Messages of the Local archive just read (`read`, and what each names outside, `blobs`), put
+/// away into `parked` as a window opens the mailbox ([`crate::parking::AtOpen`]): each is first
+/// filled in as any message whose content stays on disk is (nothing of it is read), so that it
+/// comes back as it would have been opened, and what it names is noted in `parts` as not in
+/// memory. What can't be put away is given back, filled in the same way.
+fn put_away_as_read(
+    dir: &Path,
+    read: Vec<(Id, Arc<Message>)>,
+    blobs: BTreeMap<Id, WireParts>,
+    at: &crate::parking::AtOpen,
+    parked: &mut BTreeMap<Id, Arc<mailcraft_model::ParkedMessage>>,
+    parts: &mut HashMap<Id, Parts>,
+) -> Vec<(Id, Arc<Message>)> {
+    let mut named: HashMap<Id, Parts> = blobs.iter().map(|(id, wire)| (*id, wire.parts())).collect();
+    let mut these = Mailbox::default();
+    these.messages = read.into_iter().collect();
+    // (No rows: nothing is brought into memory. What it counts and notes for later goes nowhere:
+    // the opening's own filling in counts what the file names, these included, after this.)
+    fill(
+        &mut State::default(),
+        dir,
+        &mut these,
+        Head { version: INDEX_VERSION, blobs },
+        Some(&mut named),
+        Launch { checks_later: true, rows: Some(0), park: false },
+    );
+    let list: Vec<(Id, Arc<Message>)> = std::mem::take(&mut these.messages).into_iter().collect();
+    let packed = fan_out(list.len(), |i| list.get(i).filter(|(_, m)| at.takes(m)).and_then(|(_, m)| crate::parking::freeze(m)));
+    let mut stay = Vec::new();
+    for ((id, m), p) in list.into_iter().zip(packed) {
+        match p.flatten() {
+            Some(p) => {
+                parked.insert(id, Arc::new(p));
+                parts.extend(named.remove(&id).map(|n| (id, n)));
+            }
+            None => stay.push((id, m)),
+        }
+    }
+    stay
 }
 
 /// Make every folder's mail be fetched again from its server, as for a folder never fetched:

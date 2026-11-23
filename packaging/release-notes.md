@@ -1,3 +1,8 @@
+**MailCraft 0.12.33** — the archive never fully loads at startup
+- The Local archive is now packed while your mailbox opens, instead of being fully loaded and packed a minute later. The startup memory peak is gone.
+- On a copy of your mailbox the mail engine now holds 423 MB instead of 604 MB.
+- Everything from 0.12.32 stays.
+
 **MailCraft 0.12.32** — uses less memory for drawing and fonts
 - The graphics card memory MailCraft reserves is now set aside in small pieces instead of big ones. In a test on this PC that was 28 MB instead of 192 MB.
 - Fonts for other languages (Chinese, Korean and more) load only when a message needs them.

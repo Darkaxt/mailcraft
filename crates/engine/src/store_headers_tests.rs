@@ -235,7 +235,7 @@ proptest! {
 
 /// Opened as the window opens a file, without the save `open_for_window` makes after it.
 fn open_window(path: &Path) -> Opened {
-    open_as(path, &OpenProgress::default(), Launch { checks_later: false, rows: Some(OPENING_ROWS) }).unwrap()
+    open_as(path, &OpenProgress::default(), Launch { checks_later: false, rows: Some(OPENING_ROWS), park: false }).unwrap()
 }
 
 /// Every content file beside the mailbox at `path`, made a day old: past any sweep's grace.

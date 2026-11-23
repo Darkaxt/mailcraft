@@ -116,7 +116,7 @@ fn open_bench() {
         eprintln!("made it in {:.2} s", started.elapsed().as_secs_f64());
     }
     let mut took = Vec::new();
-    for (how, launch) in [("as always", Launch::default()), ("for a window", Launch { checks_later: true, rows: Some(OPENING_ROWS) })] {
+    for (how, launch) in [("as always", Launch::default()), ("for a window", Launch { checks_later: true, rows: Some(OPENING_ROWS), park: false })] {
         let mut times = Vec::new();
         for run in 0..RUNS {
             // As at a launch: nothing known of the file yet (what was is let go of untimed).

@@ -204,8 +204,8 @@ fn a_missing_hidden_file_is_no_notice_on_any_open() {
     for (budget, launch) in [
         (1 << 30, Launch::default()),
         (1, Launch::default()),
-        (1 << 30, Launch { checks_later: true, rows: Some(3) }),
-        (1 << 30, Launch { checks_later: true, rows: None }),
+        (1 << 30, Launch { checks_later: true, rows: Some(3), park: false }),
+        (1 << 30, Launch { checks_later: true, rows: None, park: false }),
     ] {
         let opened = opens(budget, launch);
         assert_eq!(opened.unavailable, 0, "{budget} {launch:?}");
@@ -234,7 +234,8 @@ fn a_missing_hidden_file_is_no_failure_when_the_bodies_are_read_later() {
     fs::remove_file(blob_file(&path, long_hidden().as_bytes())).unwrap();
     clear_cache();
     *lock(&shared(&path).state) = State::default();
-    let opened = with_budget(1 << 30, || open_as(&path, &OpenProgress::default(), Launch { checks_later: true, rows: Some(0) }).unwrap());
+    let opened =
+        with_budget(1 << 30, || open_as(&path, &OpenProgress::default(), Launch { checks_later: true, rows: Some(0), park: false }).unwrap());
     assert!(opened.notice().is_none());
     let (missing, read) = content_later(&path);
     assert_eq!(missing.count, 0, "{:?}", missing.refs);

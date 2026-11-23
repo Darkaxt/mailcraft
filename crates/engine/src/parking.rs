@@ -124,6 +124,52 @@ fn restful(m: &Message) -> bool {
         && crate::cmd::archive::whole(m)
 }
 
+/// Which messages a window puts away as it reads the mailbox file (0.12.33), so that the archive
+/// is never in memory whole, not even while the mailbox opens: those of the Local account's
+/// archive folders that [`Mailbox::repair`](mailcraft_model::Mailbox::repair) has nothing to
+/// say of, one by one (it looks at every message for some things: a file it puts anything right
+/// in has the archive taken out again, `store`).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) struct AtOpen {
+    local: Id,
+    folders: HashSet<Id>,
+    /// Messages a change waiting for a server names.
+    named: HashSet<Id>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl AtOpen {
+    /// For mailbox `mb` as its file has it, before its messages are read: `None` when it has no
+    /// archive.
+    pub(crate) fn of(mb: &mailcraft_model::Mailbox) -> Option<AtOpen> {
+        let local = mb.accounts.iter().find(|a| a.kind == mailcraft_model::AccountKind::Local)?.id;
+        let folders: HashSet<Id> = mb.folders.iter().filter(|f| f.twin_of.is_some() && f.account == local).map(|f| f.id).collect();
+        if folders.is_empty() {
+            return None;
+        }
+        let named = mb
+            .pending
+            .iter()
+            .filter_map(|p| match p {
+                mailcraft_model::Pending::Move { message, .. } => Some(*message),
+                _ => None,
+            })
+            .collect();
+        Some(AtOpen { local, folders, named })
+    }
+
+    /// Whether message `m`, read as item `id`, may be put away, as far as can be told before
+    /// what it names outside is filled in.
+    pub(crate) fn may(&self, id: Id, m: &Message) -> bool {
+        m.id == id && m.account == self.local && self.folders.contains(&m.folder) && !self.named.contains(&id)
+    }
+
+    /// Whether `m`, filled in, is put away.
+    pub(crate) fn takes(&self, m: &Message) -> bool {
+        self.may(m.id, m) && m.uid == 0 && m.synced.is_none() && m.hidden_text.len() <= mailcraft_model::MAX_HIDDEN_TEXT && restful(m)
+    }
+}
+
 /// The commands that look at the whole mailbox, a whole folder or a whole account: the archive
 /// is taken out for them first.
 const WHOLE: &[&str] = &[

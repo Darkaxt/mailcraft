@@ -232,7 +232,8 @@ fn an_opening_for_a_window_looks_for_originals_afterwards() {
     clear_cache();
     fs::remove_file(blob_file(&path, &signed_bytes())).unwrap();
     *lock(&shared(&path).state) = State::default();
-    let opened = with_budget(1 << 30, || open_as(&path, &OpenProgress::default(), Launch { checks_later: true, rows: Some(3) }).unwrap());
+    let opened =
+        with_budget(1 << 30, || open_as(&path, &OpenProgress::default(), Launch { checks_later: true, rows: Some(3), park: false }).unwrap());
     // Nothing decided while opening.
     assert!(opened.mailbox.message(id).unwrap().has_original());
     assert!(!opened.mailbox.message(id).unwrap().original_wanted);
