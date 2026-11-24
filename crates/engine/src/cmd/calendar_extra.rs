@@ -326,7 +326,8 @@ mod tests {
         assert_eq!((prefs.twelve_hour, prefs.work_start, prefs.sync_minutes), (false, 9, 15));
         let view: crate::ViewState = serde_json::from_value(json!({"calendar": "month", "folderPane": false, "inCalendar": 7})).unwrap();
         assert_eq!((view.days, view.calendar, view.folder_pane, view.in_calendar), (0, CalView::Month, false, 7));
-        assert_eq!(serde_json::from_value::<crate::Prefs>(json!({})).unwrap(), crate::Prefs::default());
+        // (Group by Sender, v0.12.37, starts off for a new install and on for settings saved before it.)
+        assert_eq!(serde_json::from_value::<crate::Prefs>(json!({})).unwrap(), crate::Prefs { sender_groups: true, ..crate::Prefs::default() });
         assert_eq!(serde_json::from_value::<crate::ViewState>(json!({})).unwrap(), crate::ViewState::default());
         // What they are saved as, and that they come back.
         let saved = serde_json::to_value(crate::Prefs { time_scale: 15, week_numbers: true, ..Default::default() }).unwrap();

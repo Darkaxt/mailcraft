@@ -801,7 +801,8 @@ mod tests {
         assert_eq!((prefs.twelve_hour, prefs.work_start, prefs.work_end, prefs.time_scale), (false, 9, 18, 15));
         let view: crate::ViewState = serde_json::from_value(json!({"calendar": "month", "inCalendar": 7, "days": 3})).unwrap();
         assert_eq!((view.overlay.len(), view.overlay_front, view.in_calendar, view.days), (0, 0, 7, 3));
-        assert_eq!(serde_json::from_value::<crate::Prefs>(json!({})).unwrap(), crate::Prefs::default());
+        // (Group by Sender, v0.12.37, starts off for a new install and on for settings saved before it.)
+        assert_eq!(serde_json::from_value::<crate::Prefs>(json!({})).unwrap(), crate::Prefs { sender_groups: true, ..crate::Prefs::default() });
         assert_eq!(serde_json::from_value::<crate::ViewState>(json!({})).unwrap(), crate::ViewState::default());
         // Without mailbox hours nothing new is written; with them they come back.
         let saved = serde_json::to_value(crate::Prefs::default()).unwrap();
