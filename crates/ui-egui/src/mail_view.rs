@@ -1317,11 +1317,12 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         app.hit.add("messageOverdue", row.id, body);
     }
     // Unread wears a dot in the accent; under the pointer a read message shows a ring, so the
-    // switch can be found.
+    // switch can be found. A row with an arrow has it where the dot would be: there the arrow
+    // wears the accent instead (v0.12.39).
     let dot = pos2(body.min.x + 13.0, line1);
-    if unread {
+    if arrow.is_none() && unread {
         p.circle_filled(dot, 4.0, t.accent);
-    } else if read_resp.hovered() {
+    } else if arrow.is_none() && read_resp.hovered() {
         p.circle_stroke(dot, 3.5, Stroke::new(1.2, t.selection_edge_unfocused));
     }
     if !selected {
@@ -1343,7 +1344,14 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     let rect = if one { rect } else { rect.translate(vec2(0.0, -lift)) };
     if let Some(arrow) = &arrow {
         let at = Rect::from_center_size(arrow_rect.center(), vec2(12.0, 12.0));
-        icons::paint(p, at, if row.open { "expanded" } else { "collapsed" }, if arrow.hovered() { t.text } else { t.icon }, t.accent);
+        let ink = if unread {
+            t.accent
+        } else if arrow.hovered() {
+            t.text
+        } else {
+            t.icon
+        };
+        icons::paint(p, at, if row.open { "expanded" } else { "collapsed" }, ink, t.accent);
     }
 
     // Sent, drafts and outbox show who it went to rather than who wrote it; a message under its
@@ -1470,7 +1478,11 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     let (labels, labels_more) = list_labels(&app.session, &m);
     let elsewhere = row.under.is_some() && m.folder != app.session.view.folder;
     let shown_folder = (shows_folder(&app.session) || elsewhere).then(|| app.session.mailbox.folder(m.folder)).flatten();
-    let tail_after = m.categories.len().min(4) as f32 * 13.0 + if conversation { row.size().to_string().len() as f32 * 6.5 + 15.0 } else { 0.0 };
+    // A conversation's count goes before the time on the subject's line when the preview's line
+    // is under the time (v0.12.39: there, under it, it ran into the time); else at the tail.
+    let count_by_time = conversation && !one && !normal && app.session.prefs.preview_lines.min(3) > 0;
+    let tail_after =
+        m.categories.len().min(4) as f32 * 13.0 + if conversation && !count_by_time { row.size().to_string().len() as f32 * 6.5 + 15.0 } else { 0.0 };
     let one_tags =
         if one { plan_tags(p, &labels, labels_more, x - 4.0 - size_room - tail_after - (left + ONE_LINE_SENDER_MIN)) } else { TagPlan::default() };
     let who_font = if unread { semibold(SENDER_TEXT) } else { regular(SENDER_TEXT) };
@@ -1494,6 +1506,19 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     } else {
         text_end.min(time_end - date_w - 8.0)
     };
+    if !one && !normal {
+        app.hit.add("messageTime", row.id, Rect::from_min_max(pos2(time_end - date_w, line2 - 7.0), pos2(time_end, line2 + 7.0)));
+    }
+    if count_by_time {
+        let n = row.size().to_string();
+        let w = n.len() as f32 * 6.5 + 10.0;
+        let end = time_end - date_w - 6.0;
+        let br = Rect::from_min_max(pos2(end - w, line2 - 7.0), pos2(end, line2 + 7.0));
+        p.rect_filled(br, 7.0, t.pressed);
+        p.text(br.center(), Align2::CENTER_CENTER, n, regular(10.0), t.text_dim);
+        app.hit.add("conversationCount", row.id, br);
+        subject_end = subject_end.min(br.min.x - 6.0);
+    }
 
     // The size; in a search of every mailbox the folder it is in; then category marks and the
     // size of a conversation: at the right of the preview's first line, under the time, before
@@ -1577,7 +1602,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         sx -= 13.0;
     }
     // How many messages the conversation has, in every folder: what opens under it (#503).
-    if conversation {
+    if conversation && !count_by_time {
         let n = row.size().to_string();
         let w = n.len() as f32 * 6.5 + 10.0;
         let br = Rect::from_min_max(pos2(sx - w, tail_y - 7.0), pos2(sx, tail_y + 7.0));
@@ -1910,6 +1935,26 @@ mod tests {
         }
         assert_eq!(one_line_sender_width(0.0), 0.0);
         assert_eq!(one_line_sender_width(10_000.0), 220.0);
+    }
+
+    /// A conversation's row (or a run of one sender's): its count is on the subject's line before
+    /// the time, clear of it and of the subject, and the arrow is where an unread dot would be,
+    /// so it wears the accent instead (v0.12.39: the count ran into the time, the dot into the arrow).
+    #[test]
+    fn a_conversations_count_keeps_clear_of_the_time_and_the_subject() {
+        let mut a = app();
+        a.execute("view.previewLines", json!({"value": 1})).unwrap();
+        a.execute("view.conversations", json!({"value": true})).unwrap();
+        let mut harness = window(a, (1280.0, 800.0));
+        let rows = drawn(&mut harness);
+        let (row, rect) = rows.iter().find(|(row, _)| row.conversation()).cloned().expect("a conversation in the sample");
+        let (count, time, subject) =
+            (at(&harness, "conversationCount", row.id), at(&harness, "messageTime", row.id), at(&harness, "messageSubject", row.id));
+        assert!((count.center().y - (rect.min.y + SUBJECT_Y)).abs() < 0.01, "on the subject's line: {count:?} {rect:?}");
+        assert!(count.max.x + 4.0 <= time.min.x, "before the time: {count:?} {time:?}");
+        assert!(subject.max.x <= count.min.x, "the subject stops before it: {subject:?} {count:?}");
+        let arrow = at(&harness, "conversationArrow", row.id);
+        assert!(arrow.max.x <= rect.min.x + TEXT_LEFT);
     }
 
     /// Whatever a row shows (read or unread, flagged, with a file, with category marks, pinned,

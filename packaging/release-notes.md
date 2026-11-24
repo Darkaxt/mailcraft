@@ -1,3 +1,8 @@
+**MailCraft 0.12.39** — tidier grouped rows
+- On a grouped row (by sender or by conversation) an unread group now shows a blue arrow, instead of a blue dot drawn over the arrow.
+- The number of messages in a group now sits before the time on the subject's line, instead of running into the time.
+- Everything from 0.12.38 stays.
+
 **MailCraft 0.12.38** — folder icons without the white square
 - Folder icons now sit on the list as the emoji did, with no white square behind them. An icon with a white background of its own loses it.
 - A plain black or white logo (GitHub, X) takes the colour of the text, so it reads in both light and dark themes.
