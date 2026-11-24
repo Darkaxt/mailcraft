@@ -1,3 +1,7 @@
+**MailCraft 0.12.36** — folder icons in the message list too
+- Where the message list says which folder a message is in (searches, All inboxes, unified folders), it now shows the folder's company icon instead of its emoji, as the folder pane does.
+- Everything from 0.12.35 stays.
+
 **MailCraft 0.12.35** — folder icons replace the emoji
 - A folder whose mail is nearly all from one company now shows that company's icon in place of its emoji. The emoji still shows where there is no icon.
 - Everything from 0.12.34 stays.

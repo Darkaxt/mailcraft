@@ -534,3 +534,40 @@ fn a_folders_site_icon_takes_the_place_of_its_emoji() {
     }
     assert_eq!(shown, (true, false), "the icon, in the emoji's place");
 }
+
+/// And so does a message row's folder, where the row names it (0.12.36): the site's icon, not
+/// the folder's emoji.
+#[test]
+fn a_rows_folder_wears_its_sites_icon() {
+    let (mut app, _, _) = window(|_| Ok(png()));
+    let account = app.session.mailbox.accounts[0].id;
+    let folder = app.session.mailbox.add_folder(account, None, "Coinbase").unwrap();
+    let mut ids = Vec::new();
+    for from in ["a@coinbase.com", "b@info.coinbase.com", "c@coinbase.com"] {
+        let m = Message { folder, from: Address::new("", from), subject: "Coinbase receipt".into(), date: NOW, ..Default::default() };
+        ids.push(app.session.mailbox.add_message(m).unwrap());
+    }
+    app.execute("folder.tag", json!({"id": folder, "tag": "📌"})).unwrap();
+    app.execute("view.search", json!({"query": "receipt", "scope": "everywhere"})).unwrap();
+    let ctx = egui::Context::default();
+    crate::theme::install_fonts(&ctx);
+    let list = |app: &mut MailApp| {
+        app.hit.clear();
+        let input =
+            egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1200.0, 800.0))), ..Default::default() };
+        let mut out = ctx.run_ui(input, |ui| crate::mail_view::show(app, ui));
+        out.textures_delta.clear();
+        ids.iter().any(|id| app.hit.rect("messageFolderIcon", *id).is_some())
+    };
+    let mut shown = list(&mut app);
+    assert!(!shown, "no icon yet: the emoji");
+    assert!(ids.iter().any(|id| app.hit.rect("messageFolder", *id).is_some()), "the rows name their folder");
+    for _ in 0..20 {
+        shown = list(&mut app);
+        if shown {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    assert!(shown, "the site's icon, in the emoji's place");
+}

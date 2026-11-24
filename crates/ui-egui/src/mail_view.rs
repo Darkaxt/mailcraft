@@ -958,19 +958,37 @@ fn paint_result_folder(p: &egui::Painter, end: egui::Pos2, label: &str, ink: Opt
     icon
 }
 
-/// A row's folder at the start of its subject's line (#fork, v0.12.25), from `at`: its tag
-/// (`folder.tag`), or its icon in the origin's colour (`ink`), then its name, in at most two
+/// A row's folder at the start of its subject's line (#fork, v0.12.25), from `at`: the icon of
+/// the site its mail comes from (`site`, as the folder pane shows it, 0.12.36), else its tag
+/// (`folder.tag`), else its icon in the origin's colour (`ink`); then its name, in at most two
 /// fifths of `room`, and "›". Where the subject starts: `at.x` when there is no room for it.
-fn paint_folder_prefix(p: &egui::Painter, at: egui::Pos2, room: f32, name: &str, tag: Option<&str>, ink: Option<Color32>, t: &Tokens) -> f32 {
+#[allow(clippy::too_many_arguments)]
+fn paint_folder_prefix(
+    p: &egui::Painter,
+    at: egui::Pos2,
+    room: f32,
+    name: &str,
+    site: Option<&egui::TextureHandle>,
+    tag: Option<&str>,
+    ink: Option<Color32>,
+    t: &Tokens,
+) -> f32 {
     const ICON: f32 = 12.0;
     const GAP: f32 = 4.0;
     if room < 60.0 {
         return at.x;
     }
     let mut x = at.x;
-    match tag {
-        Some(tag) => x += paint_clipped(p, at, 3.0 * ICON, tag, regular(LIST_TEXT), t.text) + GAP,
-        None => {
+    match (site, tag) {
+        (Some(site), _) => {
+            let rect = Rect::from_min_size(pos2(x, at.y - ICON / 2.0), vec2(ICON, ICON));
+            // On the avatars' backdrop, as in the folder pane.
+            p.rect_filled(rect.expand(1.0), 3.0, t.avatar_backdrop);
+            p.image(site.id(), rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+            x += ICON + GAP;
+        }
+        (None, Some(tag)) => x += paint_clipped(p, at, 3.0 * ICON, tag, regular(LIST_TEXT), t.text) + GAP,
+        (None, None) => {
             icons::paint(p, Rect::from_min_size(pos2(x, at.y - ICON / 2.0), vec2(ICON, ICON)), "folder", ink.unwrap_or(t.text_dim), t.accent);
             x += ICON + GAP;
         }
@@ -1568,7 +1586,11 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     if let Some((full, name, tag)) = &folder_prefix {
         let start = subject_x;
         let ink = origin_color.map(crate::theme::c32);
-        subject_x = paint_folder_prefix(p, pos2(start, subject_y), (subject_end - start).max(0.0), name, tag.as_deref(), ink, &t);
+        let site = crate::sender_images::folder_icon(app, ui.ctx(), m.folder);
+        subject_x = paint_folder_prefix(p, pos2(start, subject_y), (subject_end - start).max(0.0), name, site.as_ref(), tag.as_deref(), ink, &t);
+        if subject_x > start && site.is_some() {
+            app.hit.add("messageFolderIcon", row.id, Rect::from_min_size(pos2(start, subject_y - 6.0), vec2(12.0, 12.0)));
+        }
         if subject_x > start {
             let at = Rect::from_min_max(pos2(start, subject_y - 7.0), pos2(subject_x, subject_y + 7.0));
             let _ = ui.interact(at, ui.scope_id().with(("msg_folder", key)), Sense::hover()).on_hover_text(full.as_str());
