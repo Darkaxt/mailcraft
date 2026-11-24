@@ -340,3 +340,20 @@ fn mail_whose_server_wont_say_its_conversation_threads_by_its_headers_once_asked
     assert_eq!(s.mailbox.message(y).unwrap().folder, inbox, "the other invoice is left where it was");
     assert_ne!(s.mailbox.message(x).unwrap().folder, inbox);
 }
+
+/// A message that changes after the conversations were worked out moves (`Arc::make_mut`), and
+/// what is kept of them held its old copy's memory until it next looked; now it is let go of
+/// (v0.12.37), and the conversations are what they were.
+#[test]
+fn a_changed_message_kept_for_the_conversations_is_let_go_of() {
+    let (mut s, [ours, _, theirs]) = invoices();
+    let threads = s.threads();
+    s.mailbox.message_mut(ours).unwrap().read = true;
+    s.mailbox_changed();
+    assert_eq!(crate::conversations::dead_links(&s.threads_cache, false), 1, "the old copy of the message read");
+    assert_eq!(crate::conversations::dead_links(&s.threads_cache, true), 1);
+    assert_eq!(crate::conversations::dead_links(&s.threads_cache, false), 0, "let go of");
+    assert!(std::sync::Arc::ptr_eq(&threads, &s.threads()), "still the same conversations");
+    assert!(!s.threads().same(ours, theirs));
+    assert_eq!(s.dead_links()["conversations"], json!(0));
+}

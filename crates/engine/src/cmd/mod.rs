@@ -181,6 +181,8 @@ pub mod search_server;
 mod search_suggest_tests;
 pub mod send_later;
 pub mod send_receive;
+#[cfg(test)]
+mod sender_groups_tests;
 pub mod shared;
 pub mod signature;
 #[cfg(test)]

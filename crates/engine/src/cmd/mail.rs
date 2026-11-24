@@ -308,7 +308,7 @@ struct Placed {
 
 impl Placed {
     fn of(s: &mut Session) -> Placed {
-        let rows = if s.view.conversations { s.rows() } else { Arc::default() };
+        let rows = if s.rows_group() { s.rows() } else { Arc::default() };
         let (mut exact, mut first) = (HashMap::new(), HashMap::new());
         for (i, r) in rows.iter().enumerate() {
             exact.entry((r.id, r.copy)).or_insert(i);
@@ -481,8 +481,15 @@ const MAX_OPEN: usize = 1_000;
 /// (by date, as they are grouped) and it is one of the list's, and whether it is open: for the
 /// keys, without building the list.
 fn focused_conversation(s: &Session) -> Option<bool> {
-    if !s.view.conversations || s.view.sort != crate::SortBy::Date {
+    if s.view.sort != crate::SortBy::Date {
         return None;
+    }
+    if !s.view.conversations {
+        // A run of one sender's messages (`view.senderGroups`), from the rows as last built.
+        let rows = s.rows_built()?;
+        let row = rows.get(s.sel.focus_in(&rows)?)?;
+        let head = row.under.unwrap_or(row.id);
+        return rows.iter().find(|r| r.id == head && r.under.is_none() && r.run).map(|r| r.open);
     }
     let m = s.focused_message()?;
     Some(s.view.open.contains(&(crate::list::conversation_account(s, m), s.thread_of(m.id))))
@@ -534,6 +541,9 @@ fn named_message(s: &Session, v: &Value) -> Result<(), crate::CmdError> {
 
 /// The key a conversation's row is opened by: its account and its conversation (#795).
 fn key_of(s: &mut Session, row: &Row) -> Option<(Id, ThreadKey)> {
+    if row.run {
+        return Some(crate::list::run_key(row));
+    }
     let account = crate::list::conversation_account(s, s.mailbox.message(row.id)?);
     Some((account, s.thread_of(row.id)))
 }

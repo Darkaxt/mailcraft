@@ -631,6 +631,7 @@ pub const REARRANGES_LIST: &[&str] = &[
     "view.reverseSort",
     "view.conversations",
     "view.groups",
+    "view.senderGroups",
     "view.oneLine",
     "view.rowStyle",
     "view.previewLines",

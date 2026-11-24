@@ -547,6 +547,18 @@ impl Index {
         }
     }
 
+    /// How many of the messages it points at are no longer in memory ([`crate::memory::dead`]);
+    /// `clear`: let go of them. One let go of is looked at again when its chunk next changes, as
+    /// one that changed is.
+    pub(crate) fn dead_links(&mut self, clear: bool) -> usize {
+        self.messages.values_mut().map(|w| crate::memory::shell(w, clear)).sum()
+    }
+
+    /// [`Index::dead_links`], counted only.
+    pub(crate) fn dead_count(&self) -> usize {
+        self.messages.values().filter(|w| crate::memory::dead(w)).count()
+    }
+
     /// Message `id` is no longer among the mailbox's messages: gone, or put away with the Local
     /// archive (`crate::parking`), which the index keeps as it holds it.
     fn leave(&mut self, id: Id, session: &Session) {

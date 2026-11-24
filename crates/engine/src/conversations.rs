@@ -125,6 +125,15 @@ fn still_of(kept: &mut Kept, mailbox: &Mailbox) -> bool {
     same
 }
 
+/// How many of the messages kept for the conversations are no longer in memory
+/// ([`crate::memory::dead`]); `clear`: let go of them. One let go of is looked at again at the
+/// next check ([`still_of`]), as one that changed is.
+pub(crate) fn dead_links(cache: &ThreadsCache, clear: bool) -> usize {
+    let mut cache = cache.lock().unwrap_or_else(PoisonError::into_inner);
+    let Some(kept) = cache.as_mut() else { return 0 };
+    kept.seen.iter_mut().flat_map(|c| c.messages.iter_mut()).map(|(_, w, _)| crate::memory::shell(w, clear)).sum()
+}
+
 fn seen_of(mailbox: &Mailbox) -> Vec<SeenChunk> {
     mailbox.messages.chunks().iter().map(|(key, chunk)| SeenChunk::of(*key, chunk)).collect()
 }

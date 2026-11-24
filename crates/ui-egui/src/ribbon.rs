@@ -1951,6 +1951,8 @@ fn menu_contents(ui: &mut Ui, app: &mut MailApp, menu: Menu) {
             ui.separator();
             let groups = app.session.prefs.show_groups;
             mi_check(ui, app, "Show in Groups", groups, "view.groups", json!({"value": !groups}));
+            let senders = app.session.prefs.sender_groups;
+            mi_check(ui, app, "Group by Sender", senders, "view.senderGroups", json!({"value": !senders}));
         }
         Menu::Theme => {
             let theme = app.ui.theme;

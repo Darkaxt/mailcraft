@@ -67,6 +67,7 @@ pub fn specs() -> Vec<CommandSpec> {
         ),
         CommandSpec::new("view.previewLines", "Message Preview", "View › Arrangement", preview_lines).reads().params(r#"{"value": 0-3}"#),
         CommandSpec::new("view.groups", "Show in Groups", "View › Arrangement", groups).reads().params(TOGGLE),
+        CommandSpec::new("view.senderGroups", "Group by Sender", "View › Arrangement", sender_groups).reads().params(TOGGLE),
         CommandSpec::new("view.oneLine", "Single Line", "View › Arrangement", one_line).reads().params(TOGGLE),
         CommandSpec::new("view.rowStyle", "Message Rows", "View › Arrangement", row_style).reads().params(
             r#"{"value"?: "compact"|"normal"|"extended"} — compact: a message on one line; normal: its folder and subject first, with the time, and under them the sender and the preview; extended: the sender first, then the subject and the preview. Omit to read it"#,
@@ -364,6 +365,11 @@ fn preview_lines(s: &mut Session, v: &Value) -> CmdResult {
 fn groups(s: &mut Session, v: &Value) -> CmdResult {
     s.prefs.show_groups = p::bool(v, "value").unwrap_or(!s.prefs.show_groups);
     Ok(json!({"value": s.prefs.show_groups}))
+}
+
+fn sender_groups(s: &mut Session, v: &Value) -> CmdResult {
+    s.prefs.sender_groups = p::bool(v, "value").unwrap_or(!s.prefs.sender_groups);
+    Ok(json!({"value": s.prefs.sender_groups}))
 }
 
 fn one_line(s: &mut Session, v: &Value) -> CmdResult {

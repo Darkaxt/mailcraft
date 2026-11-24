@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 use std::mem::size_of;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use mailcraft_model::{Address, Attachment, Message};
 use serde_json::{Value, json};
@@ -23,6 +23,27 @@ fn address(value: &Address) -> u64 {
 
 fn addresses(values: &Vec<Address>) -> u64 {
     values.iter().fold((values.capacity() as u64).saturating_mul(size_of::<Address>() as u64), |n, a| n.saturating_add(address(a)))
+}
+
+/// Whether `w` points at an item no longer in memory, whose allocation it alone keeps (a
+/// message's 1.5 KB): what is left of one that changed or went while something still had a weak
+/// handle to it (`Arc::make_mut` moves an item a weak handle points at, v0.12.37).
+pub(crate) fn dead<T>(w: &Weak<T>) -> bool {
+    // (`Weak::weak_count` says 0 once no strong handle is left, so it can't tell; one never pointed
+    // at anything is `Weak::new`.)
+    w.strong_count() == 0 && !w.ptr_eq(&Weak::new())
+}
+
+/// Counts `w` when it is [`dead`]; `clear`: and lets go of it. A handle let go of says what a dead
+/// one says to everything that compares it: it is no item in memory.
+pub(crate) fn shell<T>(w: &mut Weak<T>, clear: bool) -> usize {
+    if !dead(w) {
+        return 0;
+    }
+    if clear {
+        *w = Weak::new();
+    }
+    1
 }
 
 pub(crate) fn inspect(session: &Session) -> Value {
@@ -88,6 +109,7 @@ pub(crate) fn inspect(session: &Session) -> Value {
         result["startupBodyBudgetBytes"] = json!(crate::store::body_budget());
         result["contentCacheBytes"] = json!(crate::store::cached_bytes());
         result["contentCacheBudgetBytes"] = json!(crate::store::CACHE_MAX);
+        result["deadLinks"] = session.dead_links();
         result
     };
     result

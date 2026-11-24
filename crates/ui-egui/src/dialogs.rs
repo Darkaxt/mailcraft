@@ -507,7 +507,7 @@ pub fn confirmation(app: &MailApp, id: &str, params: &Value) -> Option<Question>
         "mail.delete" | "mail.deletePermanently" => {
             // What the selection stands for: a conversation's row, every message of it the list
             // shows (#503).
-            let selected = || match app.session.view.conversations {
+            let selected = || match app.session.rows_group() {
                 true => app.session.acting_on_in(&list_rows(&app.session)),
                 false => app.session.sel.messages.to_vec(),
             };

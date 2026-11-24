@@ -1003,6 +1003,11 @@ pub struct Prefs {
     pub preview_lines: u8,
     /// The list has group headings (Today, Yesterday…; `view.groups`). Off: one continuous list.
     pub show_groups: bool,
+    /// Messages one after another from the same sender are one row, which opens to list them
+    /// (`view.senderGroups`, v0.12.37), in a list by date without conversations. On in settings
+    /// saved before it was there; off in the program's own defaults, for what tests a list.
+    #[serde(default = "yes")]
+    pub sender_groups: bool,
     /// Each row of the list is one line: sender, subject, time and marks (`view.oneLine`).
     #[serde(skip_serializing_if = "is_false")]
     pub one_line: bool,
@@ -1097,6 +1102,7 @@ impl Default for Prefs {
             auto_lists: true,
             preview_lines: 1,
             show_groups: true,
+            sender_groups: false,
             one_line: false,
             subject_first: false,
             sync_limit: 500,
@@ -1173,6 +1179,10 @@ impl Prefs {
 /// The first `max` characters of `text`.
 fn cut_chars(text: &str, max: usize) -> &str {
     text.char_indices().nth(max).and_then(|(at, _)| text.get(..at)).unwrap_or(text)
+}
+
+fn yes() -> bool {
+    true
 }
 
 fn is_false(b: &bool) -> bool {
@@ -1466,6 +1476,10 @@ pub struct Session {
     /// is kept in a file ([`crate::words`]).
     #[cfg(not(target_arch = "wasm32"))]
     words: Option<crate::content_index::Index>,
+    /// When weak handles to messages no longer in memory were last let go of
+    /// ([`Session::let_go_of_dead_links`]).
+    #[cfg(not(target_arch = "wasm32"))]
+    links_swept: Option<std::time::Instant>,
     #[cfg(not(target_arch = "wasm32"))]
     index_query_origin: crate::content_index::QueryOrigin,
     #[cfg(not(target_arch = "wasm32"))]
@@ -1603,6 +1617,8 @@ impl Session {
             dav_enabled: false,
             #[cfg(not(target_arch = "wasm32"))]
             words: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            links_swept: None,
             #[cfg(not(target_arch = "wasm32"))]
             index_query_origin: crate::content_index::QueryOrigin::Window,
             #[cfg(not(target_arch = "wasm32"))]
@@ -1957,6 +1973,12 @@ impl Session {
         self.loads
     }
 
+    /// The rows of the message list as last built, while they are still those of the list in view,
+    /// without building them: for what only reads the session.
+    pub(crate) fn rows_built(&self) -> Option<Arc<Vec<Row>>> {
+        self.list_cache.as_ref().filter(|c| c.key == self.list_key()).map(|c| c.rows.clone())
+    }
+
     /// The rows of the message list for the folder, filter, search and sort in view. A search
     /// that reads bodies brings the bodies it lacks into memory first, newest first, for as long
     /// as [`Session::search_time`] allows; what it didn't get to is counted in
@@ -2248,7 +2270,7 @@ impl Session {
     /// What the message list is built from, but for the content brought into memory or let go of.
     fn list_state(&self) -> String {
         format!(
-            "{}|{}|{}|{}|{}|{}|{:?}|{}",
+            "{}|{}|{}|{}|{}|{}|{}|{:?}|{}",
             self.rev,
             self.today().to_days(),
             // `received:"last week"` is other days for another first day of the week, and
@@ -2257,6 +2279,7 @@ impl Session {
             self.zone_key(),
             self.words_finished(),
             self.prefs.show_groups,
+            self.prefs.sender_groups,
             // (Not saved with the rest of the view, so not in its text.)
             self.view.gmail,
             serde_json::to_string(&self.view).unwrap_or_default()
@@ -2390,7 +2413,48 @@ impl Session {
 
     pub fn poll_content_index(&mut self) {
         #[cfg(not(target_arch = "wasm32"))]
-        self.words_in_step(false);
+        {
+            self.words_in_step(false);
+            self.let_go_of_dead_links();
+        }
+    }
+
+    /// At most once a minute, let go of the weak handles kept to messages that are no longer in
+    /// memory (v0.12.37): a message that changes while one points at it moves to a new allocation,
+    /// and its old one (1.5 KB) stays until every such handle is let go of. Each holder would let
+    /// go of it only when it next looked at that message, which can be much later. What compares
+    /// them finds a handle let go of no different from a dead one.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn let_go_of_dead_links(&mut self) {
+        let now = std::time::Instant::now();
+        if self.links_swept.is_some_and(|at| now.saturating_duration_since(at) < std::time::Duration::from_secs(60)) {
+            return;
+        }
+        self.links_swept = Some(now);
+        let conversations = crate::conversations::dead_links(&self.threads_cache, true);
+        let index = self.words.as_mut().map_or(0, |w| w.dead_links(true));
+        let store = self.path.as_deref().and_then(|path| crate::store::dead_links(path, true));
+        let n = conversations.saturating_add(index).saturating_add(store.unwrap_or(0));
+        if n > 0 {
+            log::debug!(
+                "let go of {n} weak handles to messages no longer in memory (conversations {conversations}, content index {index}, mailbox file {store:?})"
+            );
+        }
+    }
+
+    /// How many weak handles kept to messages no longer in memory each holder has (`file.info`
+    /// with `memory`).
+    pub(crate) fn dead_links(&self) -> Value {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            serde_json::json!({
+                "conversations": crate::conversations::dead_links(&self.threads_cache, false),
+                "contentIndex": self.words.as_ref().map_or(0, |w| w.dead_count()),
+                "mailboxFile": self.path.as_deref().and_then(|path| crate::store::dead_links(path, false)),
+            })
+        }
+        #[cfg(target_arch = "wasm32")]
+        serde_json::json!({"conversations": crate::conversations::dead_links(&self.threads_cache, false)})
     }
 
     pub fn native_content_index_enabled(&self) -> bool {
@@ -3373,8 +3437,14 @@ impl Session {
     /// selected, and what is drawn is what is taken. Not the conversation's messages in other
     /// folders (a reply in Sent Items): those go only when they are selected themselves, under the
     /// open conversation, as in Outlook.
+    /// Whether a row of the list may stand for more than one message: a conversation's, or a
+    /// run of one sender's messages (`view.senderGroups`, in a list by date).
+    pub fn rows_group(&self) -> bool {
+        self.view.conversations || (self.prefs.sender_groups && self.view.sort == SortBy::Date)
+    }
+
     pub fn acting_on(&mut self) -> Vec<Id> {
-        if !self.view.conversations || self.sel.messages.is_empty() {
+        if !self.rows_group() || self.sel.messages.is_empty() {
             return self.sel.messages.clone();
         }
         let rows = self.rows();
@@ -3384,7 +3454,7 @@ impl Session {
     /// [`Session::acting_on`] for a caller that can't fill the list's cache, such as the question
     /// put to the owner about an agent's Delete or Move: what it would take now.
     pub fn acting_on_now(&self) -> Vec<Id> {
-        if !self.view.conversations || self.sel.messages.is_empty() {
+        if !self.rows_group() || self.sel.messages.is_empty() {
             return self.sel.messages.clone();
         }
         self.acting_on_in(&crate::list::rows(self))

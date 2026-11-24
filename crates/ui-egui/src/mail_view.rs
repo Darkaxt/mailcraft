@@ -69,7 +69,7 @@ const TIME_RIGHT: f32 = 24.0;
 /// Sender, subject and preview end this far from a row's right end, where the time's column
 /// starts: every row's text stops at the same place, whatever its time.
 const TEXT_RIGHT: f32 = 98.0;
-/// Where a quick action (delete, flag) on the row under the pointer takes a click.
+/// Where a quick action (pin, delete, flag) on the row under the pointer takes a click.
 const QUICK_TARGET: egui::Vec2 = egui::vec2(28.0, 22.0);
 /// The clear space between the quick actions, and between them and the marks before them.
 const QUICK_GAP: f32 = 6.0;
@@ -1216,32 +1216,45 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
     let conversation = row.conversation();
     let arrow_rect = Rect::from_min_max(pos2(strip.max.x, line1 - 11.0), pos2(rect.min.x + TEXT_LEFT, line1 + 11.0));
     let arrow = conversation.then(|| {
-        let tip = if row.open { tl!("Hide the messages of this conversation") } else { tl!("Show the messages of this conversation") };
+        let tip = match (row.run, row.open) {
+            (true, true) => tl!("Hide the messages from this sender"),
+            (true, false) => tl!("Show the messages from this sender"),
+            (false, true) => tl!("Hide the messages of this conversation"),
+            (false, false) => tl!("Show the messages of this conversation"),
+        };
         app.hit.add("conversationArrow", row.id, arrow_rect);
         ui.interact(arrow_rect, ui.scope_id().with(("msg_arrow", key)), Sense::click())
             .on_hover_cursor(egui::CursorIcon::PointingHand)
             .on_hover_text(tip)
     });
     // Quick actions on the row under the pointer, at the right of the sender's line: flag (where
-    // a flagged message wears its flag) and delete. Like the read switch they sit on top of the
-    // row and leave the selection alone.
+    // a flagged message wears its flag), delete and pin (0.12.37: a pinned message stays on top of
+    // the list). Like the read switch they sit on top of the row and leave the selection alone.
     let over = ui.rect_contains_pointer(rect) && egui::DragAndDrop::payload::<MessageDrag>(ui.ctx()).is_none();
     // Wide enough to hit without aiming, a gap between them, and short enough to stay off the
     // time on the subject's line.
     let quick_inset = if app.overlay_scroll_bars { OVERLAY_SCROLL_INSET } else { 0.0 };
     let flag_target = Rect::from_center_size(pos2(rect.max.x - quick_inset - QUICK_TARGET.x / 2.0, line1), QUICK_TARGET);
     let delete_rect = flag_target.translate(vec2(-(QUICK_TARGET.x + QUICK_GAP), 0.0));
+    let pin_rect = delete_rect.translate(vec2(-(QUICK_TARGET.x + QUICK_GAP), 0.0));
     let flagged = m.flag == FlagStatus::Flagged;
+    let pinned = m.pinned;
     let quick = over.then(|| {
+        let pin = ui.interact(pin_rect, ui.scope_id().with(("msg_pin", key)), Sense::click()).on_hover_text(if pinned {
+            tl!("Unpin")
+        } else {
+            tl!("Pin to the top of the list")
+        });
         let delete = ui.interact(delete_rect, ui.scope_id().with(("msg_delete", key)), Sense::click()).on_hover_text(tl!("Delete"));
         let flag = ui.interact(flag_target, ui.scope_id().with(("msg_flag", key)), Sense::click()).on_hover_text(if flagged {
             tl!("Clear flag")
         } else {
             tl!("Flag for follow-up")
         });
+        app.hit.add("messagePin", row.id, pin_rect);
         app.hit.add("messageDelete", row.id, delete_rect);
         app.hit.add("messageFlag", row.id, flag_target);
-        (delete, flag)
+        (pin, delete, flag)
     });
     // What Delete takes is what is drawn selected: an open conversation's row when it was picked
     // as the conversation, and under it the rows of what is taken (#503).
@@ -1375,17 +1388,19 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         (true, true) => (semibold(LIST_TEXT), t.overdue),
         (false, _) => (regular(LIST_TEXT), if overdue { t.overdue } else { t.text }),
     };
-    if let Some((delete, flag)) = &quick {
-        for (resp, at, icon, color) in
-            [(delete, delete_rect, "delete", t.text_dim), (flag, flag_target, "flag", if flagged { t.icon } else { t.text_dim })]
-        {
+    if let Some((pin, delete, flag)) = &quick {
+        for (resp, at, icon, color) in [
+            (pin, pin_rect, "pin", if pinned { t.icon } else { t.text_dim }),
+            (delete, delete_rect, "delete", t.text_dim),
+            (flag, flag_target, "flag", if flagged { t.icon } else { t.text_dim }),
+        ] {
             if resp.hovered() {
                 p.rect_filled(at, 4.0, t.pressed);
             }
             icons::paint(p, Rect::from_center_size(at.center(), vec2(16.0, 16.0)), icon, color, t.accent);
         }
-        // The marks keep clear of delete, so a click meant for the row doesn't land on it.
-        x = delete_rect.min.x - QUICK_GAP;
+        // The marks keep clear of the actions, so a click meant for the row doesn't land on one.
+        x = pin_rect.min.x - QUICK_GAP;
     } else {
         match m.flag {
             FlagStatus::Flagged => icons::paint(p, flag_mark, "flag", t.icon, t.accent),
@@ -1645,7 +1660,10 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, dr
         let ids: Vec<Id> = if selected { app.session.acting_on() } else { row.members.clone() };
         resp.dnd_set_drag_payload(MessageDrag(ids));
     }
-    if let Some((delete, flag)) = &quick {
+    if let Some((pin, delete, flag)) = &quick {
+        if pin.clicked() {
+            let _ = app.run("mail.pin", json!({"ids": [row.id]}));
+        }
         if delete.clicked() {
             let _ = app.run("mail.delete", json!({"ids": row.members}));
             return;
@@ -1963,6 +1981,7 @@ mod tests {
                     assert!(
                         rows[2].1.contains_rect(at(&harness, "messageFlag", hovered))
                             && rows[2].1.contains_rect(at(&harness, "messageDelete", hovered))
+                            && rows[2].1.contains_rect(at(&harness, "messagePin", hovered))
                     );
                 }
             }
@@ -1971,7 +1990,7 @@ mod tests {
 
     /// The parts of a row a script (or a hand) can reach are where the row shows them: the row
     /// itself from the list's edge to the scroll bar's lane, the read switch down its left edge,
-    /// and flag and delete at the right of the sender's line while the pointer is over it.
+    /// and flag, delete and pin at the right of the sender's line while the pointer is over it.
     #[test]
     fn the_parts_of_a_row_are_where_it_shows_them() {
         let mut harness = window(app(), (1280.0, 800.0));
@@ -2000,6 +2019,10 @@ mod tests {
         }
         assert!(flag.min.x - delete.max.x >= 6.0);
         assert!(flag.max.y < rect.min.y + SUBJECT_Y - 4.0, "and off the subject's line, where the time is");
+        // Pin (0.12.37) before delete, as big and as far apart.
+        let pin = at(&harness, "messagePin", row.id);
+        assert_eq!(pin.center().y, flag.center().y);
+        assert!(pin.width() >= 28.0 && pin.height() >= 22.0 && delete.min.x - pin.max.x >= 6.0, "{pin:?}");
 
         // They do what they say, and the selection stays where it was.
         let selected = harness.state().session.sel.messages.clone();
@@ -2012,6 +2035,12 @@ mod tests {
         // The rest of the row selects.
         click_at(&mut harness, pos2(rect.min.x + TEXT_LEFT + 40.0, rect.min.y + SUBJECT_Y));
         assert_eq!(harness.state().session.sel.focus(), Some(row.id));
+        // Last, as a pinned row moves to the top: pin pins (or unpins).
+        let was_pinned = message(&harness, row.id).pinned;
+        hover(&mut harness, rect.center());
+        let pin_now = at(&harness, "messagePin", row.id).center();
+        click_at(&mut harness, pin_now);
+        assert_eq!(message(&harness, row.id).pinned, !was_pinned, "pin pins (or unpins)");
 
         // The scroll bar's lane is right of every row, inside the list.
         let rows_end = rect.max.x;

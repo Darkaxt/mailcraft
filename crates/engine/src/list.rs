@@ -49,6 +49,10 @@ pub struct Row {
     /// For a conversation's row: it is open, and its messages are listed under it.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub open: bool,
+    /// The row of a run of messages one after another from one sender (`view.senderGroups`,
+    /// v0.12.37): it stands for all of them as a conversation's row does, and opens the same way.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub run: bool,
     /// How well the message matches the free text of the search, 0-100 ([`SearchScore`]), when
     /// the persistent index has answered the search.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -71,6 +75,7 @@ impl Row {
             copy,
             under: None,
             open: false,
+            run: false,
             score: None,
             score_detail: Vec::new(),
         }
@@ -439,6 +444,8 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
         if !s.view.open.is_empty() {
             out = opened(s, &threads, out);
         }
+    } else if s.prefs.sender_groups && s.view.sort == SortBy::Date {
+        out = by_sender(s, &shown);
     } else {
         out.extend(shown.iter().map(|m| Row::of(m, 0)));
     }
@@ -461,6 +468,52 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
     }
     scored(&mut out, &scores);
     (out, kept_only, unfetched)
+}
+
+/// What `view.open` holds for an open run of one sender's messages ([`by_sender`]): no account
+/// (an account's id is never 0) and its oldest message, which stays the same as newer mail from
+/// the sender joins the run on top.
+pub(crate) fn run_key(row: &Row) -> (Id, ThreadKey) {
+    (0, ThreadKey(row.members.last().copied().unwrap_or(row.id)))
+}
+
+/// Whether `a` and `b` are from the same sender, by address.
+fn same_sender(a: &Message, b: &Message) -> bool {
+    !a.from.email.is_empty() && a.from.email.eq_ignore_ascii_case(&b.from.email)
+}
+
+/// The rows of `shown` (sorted by date) with each run of two or more messages one after another
+/// from the same sender, under the same date heading and none of them pinned, in one row that
+/// stands for all of them (`view.senderGroups`, v0.12.37): it shows the first of them and how many
+/// there are, and Delete and Move take all of it, as a conversation's row. Opened (`view.open`, by
+/// [`run_key`]), its messages are listed under it in the list's order.
+fn by_sender(s: &Session, shown: &[&Message]) -> Vec<Row> {
+    let today = s.today();
+    let mut out = Vec::with_capacity(shown.len());
+    let mut i = 0;
+    while let Some(&m) = shown.get(i) {
+        let mut j = i + 1;
+        if !m.pinned {
+            let day = heading(s, m, today);
+            while shown.get(j).is_some_and(|n| !n.pinned && same_sender(m, n) && heading(s, n, today) == day) {
+                j += 1;
+            }
+        }
+        let run = shown.get(i..j).unwrap_or_default();
+        i = j;
+        if run.len() < 2 {
+            out.push(Row::of(m, 0));
+            continue;
+        }
+        let mut row = Row { members: run.iter().map(|m| m.id).collect(), unread: run.iter().filter(|m| !m.read).count(), run: true, ..Row::of(m, 0) };
+        row.open = s.view.open.contains(&run_key(&row));
+        let (head, open) = (row.id, row.open);
+        out.push(row);
+        if open {
+            out.extend(run.iter().map(|m| Row { under: Some(head), ..Row::of(m, u16::from(m.id == head)) }));
+        }
+    }
+    out
 }
 
 /// Each row's search score, from `scores`.

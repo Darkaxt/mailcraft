@@ -3464,6 +3464,41 @@ pub fn unlink(path: &Path, ids: &BTreeSet<Id>) -> bool {
     true
 }
 
+/// How many weak handles kept for the mailbox file at `path` point at items no longer in memory
+/// ([`crate::memory::dead`]: each keeps the allocation the item took); `clear`: let go of them. A
+/// handle let go of is as good as one to an item that changed: neither is the address of an item
+/// in memory ([`Entry::is`]), so the next save works that record out again either way. `None`
+/// while a save holds the file.
+pub fn dead_links(path: &Path, clear: bool) -> Option<usize> {
+    use crate::memory::shell;
+    let shared = shared(path);
+    let mut n = 0usize;
+    {
+        let mut st = match shared.state.try_lock() {
+            Ok(st) => st,
+            Err(std::sync::TryLockError::Poisoned(e)) => e.into_inner(),
+            Err(std::sync::TryLockError::WouldBlock) => return None,
+        };
+        let st = &mut *st;
+        if let Some(d) = st.disk.as_mut() {
+            n += d.messages.values_mut().map(|m| shell(&mut m.entry.of, clear)).sum::<usize>();
+            n += d.contacts.values_mut().map(|e| shell(&mut e.of, clear)).sum::<usize>();
+            n += d.events.values_mut().map(|e| shell(&mut e.of, clear)).sum::<usize>();
+            n += d.tasks.values_mut().map(|e| shell(&mut e.of, clear)).sum::<usize>();
+        }
+        if let Some(l) = st.loaded.as_mut() {
+            n += l.messages.iter_mut().map(|(_, w)| shell(w, clear)).sum::<usize>();
+        }
+    }
+    let mut held = lock(&shared.held);
+    n += held.held.iter().filter(|w| crate::memory::dead(w)).count();
+    if clear {
+        held.held.retain(|w| w.strong_count() > 0);
+        held.after_tidy = held.held.len();
+    }
+    Some(n)
+}
+
 /// The messages of the Local archive taken out again ([`crate::parking`]): each is what the file
 /// at `path` has (it was put away only so, and nothing writes it while it is away), so the next
 /// save knows it at a glance instead of working it out again. Left alone when the file isn't the

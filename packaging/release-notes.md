@@ -1,3 +1,9 @@
+**MailCraft 0.12.37** — group mail by sender, pin from the list, less memory held
+- Messages in a row from the same sender now show as one line with a count. Click its arrow to see them all. Turn it off in View › Arrange By › Group by Sender.
+- Each message line has a pin button next to delete. A pinned message stays at the top of the list.
+- MailCraft now lets go of old copies of messages that changed (read, flagged, synced) right away, instead of holding on to them for a long time.
+- Everything from 0.12.36 stays.
+
 **MailCraft 0.12.36** — folder icons in the message list too
 - Where the message list says which folder a message is in (searches, All inboxes, unified folders), it now shows the folder's company icon instead of its emoji, as the folder pane does.
 - Everything from 0.12.35 stays.

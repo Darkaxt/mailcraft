@@ -338,6 +338,7 @@ const SAFE: &[&str] = &[
     "view.searchSuggestions",
     "view.previewLines",
     "view.groups",
+    "view.senderGroups",
     "view.oneLine",
     "view.rowStyle",
     "view.day",
