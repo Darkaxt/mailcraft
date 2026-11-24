@@ -602,10 +602,8 @@ fn folder_row(app: &mut MailApp, ui: &mut Ui, f: &Folder, depth: usize, has_chil
     let icon = if name_end - name_x > FOLDER_ICON + 5.0 { crate::sender_images::folder_icon(app, ui.ctx(), f.id) } else { None };
     if let Some(icon) = icon {
         let at = Rect::from_center_size(pos2(name_x + FOLDER_ICON / 2.0, y), vec2(FOLDER_ICON, FOLDER_ICON));
-        // On the avatars' backdrop, as a browser shows an icon: one with see-through parts stays
-        // readable in the dark.
-        ui.painter().rect_filled(at.expand(1.0), 3.0, t.avatar_backdrop);
-        egui::Image::from_texture(egui::load::SizedTexture::from_handle(&icon)).corner_radius(2.0).paint_at(ui, at);
+        // On the pane itself, as a tag's emoji is (v0.12.38: no white tile behind it).
+        egui::Image::from_texture(egui::load::SizedTexture::from_handle(&icon.texture)).tint(icon.tint(t.text)).corner_radius(2.0).paint_at(ui, at);
         app.hit.add("folderIcon", f.id, at);
         name_x += FOLDER_ICON + 6.0;
     } else if !f.tag.is_empty() {

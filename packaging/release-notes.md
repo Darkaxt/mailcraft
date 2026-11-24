@@ -1,3 +1,8 @@
+**MailCraft 0.12.38** — folder icons without the white square
+- Folder icons now sit on the list as the emoji did, with no white square behind them. An icon with a white background of its own loses it.
+- A plain black or white logo (GitHub, X) takes the colour of the text, so it reads in both light and dark themes.
+- Everything from 0.12.37 stays.
+
 **MailCraft 0.12.37** — group mail by sender, pin from the list, less memory held
 - Messages in a row from the same sender now show as one line with a count. Click its arrow to see them all. Turn it off in View › Arrange By › Group by Sender.
 - Each message line has a pin button next to delete. A pinned message stays at the top of the list.

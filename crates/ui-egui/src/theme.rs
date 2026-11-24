@@ -258,7 +258,7 @@ pub struct Tokens {
     /// The opacity of a notice's wash and edge ([`Tokens::notice`]).
     pub notice_wash_alpha: u8,
     pub notice_edge_alpha: u8,
-    /// The initials on an avatar, the disc behind a site's icon, and a tick on a colour swatch.
+    /// The initials on an avatar, the disc behind a sender's picture, and a tick on a colour swatch.
     pub on_avatar: Color32,
     pub avatar_backdrop: Color32,
     pub on_swatch: Color32,

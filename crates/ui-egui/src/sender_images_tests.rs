@@ -571,3 +571,45 @@ fn a_rows_folder_wears_its_sites_icon() {
     }
     assert!(shown, "the site's icon, in the emoji's place");
 }
+
+/// An icon `n` pixels square, `paint(x, y)` its colour.
+fn icon_of(n: usize, paint: impl Fn(usize, usize) -> egui::Color32) -> egui::ColorImage {
+    egui::ColorImage::new([n, n], (0..n * n).map(|i| paint(i % n, i / n)).collect())
+}
+
+/// A site's icon shows with no tile behind it (v0.12.38): its white margin goes, what is inside
+/// it stays; a black or a white logo is of one tone, painted in the text's colour; one of two
+/// tones or of colour is left as it is.
+#[test]
+fn a_sites_icon_loses_its_white_margin_and_a_one_tone_logo_takes_the_texts_colour() {
+    let (white, black, red) = (egui::Color32::WHITE, egui::Color32::BLACK, egui::Color32::from_rgb(200, 30, 30));
+    let inside = |x: usize, y: usize| (4..12).contains(&x) && (4..12).contains(&y);
+
+    // A red square on white: the white goes, the red stays, and it is not of one tone.
+    let mut boxed = icon_of(16, |x, y| if inside(x, y) { red } else { white });
+    assert!(!site_look(&mut boxed));
+    assert_eq!(boxed.pixels[0].a(), 0, "the margin is see-through");
+    assert_eq!(boxed.pixels[8 * 16 + 8], red);
+
+    // A black logo on nothing, and a white one: of one tone, white with their shape.
+    for ink in [black, white] {
+        let mut logo = icon_of(16, |x, y| if inside(x, y) { ink } else { egui::Color32::TRANSPARENT });
+        assert!(site_look(&mut logo), "{ink:?}");
+        assert_eq!(logo.pixels[8 * 16 + 8], white);
+        assert_eq!(logo.pixels[0].a(), 0);
+    }
+
+    // A black disc with a white letter in it is two tones: left as it is.
+    let mut disc = icon_of(16, |x, y| match (x, y) {
+        (7..9, 6..10) => white,
+        _ if inside(x, y) => black,
+        _ => egui::Color32::TRANSPARENT,
+    });
+    assert!(!site_look(&mut disc));
+    assert_eq!(disc.pixels[8 * 16 + 5], black);
+
+    // White inside a coloured ring isn't the margin: it stays.
+    let mut ring = icon_of(16, |x, y| if inside(x, y) && !((6..10).contains(&x) && (6..10).contains(&y)) { red } else { white });
+    site_look(&mut ring);
+    assert_eq!(ring.pixels[8 * 16 + 8].a(), 255, "the white inside the ring is kept");
+}

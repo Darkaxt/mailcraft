@@ -968,7 +968,7 @@ fn paint_folder_prefix(
     at: egui::Pos2,
     room: f32,
     name: &str,
-    site: Option<&egui::TextureHandle>,
+    site: Option<&crate::sender_images::SiteIcon>,
     tag: Option<&str>,
     ink: Option<Color32>,
     t: &Tokens,
@@ -982,9 +982,8 @@ fn paint_folder_prefix(
     match (site, tag) {
         (Some(site), _) => {
             let rect = Rect::from_min_size(pos2(x, at.y - ICON / 2.0), vec2(ICON, ICON));
-            // On the avatars' backdrop, as in the folder pane.
-            p.rect_filled(rect.expand(1.0), 3.0, t.avatar_backdrop);
-            p.image(site.id(), rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+            // On the row itself, as in the folder pane.
+            p.image(site.texture.id(), rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), site.tint(t.text));
             x += ICON + GAP;
         }
         (None, Some(tag)) => x += paint_clipped(p, at, 3.0 * ICON, tag, regular(LIST_TEXT), t.text) + GAP,

@@ -68,7 +68,8 @@ enum Look {
     Asked(Receiver<Result<Vec<u8>, String>>, f64),
     /// Its bytes, not decoded yet: one picture is decoded in a frame.
     Came(Vec<u8>),
-    Ready(egui::TextureHandle),
+    /// Decoded; `true`: a site's icon of one tone ([`site_look`]), painted in the text's colour.
+    Ready(egui::TextureHandle, bool),
     /// There is none to be had: the initials stay.
     // shortcut: not asked about again until the program restarts, even when the network was down.
     Missing,
@@ -189,7 +190,7 @@ pub fn picture(app: &mut MailApp, ctx: &egui::Context, m: &Message, who: &Addres
     if !is_known(app, &address) && !(sender && crate::reading::remote::access(app, m) == crate::reading::Access::Allowed) {
         return None;
     }
-    look(app, ctx, address)
+    look(app, ctx, address).map(|(texture, _)| texture)
 }
 
 /// The picture to show for one of the contacts in People, in place of their initials. Their
@@ -203,19 +204,95 @@ pub fn contact_picture(app: &mut MailApp, ctx: &egui::Context, who: &Address) ->
     if !is_known(app, &address) {
         return None;
     }
-    look(app, ctx, address)
+    look(app, ctx, address).map(|(texture, _)| texture)
 }
 
 /// The icon of the site folder `id`'s mail comes from (`mailcraft_model::folder_sites`), while
 /// the owner keeps folder icons on. `None` while there is none; one still to be looked up is
 /// noted, and asked for at the next frame. The site is asked first, as the host does it.
-pub fn folder_icon(app: &mut MailApp, ctx: &egui::Context, id: mailcraft_model::Id) -> Option<egui::TextureHandle> {
+pub fn folder_icon(app: &mut MailApp, ctx: &egui::Context, id: mailcraft_model::Id) -> Option<SiteIcon> {
     if !app.ui.folder_icons || app.services.sender_images.is_none() {
         return None;
     }
     let site = app.session.folder_site(id)?;
     tick(app, ctx);
-    look(app, ctx, format!("{}{site}", mailcraft_model::folder_sites::ICON_KEY))
+    let (texture, mono) = look(app, ctx, format!("{}{site}", mailcraft_model::folder_sites::ICON_KEY))?;
+    Some(SiteIcon { texture, mono })
+}
+
+/// A site's icon, as it is shown before a folder's name: on the list itself, as an emoji is, with
+/// no tile behind it (v0.12.38).
+pub struct SiteIcon {
+    pub texture: egui::TextureHandle,
+    /// Of one tone (a black or a white logo): painted in the text's colour, so that it reads in
+    /// either theme.
+    pub mono: bool,
+}
+
+impl SiteIcon {
+    /// What to tint it with: the text's colour for one of one tone, else nothing.
+    pub fn tint(&self, text: egui::Color32) -> egui::Color32 {
+        if self.mono { text } else { egui::Color32::WHITE }
+    }
+}
+
+/// Makes a site's icon fit to be shown without a tile behind it (v0.12.38), and says whether it is
+/// of one tone. A white margin round it, which would show as a white square, is made see-through
+/// (the near-white reached from its edge, softly at the borderline); one of one dark or one light
+/// tone (a black or a white logo, with nothing of the other) becomes white with its shape, for
+/// [`SiteIcon::tint`] to paint in the text's colour.
+pub(crate) fn site_look(image: &mut egui::ColorImage) -> bool {
+    let [w, h] = image.size;
+    if w == 0 || h == 0 {
+        return false;
+    }
+    let mut px: Vec<[u8; 4]> = image.pixels.iter().map(|c| c.to_srgba_unmultiplied()).collect();
+    let white = |p: [u8; 4]| p[3] >= 224 && p[0].min(p[1]).min(p[2]) >= 232;
+    let edge: Vec<usize> = (0..w).flat_map(|x| [x, (h - 1) * w + x]).chain((0..h).flat_map(|y| [y * w, y * w + w - 1])).collect();
+    if edge.iter().filter(|&&i| px.get(i).is_some_and(|&p| white(p))).count() * 10 >= edge.len() * 7 {
+        let pale = |p: [u8; 4]| p[3] > 0 && p[0].min(p[1]).min(p[2]) >= 216;
+        let mut seen = vec![false; w * h];
+        let mut todo: Vec<usize> = Vec::new();
+        for &i in &edge {
+            if px.get(i).is_some_and(|&p| pale(p)) && !seen[i] {
+                seen[i] = true;
+                todo.push(i);
+            }
+        }
+        while let Some(i) = todo.pop() {
+            let p = px[i];
+            let least = p[0].min(p[1]).min(p[2]);
+            // White goes; the near-white at its border fades out, as an edge drawn smooth does.
+            px[i][3] = if least >= 236 { 0 } else { u8::try_from(u32::from(p[3]) * u32::from(236 - least) / 20).unwrap_or(p[3]) };
+            let (x, y) = (i % w, i / w);
+            let next = [(x > 0).then(|| i - 1), (x + 1 < w).then(|| i + 1), (y > 0).then(|| i - w), (y + 1 < h).then(|| i + w)];
+            for n in next.into_iter().flatten() {
+                if !seen[n] && pale(px[n]) {
+                    seen[n] = true;
+                    todo.push(n);
+                }
+            }
+        }
+    }
+    // Of one tone: what is drawn is grey, all of it dark or all of it light.
+    let ink: Vec<[u8; 4]> = px.iter().copied().filter(|p| p[3] >= 128).collect();
+    let luma = |p: &[u8; 4]| (2126 * u32::from(p[0]) + 7152 * u32::from(p[1]) + 722 * u32::from(p[2])) / 10_000;
+    let n = ink.len() as u64;
+    let grey = n > 0 && ink.iter().map(|p| u64::from(p[0].max(p[1]).max(p[2]) - p[0].min(p[1]).min(p[2]))).sum::<u64>() < n * 31;
+    let dark = ink.iter().filter(|p| luma(p) <= 100).count() as u64;
+    let light = ink.iter().filter(|p| luma(p) >= 150).count() as u64;
+    let mono = grey && (dark * 100 >= n * 97 || light * 100 >= n * 97);
+    image.pixels = px
+        .iter()
+        .map(|p| {
+            if mono {
+                egui::Color32::from_rgba_unmultiplied(255, 255, 255, p[3])
+            } else {
+                egui::Color32::from_rgba_unmultiplied(p[0], p[1], p[2], p[3])
+            }
+        })
+        .collect();
+    mono
 }
 
 /// `who`'s address in lower case, as pictures are kept by; none for one too long to be anybody's.
@@ -226,7 +303,7 @@ fn key(who: &Address) -> Option<String> {
 
 /// The picture of `address` (in lower case), once its look-up has brought one; one that is still
 /// to be looked up is noted, and asked for at the next frame.
-fn look(app: &mut MailApp, ctx: &egui::Context, address: String) -> Option<egui::TextureHandle> {
+fn look(app: &mut MailApp, ctx: &egui::Context, address: String) -> Option<(egui::TextureHandle, bool)> {
     let frame = images::frame(ctx);
     let offline = app.offline();
     let state = &mut app.sender_images;
@@ -249,12 +326,15 @@ fn look(app: &mut MailApp, ctx: &egui::Context, address: String) -> Option<egui:
         }
         state.decoded = Some(frame);
         *look = match images::decode_icon(bytes, SIDE) {
-            Some(image) => Look::Ready(ctx.load_texture("mailcraft-sender-image", image, egui::TextureOptions::LINEAR)),
+            Some(mut image) => {
+                let mono = address.starts_with(mailcraft_model::folder_sites::ICON_KEY) && site_look(&mut image);
+                Look::Ready(ctx.load_texture("mailcraft-sender-image", image, egui::TextureOptions::LINEAR), mono)
+            }
             None => Look::Missing,
         };
     }
     match look {
-        Look::Ready(texture) => Some(texture.clone()),
+        Look::Ready(texture, mono) => Some((texture.clone(), *mono)),
         _ => None,
     }
 }
