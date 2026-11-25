@@ -11,8 +11,11 @@ workspace = true
 [dependencies]
 mailcraft-engine = { workspace = true }
 mailcraft-control-key = { workspace = true }
+mailcraft-names = { workspace = true }
+unicode-general-category = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
 mailcraft-engine = { workspace = true, features = ["test-support"] }
+proptest = { workspace = true }

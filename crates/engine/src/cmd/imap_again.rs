@@ -85,7 +85,13 @@ pub fn wanted(mb: &Mailbox, account: Id, now: Timestamp) -> HashMap<Id, Vec<u32>
 /// the mark gone. Where it is, its flags, categories and everything else stay. A draft is the
 /// owner's own and keeps its text; a name list of another length or of other addresses is not
 /// the same list and stays.
-pub fn take_again(mb: &mut Mailbox, id: Id, mut read: Message) {
+pub fn take_again(mb: &mut Mailbox, id: Id, read: Message) {
+    let clock = mailcraft_model::RuleClock { now: mailcraft_time::now(), zone: mailcraft_time::Zone::system(), due_hour: 17 };
+    take_again_at(mb, id, read, &clock);
+}
+
+/// [`take_again`], running the rules waiting for its content by `clock`.
+pub fn take_again_at(mb: &mut Mailbox, id: Id, mut read: Message, clock: &mailcraft_model::RuleClock) {
     // What came brought no original (#30): its server's copy isn't protected either.
     let brought = read.original.is_some();
     // Within what the mailbox keeps of originals in all (#30), counting the one it replaces.
@@ -152,7 +158,7 @@ pub fn take_again(mb: &mut Mailbox, id: Id, mut read: Message) {
         m.incomplete = read.incomplete;
         m.not_downloaded = read.not_downloaded;
         m.unfetched = false;
-        mb.apply_rules(id);
+        mb.apply_rules(id, clock);
     }
 }
 
@@ -199,10 +205,10 @@ const LONGEST_WAIT: Timestamp = 4 * 60 * 60;
 
 /// Take in what a folder's delta says of messages downloaded again. `by_uid` finds a message of
 /// the folder by its UID.
-pub fn take_in(mb: &mut Mailbox, delta: &mut FolderDelta, now: Timestamp, by_uid: impl Fn(u32) -> Option<Id>) {
+pub fn take_in(mb: &mut Mailbox, delta: &mut FolderDelta, clock: &mailcraft_model::RuleClock, by_uid: impl Fn(u32) -> Option<Id>) {
     for read in std::mem::take(&mut delta.refetched) {
         if let Some(id) = by_uid(read.uid) {
-            take_again(mb, id, read);
+            take_again_at(mb, id, read, clock);
         }
     }
     let too_large = std::mem::take(&mut delta.refetch_too_large);
@@ -217,7 +223,7 @@ pub fn take_in(mb: &mut Mailbox, delta: &mut FolderDelta, now: Timestamp, by_uid
             // over a day; too large to take here, at once. What waits for them goes on waiting
             // either way, until Check again asks once more.
             if m.original_wanted {
-                refused(m, too_large.contains(&uid), now);
+                refused(m, too_large.contains(&uid), clock.now);
                 continue;
             }
             (m.refetch, m.refetched) = (false, true);

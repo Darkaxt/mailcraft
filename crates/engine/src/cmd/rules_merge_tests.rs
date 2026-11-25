@@ -160,7 +160,9 @@ fn automatic_rules_merge_never_crosses_an_intervening_rule_or_changes_account_sc
     s.run("rules.add", &draft(account, target, "last@example.org")).unwrap();
     assert_eq!(s.mailbox.rules.len(), 3);
     let mut other_scope = draft(account, target, "fourth@example.org");
-    other_scope.as_object_mut().unwrap().remove("account");
+    // (Since the upstream merge a rule added with no account is for the account in view, so
+    // the other scope, every account's, is named outright.)
+    other_scope["account"] = json!(0);
     s.run("rules.add", &other_scope).unwrap();
     assert_eq!(s.mailbox.rules.len(), 4);
     let mut different_stop = draft(account, target, "fifth@example.org");
@@ -188,7 +190,8 @@ fn automatic_rules_merge_run_after_create_does_not_file_older_sources() {
 #[test]
 fn automatic_rules_merge_from_message_only_runs_the_new_sender() {
     let (mut s, account, inbox, target) = fixture();
-    s.run("rules.add", &draft(account, target, "old@example.org")).unwrap();
+    // (Upstream's fromMessage matches the whole address, so it merges with an exact-address rule.)
+    s.run("rules.add", &exact_draft(account, target, "old@example.org")).unwrap();
     let older = message(&mut s, inbox, "old@example.org");
     let new = message(&mut s, inbox, "new@example.org");
     // fromMessage's default stop is false; retain that behavior for both definitions.

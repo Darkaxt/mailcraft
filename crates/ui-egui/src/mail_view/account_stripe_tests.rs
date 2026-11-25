@@ -120,3 +120,17 @@ fn combined_views_stripe_rows_in_their_origin_colour_and_offer_the_mode() {
     let still: usize = rows.iter().filter(|row| harness.state().hit.rect("messageOriginColor", row.id).is_some()).count();
     assert!(still < striped.len(), "full-row tints replace the stripe on ordinary rows");
 }
+
+#[test]
+fn in_classic_light_the_selection_bar_is_beside_the_stripe_not_over_it() {
+    let (mut harness, _, _, moved) = window();
+    harness.state_mut().execute("ui.theme", json!({"value": "classicLight"})).unwrap();
+    harness.state_mut().execute("view.search", json!({"query": "e", "scope": "everywhere"})).unwrap();
+    harness.state_mut().execute("mail.select", json!({"id": moved})).unwrap();
+    harness.run_steps(3);
+    let stripe = harness.state().hit.rect("messageAccountColor", moved).unwrap();
+    let bar = harness.state().hit.rect("messageSelectionBar", moved).unwrap();
+    assert!(bar.min.x >= stripe.max.x, "bar {bar:?} clear of stripe {stripe:?}");
+    let row = harness.state().hit.rect("message", moved).unwrap();
+    assert!(row.contains_rect(bar), "{bar:?} in {row:?}");
+}

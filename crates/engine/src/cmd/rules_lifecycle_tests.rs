@@ -11,7 +11,7 @@ fn definition(id: Id, account: Id, actions: Vec<Action>) -> Rule {
         account,
         name: format!("Rule {id}"),
         enabled: true,
-        conditions: vec![Condition::SubjectContains("invoice".into())],
+        conditions: vec![Condition::SubjectContains(vec!["invoice".into()])],
         actions,
         ..Default::default()
     }

@@ -2679,3 +2679,6 @@ mod protected_sync;
 
 #[path = "imap_folders_tests.rs"]
 mod imap_folders;
+// (Sending from an account's other addresses, #797: its own file, with these helpers.)
+#[path = "sender_address_tests.rs"]
+mod sender_address_tests;

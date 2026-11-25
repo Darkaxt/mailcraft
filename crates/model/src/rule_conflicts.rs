@@ -5,10 +5,13 @@
 use crate::{Action, Address, Condition, Id, Mailbox, Message, Rule, RuleField};
 use std::collections::HashSet;
 
+/// The senders of a rule that picks by its sender alone. Its exceptions don't pick: the witness
+/// built from these is checked by the rule's own matcher, exceptions included.
 fn basic_senders(rule: &Rule) -> Vec<&str> {
     match rule.conditions.as_slice() {
-        [Condition::FromContains(sender)] => vec![sender.as_str()],
-        [Condition::FromAny(senders) | Condition::FromAddresses(senders)] => senders.iter().map(String::as_str).collect(),
+        [Condition::FromContains(senders) | Condition::From(senders) | Condition::FromAny(senders) | Condition::FromAddresses(senders)] => {
+            senders.iter().map(String::as_str).collect()
+        }
         _ => Vec::new(),
     }
 }
@@ -65,8 +68,8 @@ enum Side {
 
 fn side(condition: &Condition) -> Option<Side> {
     Some(match condition {
-        Condition::FromContains(_) | Condition::FromAny(_) | Condition::FromAddresses(_) => Side::Sender,
-        Condition::ToAddresses(_) | Condition::ToContains(_) => Side::Recipient,
+        Condition::FromContains(_) | Condition::From(_) | Condition::FromAny(_) | Condition::FromAddresses(_) => Side::Sender,
+        Condition::ToAddresses(_) | Condition::ToContains(_) | Condition::SentTo(_) => Side::Recipient,
         Condition::Text(text) => match text.field {
             RuleField::From | RuleField::OriginalFrom => Side::Sender,
             RuleField::To | RuleField::ReceivingAlias => Side::Recipient,
@@ -77,7 +80,8 @@ fn side(condition: &Condition) -> Option<Side> {
     })
 }
 
-/// The one side every condition of `rule` picks by, when there is one.
+/// The one side every condition of `rule` picks by, when there is one. Its exceptions
+/// ([`Rule::exceptions`], [`Condition::Unless`]) only leave mail out, so they pick no side.
 fn only_side(rule: &Rule) -> Option<Side> {
     let mut sides = rule.conditions.iter().filter_map(side);
     let first = sides.next()?;
@@ -114,14 +118,20 @@ pub fn proven_overlap(mailbox: &Mailbox, left: &Rule, right: &Rule) -> bool {
     let mut senders = vec![String::new()];
     let mut aliases = vec!["witness@example.org".to_string()];
     let mut originals = vec![Address::new("", "witness@example.org")];
+    // Candidates come from the conditions that pick (never from exceptions, which only leave
+    // mail out); every witness is then checked by both rules' matchers, exceptions included.
     for condition in left.conditions.iter().chain(&right.conditions) {
         match condition {
-            Condition::FromContains(text) => senders.push(text.clone()),
-            Condition::FromAny(values) | Condition::FromAddresses(values) => senders.extend(values.iter().take(32).cloned()),
-            Condition::ToContains(text) => message.to.push(Address::new("", text)),
-            Condition::ToAddresses(values) => message.to.extend(values.iter().map(|value| Address::new("", value))),
-            Condition::SubjectContains(text) => append(&mut message.subject, text),
-            Condition::BodyContains(text) => append(&mut message.body.text, text),
+            Condition::FromContains(values) | Condition::From(values) | Condition::FromAny(values) | Condition::FromAddresses(values) => {
+                senders.extend(values.iter().take(32).cloned())
+            }
+            Condition::ToContains(values) | Condition::SentTo(values) | Condition::ToAddresses(values) => {
+                message.to.extend(values.iter().take(32).map(|value| Address::new("", value)))
+            }
+            Condition::SubjectContains(values) => values.iter().take(32).for_each(|text| append(&mut message.subject, text)),
+            Condition::BodyContains(values) | Condition::SubjectOrBodyContains(values) => {
+                values.iter().take(32).for_each(|text| append(&mut message.body.text, text))
+            }
             Condition::HasAttachment => message.attachments.push(crate::Attachment::default()),
             Condition::Importance(importance) => message.importance = *importance,
             Condition::Text(text) if !text.regex => match text.field {

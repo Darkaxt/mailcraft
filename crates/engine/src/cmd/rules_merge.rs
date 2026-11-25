@@ -10,13 +10,17 @@ fn senders(rule: &Rule) -> Option<(Vec<String>, bool)> {
     if rule.keep != Keep::Here || rule.server.is_some() || rule.unanswered || !rule.refused.is_empty() || !rule.repair.is_empty() {
         return None;
     }
-    if !matches!(rule.actions.as_slice(), [Action::MoveTo(_)]) || rule.validation().is_err() {
+    // Exceptions (kept apart from the conditions since the upstream merge) would be lost in a merge.
+    if !rule.exceptions.is_empty() || !matches!(rule.actions.as_slice(), [Action::MoveTo(_)]) || rule.validation().is_err() {
         return None;
     }
     match rule.conditions.as_slice() {
-        [Condition::FromContains(sender)] => Some((vec![sender.clone()], false)),
+        [Condition::FromContains(senders)] => Some((senders.clone(), false)),
         [Condition::FromAny(senders)] => Some((senders.clone(), false)),
         [Condition::FromAddresses(senders)] => Some((senders.clone(), true)),
+        // "Always move messages from" a whole address (upstream's `rules.fromMessage`) matches
+        // it as exact alternatives do.
+        [Condition::From(senders)] => Some((senders.clone(), true)),
         _ => None,
     }
 }

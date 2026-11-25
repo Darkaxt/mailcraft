@@ -1,3 +1,13 @@
+**MailCraft 0.12.41** — the newest MailCraft features from the original project
+- Rules can look for much more (people, words, size, categories, flags, days) and can copy, flag or show a desktop alert. A rule's Delete never deletes for good.
+- Spelling is checked as you write, with Windows' own dictionaries. Right-click a marked word for suggestions.
+- The Font menu offers every font installed on your computer, and you can resize a picture in a message by dragging its corner.
+- Put folders and Favorites in your own order, pick an accent colour of your own, and use Paste Text Only.
+- Unsubscribe from the lists of several messages at once.
+- Select several appointments and copy, cut, paste or delete them together.
+- Many fixes: a reply quotes only what the reading pane shows, a changed signature is kept when MailCraft closes, and the reading pane scrolls with the keyboard after a click in it.
+- Updates still come only from this fork and only when you click Update now. Everything from 0.12.40 stays.
+
 **MailCraft 0.12.40** — see how far an update has downloaded
 - While an update downloads, its window now shows a bar and how much is there of how much in all (for example "12 of 46 MB"), instead of only a spinning wheel.
 - Everything from 0.12.39 stays.

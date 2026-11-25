@@ -98,7 +98,7 @@ fn selected_header_rule_waits_for_body_needed_to_check_another_filing_claim() {
         id: 999,
         account,
         enabled: true,
-        conditions: vec![mailcraft_model::Condition::BodyContains("Protected".into())],
+        conditions: vec![mailcraft_model::Condition::BodyContains(vec!["Protected".into()])],
         actions: vec![mailcraft_model::Action::MoveTo(inbox)],
         ..Default::default()
     });
@@ -177,7 +177,7 @@ fn missing_destinations_pause_a_local_rule_and_preview_reports_failure_without_c
 fn invalid_saved_local_definitions_pause_without_acting_or_rewriting_their_conditions() {
     use mailcraft_model::{Condition, RuleField, RuleText};
     for conditions in [
-        vec![Condition::SubjectContains(String::new())],
+        vec![Condition::SubjectContains(vec![String::new()])],
         Vec::new(),
         vec![Condition::Text(RuleText { field: RuleField::Subject, pattern: "[broken".into(), regex: true, case_sensitive: false })],
     ] {

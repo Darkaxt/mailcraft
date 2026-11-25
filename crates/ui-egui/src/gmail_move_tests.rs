@@ -45,6 +45,13 @@ fn gmail_window(google: bool, on: bool) -> (Harness, Id, Id) {
         FolderDelta { id: Some(inbox), remote: "INBOX".into(), kind: FolderKind::Inbox, uid_validity: 7, uid_seen: 3, new, ..Default::default() };
     app.execute("sync.apply", json!({"result": SyncResult { account, folders: vec![delta], ..Default::default() }})).unwrap();
     app.execute("folder.select", json!({"id": inbox})).unwrap();
+    // All Accounts (#625) folded, so that the Gmail Inbox's categories are inside the window.
+    app.ui.collapsed_folders.push(crate::nav::ALL_ACCOUNTS);
+    // (The fork's pane holds more above it, the sample's accounts and Favorites (folded under
+    // 0): folded too, so that the Gmail Inbox's category rows are inside the window to drop on.)
+    let others: Vec<Id> = app.session.mailbox.accounts.iter().map(|a| a.id).filter(|id| *id != account).collect();
+    app.ui.collapsed_folders.push(0);
+    app.ui.collapsed_folders.extend(others);
     harness.run_steps(4);
     (harness, account, inbox)
 }

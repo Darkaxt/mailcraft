@@ -747,13 +747,13 @@ pub fn check_keys(app: &MailApp, c: &mailcraft_engine::CommandSpec, keys: &str) 
     Ok(out.join(" / "))
 }
 
-/// Delete's keys in the other modules: on a selected event, contact or task.
+/// Delete's keys in the other modules: on a selected event (or a set of them), contact or task.
 fn module_delete(app: &MailApp, key: &str) -> Option<&'static str> {
     if !app.session.registry.get("mail.delete").is_some_and(|c| c.bound_to(key)) {
         return None;
     }
     match app.session.view.module {
-        Module::Calendar if app.session.sel.event.is_some() => Some("calendar.delete"),
+        Module::Calendar if app.session.sel.event.is_some() || !app.session.sel.events.is_empty() => Some("calendar.delete"),
         Module::People if app.session.sel.contact.is_some() => Some("people.delete"),
         Module::Tasks if app.session.sel.task.is_some() => Some("tasks.delete"),
         _ => None,
@@ -829,6 +829,17 @@ pub fn global_shortcuts(app: &mut MailApp, ctx: &egui::Context) {
         if list && moving {
             continue;
         }
+        // In a message the pointer last went down in, the keys that move scroll it instead of
+        // moving in the message list (#1739).
+        if moving
+            && !typing
+            && let Some(scroll) = crate::reading::scroll_of(key, modifiers)
+            && let Some(place) = app.text_selection.scroll_target(ctx.viewport_id(), crate::reading::images::frame(ctx))
+        {
+            app.text_selection.scroll(place, scroll);
+            ctx.request_repaint();
+            continue;
+        }
         let Some(name) = key_name(key) else { continue };
         let function = name.len() > 1 && name.starts_with('F') && name[1..].chars().all(|c| c.is_ascii_digit());
         if typing {
@@ -862,7 +873,10 @@ pub fn global_shortcuts(app: &mut MailApp, ctx: &egui::Context) {
         let modifiers = if name == "Plus" { Modifiers { shift: false, ..modifiers } } else { modifiers };
         let k = combo(modifiers, name);
         if let Some(id) = module_delete(app, &k) {
-            let _ = app.run(id, json!({}));
+            // A typed set of more than one is deleted as that set, never as the one series its
+            // focus might name: the occurrence scope keeps its one accurate question.
+            let params = if id == "calendar.delete" && app.session.sel.events.len() > 1 { json!({ "scope": "occurrence" }) } else { json!({}) };
+            let _ = app.run(id, params);
             continue;
         }
         // In a message that is being read (the pointer last went down in it, or is over it),

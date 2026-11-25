@@ -47,14 +47,21 @@ fn mail(s: &mut Session, account: Id, sender: &str) -> Id {
 }
 
 fn add_rule(s: &mut Session, folder: Id, senders: &[&str]) -> Id {
-    s.run(
-        "rules.add",
-        &json!({"name":"Company filing","server":false,"conditions":[{"type":"fromAddresses","value":senders}],
-        "actions":[{"type":"moveTo","value":folder}]}),
-    )
-    .unwrap()["id"]
+    let id = s
+        .run(
+            "rules.add",
+            &json!({"name":"Company filing","server":false,"conditions":[{"type":"fromAddresses","value":senders}],
+            "actions":[{"type":"moveTo","value":folder}]}),
+        )
+        .unwrap()["id"]
         .as_u64()
-        .unwrap()
+        .unwrap();
+    // (Since the upstream merge a rule added with no account is for the account in view; these
+    // tests file every account's mail, so the rule is made one for every account.)
+    if let Some(rule) = s.mailbox.rules.iter_mut().find(|r| r.id == id) {
+        rule.account = 0;
+    }
+    id
 }
 
 fn review(s: &mut Session, ids: &[Id], folder: Id) -> Value {
@@ -80,7 +87,7 @@ fn auto_files_multiple_accounts_and_consolidates_future_senders_without_copying_
     assert_eq!(s.mailbox.rules[0].account, 0);
     assert_eq!(s.mailbox.messages.len(), 2);
     let future = mail(&mut s, a[2], "billing@example.org");
-    s.mailbox.apply_rules(future);
+    s.mailbox.apply_rules(future, &s.rule_clock());
     assert_eq!(s.mailbox.message(future).unwrap().folder, new);
     assert!(!s.mailbox.queued.is_empty(), "server placement is pending, not falsely confirmed");
 }
@@ -129,11 +136,11 @@ fn reroute_splits_only_selected_alternatives_and_received_history_preserving_oth
     let original = s.mailbox.rules.iter().find(|r| r.id == rule).unwrap();
     assert!(original.actions.contains(&Action::MoveTo(old)) && original.actions.contains(&Action::MarkRead));
     assert!(original.conditions.iter().any(|c| matches!(c, Condition::Unless(_))));
-    s.mailbox.apply_rules(unrelated);
+    s.mailbox.apply_rules(unrelated, &s.rule_clock());
     assert_eq!(s.mailbox.message(unrelated).unwrap().folder, old);
     assert!(s.mailbox.message(unrelated).unwrap().read);
     let future = mail(&mut s, a[1], "billing@example.org");
-    s.mailbox.apply_rules(future);
+    s.mailbox.apply_rules(future, &s.rule_clock());
     assert_eq!(s.mailbox.message(future).unwrap().folder, new);
     assert!(s.mailbox.message(future).unwrap().read, "split sender retains the original non-filing action");
     assert_eq!(review(&mut s, &[future], new)["conflicts"], json!([]), "the exact remainder exception is disjoint");
@@ -152,7 +159,7 @@ fn rerouting_all_of_a_rules_senders_replaces_it_instead_of_leaving_a_dead_rule()
     assert!(s.mailbox.rules.iter().all(|r| r.id != rule), "the spent original is gone");
     assert_eq!(s.mailbox.rules.len(), 1, "{:?}", s.mailbox.rules);
     let future = mail(&mut s, a[2], "billing@example.org");
-    s.mailbox.apply_rules(future);
+    s.mailbox.apply_rules(future, &s.rule_clock());
     assert_eq!(s.mailbox.message(future).unwrap().folder, new);
     // With another action besides filing, it keeps that action for the sender, once.
     let (mut s, a, new, old) = setup();
@@ -163,7 +170,7 @@ fn rerouting_all_of_a_rules_senders_replaces_it_instead_of_leaving_a_dead_rule()
     apply(&mut s, &[selected], new, &report, "reroute");
     assert!(s.mailbox.rules.iter().all(|r| !r.conditions.iter().any(|c| matches!(c, Condition::Unless(_)))), "{:?}", s.mailbox.rules);
     let future = mail(&mut s, a[2], "billing@example.org");
-    s.mailbox.apply_rules(future);
+    s.mailbox.apply_rules(future, &s.rule_clock());
     assert_eq!(s.mailbox.message(future).unwrap().folder, new);
     assert!(s.mailbox.message(future).unwrap().read);
 }
@@ -179,14 +186,14 @@ fn once_survives_native_reopen_and_repeated_rule_processing_without_exempting_fu
     let bytes = mailcraft_engine::io::write_mailbox(&s.mailbox).unwrap();
     let mut s = Session::new(mailcraft_engine::io::read_mailbox(&bytes).unwrap());
     for _ in 0..3 {
-        s.mailbox.apply_rules(selected);
-        s.mailbox.run_rules(selected, true);
+        s.mailbox.apply_rules(selected, &s.rule_clock());
+        s.mailbox.run_rules(selected, true, &s.rule_clock());
     }
     assert_eq!(s.mailbox.message(selected).unwrap().folder, new);
     assert_eq!(s.mailbox.message(selected).unwrap().filing_override, Some(new));
     assert_eq!(s.mailbox.rules, rules);
     let future = mail(&mut s, a[2], "billing@example.org");
-    s.mailbox.apply_rules(future);
+    s.mailbox.apply_rules(future, &s.rule_clock());
     assert_eq!(s.mailbox.message(future).unwrap().folder, old);
 }
 

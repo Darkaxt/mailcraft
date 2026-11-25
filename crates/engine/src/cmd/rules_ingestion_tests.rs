@@ -245,7 +245,7 @@ fn rules_ingestion_does_not_sweep_sent_drafts_trash_or_junk() {
         let child = s.mailbox.add_folder(account, Some(folder), "Child").unwrap();
         for folder in [folder, child] {
             let id = s.mailbox.add_message(Message { folder, subject: "Invoice".into(), ..Default::default() }).unwrap();
-            assert!(s.mailbox.apply_rules(id).applied.is_empty());
+            assert!(s.mailbox.apply_rules(id, &s.rule_clock()).applied.is_empty());
             assert_eq!(s.mailbox.message(id).unwrap().folder, folder);
         }
     }
@@ -275,13 +275,15 @@ fn rules_ingestion_prevents_competing_moves_caused_by_earlier_importance_changes
         },
     ];
     let id = s.mailbox.add_message(Message { folder: receiving, importance: Importance::High, ..Default::default() }).unwrap();
-    let result = s.mailbox.apply_rules(id);
+    let result = s.mailbox.apply_rules(id, &s.rule_clock());
     assert!(result.conflicts && result.applied.is_empty());
     assert_eq!(s.mailbox.message(id).unwrap().folder, receiving);
     assert_eq!(s.mailbox.message(id).unwrap().importance, Importance::High);
     // Ordinary sequential non-conflicting actions keep their original behavior.
     s.mailbox.rules[0].actions = vec![Action::SetImportance(Importance::Low), Action::MarkRead];
-    assert_eq!(s.mailbox.apply_rules(id).applied, ["Make low", "Already low"]);
+    // (The upstream merge leaves out of `applied` a rule whose only effect is a move to the folder the
+    // message is already in: "Already low" matches but changes nothing.)
+    assert_eq!(s.mailbox.apply_rules(id, &s.rule_clock()).applied, ["Make low"]);
     assert!(s.mailbox.message(id).unwrap().read);
 }
 
@@ -294,7 +296,7 @@ fn rules_ingestion_waits_for_body_exceptions_after_an_earlier_importance_change(
             name: "Raise importance".into(),
             account,
             enabled: true,
-            conditions: vec![Condition::SubjectContains("Invoice".into())],
+            conditions: vec![Condition::SubjectContains(vec!["Invoice".into()])],
             actions: vec![Action::SetImportance(Importance::High)],
             ..Default::default()
         },
@@ -303,7 +305,7 @@ fn rules_ingestion_waits_for_body_exceptions_after_an_earlier_importance_change(
             name: "Important except protected".into(),
             account,
             enabled: true,
-            conditions: vec![Condition::Importance(Importance::High), Condition::Unless(vec![Condition::BodyContains("Protected".into())])],
+            conditions: vec![Condition::Importance(Importance::High), Condition::Unless(vec![Condition::BodyContains(vec!["Protected".into()])])],
             actions: vec![Action::MoveTo(archive)],
             ..Default::default()
         },

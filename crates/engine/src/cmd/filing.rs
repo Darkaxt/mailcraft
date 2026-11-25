@@ -122,6 +122,7 @@ fn blocked(s: &Session, rule: &Rule) -> Option<String> {
     }
     if rule.conditions.iter().filter(|c| !matches!(c, Condition::Unless(_))).count() >= 20
         || rule.conditions.iter().any(|c| matches!(c,Condition::Unless(parts) if parts.len()>=20))
+        || rule.exceptions.len() >= 20
     {
         return Some("the existing rule has no capacity for a lossless sender split; narrow it explicitly first".into());
     }
@@ -189,14 +190,17 @@ fn plan(s: &Session, v: &Value) -> Result<Plan, crate::CmdError> {
             if mailcraft_model::rule_conflicts::picked_by_other_sides(&draft, r) {
                 return false;
             }
-            !r.conditions.iter().any(|condition| match condition {
-                Condition::FromAddresses(addresses) => !addresses.iter().any(|a| senders.iter().any(|b| a.eq_ignore_ascii_case(b))),
-                Condition::Unless(parts) => parts.iter().any(|part| {
-                    matches!(part,Condition::FromAddresses(addresses)
+            // An exception (its own list or an Unless among its conditions) that leaves out
+            // every selected sender keeps it from competing.
+            let spared = r.all_exceptions().any(|part| {
+                matches!(part,Condition::FromAddresses(addresses)
                 if senders.iter().all(|sender|addresses.iter().any(|a|a.eq_ignore_ascii_case(sender))))
-                }),
-                _ => false,
-            })
+            });
+            !spared
+                && !r.conditions.iter().any(|condition| match condition {
+                    Condition::FromAddresses(addresses) => !addresses.iter().any(|a| senders.iter().any(|b| a.eq_ignore_ascii_case(b))),
+                    _ => false,
+                })
         })
         .collect();
     let mut by_folder: BTreeMap<Id, usize> = BTreeMap::new();

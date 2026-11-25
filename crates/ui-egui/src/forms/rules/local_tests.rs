@@ -101,7 +101,7 @@ fn editing_round_trips_conditions_exceptions_copy_actions_and_global_identity() 
         enabled: false,
         conditions: vec![
             Condition::Text(RuleText { field: RuleField::Subject, pattern: "^Invoice [0-9]+$".into(), regex: true, case_sensitive: true }),
-            Condition::Unless(vec![Condition::FromContains("archive@example.org".into())]),
+            Condition::Unless(vec![Condition::FromContains(vec!["archive@example.org".into()])]),
         ],
         actions: vec![Action::CopyTo(to), Action::Flag],
         stop: true,
@@ -117,7 +117,10 @@ fn editing_round_trips_conditions_exceptions_copy_actions_and_global_identity() 
     assert_eq!(params["exceptions"], json!([{"type": "fromContains", "value": "archive@example.org"}]));
     assert_eq!(params["actions"], serde_json::to_value(&rule.actions).unwrap());
     session.run(command, &params).unwrap();
-    assert_eq!(session.mailbox.rules[0], rule);
+    // The engine keeps exceptions in their own list now (upstream #566), not as an Unless condition.
+    let stored =
+        Rule { conditions: rule.conditions[..1].to_vec(), exceptions: vec![Condition::FromContains(vec!["archive@example.org".into()])], ..rule };
+    assert_eq!(session.mailbox.rules[0], stored);
 }
 
 fn rendered_app() -> (crate::MailApp, Id, Id) {
@@ -130,7 +133,7 @@ fn rendered_app() -> (crate::MailApp, Id, Id) {
         account: source,
         conditions: vec![
             Condition::Text(RuleText { field: RuleField::Subject, pattern: "^Invoice [0-9]+$".into(), regex: true, case_sensitive: true }),
-            Condition::Unless(vec![Condition::FromContains("archive@example.org".into())]),
+            Condition::Unless(vec![Condition::FromContains(vec!["archive@example.org".into()])]),
         ],
         actions: vec![Action::MoveTo(to)],
         ..Default::default()

@@ -146,6 +146,7 @@ impl PreviewWindow {
         let choice = theme::ThemeChoice {
             appearance: theme::Appearance::default(),
             accent: theme::Accent::default(),
+            custom: None,
             high_contrast: false,
             dark_style: Default::default(),
         };

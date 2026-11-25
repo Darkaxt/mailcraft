@@ -50,13 +50,20 @@ impl Cond {
         }
     }
 
-    fn from_condition(condition: &Condition, exception: bool) -> Cond {
+    pub(super) fn from_condition(condition: &Condition, exception: bool) -> Cond {
         let mut row = Cond { exception, ..Default::default() };
+        let words = |row: &mut Cond, kind: When, words: &[String]| {
+            row.kind = kind;
+            row.text = words.join("; ");
+        };
         match condition {
-            Condition::FromContains(text) => {
-                row.kind = When::From;
-                row.text.clone_from(text);
-            }
+            Condition::FromContains(t) => words(&mut row, When::From, t),
+            Condition::ToContains(t) => words(&mut row, When::To, t),
+            Condition::SubjectContains(t) => words(&mut row, When::Subject, t),
+            Condition::BodyContains(t) => words(&mut row, When::Body, t),
+            Condition::SubjectOrBodyContains(t) => words(&mut row, When::SubjectOrBody, t),
+            Condition::From(p) => words(&mut row, When::Person, p),
+            Condition::SentTo(p) => words(&mut row, When::SentTo, p),
             Condition::FromAny(senders) => {
                 row.kind = When::FromAny;
                 row.text = senders.join("\n");
@@ -65,23 +72,37 @@ impl Cond {
                 row.kind = if matches!(condition, Condition::FromAddresses(_)) { When::FromAddresses } else { When::ToAddresses };
                 row.text = addresses.join("\n");
             }
-            Condition::ToContains(text) => {
-                row.kind = When::To;
-                row.text.clone_from(text);
-            }
-            Condition::SubjectContains(text) => {
-                row.kind = When::Subject;
-                row.text.clone_from(text);
-            }
-            Condition::BodyContains(text) => {
-                row.kind = When::Body;
-                row.text.clone_from(text);
-            }
             Condition::HasAttachment => row.kind = When::Attachment,
             Condition::Importance(importance) => {
                 row.kind = When::Importance;
                 row.importance = *importance;
             }
+            Condition::Sensitivity(sensitivity) => {
+                row.kind = When::Sensitivity;
+                row.sensitivity = *sensitivity;
+            }
+            Condition::SizeBetween { min, max } => {
+                row.kind = When::Size;
+                row.min = min.to_string();
+                row.max = max.to_string();
+            }
+            Condition::ReceivedBetween { from, to } => {
+                row.kind = When::Received;
+                row.from = from.as_ref().map(|d| d.iso()).unwrap_or_default();
+                row.to = to.as_ref().map(|d| d.iso()).unwrap_or_default();
+            }
+            Condition::Category(names) => {
+                row.kind = When::Category;
+                row.category = names.first().cloned().unwrap_or_default();
+            }
+            Condition::SentOnlyToMe => row.kind = When::SentOnlyToMe,
+            Condition::ToMe => row.kind = When::ToMe,
+            Condition::CcMe => row.kind = When::CcMe,
+            Condition::ToOrCcMe => row.kind = When::ToOrCcMe,
+            Condition::NotToMe => row.kind = When::NotToMe,
+            Condition::MeetingRequest => row.kind = When::Meeting,
+            Condition::AutomaticReply => row.kind = When::AutomaticReply,
+            Condition::Flagged => row.kind = When::Flagged,
             Condition::Text(text) => {
                 row.advanced = true;
                 row.kind = match text.field {
@@ -132,6 +153,8 @@ impl RulesForm {
                 other => vec![Cond::from_condition(other, false)],
             })
             .collect();
+        self.unless = rule.exceptions.iter().map(|c| Cond::from_condition(c, false)).collect();
+        self.alert = rule.alert;
         self.acts = rule
             .actions
             .iter()
@@ -150,13 +173,22 @@ impl RulesForm {
                         row.kind = Do::Categorize;
                         row.category.clone_from(category);
                     }
-                    Action::Flag => row.kind = Do::Flag,
+                    Action::Flag => {
+                        row.kind = Do::Flag;
+                        row.due = None;
+                    }
                     Action::MarkRead => row.kind = Do::MarkRead,
                     Action::SetImportance(importance) => {
                         row.kind = Do::SetImportance;
                         row.importance = *importance;
                     }
                     Action::Delete => row.kind = Do::Delete,
+                    Action::FlagFor(due) => {
+                        row.kind = Do::Flag;
+                        row.due = Some(*due);
+                    }
+                    Action::ClearFlag => row.kind = Do::ClearFlag,
+                    Action::ClearCategories => row.kind = Do::ClearCategories,
                 }
                 row
             })

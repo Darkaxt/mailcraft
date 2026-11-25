@@ -37,7 +37,9 @@ fn source_is_framed_as_hostile_text_and_eml_data_is_not_rewritten() {
             assert!(bytes.starts_with(b"Date:"));
             assert_eq!(page["originalMimeAvailable"], false);
         }
-        assert_eq!(execute(&mut host, command, json!({"id":id,"token":token,"close":true}))["state"], "closed");
+        // Every string outside the plain keys is framed now, the closed state's word too.
+        let closed = execute(&mut host, command, json!({"id":id,"token":token,"close":true}));
+        assert_eq!(closed["state"], format!("{UNTRUSTED_OPEN}closed{UNTRUSTED_CLOSE}"));
     }
 }
 

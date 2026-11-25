@@ -118,7 +118,7 @@ fn conflicts_with_complex_regex_stop_execution_before_any_action_and_survive_reo
     let preview = s.run("rules.preview", &json!({"folder":inbox})).unwrap();
     assert_eq!(preview["failed"], 1);
     assert_eq!(serde_json::to_value(&s.mailbox).unwrap(), before);
-    let execution = s.mailbox.apply_rules(message);
+    let execution = s.mailbox.apply_rules(message, &s.rule_clock());
     assert!(execution.applied.is_empty());
     assert_eq!(execution.failures.len(), 1);
     assert_eq!(execution.matched, 2);
@@ -145,7 +145,7 @@ fn conflicts_respect_exceptions_and_draft_preview_keeps_other_destinations_in_sc
         .mailbox
         .add_message(Message { folder: inbox, from: Address::new("", "billing@example.org"), subject: "Receipt".into(), ..Default::default() })
         .unwrap();
-    assert!(s.mailbox.apply_rules(message).failures.is_empty());
+    assert!(s.mailbox.apply_rules(message, &s.rule_clock()).failures.is_empty());
     assert_eq!(s.mailbox.message(message).unwrap().folder, inbox);
     assert_eq!(s.run("rules.conflicts", &json!({"id":first})).unwrap()["confirmed"], 0);
     let preview = s.run("rules.preview", &json!({"rule":draft(account, inbox), "editing":second, "folder":inbox})).unwrap();
@@ -177,7 +177,7 @@ fn conflicts_do_not_hide_a_missing_destination_repair_behind_a_false_competing_r
     s.mailbox.rules[0].stop = false;
     s.mailbox.rules.insert(0, invalid);
     let message = s.mailbox.add_message(Message { folder: inbox, from: Address::new("", "billing@example.org"), ..Default::default() }).unwrap();
-    let result = s.mailbox.apply_rules(message);
+    let result = s.mailbox.apply_rules(message, &s.rule_clock());
     assert!(!result.conflicts);
     assert_eq!(result.applied.len(), 1);
     assert_eq!(s.mailbox.message(message).unwrap().folder, archive);
