@@ -1513,9 +1513,11 @@ fn services(
 fn update_download(
     ctx: &egui::Context,
     updates: HostUpdates,
-) -> Box<dyn Fn(mailcraft_model::update::Release) -> std::sync::mpsc::Receiver<Result<PathBuf, String>>> {
+) -> Box<
+    dyn Fn(mailcraft_model::update::Release, std::sync::Arc<mailcraft_model::update::Progress>) -> std::sync::mpsc::Receiver<Result<PathBuf, String>>,
+> {
     let ctx = ctx.clone();
-    Box::new(move |release: mailcraft_model::update::Release| {
+    Box::new(move |release: mailcraft_model::update::Release, progress: std::sync::Arc<mailcraft_model::update::Progress>| {
         let updates = updates.clone();
         background(&ctx, "update download", move || {
             if wipe::begun() {
@@ -1524,7 +1526,10 @@ fn update_download(
             let dir = updates.folders.updates();
             // The SHA-256 noted is the signed list's, not the file's read back: what is
             // installed is checked against what the release signed.
-            let verified = updater::download(&release, updates.install, &dir, mailcraft_net::update_download::download)?;
+            let fetch = |r: &mailcraft_model::update::Release, name: &str, d: &std::path::Path| {
+                mailcraft_net::update_download::download(r, name, d, &progress)
+            };
+            let verified = updater::download(&release, updates.install, &dir, fetch)?;
             let got = verified.path.clone();
             *updates.verified.lock().unwrap_or_else(|e| e.into_inner()) = Some(verified);
             Ok(got)

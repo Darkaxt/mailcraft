@@ -22,7 +22,7 @@ use std::io::{BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use mailcraft_model::update::{Asset, Release, is_file_name};
+use mailcraft_model::update::{Asset, Progress, Release, is_file_name};
 use ring::signature::{ED25519, UnparsedPublicKey};
 
 use crate::NetError;
@@ -199,6 +199,28 @@ pub(crate) struct Reach<'a> {
     /// For the large file, and for the small ones.
     pub(crate) large: StreamPatience,
     pub(crate) small: StreamPatience,
+    /// Where how far the large file has got is told, for the update window's bar.
+    pub(crate) progress: Option<&'a Progress>,
+}
+
+/// A writer that tells `progress` of every byte written through it.
+struct Counting<'a, W: Write> {
+    inner: W,
+    progress: Option<&'a Progress>,
+}
+
+impl<W: Write> Write for Counting<'_, W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let n = self.inner.write(buf)?;
+        if let Some(progress) = self.progress {
+            progress.add(n as u64);
+        }
+        Ok(n)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 /// GitHub's hosts for releases, over HTTPS on the usual port.
@@ -210,11 +232,13 @@ fn on_github(url: &Url) -> bool {
 /// the release's signed list, and give where it is and the signed SHA-256. It is downloaded whole, carried on where an
 /// earlier try stopped; one already there and checked is not downloaded again. Every other file
 /// in `dir` is deleted. Blocks for as long as the download takes; call it on a background thread.
-pub fn download(release: &Release, name: &str, dir: &Path) -> Result<Downloaded, DownloadError> {
+/// How far it has got is told to `progress` as the bytes come.
+pub fn download(release: &Release, name: &str, dir: &Path, progress: &Progress) -> Result<Downloaded, DownloadError> {
     let reach = Reach {
         allowed: &on_github,
         large: StreamPatience { connect: Duration::from_secs(10), idle: Duration::from_secs(30), total: Duration::from_secs(3_600) },
         small: StreamPatience { connect: Duration::from_secs(10), idle: Duration::from_secs(10), total: Duration::from_secs(20) },
+        progress: Some(progress),
     };
     download_with(release, name, dir, &release_keys(), &reach)
 }
@@ -222,10 +246,16 @@ pub fn download(release: &Release, name: &str, dir: &Path) -> Result<Downloaded,
 /// [`download`] from a stand-in release server on this machine (`http://127.0.0.1:…`), trusting
 /// `keys` rather than the build's: for the tests of the crates that sit on this one.
 #[cfg(feature = "stand-in")]
-pub fn download_from_stand_in(release: &Release, name: &str, dir: &Path, keys: &[[u8; 32]]) -> Result<Downloaded, DownloadError> {
+pub fn download_from_stand_in(
+    release: &Release,
+    name: &str,
+    dir: &Path,
+    keys: &[[u8; 32]],
+    progress: &Progress,
+) -> Result<Downloaded, DownloadError> {
     let loopback = |url: &Url| crate::transport::is_loopback(&url.host);
     let quick = StreamPatience { connect: Duration::from_secs(5), idle: Duration::from_secs(5), total: Duration::from_secs(20) };
-    download_with(release, name, dir, keys, &Reach { allowed: &loopback, large: quick, small: quick })
+    download_with(release, name, dir, keys, &Reach { allowed: &loopback, large: quick, small: quick, progress: Some(progress) })
 }
 
 pub(crate) fn download_with(release: &Release, name: &str, dir: &Path, keys: &[[u8; 32]], reach: &Reach<'_>) -> Result<Downloaded, DownloadError> {
@@ -252,6 +282,9 @@ pub(crate) fn download_with(release: &Release, name: &str, dir: &Path, keys: &[[
     tidy(dir, &[done.as_path(), part.as_path()]);
     if done.is_file() {
         if sha256(&done).is_some_and(|d| d == digest) {
+            if let Some(progress) = reach.progress {
+                progress.set(asset.size, asset.size);
+            }
             return Ok(Downloaded { path: done, sha256: digest });
         }
         let _ = fs::remove_file(&done);
@@ -376,18 +409,24 @@ fn large(asset: &Asset, part: &Path, reach: &Reach<'_>) -> Result<(), DownloadEr
         let _ = fs::remove_file(part);
         have = 0;
     }
+    if let Some(progress) = reach.progress {
+        progress.set(have, cap);
+    }
     if have == cap && cap > 0 {
         return Ok(());
     }
     // Once from where it stopped; and, when the server won't carry on, once from the start.
     for _ in 0..2 {
         let from = (have > 0).then_some(have);
+        if let Some(progress) = reach.progress {
+            progress.set(have, cap);
+        }
         let file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(part)
             .map_err(|e| failed(&format!("the download couldn't be written: {}", e.kind())))?;
-        let mut sink = BufWriter::new(file);
+        let mut sink = Counting { inner: BufWriter::new(file), progress: reach.progress };
         let accept = |said: &Streamed| match from {
             None => said.status == 200,
             Some(from) => said.status == 206 && range_carries_on(said.content_range.as_deref(), from),
@@ -539,7 +578,7 @@ mod tests {
 
     fn reach() -> Reach<'static> {
         let quick = StreamPatience { connect: Duration::from_secs(2), idle: Duration::from_secs(2), total: Duration::from_secs(5) };
-        Reach { allowed: &loopback, large: quick, small: quick }
+        Reach { allowed: &loopback, large: quick, small: quick, progress: None }
     }
 
     fn scratch(name: &str) -> PathBuf {
@@ -564,9 +603,14 @@ mod tests {
         let dir = scratch("ok");
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("mailcraft-9.9.8-linux-x86_64.AppImage.part"), b"an older one").unwrap();
-        let got = download_with(&release(&r.server, file.len() as u64), NAME, &dir, &[public(&pair)], &reach()).unwrap();
+        let progress = Progress::default();
+        let got =
+            download_with(&release(&r.server, file.len() as u64), NAME, &dir, &[public(&pair)], &Reach { progress: Some(&progress), ..reach() })
+                .unwrap();
         assert_eq!(got.path, dir.join(NAME));
         assert_eq!(fs::read(&got.path).unwrap(), file);
+        // The update window's bar was told of every byte, of the size the release gives.
+        assert_eq!((progress.received(), progress.total()), (file.len() as u64, file.len() as u64));
         // The digest given is the signed list's, not one worked out from the file afterwards:
         // the file changed once it is in place doesn't change it.
         let signed_digest = parse_sums(&r.stand.lock().unwrap().sums).unwrap().digest(NAME).unwrap();

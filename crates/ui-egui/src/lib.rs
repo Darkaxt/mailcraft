@@ -660,7 +660,16 @@ pub struct Services {
     /// name no address, arrives through the channel. Nothing is installed. Absent for every
     /// other copy, in the browser and in the tests: the owner is told of new versions, and that
     /// is all.
-    pub update_download: Option<Box<dyn Fn(mailcraft_model::update::Release) -> Receiver<Result<std::path::PathBuf, String>>>>,
+    /// How far it has got is told to the [`mailcraft_model::update::Progress`] given, for the
+    /// update window's bar.
+    pub update_download: Option<
+        Box<
+            dyn Fn(
+                mailcraft_model::update::Release,
+                std::sync::Arc<mailcraft_model::update::Progress>,
+            ) -> Receiver<Result<std::path::PathBuf, String>>,
+        >,
+    >,
     /// The organisation has turned updating MailCraft by itself off for every user of the
     /// computer (a policy in the registry on Windows, a file on macOS and Linux): Install
     /// updates automatically is off and can't be turned on, and only the notice remains.

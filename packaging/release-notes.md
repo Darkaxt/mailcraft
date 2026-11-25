@@ -1,3 +1,7 @@
+**MailCraft 0.12.40** — see how far an update has downloaded
+- While an update downloads, its window now shows a bar and how much is there of how much in all (for example "12 of 46 MB"), instead of only a spinning wheel.
+- Everything from 0.12.39 stays.
+
 **MailCraft 0.12.39** — tidier grouped rows
 - On a grouped row (by sender or by conversation) an unread group now shows a blue arrow, instead of a blue dot drawn over the arrow.
 - The number of messages in a group now sits before the time on the subject's line, instead of running into the time.

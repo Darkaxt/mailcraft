@@ -25712,7 +25712,7 @@ msgid "{provider}'s sign-in page is open in your browser"
 msgstr "Die Anmeldeseite von {provider} ist in Ihrem Browser geöffnet"
 
 #. interface
-#: crates/ui-egui/src/opening.rs
+#: crates/ui-egui/src/opening.rs crates/ui-egui/src/updates.rs
 msgid "{read} of {total} MB"
 msgstr "{read} von {total} MB"
 

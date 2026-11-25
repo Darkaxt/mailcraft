@@ -27091,7 +27091,7 @@ msgid "{provider}'s sign-in page is open in your browser"
 msgstr "{provider} 的登录页面已在您的浏览器中打开"
 
 #. interface
-#: crates/ui-egui/src/opening.rs
+#: crates/ui-egui/src/opening.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "{read} of {total} MB"
 msgstr "{total} MB 中已读取 {read} MB"

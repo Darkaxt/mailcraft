@@ -27397,7 +27397,7 @@ msgid "{provider}'s sign-in page is open in your browser"
 msgstr "Přihlašovací stránka {provider} je otevřená v prohlížeči"
 
 #. interface
-#: crates/ui-egui/src/opening.rs
+#: crates/ui-egui/src/opening.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "{read} of {total} MB"
 msgstr "{read} z {total} MB"

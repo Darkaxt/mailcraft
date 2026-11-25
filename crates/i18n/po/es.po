@@ -27264,7 +27264,7 @@ msgid "{provider}'s sign-in page is open in your browser"
 msgstr "La página de inicio de sesión de {provider} está abierta en su navegador"
 
 #. interface
-#: crates/ui-egui/src/opening.rs
+#: crates/ui-egui/src/opening.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "{read} of {total} MB"
 msgstr "{read} de {total} MB"

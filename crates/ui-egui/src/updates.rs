@@ -31,10 +31,11 @@
 //!   and the last version told of ([`UiState`]); nothing else of GitHub's answer.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::mpsc::{Receiver, TryRecvError};
 
 use egui::{Ui, vec2};
-use mailcraft_model::update::{Release, Version};
+use mailcraft_model::update::{Progress, Release, Version};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -133,8 +134,8 @@ pub struct Updates {
     pub(crate) dialog: bool,
     /// A check on its way, and who asked for it.
     pending: Option<(Receiver<Result<Release, String>>, Asker)>,
-    /// A download on its way, of that version.
-    downloading: Option<(Receiver<Result<PathBuf, String>>, Version)>,
+    /// A download on its way, of that version, and how far it has got.
+    downloading: Option<(Receiver<Result<PathBuf, String>>, Version, Arc<Progress>)>,
     /// The version downloaded and checked this run.
     downloaded: Option<Version>,
     /// Update now was pressed and not cancelled: once the download is checked, the window closes
@@ -383,13 +384,14 @@ impl MailApp {
     /// Hand the download of `release` to the host, when it is newer and isn't on its way already.
     fn begin_update_download(&mut self, release: &Release) {
         let wanted = running().is_some_and(|running| release.version.is_newer_than(&running))
-            && self.updates.downloading.as_ref().is_none_or(|(_, v)| *v != release.version);
+            && self.updates.downloading.as_ref().is_none_or(|(_, v, _)| *v != release.version);
         let Some(download) = self.services.update_download.as_ref().filter(|_| wanted) else { return };
-        self.updates.downloading = Some((download(release.clone()), release.version.clone()));
+        let progress = Arc::new(Progress::default());
+        self.updates.downloading = Some((download(release.clone(), progress.clone()), release.version.clone(), progress));
     }
 
     fn poll_update_download(&mut self) {
-        let Some((rx, version)) = &self.updates.downloading else { return };
+        let Some((rx, version, _)) = &self.updates.downloading else { return };
         let answer = match rx.try_recv() {
             Ok(answer) => answer,
             Err(TryRecvError::Empty) => return,
@@ -511,6 +513,7 @@ fn update_state(app: &MailApp) -> Value {
             "value": app.installs_updates(),
             "setting": install_setting(app),
             "downloading": app.updates.downloading.is_some(),
+            "progress": app.updates.downloading.as_ref().map(|(_, _, p)| json!({"received": p.received(), "total": p.total()})),
             "downloaded": app.updates.downloaded.as_ref().map(ToString::to_string),
             "installing": app.updates.installing,
             "restart": app.updates.restart,
@@ -651,6 +654,7 @@ pub(crate) fn dialog(app: &mut MailApp, ctx: &egui::Context) {
     let checking = app.updates.pending.is_some();
     let newer = app.updates.answered.then(|| app.updates.newer.clone()).flatten();
     let downloading = app.updates.installing;
+    let progress = app.updates.downloading.as_ref().map(|(_, _, p)| (p.received(), p.total()));
     let can_install = app.installs_updates();
     let open = crate::dialogs::window(ctx, tl!("Update"), 420.0, |ui| {
         let heading = |ui: &mut Ui, text: &str, color: egui::Color32| {
@@ -675,10 +679,34 @@ pub(crate) fn dialog(app: &mut MailApp, ctx: &egui::Context) {
             if downloading {
                 heading(ui, &crate::i18n::fmt(tl!("Updating to MailCraft {version}"), &[("version", &release.version.to_string())]), t.text);
                 dim(ui, tl!("MailCraft closes, installs it and opens again. Windows asks for your OK first."));
-                ui.horizontal(|ui| {
-                    ui.add(egui::Spinner::new().size(14.0));
-                    ui.label(tl!("Downloading…"));
-                });
+                match progress.filter(|(_, total)| *total > 0) {
+                    // How much is there and how much there is in all, on a bar as opening the mailbox has.
+                    Some((got, total)) => {
+                        let got = got.min(total);
+                        ui.add_space(4.0);
+                        let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 6.0), egui::Sense::hover());
+                        ui.painter().rect_filled(bar, 3.0, t.track);
+                        let fraction = (got as f64 / total as f64) as f32;
+                        if fraction > 0.0 {
+                            let filled = egui::Rect::from_min_max(bar.min, egui::pos2(bar.min.x + (bar.width() * fraction).max(6.0), bar.max.y));
+                            ui.painter().rect_filled(filled, 3.0, t.accent);
+                        }
+                        app.hit.add("updateProgress", 0, bar);
+                        let said = crate::i18n::fmt(
+                            tl!("{read} of {total} MB"),
+                            &[("read", &crate::opening::megabytes(got, total)), ("total", &crate::opening::megabytes(total, total))],
+                        );
+                        dim(ui, &said);
+                    }
+                    None => {
+                        ui.horizontal(|ui| {
+                            ui.add(egui::Spinner::new().size(14.0));
+                            ui.label(tl!("Downloading…"));
+                        });
+                    }
+                }
+                // The bar moves as the bytes come, not only when something else wakes the window.
+                ui.ctx().request_repaint_after(std::time::Duration::from_millis(100));
                 crate::dialogs::button_row(ui, |ui| {
                     let cancel = ui.add(egui::Button::new(tl!("Cancel")).min_size(vec2(72.0, 26.0)));
                     app.hit.add("updateCancel", 0, cancel.rect);
@@ -874,7 +902,7 @@ mod tests {
     fn downloading(mut services: Services, answer: Result<PathBuf, String>) -> (Services, Arc<Mutex<Vec<String>>>) {
         let asked = Arc::new(Mutex::new(Vec::new()));
         let kept = asked.clone();
-        services.update_download = Some(Box::new(move |release: Release| {
+        services.update_download = Some(Box::new(move |release: Release, _| {
             kept.lock().unwrap().push(release.version.to_string());
             let (tx, rx) = std::sync::mpsc::channel();
             let _ = tx.send(answer.clone());

@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use mailcraft_engine::Session;
 use mailcraft_model::Mailbox;
-use mailcraft_model::update::{Asset, Release, Version};
+use mailcraft_model::update::{Asset, Progress, Release, Version};
 use mailcraft_ui_egui::{MailApp, Services, UiState, updates::UpdateCheck};
 use ring::rand::SystemRandom;
 use ring::signature::{Ed25519KeyPair, KeyPair as _};
@@ -90,11 +90,12 @@ fn window(found: Release, trusted: [u8; 32], dir: &Path) -> MailApp {
             let _ = tx.send(Ok(found.clone()));
             rx
         })),
-        update_download: Some(Box::new(move |release: Release| {
+        update_download: Some(Box::new(move |release: Release, progress: Arc<Progress>| {
             let (tx, rx) = std::sync::mpsc::channel();
             let dir = dir.clone();
             std::thread::spawn(move || {
-                let fetch = |r: &Release, name: &str, d: &Path| mailcraft_net::update_download::download_from_stand_in(r, name, d, &[trusted]);
+                let fetch =
+                    |r: &Release, name: &str, d: &Path| mailcraft_net::update_download::download_from_stand_in(r, name, d, &[trusted], &progress);
                 let _ = tx.send(super::updater::download(&release, Install::AppImage, &dir, fetch).map(|v| v.path));
             });
             rx

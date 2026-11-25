@@ -113,6 +113,38 @@ pub struct Asset {
     pub url: String,
 }
 
+/// How far a download has got: told by the thread downloading, read by the window that shows it.
+#[derive(Debug, Default)]
+pub struct Progress {
+    received: std::sync::atomic::AtomicU64,
+    total: std::sync::atomic::AtomicU64,
+}
+
+impl Progress {
+    const ORDER: std::sync::atomic::Ordering = std::sync::atomic::Ordering::Relaxed;
+
+    /// Bytes there so far.
+    pub fn received(&self) -> u64 {
+        self.received.load(Self::ORDER)
+    }
+
+    /// Bytes there are in all (0: not known yet).
+    pub fn total(&self) -> u64 {
+        self.total.load(Self::ORDER)
+    }
+
+    /// `received` of `total` there: at the start of a try, or once the file is all there.
+    pub fn set(&self, received: u64, total: u64) {
+        self.total.store(total, Self::ORDER);
+        self.received.store(received, Self::ORDER);
+    }
+
+    /// `n` more bytes came.
+    pub fn add(&self, n: u64) {
+        let _ = self.received.try_update(Self::ORDER, Self::ORDER, |r| Some(r.saturating_add(n)));
+    }
+}
+
 /// Whether `name` will do as the name of a release's file, and of a file it is kept in: at most
 /// 120 letters, digits, `.`, `-`, `_` and `+`, not starting with a dot, and no `..`.
 pub fn is_file_name(name: &str) -> bool {
