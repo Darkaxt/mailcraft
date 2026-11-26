@@ -1383,6 +1383,11 @@ msgstr "A Küldés után az üzenet ennyi ideig vár a Postázandó üzenetek k�
 msgid "After you accept, tentatively accept or decline a meeting request in the mail, or take a cancelled meeting out of your calendar, the message goes to Deleted Items. Left off, it stays where it is and says what you answered."
 msgstr "Miután elfogadod, előre megfontoltan elfogadod vagy visszautasítod a levélben a találkozó iránti kérelmet, vagy kiveszed a törölt találkozót a naptáradból, az üzenet a Törölt tárgyakhoz kerül. Lemaradva, ott marad, ahol van, és elmondja, mit válaszoltál."
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Age limit (minutes)"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt
 #, fuzzy
@@ -1602,6 +1607,11 @@ msgstr "Szintén Hotmail, Élő és MSN"
 #. interface
 #: crates/ui-egui/src/shortcuts_page.rs
 msgid "Alt"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Always"
 msgstr ""
 
 #. command label
@@ -2141,7 +2151,7 @@ msgid "Arrange Tasks By"
 msgstr "Feladatok elrendezése"
 
 #. ribbon, ribbon location
-#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/for_you.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Arrangement"
 msgstr "Elrendezés"
@@ -3841,6 +3851,11 @@ msgstr "Jelölő törlése"
 msgid "Clear Formatting"
 msgstr "Formázás törlése"
 
+#. command label
+#: crates/engine/src/cmd/for_you.rs
+msgid "Clear Link History"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/ribbon/view_menus.rs
 #, fuzzy
@@ -3864,6 +3879,11 @@ msgstr "Szűrők törlése"
 #, fuzzy
 msgid "Clear flag"
 msgstr "Jelölő törlése"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Clear link history"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListBar.kt crates/ui-egui/src/mail_view.rs
@@ -6150,6 +6170,11 @@ msgid "Everything"
 msgstr "Minden"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Everything else"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/opening.rs
 #, fuzzy
 msgid "Everything else in it opens as usual."
@@ -6671,6 +6696,11 @@ msgid ""
 "Properties"
 msgstr "Mappa tulajdonságai"
 
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Folder & subject"
+msgstr ""
+
 #. command label, ribbon location
 #: crates/engine/src/cmd/account.rs crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/filing.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/view.rs
 #, fuzzy
@@ -6722,6 +6752,11 @@ msgstr "{folder} mappa ({of} {n})"
 #, fuzzy
 msgid "Folders"
 msgstr "Mappák"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Folders in the Inbox's For you"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/graph_mail.rs
@@ -6790,6 +6825,11 @@ msgstr "Betűméret"
 msgid "Food & drink"
 msgstr ""
 
+#. command label
+#: crates/engine/src/cmd/for_you.rs
+msgid "For You Settings"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
@@ -6839,6 +6879,21 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Egyelőre az automatikus válaszok nem módosulnak: {error}"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs crates/ui-egui/src/mail_view.rs
+msgid "For you"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "For you settings"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "For you settings…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/ews_setup.rs
 #, fuzzy
 msgid "Forget"
@@ -6861,6 +6916,11 @@ msgstr "Felejtsd el a megbízható tanúsítványt"
 #, fuzzy
 msgid "Forget the pictures that are kept; they are downloaded again when you ask."
 msgstr "Elfelejti a megőrzött képeket; kérésére újra letöltődnek."
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Forget which messages you opened a link in"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
@@ -7642,11 +7702,21 @@ msgstr "Részletek elrejtése"
 msgid "Hide MailCraft"
 msgstr "MailCraft elrejtése"
 
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Hide Reading Pane When Nothing Is Selected"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Hide This Copy"
 msgstr "A másolat elrejtése"
+
+#. interface
+#: crates/ui-egui/src/ribbon.rs
+msgid "Hide When Nothing Is Selected"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MessageHeader.kt
@@ -8122,6 +8192,11 @@ msgid "Importing… {messages} of {total}"
 msgstr "Importálás… {messages} of {total}"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "In All mail"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/attachment_preview.rs
 #, fuzzy
 msgid "In Junk E-mail, preview an attachment from its menu."
@@ -8156,6 +8231,11 @@ msgstr "Egyszerű szöveges üzenetben"
 #, fuzzy
 msgid "In line with text"
 msgstr "Szöveggel egy sorban"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "In the Inbox (with unread mail filed into other folders)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -11440,6 +11520,11 @@ msgstr ""
 msgid "New search folder…"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "New senders, first seen within (days)"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 #, fuzzy
@@ -11798,6 +11883,11 @@ msgstr ""
 #, fuzzy
 msgid "No file manager could be started to show the folder."
 msgstr "A fájlkezelő nem mutathatja meg a mappát."
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "No folders mail is filed into."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/move_items.rs crates/ui-egui/src/ribbon.rs
@@ -13691,6 +13781,11 @@ msgstr ""
 #, fuzzy
 msgid "People to invite"
 msgstr "Meghívandók"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "People you reply to, among their latest (messages)"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PeopleScreen.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/signatures.rs
@@ -16570,6 +16665,16 @@ msgstr "Képek küldése"
 msgid "Sender's address contains"
 msgstr "A feladó címe tartalmazza"
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Senders whose links you open, over (days)"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Senders you read, over (days)"
+msgstr ""
+
 #. name
 #: crates/model/src/sync/progress.rs
 #, fuzzy
@@ -16899,6 +17004,11 @@ msgid ""
 "Training"
 msgstr "Képzés megjelenítése"
 
+#. command label
+#: crates/engine/src/cmd/for_you.rs
+msgid "Show All For You"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/calendar.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -17046,6 +17156,11 @@ msgid "Show a notification when a calendar or task reminder falls due, even when
 msgstr "Értesítést jelenít meg, amikor egy naptár- vagy feladatemlékeztető esedékessé válik, akkor is, ha az alkalmazás be van zárva. Kikapcsolva nem jelenik meg értesítés; az emlékeztetők megmaradnak a naptárban és a Feladatokban."
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Show all"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Show as"
@@ -17067,6 +17182,11 @@ msgstr ""
 msgid "Show as Conversations"
 msgstr "Társalgások"
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Show at most"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 #, fuzzy
@@ -17078,6 +17198,11 @@ msgstr "Befejezett feladatok megjelenítése"
 #, fuzzy
 msgid "Show details"
 msgstr "Részletek megjelenítése"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Show fewer"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/sender_images.rs
@@ -22367,6 +22492,11 @@ msgid "Unread"
 msgstr "Olvasatlan"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Unread mail worth reading first, at the top of the list."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Unread messages in the folder itself"
@@ -22781,7 +22911,7 @@ msgid "Version {version}"
 msgstr "Verzió: {version}"
 
 #. name, ribbon location
-#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/for_you.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
 msgid "View"
 msgstr "Nézet"
@@ -22956,6 +23086,16 @@ msgstr "Ami a rendszer vágólapján van, az nem ez a találkozó"
 #, fuzzy
 msgid "What it is made of"
 msgstr "Miből készült?"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "What qualifies"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "What the For you section at the top of All mail and the Inbox lists"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/sync_panel.rs
@@ -23647,6 +23787,11 @@ msgstr "A postafiókáját megjavították."
 #, fuzzy
 msgid "Your name"
 msgstr "Megjelenítendő név"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Your names on notifications"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -24640,6 +24785,11 @@ msgid "from contains {words}"
 msgstr "a feladó tartalmazza: {words}"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "from your addresses"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "from {from} to {to}"
@@ -24989,6 +25139,11 @@ msgstr "olvasottnak jelölés"
 #, fuzzy
 msgid "message {id} keeps no original"
 msgstr "üzenet {id} nem eredeti"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "messages (0: all); the rest under Show all"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reminders.rs

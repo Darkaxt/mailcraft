@@ -256,13 +256,13 @@ fn the_inbox_brings_back_mail_filed_into_switched_on_folders() {
     let account = s.mailbox.folder(inbox(&s)).unwrap().account;
     let travels = s.mailbox.add_folder(account, None, "Travels").unwrap();
     // From a sender who is in no tier: he has never read their mail.
-    let old = message("tickets@air.example", 90, false);
-    add(&mut s, travels, bulk(old));
+    let old = add(&mut s, travels, bulk(message("tickets@air.example", 90, false)));
     let ticket = add(&mut s, travels, bulk(message("tickets@air.example", 1, false)));
     assert!(section(&mut s).is_empty());
     s.prefs.for_you.folders = vec![ForYouFolder { folder: travels, always: true, max_age_minutes: None }];
     s.rev += 1;
-    assert_eq!(section(&mut s), vec![(ticket, Tier::Folder)]);
+    // Without an age limit, all its unread mail, however old, newest first.
+    assert_eq!(section(&mut s), vec![(ticket, Tier::Folder), (old, Tier::Folder)]);
     // Selecting it there keeps it selected, though it is in no Inbox.
     s.run("mail.select", &json!({"ids": [ticket]})).unwrap();
     assert_eq!(s.sel.messages, vec![ticket]);

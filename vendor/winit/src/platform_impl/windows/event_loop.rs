@@ -52,7 +52,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     MINMAXINFO, MNC_CLOSE, MSG, MWMO_INPUTAVAILABLE, NCCALCSIZE_PARAMS, PM_REMOVE, PT_PEN,
     HTMAXBUTTON, HTSYSMENU, HTLEFT, HTRIGHT, HTTOP, HTBOTTOM, HTTOPLEFT, HTTOPRIGHT,
     HTBOTTOMLEFT, HTBOTTOMRIGHT, WM_NCHITTEST, WM_NCMOUSEMOVE, WM_NCMOUSELEAVE,
-    PT_TOUCH, QS_ALLINPUT, RI_MOUSE_HWHEEL, RI_MOUSE_WHEEL, SC_MINIMIZE, SC_RESTORE,
+    PT_TOUCH, QS_ALLINPUT, RI_MOUSE_HWHEEL, RI_MOUSE_WHEEL, SC_MAXIMIZE, SC_MINIMIZE, SC_RESTORE,
+    WM_NCLBUTTONUP,
     SIZE_MAXIMIZED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WHEEL_DELTA, WINDOWPOS,
     WMSZ_BOTTOM, WMSZ_BOTTOMLEFT, WMSZ_BOTTOMRIGHT, WMSZ_LEFT, WMSZ_RIGHT, WMSZ_TOP, WMSZ_TOPLEFT,
     WMSZ_TOPRIGHT, WM_CAPTURECHANGED, WM_CLOSE, WM_CREATE, WM_DESTROY, WM_DPICHANGED,
@@ -1254,6 +1255,16 @@ unsafe fn public_window_callback_inner(
         },
 
         WM_NCLBUTTONDOWN => {
+            // The maximize button is drawn by the app inside the client area, so the default
+            // caption-button tracking (which hit-tests the classic, zero-sized frame's own button
+            // rectangle) never fires SC_MAXIMIZE. Track the press here and toggle on release, as
+            // the system button does; Snap layouts still come from answering HTMAXBUTTON.
+            let maximize = wparam == HTMAXBUTTON as usize;
+            userdata.window_state_lock().caption_maximize_down = maximize;
+            if maximize {
+                result = ProcResult::Value(0);
+                return;
+            }
             if wparam == HTCAPTION as _ {
                 // Prevent the user event loop from pausing when left clicking the title bar.
                 //
@@ -1281,6 +1292,19 @@ unsafe fn public_window_callback_inner(
                 // in the main event loop caused by that popup menu.
                 let lparam = 0;
                 unsafe { PostMessageW(window, WM_MOUSEMOVE, 0, lparam) };
+            }
+            result = ProcResult::DefWindowProc(wparam);
+        },
+
+        WM_NCLBUTTONUP => {
+            let pressed = std::mem::take(&mut userdata.window_state_lock().caption_maximize_down);
+            if wparam == HTMAXBUTTON as usize {
+                if pressed {
+                    let command = if util::is_maximized(window) { SC_RESTORE } else { SC_MAXIMIZE };
+                    unsafe { PostMessageW(window, WM_SYSCOMMAND, command as usize, 0) };
+                }
+                result = ProcResult::Value(0);
+                return;
             }
             result = ProcResult::DefWindowProc(wparam);
         },

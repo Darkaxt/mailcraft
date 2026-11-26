@@ -1311,6 +1311,11 @@ msgstr "Nach dem Senden wartet eine Nachricht so lange im Postausgang und zeigt 
 msgid "After you accept, tentatively accept or decline a meeting request in the mail, or take a cancelled meeting out of your calendar, the message goes to Deleted Items. Left off, it stays where it is and says what you answered."
 msgstr "Wenn Sie eine Besprechungsanfrage in der E-Mail zusagen, mit Vorbehalt zusagen oder ablehnen oder eine abgesagte Besprechung aus Ihrem Kalender entfernen, wird die Nachricht in „Gelöschte Elemente“ verschoben. Ist dies ausgeschaltet, bleibt sie, wo sie ist, und zeigt Ihre Antwort an."
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Age limit (minutes)"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarScreen.kt
 #, fuzzy
@@ -1525,6 +1530,11 @@ msgstr "Auch Hotmail, Live und MSN"
 #. interface
 #: crates/ui-egui/src/shortcuts_page.rs
 msgid "Alt"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Always"
 msgstr ""
 
 #. command label
@@ -2045,7 +2055,7 @@ msgid "Arrange Tasks By"
 msgstr "Aufgaben anordnen nach"
 
 #. ribbon, ribbon location
-#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/for_you.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Arrangement"
 msgstr "Anordnung"
@@ -3660,6 +3670,11 @@ msgstr "Kennzeichnung löschen"
 msgid "Clear Formatting"
 msgstr "Formatierung löschen"
 
+#. command label
+#: crates/engine/src/cmd/for_you.rs
+msgid "Clear Link History"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/ribbon/view_menus.rs
 msgid "Clear Recent Searches"
@@ -3681,6 +3696,11 @@ msgstr "Filter zurücksetzen"
 #, fuzzy
 msgid "Clear flag"
 msgstr "Kennzeichnung löschen"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Clear link history"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListBar.kt crates/ui-egui/src/mail_view.rs
@@ -5848,6 +5868,11 @@ msgid "Everything"
 msgstr "Alles"
 
 #. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Everything else"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/opening.rs
 msgid "Everything else in it opens as usual."
 msgstr "Alles andere darin wird wie gewohnt geöffnet."
@@ -6335,6 +6360,11 @@ msgstr ""
 "Ordner-\n"
 "eigenschaften"
 
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Folder & subject"
+msgstr ""
+
 #. command label, ribbon location
 #: crates/engine/src/cmd/account.rs crates/engine/src/cmd/aliases.rs crates/engine/src/cmd/filing.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/view.rs
 #, fuzzy
@@ -6383,6 +6413,11 @@ msgstr "Ordner {folder} ({n} von {of})"
 #, fuzzy
 msgid "Folders"
 msgstr "Ordner"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Folders in the Inbox's For you"
+msgstr ""
 
 #. what a command says
 #: crates/engine/src/cmd/graph_mail.rs
@@ -6453,6 +6488,11 @@ msgstr "Schriftgrad"
 msgid "Food & drink"
 msgstr ""
 
+#. command label
+#: crates/engine/src/cmd/for_you.rs
+msgid "For You Settings"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 msgid "For a mail server your organisation runs itself. MailCraft looks for the server from your address, or you can type its address in Server settings. Nothing is sent until you press Connect."
@@ -6501,6 +6541,21 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Vorerst werden Ihre automatischen Antworten nicht geändert: {error}"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs crates/ui-egui/src/mail_view.rs
+msgid "For you"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "For you settings"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "For you settings…"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/ews_setup.rs
 msgid "Forget"
 msgstr "Vergessen"
@@ -6521,6 +6576,11 @@ msgstr "Vertrauenswürdiges Zertifikat vergessen"
 #, fuzzy
 msgid "Forget the pictures that are kept; they are downloaded again when you ask."
 msgstr "Aufbewahrte Bilder vergessen; sie werden auf Anforderung erneut heruntergeladen."
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Forget which messages you opened a link in"
+msgstr ""
 
 #. ribbon, ribbon location
 #: crates/engine/src/cmd/format.rs crates/ui-egui/src/ribbon.rs
@@ -7244,10 +7304,20 @@ msgstr "Details ausblenden"
 msgid "Hide MailCraft"
 msgstr "MailCraft ausblenden"
 
+#. command label
+#: crates/engine/src/cmd/view.rs
+msgid "Hide Reading Pane When Nothing Is Selected"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
 msgid "Hide This Copy"
 msgstr "Diese Kopie ausblenden"
+
+#. interface
+#: crates/ui-egui/src/ribbon.rs
+msgid "Hide When Nothing Is Selected"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MessageHeader.kt
@@ -7671,6 +7741,11 @@ msgid "Importing… {messages} of {total}"
 msgstr "Importiere … {messages} von {total}"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "In All mail"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/attachment_preview.rs
 msgid "In Junk E-mail, preview an attachment from its menu."
 msgstr "In Junk-E-Mails können Sie eine Anlage über deren Menü in der Vorschau anzeigen."
@@ -7701,6 +7776,11 @@ msgstr "In einer Nur-Text-Nachricht"
 #, fuzzy
 msgid "In line with text"
 msgstr "Mit Text in Zeile"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "In the Inbox (with unread mail filed into other folders)"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -10829,6 +10909,11 @@ msgstr ""
 msgid "New search folder…"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "New senders, first seen within (days)"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 #, fuzzy
@@ -11162,6 +11247,11 @@ msgstr ""
 #: crates/ui-egui/src/data_removal.rs
 msgid "No file manager could be started to show the folder."
 msgstr "Es konnte kein Dateimanager gestartet werden, um den Ordner anzuzeigen."
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "No folders mail is filed into."
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/move_items.rs crates/ui-egui/src/ribbon.rs
@@ -12944,6 +13034,11 @@ msgstr ""
 #, fuzzy
 msgid "People to invite"
 msgstr "Einzuladende Personen"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "People you reply to, among their latest (messages)"
+msgstr ""
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PeopleScreen.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/merge_contacts.rs crates/ui-egui/src/signatures.rs
@@ -15685,6 +15780,16 @@ msgstr "Absenderbilder"
 msgid "Sender's address contains"
 msgstr "Adresse des Absenders enthält"
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Senders whose links you open, over (days)"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Senders you read, over (days)"
+msgstr ""
+
 #. name
 #: crates/model/src/sync/progress.rs
 #, fuzzy
@@ -15999,6 +16104,11 @@ msgstr ""
 "Training\n"
 "anzeigen"
 
+#. command label
+#: crates/engine/src/cmd/for_you.rs
+msgid "Show All For You"
+msgstr ""
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/calendar.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -16142,6 +16252,11 @@ msgid "Show a notification when a calendar or task reminder falls due, even when
 msgstr "Zeigt eine Benachrichtigung, wenn eine Kalender- oder Aufgabenerinnerung fällig wird, auch wenn die App geschlossen ist. Aus: keine Benachrichtigung; die Erinnerungen bleiben im Kalender und in den Aufgaben."
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Show all"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Show as"
@@ -16163,6 +16278,11 @@ msgstr ""
 msgid "Show as Conversations"
 msgstr "Als Unterhaltungen anzeigen"
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Show at most"
+msgstr ""
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 #, fuzzy
@@ -16174,6 +16294,11 @@ msgstr "Erledigte Aufgaben anzeigen"
 #, fuzzy
 msgid "Show details"
 msgstr "Details anzeigen"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Show fewer"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/sender_images.rs
@@ -21172,6 +21297,11 @@ msgid "Unread"
 msgstr "Ungelesen"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Unread mail worth reading first, at the top of the list."
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/folder_properties.rs
 #, fuzzy
 msgid "Unread messages in the folder itself"
@@ -21569,7 +21699,7 @@ msgid "Version {version}"
 msgstr "Version {version}"
 
 #. name, ribbon location
-#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/for_you.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
 msgid "View"
 msgstr "Ansicht"
@@ -21738,6 +21868,16 @@ msgstr "Was in der Zwischenablage des Systems ist, ist nicht dieser Termin"
 #, fuzzy
 msgid "What it is made of"
 msgstr "Woraus es besteht"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "What qualifies"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "What the For you section at the top of All mail and the Inbox lists"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/sync_panel.rs
@@ -22393,6 +22533,11 @@ msgstr "Ihr Postfach wurde repariert"
 #, fuzzy
 msgid "Your name"
 msgstr "Ihr Name"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Your names on notifications"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -23341,6 +23486,11 @@ msgid "from contains {words}"
 msgstr "der Absender enthält {words}"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "from your addresses"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 msgid "from {from} to {to}"
 msgstr "von {from} bis {to}"
@@ -23670,6 +23820,11 @@ msgstr "als gelesen markieren"
 #: crates/engine/src/session.rs
 msgid "message {id} keeps no original"
 msgstr "Nachricht {id} enthält kein Original"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "messages (0: all); the rest under Show all"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reminders.rs

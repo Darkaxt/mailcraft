@@ -25,6 +25,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 /// Contains information about states and the window that the callback is going to use.
 pub(crate) struct WindowState {
     pub caption_regions: Option<crate::platform::windows::CaptionRegions>,
+    /// A press on the client-drawn maximize button (`HTMAXBUTTON`), waiting for its release.
+    pub caption_maximize_down: bool,
     pub mouse: MouseProperties,
 
     /// Used by `WM_GETMINMAXINFO`.
@@ -148,6 +150,7 @@ impl WindowState {
     ) -> WindowState {
         WindowState {
             caption_regions: None,
+            caption_maximize_down: false,
             mouse: MouseProperties {
                 non_client: false,
                 selected_cursor: SelectedCursor::default(),
