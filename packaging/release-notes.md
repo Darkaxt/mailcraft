@@ -1,3 +1,8 @@
+**MailCraft 0.12.42** — move contacts between folders
+- In People, select one or more contacts and use Move to put them in another contacts folder, or keep them on this computer only.
+- People shows each contacts folder: which account it is kept in, whether it is read only, and contacts not sent to the server yet.
+- Everything from 0.12.41 stays.
+
 **MailCraft 0.12.41** — the newest MailCraft features from the original project
 - Rules can look for much more (people, words, size, categories, flags, days) and can copy, flag or show a desktop alert. A rule's Delete never deletes for good.
 - Spelling is checked as you write, with Windows' own dictionaries. Right-click a marked word for suggestions.

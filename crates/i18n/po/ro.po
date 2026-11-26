@@ -208,6 +208,12 @@ msgid "(none)"
 msgstr "(niciunul)"
 
 #. interface
+#: crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "(read only)"
+msgstr "(doar citire)"
+
+#. interface
 #: crates/ui-egui/src/reading/remote.rs
 #, fuzzy
 msgid "(the server didn't confirm the sender)"
@@ -938,7 +944,7 @@ msgid "Accessibility"
 msgstr "Accesibilitate"
 
 #. command label, interface
-#: crates/engine/src/cmd/help.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/forms/junk.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/tasks_view.rs
+#: crates/engine/src/cmd/help.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/forms/junk.rs crates/ui-egui/src/tasks_view.rs
 #, fuzzy
 msgid "Account"
 msgstr "Cont"
@@ -983,7 +989,7 @@ msgid "Accounts"
 msgstr "Conturi"
 
 #. ribbon, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/contacts_move.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Actions"
 msgstr "Acțiuni"
@@ -1768,6 +1774,15 @@ msgstr "Un element ar ajunge unde este deja; nu s-a mutat nimic."
 #, fuzzy
 msgid "An unsubscribe is already on its way."
 msgstr "O dezabonare este deja în curs."
+
+#. interface
+#: crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "And {n} more change was put back."
+msgid_plural "And {n} more changes were put back."
+msgstr[0] "Și încă {n} modificare a fost anulată."
+msgstr[1] "Și încă {n} modificări au fost anulate."
+msgstr[2] "Și încă {n} de modificări au fost anulate."
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -3088,6 +3103,12 @@ msgstr "Calibri"
 msgid "Call"
 msgstr "Apelează"
 
+#. interface
+#: crates/ui-egui/src/address_book.rs
+#, fuzzy
+msgid "Can only be read"
+msgstr "Poate fi doar citit"
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
 #, fuzzy
@@ -3101,7 +3122,7 @@ msgid "Can't sign"
 msgstr "Nu se poate semna"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PersonEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/updates.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PersonEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/archive.rs crates/ui-egui/src/chrome.rs crates/ui-egui/src/close_to_tray.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/import_pst.rs crates/ui-egui/src/import_tree.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/report_problem.rs crates/ui-egui/src/search_folders.rs crates/ui-egui/src/security.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "Cancel"
 msgstr "Anulare"
@@ -3874,9 +3895,8 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/reading.rs
-#, fuzzy
 msgid "Click to preview {name}; double-click to open it"
-msgstr "Clic pentru previzualizarea {name}; dublu clic pentru deschidere"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shortcuts_page.rs
@@ -4191,7 +4211,7 @@ msgid "Contact Changes to Send"
 msgstr "Modificări de contacte de trimis"
 
 #. interface
-#: crates/ui-egui/src/address_book.rs crates/ui-egui/src/check_names.rs
+#: crates/ui-egui/src/address_book.rs crates/ui-egui/src/check_names.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Contacts"
 msgstr "Contacte"
@@ -5404,9 +5424,8 @@ msgstr "Gata: {n} noi"
 
 #. interface
 #: crates/ui-egui/src/reading.rs
-#, fuzzy
 msgid "Double-click to open {name}; right-click to save it"
-msgstr "Dublu clic pentru a deschide {name}; clic dreapta pentru a-l salva"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/shortcuts_page.rs
@@ -7751,7 +7770,7 @@ msgid "Hold Unsent Mail"
 msgstr "Reținere e-mail netrimis"
 
 #. interface, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/share.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/category.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/gmail_move.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/engine/src/cmd/react.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/shortcuts_page.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar/share.rs crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/category.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/contacts_move.rs crates/engine/src/cmd/followup.rs crates/engine/src/cmd/gmail_move.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs crates/engine/src/cmd/react.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/snooze.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/shortcuts_page.rs
 #, fuzzy
 msgid "Home"
 msgstr "Pornire"
@@ -8957,8 +8976,8 @@ msgstr ""
 msgid "Kept Public key"
 msgstr "Cheie publică păstrată"
 
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Kept in"
 msgstr "Păstrată în"
@@ -8980,6 +8999,12 @@ msgstr "Păstrat în spațiul de stocare al acestui browser, salvat pe parcurs. 
 #, fuzzy
 msgid "Kept in {path}, saved as you go."
 msgstr "Păstrat în {path}, salvat pe parcurs."
+
+#. interface
+#: crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "Kept in: {folder}"
+msgstr "Păstrat în: {folder}"
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PersonPlaces.kt
@@ -10651,7 +10676,7 @@ msgid "Month"
 msgstr "Lună"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt
 #, fuzzy
 msgid "More"
 msgstr "Mai multe"
@@ -10729,7 +10754,7 @@ msgid "Most of the sender's name is characters that aren't shown, and the messag
 msgstr "Numele expeditorului e format în mare parte din caractere invizibile, iar mesajul a venit de la {real}."
 
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/gmail_move.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#: crates/engine/src/cmd/gmail_move.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/filing.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/move_contacts.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Move"
 msgstr "Mutare"
@@ -10743,6 +10768,12 @@ msgid ""
 msgstr ""
 "Mutare\n"
 "dosar"
+
+#. interface
+#: crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "Move \"{name}\" to:"
+msgstr "Mută „{name}” în:"
 
 #. command label
 #: crates/engine/src/cmd/account.rs
@@ -10843,6 +10874,12 @@ msgstr "Mutare și trimitere invitații"
 msgid "Move and Send Updates"
 msgstr "Mutare și trimitere actualizări"
 
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "Move anyway"
+msgstr "Mută oricum"
+
 #. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Move before {rule} in this account's complete rule order"
@@ -10911,6 +10948,18 @@ msgstr "Mutare în calendar"
 msgid "Move to Category"
 msgstr "Mutare în categorie"
 
+#. command label, interface
+#: crates/engine/src/cmd/contacts_move.rs crates/ui-egui/src/dialogs.rs
+#, fuzzy
+msgid "Move to Contacts Folder"
+msgstr "Mută în dosarul de contacte"
+
+#. interface
+#: crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "Move to Contacts Folder…"
+msgstr "Mută în dosarul de contacte…"
+
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/mail.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/opened_message.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -10935,6 +10984,18 @@ msgstr "Mutare în calendarul contului meu"
 msgid "Move to Your Account's Calendar"
 msgstr "Mutare în calendarul contului dvs."
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt
+#, fuzzy
+msgid "Move to contacts folder"
+msgstr "Mută în dosarul de contacte"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt
+#, fuzzy
+msgid "Move to contacts folder…"
+msgstr "Mută în dosarul de contacte…"
+
 #. name
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
@@ -10958,6 +11019,21 @@ msgstr "Mutare în calendarul contului"
 #, fuzzy
 msgid "Move to…"
 msgstr "Mutare în…"
+
+#. interface
+#: crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "Move {n} contact to:"
+msgid_plural "Move {n} contacts to:"
+msgstr[0] "Mută {n} contact în:"
+msgstr[1] "Mută {n} contacte în:"
+msgstr[2] "Mută {n} de contacte în:"
+
+#. interface
+#: crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "Move…"
+msgstr "Mută…"
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -12252,8 +12328,8 @@ msgstr "Încă necitit."
 msgid "Not saved"
 msgstr "Nesalvat"
 
-#. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PersonPlaces.kt
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PersonPlaces.kt crates/ui-egui/src/people_view.rs
 #, fuzzy
 msgid "Not sent yet"
 msgstr "Încă netrimis"
@@ -12617,7 +12693,7 @@ msgid "On the server: here it can be switched on or off, moved or deleted"
 msgstr "Pe server: aici poate fi pornit sau oprit, mutat sau șters"
 
 #. interface
-#: crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/widgets.rs
+#: crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/move_contacts.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/widgets.rs
 #, fuzzy
 msgid "On this computer"
 msgstr "Pe acest computer"
@@ -13084,6 +13160,12 @@ msgstr "Open source sub licența MIT sau licența Apache 2.0, la alegere."
 #, fuzzy
 msgid "Open source under the MIT License or the Apache License 2.0, at your option. The interface fonts are Inter, Source Sans 3 and JetBrains Mono (SIL Open Font License). Every icon is drawn in code."
 msgstr "Open source sub licența MIT sau licența Apache 2.0, la alegere. Fonturile interfeței sunt Inter, Source Sans 3 și JetBrains Mono (SIL Open Font License). Fiecare pictogramă este desenată din cod."
+
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "Open that one"
+msgstr "Deschide-l pe acela"
 
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
@@ -14282,12 +14364,6 @@ msgstr "Citiți acum din nou Favoritele din Outlook"
 #, fuzzy
 msgid "Read with {owner}'s sign-in, for as long as you keep it: the person has to have shared their calendar with you. It is kept on this computer only: it won't appear in Outlook or on your other devices. Microsoft asks you once to let MailCraft read other people's calendars."
 msgstr "Citit cu conectarea lui {owner}, cât timp îl păstrați: persoana trebuie să-și fi partajat calendarul cu dvs. Se păstrează doar pe acest computer: nu va apărea în Outlook sau pe celelalte dispozitive. Microsoft vă întreabă o dată dacă permiteți ca MailCraft să citească calendarele altor persoane."
-
-#. interface
-#: crates/ui-egui/src/people_view.rs
-#, fuzzy
-msgid "Read-only"
-msgstr "Doar citire"
 
 #. interface
 #: crates/ui-egui/src/reading/appearance.rs
@@ -16895,6 +16971,12 @@ msgstr "Afișare calendar"
 #. command label
 #: crates/engine/src/cmd/view.rs
 #, fuzzy
+msgid "Show Contacts Folder"
+msgstr "Afișează dosarul de contacte"
+
+#. command label
+#: crates/engine/src/cmd/view.rs
+#, fuzzy
 msgid "Show Contacts Of"
 msgstr "Afișare contacte din"
 
@@ -18607,6 +18689,12 @@ msgstr "Aceasta nu a putut fi făcută."
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Hosted.kt
 #, fuzzy
+msgid "That could not be moved."
+msgstr "Nu s-a putut muta."
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Hosted.kt
+#, fuzzy
 msgid "That could not be saved."
 msgstr "Nu s-a putut salva."
 
@@ -19241,6 +19329,18 @@ msgstr "Contactele nu au putut fi preluate: {error}"
 #, fuzzy
 msgid "The contacts folder \"{name}\" can only be read: a new contact can't be put there."
 msgstr "Dosarul de contacte „{name}” poate fi doar citit: nu se poate pune un contact nou acolo."
+
+#. what a command says
+#: crates/engine/src/cmd/contacts_move.rs
+#, fuzzy
+msgid "The contacts folder \"{name}\" can only be read: its contacts can't be moved out of it."
+msgstr "Dosarul de contacte „{name}” poate fi doar citit: contactele lui nu pot fi mutate din el."
+
+#. what a command says
+#: crates/engine/src/cmd/contacts_move.rs
+#, fuzzy
+msgid "The contacts folder \"{name}\" can only be read: nothing can be moved into it."
+msgstr "Dosarul de contacte „{name}” poate fi doar citit: nu se poate muta nimic în el."
 
 #. what a command says
 #: crates/engine/src/cmd/contacts_remote.rs
@@ -20620,6 +20720,12 @@ msgstr "Nu există conexiune la rețea."
 msgid "There is no other calendar to lay it over."
 msgstr "Nu există alt calendar peste care să-l suprapuneți."
 
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "There is no other contacts folder to move to."
+msgstr "Nu există alt dosar de contacte în care să muți."
+
 #. interface
 #: crates/ui-egui/src/signatures.rs
 #, fuzzy
@@ -20996,6 +21102,12 @@ msgstr "Această categorie se află pe mai multe evenimente din calendare păstr
 #, fuzzy
 msgid "This certificate's key is of a kind MailCraft doesn't use: only ECDSA on P-256 or P-384 is imported here."
 msgstr "Cheia acestui certificat este de un tip pe care MailCraft nu îl folosește: aici se importă doar ECDSA pe P-256 sau P-384."
+
+#. interface
+#: crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "This change is on this computer and goes to the server at the next Send/Receive."
+msgstr "Această modificare este pe acest computer și ajunge la server la următorul Trimitere/Primire."
 
 #. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
@@ -25182,13 +25294,13 @@ msgid "no calendar with id {id}"
 msgstr "nu există calendar cu ID-ul {id}"
 
 #. what a command says
-#: crates/engine/src/cmd/attach_item.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs
+#: crates/engine/src/cmd/attach_item.rs crates/engine/src/cmd/contacts_move.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/people_merge.rs
 #, fuzzy
 msgid "no contact with id {id}"
 msgstr "nu există contact cu ID-ul {id}"
 
 #. what a command says
-#: crates/engine/src/cmd/contacts_remote.rs
+#: crates/engine/src/cmd/contacts_move.rs crates/engine/src/cmd/contacts_remote.rs crates/engine/src/cmd/view.rs
 #, fuzzy
 msgid "no contacts folder with id {id}"
 msgstr "niciun dosar de contacte cu id-ul {id}"
@@ -25689,7 +25801,7 @@ msgid "save the mailbox to a file first: the switch keeps a copy of it beside th
 msgstr "salvați întâi cutia poștală într-un fișier: schimbarea păstrează o copie lângă acel fișier"
 
 #. what a command says, why a command can't run
-#: crates/engine/src/cmd/people.rs
+#: crates/engine/src/cmd/contacts_move.rs crates/engine/src/cmd/people.rs
 #, fuzzy
 msgid "select a contact first"
 msgstr "selectați întâi un contact"
@@ -27365,6 +27477,12 @@ msgstr "această versiune nu se poate dezabona cu un clic"
 msgid "this contact has no e-mail address"
 msgstr "acest contact nu are adresă de e-mail"
 
+#. why a command can't run
+#: crates/engine/src/cmd/people.rs
+#, fuzzy
+msgid "this contacts folder can only be read"
+msgstr "acest dosar de contacte poate fi doar citit"
+
 #. what a command says
 #: crates/engine/src/cmd/remote.rs
 #, fuzzy
@@ -27900,6 +28018,12 @@ msgstr "{contributors} contribuitori · {commits} commituri"
 msgid "{counted} · Paused until the next Send/Receive"
 msgstr "{counted} · Întrerupt până la următoarea Trimitere/primire"
 
+#. what a command says
+#: crates/engine/src/cmd/contacts_move.rs
+#, fuzzy
+msgid "{count} contacts are still being sent to their servers, among them {names}: try again shortly."
+msgstr "{count} contacte sunt încă în curs de trimitere către serverele lor, printre care {names}: încercați din nou în curând."
+
 #. interface
 #: crates/ui-egui/src/mail_view.rs
 msgid "{count} messages are not fully downloaded. Their missing content cannot be searched offline."
@@ -27938,6 +28062,12 @@ msgstr "{folders} vor fi create într-un dosar nou numit {name} pe acest compute
 #: crates/ui-egui/src/nav.rs
 msgid "{folder} (all accounts)"
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/forms.rs crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "{folder} ({owner})"
+msgstr "{folder} ({owner})"
 
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/nav.rs
@@ -28117,6 +28247,12 @@ msgstr "{m} min {s} s"
 msgid "{names} and {n} more"
 msgstr "{names} și încă {n}"
 
+#. what a command says
+#: crates/engine/src/cmd/contacts_move.rs
+#, fuzzy
+msgid "{names} are still being sent to their servers: try again shortly."
+msgstr "{names} sunt încă în curs de trimitere către serverele lor: încercați din nou în curând."
+
 #. interface
 #: crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
@@ -28140,6 +28276,12 @@ msgstr "{name} nu a putut fi citit, așa că nu a fost atașat."
 #, fuzzy
 msgid "{name} couldn't be added to {folder}{why}: it is kept on this computer."
 msgstr "{name} nu a putut fi adăugat în {folder}{why}: este păstrat pe acest computer."
+
+#. what a command says
+#: crates/engine/src/cmd/contacts_remote.rs
+#, fuzzy
+msgid "{name} couldn't be moved to {folder}{why}: it stays in {from}."
+msgstr "{name} nu a putut fi mutat în {folder}{why}: rămâne în {from}."
 
 #. interface
 #: crates/ui-egui/src/files.rs
@@ -28225,6 +28367,12 @@ msgstr "{name} este un cont JMAP, iar această versiune nu trimite și nu prime�
 msgid "{name} is a shared mailbox whose account is gone: remove it and add it again"
 msgstr "{name} este o cutie poștală partajată al cărei cont nu mai există: eliminați-o și adăugați-o din nou"
 
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MovePerson.kt crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "{name} is already in {folder}."
+msgstr "{name} este deja în {folder}."
+
 #. interface
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -28242,6 +28390,12 @@ msgstr "{name} rămâne pe acest computer: {folder} nu mai este pe server, iar m
 #, fuzzy
 msgid "{name} is larger than {mb} MB"
 msgstr "{name} este mai mare de {mb} MB"
+
+#. what a command says
+#: crates/engine/src/cmd/contacts_move.rs
+#, fuzzy
+msgid "{name} is still being sent to its server: try again shortly."
+msgstr "{name} încă se trimite către serverul său: încercați din nou în curând."
 
 #. interface
 #: crates/ui-egui/src/reading/warnings.rs
@@ -28565,6 +28719,15 @@ msgstr[1] "{n} modificări făcute aici nu au ajuns pe server și se vor pierde.
 msgstr[2] "{n} de modificări făcute aici nu au ajuns pe server și se vor pierde."
 
 #. interface
+#: crates/ui-egui/src/sync_panel.rs
+#, fuzzy
+msgid "{n} change to contacts isn't on the server yet: it is tried again later"
+msgid_plural "{n} changes to contacts aren't on the server yet: they are tried again later"
+msgstr[0] "{n} modificare de contacte nu este încă pe server: se reîncearcă mai târziu"
+msgstr[1] "{n} modificări de contacte nu sunt încă pe server: se reîncearcă mai târziu"
+msgstr[2] "{n} de modificări de contacte nu sunt încă pe server: se reîncearcă mai târziu"
+
+#. interface
 #: crates/ui-egui/src/graph_switch.rs
 #, fuzzy
 msgid "{n} change waiting for the IMAP server won't reach it; it stays in the backup copy."
@@ -28614,6 +28777,15 @@ msgid_plural "{n} contacts aren't undone: too many changes are waiting to be sen
 msgstr[0] "{n} contact nu este anulat: prea multe modificări așteaptă să fie trimise la serverul său."
 msgstr[1] "{n} contacte nu sunt anulate: prea multe modificări așteaptă să fie trimise la serverele lor."
 msgstr[2] "{n} de contacte nu sunt anulate: prea multe modificări așteaptă să fie trimise la serverele lor."
+
+#. interface
+#: crates/ui-egui/src/move_contacts.rs
+#, fuzzy
+msgid "{n} contact wasn't moved, as it is still being sent to its server: {names}. Try again shortly."
+msgid_plural "{n} contacts weren't moved, as they are still being sent to their servers: {names}. Try again shortly."
+msgstr[0] "{n} contact nu a fost mutat, deoarece este încă în curs de trimitere către serverul său: {names}. Încercați din nou în curând."
+msgstr[1] "{n} contacte nu au fost mutate, deoarece sunt încă în curs de trimitere către serverele lor: {names}. Încercați din nou în curând."
+msgstr[2] "{n} de contacte nu au fost mutate, deoarece sunt încă în curs de trimitere către serverele lor: {names}. Încercați din nou în curând."
 
 #. interface
 #: crates/ui-egui/src/lib.rs
@@ -29700,13 +29872,19 @@ msgid "{people} and {nameless}"
 msgstr "{people} și {nameless}"
 
 #. interface
-#: crates/ui-egui/src/dialogs.rs
+#: crates/ui-egui/src/dialogs.rs crates/ui-egui/src/move_contacts.rs
 #, fuzzy
 msgid "{people} and {n} more"
 msgid_plural "{people} and {n} more"
 msgstr[0] "{people} și încă {n}"
 msgstr[1] "{people} și încă {n}"
 msgstr[2] "{people} și încă {n}"
+
+#. interface
+#: crates/ui-egui/src/people_view.rs
+#, fuzzy
+msgid "{person}'s shared contacts"
+msgstr "Contactele partajate ale lui {person}"
 
 #. interface
 #: crates/ui-egui/src/sync_panel.rs
@@ -30129,6 +30307,10 @@ msgstr "−Linii"
 #~ msgstr[0] "{n} mesaj mai vechi nu a fost căutat: textul lui nu e încă încărcat"
 #~ msgstr[1] "{n} mesaje mai vechi nu au fost căutate: textul lor nu e încă încărcat"
 #~ msgstr[2] "{n} de mesaje mai vechi nu au fost căutate: textul lor nu e încă încărcat"
+
+#, fuzzy
+#~ msgid "Read-only"
+#~ msgstr "Doar citire"
 
 #, fuzzy
 #~ msgid "Kept on this phone only: it is not sent to your account."

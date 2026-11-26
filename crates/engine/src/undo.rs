@@ -58,6 +58,8 @@ pub(crate) struct Touched {
     /// Of those it changed, the fields a server keeps that it changed (#1917): undone, only
     /// those go back, and what a server changed since in the others stays.
     contact_fields: BTreeMap<Id, BTreeSet<ContactField>>,
+    /// Of those it changed, the ones it put in another folder (#1144).
+    moved_contacts: BTreeSet<Id>,
     pending_added: HashSet<String>,
     pending_removed: HashSet<String>,
     rules: Option<Vec<mailcraft_model::Rule>>,
@@ -127,6 +129,12 @@ impl Touched {
     /// (rather than adding or taking it away).
     pub(crate) fn contact_fields(&self, id: Id) -> Option<&BTreeSet<ContactField>> {
         self.contact_fields.get(&id)
+    }
+
+    /// Whether the change put contact `id` in another folder (#1144), rather than a refusal or a
+    /// move back done outside any step.
+    pub(crate) fn moved_contact(&self, id: Id) -> bool {
+        self.moved_contacts.contains(&id)
     }
 
     /// The events whose categories the change changed, with the categories it left them (#661).
@@ -232,6 +240,9 @@ pub(crate) fn touched(before: &Mailbox, after: &Mailbox) -> Touched {
                 if !(Arc::ptr_eq(a, b) || a == b) {
                     t.changed_contacts.insert(**id);
                     t.contact_fields.insert(**id, ContactField::changed(b, a));
+                    if a.folder != b.folder {
+                        t.moved_contacts.insert(**id);
+                    }
                 }
                 was.next();
                 is.next();

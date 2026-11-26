@@ -22,6 +22,8 @@ use serde_json::{Value, json};
 
 pub mod bind;
 #[cfg(test)]
+mod contact_move_tests;
+#[cfg(test)]
 mod delete_form_tests;
 
 use crate::cmd::compose::{LEAVING, draft_gone};
@@ -367,6 +369,11 @@ const SAFE: &[&str] = &[
     "view.taskFilter",
     "view.taskAccount",
     "view.peopleAccount",
+    "view.peopleFolder",
+    // (In the fork a move into another contacts folder, #1144, is filing like a mail move: the
+    // contacts are kept, only where they are changes. Into a shared account it is asked about as
+    // a send, as a mail move is: other people see them there.)
+    "people.moveToFolder",
     // (People shows the address list; nothing is looked up for an agent: only what the owner types
     // in the window's search box is, #1262.)
     "people.addressBook",
@@ -1032,6 +1039,13 @@ pub fn classify(s: &Session, id: &str, params: &Value) -> Access {
                     s.mailbox.folder(f).and_then(|f| s.mailbox.account(f.account)).is_some_and(|a| a.is_shared()) && onto_another_server(s, params, f)
                 });
             if folder.is_some_and(|f| is_outbox(&s.mailbox, f)) || onto { Access::Owner(Class::Send) } else { Access::Safe }
+        }
+        "people.moveToFolder" => {
+            let folder = params.get("folder").and_then(Value::as_u64).filter(|f| *f != 0);
+            let shared = folder.is_some_and(|f| {
+                s.mailbox.contact_folders.iter().find(|x| x.id == f).and_then(|x| s.mailbox.account(x.account)).is_some_and(|a| a.is_shared())
+            });
+            if shared { Access::Owner(Class::Send) } else { Access::Safe }
         }
         "mail.delete" => {
             let ids = taken(params);
@@ -3183,6 +3197,31 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
                 },
                 name(p::id(params, "keep"))
             )
+        }
+        "people.moveToFolder" => {
+            let ids: Vec<Id> = match params.get("ids").and_then(Value::as_array) {
+                Some(a) => a.iter().take(1000).filter_map(Value::as_u64).collect(),
+                None => s.sel.contact.into_iter().collect(),
+            };
+            let names: Vec<String> = ids.iter().filter_map(|c| s.mailbox.contact(*c)).map(|c| quoted(&c.name())).collect();
+            // 0 is On this computer, which `p::id` doesn't take.
+            let into = match params.get("folder").and_then(Value::as_u64) {
+                Some(0) => "On this computer".to_string(),
+                Some(f) => s.mailbox.contact_folders.iter().find(|x| x.id == f).map_or_else(
+                    || "a folder that isn't there".to_string(),
+                    |x| {
+                        let whose = s.mailbox.account(x.account).map_or_else(|| "another account".to_string(), |a| clip(&a.email, 80));
+                        format!("{} of {whose}", quoted(&x.name))
+                    },
+                ),
+                None => "no folder".to_string(),
+            };
+            let who = if names.is_empty() {
+                "(no contacts)".to_string()
+            } else {
+                format!("{} ({})", plural(names.len(), "{n} contact", "{n} contacts"), some(&names, 8))
+            };
+            format!("move {who} into {into}, deleting them where they are now")
         }
         "tasks.new" | "tasks.fromMessage" if new_task_onto(s, id, params).is_some() => {
             let account = new_task_onto(s, id, params).and_then(|a| s.mailbox.account(a));
