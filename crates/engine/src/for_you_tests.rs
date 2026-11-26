@@ -383,3 +383,30 @@ fn for_you_settings_round_trip() {
     assert_eq!(s.run("forYou.settings", &json!({})).unwrap()["cap"], json!(5));
     assert!(s.run("forYou.settings", &json!({"cap": "many"})).is_err());
 }
+
+#[test]
+fn for_you_commands_need_no_consent() {
+    use crate::agent::{Access, access};
+    for id in ["forYou.settings", "forYou.showAll", "forYou.clearLinks", "view.paneAutoHide"] {
+        assert_eq!(access(id), Some(Access::Safe), "{id}");
+    }
+}
+
+#[test]
+fn folder_rows_are_a_row_style() {
+    let mut s = session();
+    assert_eq!(s.run("view.rowStyle", &json!({"value": "folder"})).unwrap(), json!({"value": "folder"}));
+    assert!(s.prefs.folder_rows && !s.prefs.one_line);
+    assert_eq!(s.run("view.rowStyle", &json!({"value": "extended"})).unwrap(), json!({"value": "extended"}));
+    assert!(!s.prefs.folder_rows);
+}
+
+#[test]
+fn the_pane_hides_itself_by_default() {
+    let mut s = session();
+    assert!(s.prefs.pane_auto_hide);
+    assert_eq!(s.run("view.paneAutoHide", &json!({"value": false})).unwrap(), json!({"value": false}));
+    // Settings saved before it was there have it on.
+    let old: crate::Prefs = serde_json::from_value(json!({})).unwrap();
+    assert!(old.pane_auto_hide && !old.folder_rows);
+}

@@ -297,6 +297,16 @@ pub fn tier(m: &Message, stats: &SenderStats, p: &ForYouPrefs, own: &Own, now: T
     None
 }
 
+/// What of For you the message list is kept under ([`Session::rows`]): its settings, and while a
+/// folder's mail leaves the Inbox's section by age, the minute.
+pub(crate) fn list_key(s: &Session) -> String {
+    let mut key = serde_json::to_string(&s.prefs.for_you).unwrap_or_default();
+    if s.prefs.for_you.folders.iter().any(|f| f.max_age_minutes.is_some()) && applies(s) == Some(Where::Inbox) {
+        key.push_str(&format!("@{}", s.now().div_euclid(60)));
+    }
+    key
+}
+
 /// Which list has the section.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Where {

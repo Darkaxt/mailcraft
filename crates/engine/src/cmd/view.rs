@@ -76,8 +76,9 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.senderGroups", "Group by Sender", "View › Arrangement", sender_groups).reads().params(TOGGLE),
         CommandSpec::new("view.oneLine", "Single Line", "View › Arrangement", one_line).reads().params(TOGGLE),
         CommandSpec::new("view.rowStyle", "Message Rows", "View › Arrangement", row_style).reads().params(
-            r#"{"value"?: "compact"|"normal"|"extended"} — compact: a message on one line; normal: its folder and subject first, with the time, and under them the sender and the preview; extended: the sender first, then the subject and the preview. Omit to read it"#,
+            r#"{"value"?: "compact"|"normal"|"extended"|"folder"} — compact: a message on one line; normal: its folder and subject first, with the time, and under them the sender and the preview; extended: the sender first, then the subject and the preview; folder: its folder (its sender, in an Inbox) and the time, under them the subject larger, no sender and no preview. Omit to read it"#,
         ),
+        CommandSpec::new("view.paneAutoHide", "Hide Reading Pane When Nothing Is Selected", "View › Layout", pane_auto_hide).reads().params(TOGGLE),
         CommandSpec::new("view.day", "Day", "Home › Arrange", day).reads().key(mac_or("Mod+Ctrl+1", "Mod+Alt+1")),
         CommandSpec::new("view.workWeek", "Work Week", "Home › Arrange", work_week).reads().key(mac_or("Mod+Ctrl+2", "Mod+Alt+2")),
         CommandSpec::new("view.week", "Week", "Home › Arrange", week).reads().key(mac_or("Mod+Ctrl+3", "Mod+Alt+3")),
@@ -448,19 +449,32 @@ fn one_line(s: &mut Session, v: &Value) -> CmdResult {
 /// two or more lines with the subject or the sender first.
 fn row_style(s: &mut Session, v: &Value) -> CmdResult {
     if let Some(code) = v.get("value").filter(|x| !x.is_null()) {
-        (s.prefs.one_line, s.prefs.subject_first) = match code.as_str() {
-            Some("compact") => (true, s.prefs.subject_first),
-            Some("normal") => (false, true),
-            Some("extended") => (false, false),
-            _ => return Err(bad("`value` is compact, normal or extended")),
+        (s.prefs.one_line, s.prefs.subject_first, s.prefs.folder_rows) = match code.as_str() {
+            Some("compact") => (true, s.prefs.subject_first, false),
+            Some("normal") => (false, true, false),
+            Some("extended") => (false, false, false),
+            // fork: Folder & subject rows.
+            Some("folder") => (false, true, true),
+            _ => return Err(bad("`value` is compact, normal, extended or folder")),
         };
     }
-    let style = match (s.prefs.one_line, s.prefs.subject_first) {
-        (true, _) => "compact",
-        (false, true) => "normal",
-        (false, false) => "extended",
-    };
-    Ok(json!({"value": style}))
+    Ok(json!({"value": row_style_code(&s.prefs)}))
+}
+
+/// The row style `prefs` have (`view.rowStyle`).
+pub(crate) fn row_style_code(prefs: &crate::Prefs) -> &'static str {
+    match (prefs.one_line, prefs.folder_rows, prefs.subject_first) {
+        (true, _, _) => "compact",
+        (false, true, _) => "folder",
+        (false, false, true) => "normal",
+        (false, false, false) => "extended",
+    }
+}
+
+/// fork: the reading pane hidden while no message is selected, the list taking its room.
+fn pane_auto_hide(s: &mut Session, v: &Value) -> CmdResult {
+    s.prefs.pane_auto_hide = p::bool(v, "value").unwrap_or(!s.prefs.pane_auto_hide);
+    Ok(json!({"value": s.prefs.pane_auto_hide}))
 }
 
 fn cal(s: &mut Session, view: CalView) -> CmdResult {

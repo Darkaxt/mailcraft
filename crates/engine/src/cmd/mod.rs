@@ -81,6 +81,8 @@ mod folder_order_tests;
 #[cfg(test)]
 mod folder_properties_tests;
 pub mod followup;
+/// fork: For you.
+pub mod for_you;
 #[cfg(test)]
 mod followup_tests;
 pub mod format;
@@ -267,6 +269,7 @@ pub fn registry() -> Registry {
     v.extend(archive::specs());
     v.extend(snooze::specs());
     v.extend(followup::specs());
+    v.extend(for_you::specs());
     v.extend(gmail_move::specs());
     v.extend(compose::specs());
     v.extend(format::specs());

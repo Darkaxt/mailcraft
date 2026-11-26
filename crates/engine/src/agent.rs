@@ -358,6 +358,11 @@ const SAFE: &[&str] = &[
     "view.senderGroups",
     "view.oneLine",
     "view.rowStyle",
+    // fork: the reading pane out of the way while nothing is selected, and For you's Show all
+    // and its record of links opened (only what this computer lists).
+    "view.paneAutoHide",
+    "forYou.showAll",
+    "forYou.clearLinks",
     "view.day",
     "view.workWeek",
     "view.week",
@@ -669,6 +674,8 @@ const SETTINGS: &[&str] = &[
     // the owner's phishing warning.
     "mail.dismissWarnings",
     "file.options",
+    // fork: For you's settings (what the section lists; nothing of the mail changes).
+    "forYou.settings",
     // Work Offline: turned off, what waits in the Outbox goes out.
     "sync.offline",
     // Wait before sending (Undo Send): turned off, what is sent goes at the next run (#950).
