@@ -79,7 +79,7 @@ pub(crate) fn settings_window(app: &mut MailApp, ctx: &egui::Context) {
     let max = vec2(560.0, 640.0).min((room - vec2(24.0, 24.0)).max(vec2(260.0, 220.0)));
     let folders = folders(app);
     egui::Window::new(tl!("For you"))
-        .id(egui::Id::new("for_you_settings"))
+        .id(egui::Id::unique("for_you_settings"))
         .open(&mut open)
         .collapsible(false)
         .default_size(vec2(520.0, 560.0).min(max))

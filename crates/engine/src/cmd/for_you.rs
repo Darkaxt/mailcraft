@@ -25,24 +25,24 @@ pub fn specs() -> Vec<CommandSpec> {
 
 fn settings(s: &mut Session, v: &Value) -> CmdResult {
     if let Some(given) = v.as_object().filter(|o| !o.is_empty()) {
-        let mut now = serde_json::to_value(&s.prefs.for_you).map_err(|e| bad(&e.to_string()))?;
+        let mut now = serde_json::to_value(&s.prefs.for_you).map_err(|e| bad(e.to_string()))?;
         let known = serde_json::to_value(ForYouPrefs { own_names: vec![String::new()], folders: vec![Default::default()], ..Default::default() })
-            .map_err(|e| bad(&e.to_string()))?;
+            .map_err(|e| bad(e.to_string()))?;
         let Some(obj) = now.as_object_mut() else { return Err(bad("For you's settings are not an object")) };
         for (key, value) in given {
             if known.get(key).is_none() {
-                return Err(bad(&format!("`{key}` is not one of For you's settings")));
+                return Err(bad(format!("`{key}` is not one of For you's settings")));
             }
             obj.insert(key.clone(), value.clone());
         }
-        let mut prefs: ForYouPrefs = serde_json::from_value(now).map_err(|e| bad(&format!("For you's settings: {e}")))?;
+        let mut prefs: ForYouPrefs = serde_json::from_value(now).map_err(|e| bad(format!("For you's settings: {e}")))?;
         if let Some(missing) = prefs.folders.iter().find(|f| s.mailbox.folder(f.folder).is_none()) {
-            return Err(bad(&format!("no folder with id {}", missing.folder)));
+            return Err(bad(format!("no folder with id {}", missing.folder)));
         }
         prefs.tidy();
         s.prefs.for_you = prefs;
     }
-    serde_json::to_value(&s.prefs.for_you).map_err(|e| bad(&e.to_string()))
+    serde_json::to_value(&s.prefs.for_you).map_err(|e| bad(e.to_string()))
 }
 
 fn show_all(s: &mut Session, v: &Value) -> CmdResult {

@@ -197,7 +197,7 @@ const PANE_REVEAL_DELAY: f64 = 0.4;
 /// fork: whether the reading pane `pane` is hidden for there being no message selected
 /// (`view.paneAutoHide`), for as long as a click on the list is still going on after one is.
 fn auto_hidden(app: &MailApp, ui: &Ui, pane: Pane, composing: bool) -> bool {
-    let id = egui::Id::new("reading_pane_auto_hidden");
+    let id = egui::Id::unique("reading_pane_auto_hidden");
     if !app.session.prefs.pane_auto_hide || pane == Pane::Off || composing {
         ui.ctx().data_mut(|d| d.remove::<f64>(id));
         return false;

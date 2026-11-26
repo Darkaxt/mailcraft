@@ -273,7 +273,7 @@ pub fn is_bulk(m: &Message) -> bool {
 pub fn self_triggered(m: &Message, own: &Own) -> bool {
     let email = m.from.email.trim().to_lowercase();
     let name = m.from.name.trim().to_lowercase();
-    own.addresses.contains(&email) || (!name.is_empty() && own.names.iter().any(|n| *n == name))
+    own.addresses.contains(&email) || (!name.is_empty() && own.names.contains(&name))
 }
 
 /// The highest tier of the tiers of `p` the unread message `m` is in, by its sender's mail
