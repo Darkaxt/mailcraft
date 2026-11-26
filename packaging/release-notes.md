@@ -1,3 +1,12 @@
+**MailCraft 0.12.43** — For you: the mail worth reading first
+- All mail and the Inbox can start with a For you section: unread mail from new senders, from people you reply to, from senders whose links you open and from senders you usually read. Newsletters and bots never count as new senders, and mail with a sender warning or caused by you never shows there.
+- In the Inbox, For you also brings back unread mail your rules filed into other folders. Mark a folder "Always" (Travels, Security) to have its mail there every time, with an age limit if you like (30 minutes for codes).
+- Reading a message takes it out of For you. Pinned mail stays in Pinned. Show all lists everything that qualifies when there is more than fits.
+- Turn it on and adjust it with the gear on its heading, or in File › Options › For you settings.
+- A new row style, Folder & subject: the folder (the sender, for mail in an Inbox) on top and the subject larger under it, with no preview. The sender shows when you point at the row.
+- View › Reading Pane › Hide When Nothing Is Selected: the list takes the whole width until you select a message.
+- Everything from 0.12.42 stays.
+
 **MailCraft 0.12.42** — move contacts between folders
 - In People, select one or more contacts and use Move to put them in another contacts folder, or keep them on this computer only.
 - People shows each contacts folder: which account it is kept in, whether it is read only, and contacts not sent to the server yet.
