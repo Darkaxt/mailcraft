@@ -47,6 +47,8 @@ mod digital_signature;
 #[cfg(test)]
 mod digital_signature_tests;
 mod folder_sites;
+/// fork: For you.
+pub mod for_you;
 pub mod gmail;
 pub mod import_pst;
 pub mod import_tree;
@@ -526,6 +528,8 @@ mod ews_account_tests;
 mod focus_stays_tests;
 #[cfg(test)]
 mod folder_sites_tests;
+#[cfg(test)]
+mod for_you_tests;
 #[cfg(test)]
 mod gmail_labels_tests;
 #[cfg(test)]

@@ -317,6 +317,12 @@ impl Session {
         facts
     }
 
+    /// fork: For you. What the warnings were last measured against, as they were then: for what
+    /// only reads the session ([`crate::for_you`], which has them brought up to date first).
+    pub(crate) fn last_facts(&self) -> Option<Arc<Facts>> {
+        self.sender_checks.facts.as_ref().map(|(_, facts)| facts.clone())
+    }
+
     /// The sender warnings of `m` (`mailcraft_model::sender_warnings`): with its links looked at
     /// when `links` is set and its body is here. Worked out once and kept, until the message, or
     /// what they are measured against (the contacts, Sent Items, the owner's accounts), changes.

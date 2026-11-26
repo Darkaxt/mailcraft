@@ -672,6 +672,8 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
     let mut state = app.text_selection.state(place);
     // A copy that waited for the layout to be whole is due now.
     let due = state.as_deref_mut().and_then(|state| state.bind(&entry.doc, entry.laid.done));
+    // fork: For you. Links opened so far this frame, to tell one opened from this body below.
+    let opened_before = links_out(&ctx);
     let (origin, asked) = paint(ui, &entry.laid, &t, access, state, &flagged);
     #[cfg(test)]
     {
@@ -685,9 +687,18 @@ pub fn show(app: &mut MailApp, ui: &mut Ui, message: &Arc<Message>, place: Place
     for action in due.into_iter().chain(asked) {
         select::act(app, place, action);
     }
+    // fork: For you. A link of the message being read was opened: noted on it (the time only).
+    if matches!(place, Place::Pane | Place::Window(_)) && links_out(&ctx) > opened_before {
+        app.session.note_link_opened(message.id);
+    }
     if matches!(place, Place::Pane | Place::Window(_)) {
         wheel_zoom(app, ui);
     }
+}
+
+/// fork: For you. How many pages the frame asks to open so far.
+fn links_out(ctx: &egui::Context) -> usize {
+    ctx.output(|o| o.commands.iter().filter(|c| matches!(c, egui::OutputCommand::OpenUrl(_))).count())
 }
 
 /// Ctrl (⌘ on a Mac) with the wheel over the message being read zooms its text a step at a time

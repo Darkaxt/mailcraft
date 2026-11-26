@@ -60,11 +60,17 @@ pub struct Row {
     /// Each term's best match behind `score`.
     #[serde(rename = "scoreDetail", skip_serializing_if = "Vec::is_empty")]
     pub score_detail: Vec<ScoreDetail>,
+    /// fork: the row is in the For you section ([`crate::for_you`]), and why.
+    #[serde(rename = "forYou", skip_serializing_if = "Option::is_none")]
+    pub for_you: Option<crate::for_you::Tier>,
+    /// fork: on the section's first row: it holds back rows that qualify (Show all).
+    #[serde(rename = "forYouMore", skip_serializing_if = "std::ops::Not::not")]
+    pub for_you_more: bool,
 }
 
 impl Row {
     /// The row of one message, `copy` of its rows.
-    fn of(m: &Message, copy: u16) -> Row {
+    pub(crate) fn of(m: &Message, copy: u16) -> Row {
         Row {
             id: m.id,
             members: vec![m.id],
@@ -78,6 +84,8 @@ impl Row {
             run: false,
             score: None,
             score_detail: Vec::new(),
+            for_you: None,
+            for_you_more: false,
         }
     }
 
@@ -318,7 +326,7 @@ fn filtered(s: &Session, m: &Message, me: &[&str]) -> bool {
 
 /// Whether `m` is kept by the tag filter in view (`view.tag`): in a view of the unified mailbox,
 /// only the mail of folders with that tag; elsewhere, and with no tag chosen, all of it.
-fn tag_kept(s: &Session, m: &Message) -> bool {
+pub(crate) fn tag_kept(s: &Session, m: &Message) -> bool {
     match s.view.tag.as_deref() {
         Some(tag) if s.view.search_folder.is_some() || s.view.filing.is_some() || s.view.scope == Scope::Inboxes => {
             s.mailbox.tag_of(m.folder) == Some(tag)
@@ -460,11 +468,13 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
     // Show in Groups off: the sorted rows, no headings. (A message under its open conversation is
     // under its conversation's heading.) A row of each message `shown` has, in its order, is
     // that message's, without looking it up.
+    // fork: For you's rows first, under their own heading.
+    let section = crate::for_you::section(s, &mut out);
     if s.prefs.show_groups {
         let direct = out.len() == shown.len() && out.iter().zip(&shown).all(|(r, m)| r.id == m.id);
         let mut last: Option<Heading> = None;
         let today = s.today();
-        for (i, row) in out.iter_mut().enumerate().filter(|(_, r)| r.under.is_none()) {
+        for (i, row) in out.iter_mut().enumerate().skip(section).filter(|(_, r)| r.under.is_none()) {
             let m = if direct { shown.get(i).copied() } else { mb.message(row.id) };
             let heading = m.and_then(|m| heading(s, m, today));
             if heading != last {

@@ -428,6 +428,10 @@ pub struct ViewState {
     pub tag: Option<String>,
     pub reading_pane: Pane,
     pub folder_pane: bool,
+    /// fork: For you. The section lists every row that qualifies, not only the first
+    /// [`crate::for_you::ForYouPrefs::cap`] (`forYou.showAll`).
+    #[serde(skip_serializing_if = "is_false")]
+    pub for_you_all: bool,
     /// The Preview Pane (v0.12.14; `view.previewPane`): a pane on the right that shows the
     /// attachment clicked in a message read or being written. Off: a preview takes the place of
     /// the message's body, when the owner turned on the installed helpers.
@@ -500,6 +504,7 @@ impl Default for ViewState {
             tag: None,
             reading_pane: Pane::Right,
             folder_pane: true,
+            for_you_all: false,
             preview_pane: false,
             nav_foot: false,
             calendar: CalView::Week,
@@ -1153,6 +1158,16 @@ pub struct Prefs {
     /// through [`Prefs::undo_send`], which keeps it to what the choice offers.
     #[serde(skip_serializing_if = "is_zero_u8")]
     pub undo_send_secs: u8,
+    /// fork: For you's settings ([`crate::for_you`]).
+    pub for_you: crate::for_you::ForYouPrefs,
+    /// fork: rows of two lines led by their folder, the subject under it, no sender and no
+    /// preview (`view.rowStyle` "folder"). Mail in an Inbox has its sender in the folder's place.
+    #[serde(skip_serializing_if = "is_false")]
+    pub folder_rows: bool,
+    /// fork: the reading pane is hidden while no message is selected (`view.paneAutoHide`): the
+    /// list takes its room. On in settings saved before it was there.
+    #[serde(default = "yes")]
+    pub pane_auto_hide: bool,
 }
 
 impl Default for Prefs {
@@ -1194,6 +1209,9 @@ impl Default for Prefs {
             recent_searches: Vec::new(),
             offline: false,
             undo_send_secs: 0,
+            for_you: Default::default(),
+            folder_rows: false,
+            pane_auto_hide: true,
         }
     }
 }
@@ -1473,6 +1491,8 @@ pub struct Session {
     /// ([`Session::folder_site`]).
     pub(crate) site_cache: HashMap<Id, (usize, mailcraft_model::folder_sites::Verdict)>,
     pub(crate) aliases_cache: Option<((u64, usize), Arc<crate::aliases::Inventory>)>,
+    /// fork: For you's sender statistics, kept while the mailbox doesn't change.
+    pub(crate) for_you_stats: crate::for_you::StatsCache,
     /// Each message's parsed SimpleLogin facts, kept across revisions ([`Session::aliases`]).
     pub(crate) aliases_memo: crate::aliases::FactsMemo,
     /// The conversation last asked for ([`Session::conversation`]), as of the revision, message
@@ -1742,6 +1762,7 @@ impl Session {
             site_cache: HashMap::new(),
             aliases_cache: None,
             aliases_memo: Default::default(),
+            for_you_stats: Default::default(),
             conversation_cache: None,
             threads_cache: Default::default(),
             list_builds: 0,
@@ -2072,11 +2093,14 @@ impl Session {
     pub(crate) fn in_list(&mut self, ids: &[Id]) -> HashSet<Id> {
         if mailcraft_model::search::Query::parse(&self.view.search).is_empty() {
             let mut shown = crate::list::lists(self, ids);
-            // And those of another folder listed under their open conversation (#503).
-            if !self.view.open.is_empty() && ids.iter().any(|id| !shown.contains(id)) {
+            // And those of another folder listed under their open conversation (#503), or in
+            // the Inbox's For you (fork).
+            let for_you = crate::for_you::applies(self) == Some(crate::for_you::Where::Inbox);
+            if (!self.view.open.is_empty() || for_you) && ids.iter().any(|id| !shown.contains(id)) {
                 let rows = self.rows();
                 let wanted: HashSet<Id> = ids.iter().copied().collect();
                 shown.extend(rows.iter().filter(|r| r.under.is_some() && wanted.contains(&r.id)).map(|r| r.id));
+                shown.extend(rows.iter().filter(|r| r.for_you.is_some()).flat_map(|r| r.members.iter()).filter(|id| wanted.contains(id)).copied());
             }
             return shown;
         }
@@ -2169,6 +2193,11 @@ impl Session {
         self.list_cache.as_ref().filter(|c| c.key == self.list_key()).map(|c| c.rows.clone())
     }
 
+    /// fork: For you. The rows of the message list as last built, whatever they were built for.
+    pub(crate) fn rows_last(&self) -> Option<Arc<Vec<Row>>> {
+        self.list_cache.as_ref().map(|c| c.rows.clone())
+    }
+
     /// The rows of the message list for the folder, filter, search and sort in view. A search
     /// that reads bodies brings the bodies it lacks into memory first, newest first, for as long
     /// as [`Session::search_time`] allows; what it didn't get to is counted in
@@ -2237,6 +2266,8 @@ impl Session {
         // (So that the list is built from the folder's own messages: `list::listing`.)
         let _ = self.folder_counts();
         let _ = self.threads();
+        // fork: For you.
+        self.for_you_ready();
         let (rows, kept, unfetched) = crate::list::listing(self, &decided, &searched);
         self.list_builds = self.list_builds.saturating_add(1);
         // What it lists of the selection stays in it too: the rows don't change for that, as each
@@ -3622,10 +3653,15 @@ impl Session {
             return;
         }
         // (Only a message that is here may be listed anywhere.)
-        let under: HashSet<Id> = if self.view.open.is_empty() || outside.iter().all(|id| self.mailbox.message(*id).is_none()) {
+        // (fork: and those the Inbox's For you lists from other folders.)
+        let for_you = crate::for_you::applies(self) == Some(crate::for_you::Where::Inbox);
+        let under: HashSet<Id> = if (self.view.open.is_empty() && !for_you) || outside.iter().all(|id| self.mailbox.message(*id).is_none()) {
             HashSet::new()
         } else {
-            self.rows().iter().filter(|r| r.under.is_some() && outside.contains(&r.id)).map(|r| r.id).collect()
+            let rows = self.rows();
+            let mut under: HashSet<Id> = rows.iter().filter(|r| r.under.is_some() && outside.contains(&r.id)).map(|r| r.id).collect();
+            under.extend(rows.iter().filter(|r| r.for_you.is_some()).flat_map(|r| r.members.iter()).filter(|id| outside.contains(id)).copied());
+            under
         };
         self.sel.messages.retain(|id| !outside.contains(id) || under.contains(id));
     }
