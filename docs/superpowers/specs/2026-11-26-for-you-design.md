@@ -53,9 +53,14 @@ A message appears once, in its highest tier.
 4. **Senders you read**: the sender qualifies when more than half of the messages received from that sender in
    the last 2 months are read (window and share adjustable). Reads on other devices count (the synced flag).
 
-**Noise exclusions, all tiers** (owner: "your pick"): messages with `List-Unsubscribe`, bot/automated senders
-(`Auto-Submitted`, `noreply`-style addresses, `[bot]` names) and messages carrying sender warnings never qualify
-for any tier. Tickets and OTPs still reach the Inbox's For you through the per-folder switch, which ignores this.
+**Noise exclusions apply to "New sender" only**: messages with `List-Unsubscribe`, bot/automated senders
+(`Auto-Submitted`, `noreply`-style addresses, `[bot]` names) never count as a new sender. They can still qualify
+for tiers 2-4: owner, 2026-11-26: "if they fall under what I read or open, by definition that means they are
+interesting to me".
+
+**Sender warnings exclude from every tier** (builder's call, for safety): a message carrying sender warnings
+(lookalike domain, failed checks...) never qualifies, because a lookalike of a sender he reads is exactly the
+mail that must not be promoted.
 
 Also never qualifies, in any tier: mail triggered by the owner himself, i.e. sent from one of his own addresses, or
 notification mail about his own activity (e.g. GitHub notifications whose triggering actor is one of his
@@ -148,7 +153,7 @@ give the subject more room.
 
 Mine (proposed, accepted by the owner): exclude bulk/bot/warned senders from "new sender"; exclude mail
 triggered by himself; manual pins untouched; "usually" = more than half; per-folder age limit; "Folder & subject rows"
-as a View option; noise exclusions on every tier; sender on hover only.
+as a View option; sender warnings exclude from every tier; sender on hover only.
 
 ## Left to the builder
 
