@@ -126,6 +126,8 @@ pub fn show(app: &mut MailApp, ui: &mut Ui) {
     // The reading pane's message being written (#286): one in a window of its own isn't here.
     let composing = crate::windows::compose_window::pane_compose(app).is_some_and(|c| app.session.compose_id() == Some(c));
     let pane = app.session.view.reading_pane;
+    // fork: hidden while no message is selected, when the owner has it so.
+    let pane = if auto_hidden(app, ui, pane, composing) { Pane::Off } else { pane };
     // The list takes the whole width when the reading pane is off, unless a message is being written.
     if pane == Pane::Off && !composing {
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.surface)).show(ui, |ui| list(app, ui));
@@ -187,6 +189,36 @@ fn splitter_asked(ui: &Ui, id: egui::Id) -> bool {
     ui.input(|i| [Action::Increment, Action::Decrement, Action::SetValue].into_iter().any(|a| i.has_accesskit_action_request(id, a)))
 }
 
+/// fork: how long the reading pane stays hidden after a message is selected with it hidden
+/// (`view.paneAutoHide`): longer than a double click takes, so that the second click of one lands
+/// on the row, not on the pane come up under it.
+const PANE_REVEAL_DELAY: f64 = 0.4;
+
+/// fork: whether the reading pane `pane` is hidden for there being no message selected
+/// (`view.paneAutoHide`), for as long as a click on the list is still going on after one is.
+fn auto_hidden(app: &MailApp, ui: &Ui, pane: Pane, composing: bool) -> bool {
+    let id = egui::Id::new("reading_pane_auto_hidden");
+    if !app.session.prefs.pane_auto_hide || pane == Pane::Off || composing {
+        ui.ctx().data_mut(|d| d.remove::<f64>(id));
+        return false;
+    }
+    if app.session.sel.messages.is_empty() {
+        // Hidden; it comes back that long after something is selected.
+        ui.ctx().data_mut(|d| d.insert_temp(id, f64::NAN));
+        return true;
+    }
+    let Some(at) = ui.ctx().data(|d| d.get_temp::<f64>(id)) else { return false };
+    let now = ui.input(|i| i.time);
+    let at = if at.is_nan() { now + PANE_REVEAL_DELAY } else { at };
+    if now < at || ui.input(|i| i.pointer.any_down()) {
+        ui.ctx().data_mut(|d| d.insert_temp(id, at));
+        ui.ctx().request_repaint_after(std::time::Duration::from_secs_f64((at - now).max(0.02)));
+        return true;
+    }
+    ui.ctx().data_mut(|d| d.remove::<f64>(id));
+    false
+}
+
 /// A row and the line under it: 72 with one line of preview (15 clear above the sender's
 /// capitals and 15 under the preview's), 13 more for each further line, 57 with none. It depends
 /// on nothing but the number of preview lines, so where a row is can be worked out without
@@ -228,22 +260,25 @@ fn normal_row_height(preview_lines: u8) -> f32 {
     NORMAL_H + f32::from(preview_lines.clamp(1, 3) - 1) * PREVIEW_PITCH
 }
 
-/// The list's row style: Compact (one line), Normal (subject first) or Extended (sender first).
+/// The list's row style: Compact (one line), Normal (subject first), Extended (sender first) or
+/// (fork) Folder & subject.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RowStyle {
     Compact,
     Normal,
     Extended,
+    Folder,
 }
 
 impl RowStyle {
-    const ALL: [RowStyle; 3] = [RowStyle::Compact, RowStyle::Normal, RowStyle::Extended];
+    const ALL: [RowStyle; 4] = [RowStyle::Compact, RowStyle::Normal, RowStyle::Extended, RowStyle::Folder];
 
     fn of(prefs: &mailcraft_engine::Prefs) -> RowStyle {
-        match (prefs.one_line, prefs.subject_first) {
-            (true, _) => RowStyle::Compact,
-            (false, true) => RowStyle::Normal,
-            (false, false) => RowStyle::Extended,
+        match (prefs.one_line, prefs.folder_rows, prefs.subject_first) {
+            (true, _, _) => RowStyle::Compact,
+            (false, true, _) => RowStyle::Folder,
+            (false, false, true) => RowStyle::Normal,
+            (false, false, false) => RowStyle::Extended,
         }
     }
 
@@ -252,6 +287,7 @@ impl RowStyle {
             RowStyle::Compact => "compact",
             RowStyle::Normal => "normal",
             RowStyle::Extended => "extended",
+            RowStyle::Folder => "folder",
         }
     }
 
@@ -261,6 +297,7 @@ impl RowStyle {
             RowStyle::Compact => tl!("Compact (one line)"),
             RowStyle::Normal => tl!("Normal (subject first)"),
             RowStyle::Extended => tl!("Extended (sender first)"),
+            RowStyle::Folder => tl!("Folder & subject"),
         }
     }
 }
@@ -287,6 +324,7 @@ fn row_style_dropdown(app: &mut MailApp, ui: &mut Ui, r: Rect) {
         RowStyle::Compact => &[(0.0, true), (3.7, true), (7.4, true), (11.0, true)],
         RowStyle::Normal => &[(0.0, true), (3.0, false), (8.0, true), (11.0, false)],
         RowStyle::Extended => &[(0.0, true), (3.7, false), (7.4, false), (11.0, false)],
+        RowStyle::Folder => &[(0.0, false), (3.7, true), (8.0, false), (11.7, true)],
     };
     for (dy, first) in lines {
         let end = if *first { x1 } else { x1 - 3.0 };
@@ -359,6 +397,10 @@ fn group_name(group: &str, category: bool) -> &str {
         group
     } else if group == "Pinned" {
         tl!("Pinned")
+    } else if group == mailcraft_engine::for_you::HEADING {
+        tl!("For you")
+    } else if group == mailcraft_engine::for_you::REST {
+        tl!("Everything else")
     } else if group == mailcraft_engine::list::NO_CATEGORY {
         tl!("No category")
     } else {
@@ -750,9 +792,13 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     let one_line = app.session.prefs.one_line;
     // The rows of a search on the server keep the height the preview lines ask for.
     let server_h = row_height(app.session.prefs.preview_lines);
-    let normal = !one_line && app.session.prefs.subject_first;
+    // (fork: Folder & subject rows are Normal rows of two lines and no preview.)
+    let folder_rows = !one_line && app.session.prefs.folder_rows;
+    let normal = !one_line && (app.session.prefs.subject_first || folder_rows);
     let row_h = if one_line {
         ONE_LINE_H
+    } else if folder_rows {
+        NORMAL_H
     } else if normal {
         normal_row_height(app.session.prefs.preview_lines)
     } else {
@@ -888,12 +934,20 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
                 .take_while(|(i, _)| tops.get(*i).is_some_and(|top| *top <= viewport.max.y))
                 .any(|(i, row)| row.id == id && row.copy == copy && tops.get(i).is_some_and(|top| *top + row_h > viewport.min.y))
         });
+        // fork: how many rows For you lists (its heading says it).
+        let for_you = rows.iter().take_while(|r| r.for_you.is_some()).count();
         for (i, row) in rows.iter().enumerate().skip(first) {
             let Some(top) = tops.get(i).copied() else { break };
             if top - GROUP_H > viewport.max.y {
                 break;
             }
-            if let Some(group) = &row.group {
+            if let Some(group) = &row.group
+                && row.for_you.is_some()
+                && group == mailcraft_engine::for_you::HEADING
+            {
+                let gr = Rect::from_min_max(pos2(origin.x + ROW_INSET, origin.y + top - GROUP_H), pos2(origin.x + width, origin.y + top));
+                crate::for_you_view::header(app, ui, gr, for_you, row.for_you_more, GROUP_TEXT);
+            } else if let Some(group) = &row.group {
                 // Text on the list itself: no bar, no box.
                 let gr = Rect::from_min_max(pos2(origin.x + ROW_INSET, origin.y + top - GROUP_H), pos2(origin.x + width, origin.y + top));
                 paint_clipped(
@@ -1250,8 +1304,11 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
         .on_hover_text(if unread { tl!("Mark as read") } else { tl!("Mark as unread") });
     app.hit.add("messageRead", row.id, strip);
     let one = app.session.prefs.one_line;
+    // fork: Folder & subject rows: the folder (the sender, in an Inbox) and the time on the first
+    // line, the subject under it, larger, and no preview.
+    let folder_rows = !one && app.session.prefs.folder_rows;
     // Normal rows (#fork, v0.12.26): the subject's line first, the sender's and the preview under it.
-    let normal = !one && app.session.prefs.subject_first;
+    let normal = !one && (app.session.prefs.subject_first || folder_rows);
     let (line1, line2) = if one {
         (rect.center().y, rect.center().y)
     } else if normal {
@@ -1261,7 +1318,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     };
     // With tighter spacing a row's lines move up by half of what it gave up (`view.density`), and
     // in a dense look by half of what that takes too.
-    let lines = if one { 0 } else { app.session.prefs.preview_lines.min(3) };
+    let lines = if one || folder_rows { 0 } else { app.session.prefs.preview_lines.min(3) };
     let said: Option<Arc<str>> = (lines > 0).then(|| {
         let max_chars = usize::from(lines) * 200;
         app.session.indexed_preview(&m, max_chars).map(Arc::from).unwrap_or_else(|| preview(ui, &m, max_chars))
@@ -1584,7 +1641,11 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     // In every account's Inbox (#625) too: the folder leads the subject's line, as in the other
     // combined views.
     let unified = mailcraft_engine::unified::of(&app.session).is_some();
-    let shown_folder = (shows_folder(&app.session) || elsewhere || unified).then(|| app.session.mailbox.folder(m.folder)).flatten();
+    let shown_folder =
+        (shows_folder(&app.session) || elsewhere || unified || folder_rows).then(|| app.session.mailbox.folder(m.folder)).flatten();
+    // (fork: in Folder & subject rows mail in an Inbox has its sender where the folder would be.)
+    let sender_on_top = folder_rows && shown_folder.is_none_or(|f| f.kind == FolderKind::Inbox);
+    let shown_folder = shown_folder.filter(|_| !sender_on_top);
     // A conversation's count goes before the time on the subject's line when the preview's line
     // is under the time (v0.12.39: there, under it, it ran into the time); else at the tail.
     let count_by_time = conversation && !one && !normal && lines > 0 && !nothing_said;
@@ -1640,7 +1701,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     // the subject, #1657), or before the marks in a single line.
     let preview_y = rect.min.y + PREVIEW_TOP + PREVIEW_PITCH / 2.0 + 0.5;
     let tail_on_subject = lines == 0 || nothing_said;
-    let (mut sx, tail_y) = if one {
+    let (mut sx, tail_y) = if one || folder_rows {
         (x, line1)
     } else if normal {
         (time_end, line2)
@@ -1695,7 +1756,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
         let implied = (view.scope == mailcraft_engine::Scope::Inboxes && folder.kind == FolderKind::Inbox)
             || (view.filing.is_some() && app.session.mailbox.folder(view.folder).is_some_and(|f| crate::nav::folder_name(f) == name));
         let full = crate::i18n::fmt(tl!("{folder} - {mailbox}"), &[("folder", name), ("mailbox", &origin)]);
-        (full, if implied { String::new() } else { name.to_string() }, app.session.mailbox.tag_of(folder.id).map(str::to_owned))
+        (full, if implied && !folder_rows { String::new() } else { name.to_string() }, app.session.mailbox.tag_of(folder.id).map(str::to_owned))
     });
     // The labels' tags: planned above in a single line; otherwise in what is left of their line
     // (the preview's first, or the subject's) down to a little of it (never over the picture at
@@ -1731,25 +1792,47 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     }
     let subject = if m.subject.trim().is_empty() { tl!("(no subject)") } else { m.subject.as_str() };
     let subject_size = if normal { NORMAL_SUBJECT_TEXT } else { LIST_TEXT };
+    // fork: Folder & subject rows. The sender comes under the pointer, and leads the first line of
+    // mail in an Inbox; the subject has the second line to itself, as far as the time's end.
+    if folder_rows {
+        let tip = if m.from.email.is_empty() || m.from.name.trim().is_empty() { who.clone() } else { format!("{} <{}>", m.from.name.trim(), m.from.email) };
+        let text = Rect::from_min_max(pos2(left, rect.min.y), pos2((sx - 6.0).max(left), row_bottom));
+        let _ = ui.interact(text, ui.scope_id().with(("msg_who", key)), Sense::hover()).on_hover_text(tip);
+        subject_end = time_end;
+        if sender_on_top {
+            let who_font = if unread { semibold(LIST_TEXT) } else { regular(LIST_TEXT) };
+            let mut who_x = left;
+            if m.draft {
+                who_x += paint_clipped(p, pos2(left, line1), (sx - 6.0 - left).max(0.0), tl!("[Draft]"), regular(LIST_TEXT), ink(t.red)) + 5.0;
+            }
+            let w = paint_clipped(p, pos2(who_x, line1), (sx - 6.0 - who_x).max(0.0), &who, who_font, who_color);
+            app.hit.add("messageSender", row.id, Rect::from_min_max(pos2(left, line1 - 7.0), pos2(who_x + w, line1 + 7.0)));
+        }
+    }
     let (sfont, scolor) = match (unread, overdue) {
         (true, false) => (semibold(subject_size), t.text),
         (true, true) => (semibold(subject_size), ink(t.overdue)),
         (false, _) => (regular(subject_size), if overdue { ink(t.overdue) } else { t.text }),
     };
-    let subject_y = if normal { line1 } else { line2 };
+    let subject_y = if normal && !folder_rows { line1 } else { line2 };
     let mut subject_x = if one { who_end + 10.0 } else { left };
     if let Some((full, name, tag)) = &folder_prefix {
+        // (fork: in Folder & subject rows on a line of its own, the first, before the time.)
+        let (prefix_y, prefix_end) = if folder_rows { (line1, sx - 6.0) } else { (subject_y, subject_end) };
         let start = subject_x;
         let ink = origin_color.map(crate::theme::c32);
         let site = crate::sender_images::folder_icon(app, ui.ctx(), m.folder);
-        subject_x = paint_folder_prefix(p, pos2(start, subject_y), (subject_end - start).max(0.0), name, site.as_ref(), tag.as_deref(), ink, &t);
-        if subject_x > start && site.is_some() {
-            app.hit.add("messageFolderIcon", row.id, Rect::from_min_size(pos2(start, subject_y - 6.0), vec2(12.0, 12.0)));
+        let end = paint_folder_prefix(p, pos2(start, prefix_y), (prefix_end - start).max(0.0), name, site.as_ref(), tag.as_deref(), ink, &t);
+        if end > start && site.is_some() {
+            app.hit.add("messageFolderIcon", row.id, Rect::from_min_size(pos2(start, prefix_y - 6.0), vec2(12.0, 12.0)));
         }
-        if subject_x > start {
-            let at = Rect::from_min_max(pos2(start, subject_y - 7.0), pos2(subject_x, subject_y + 7.0));
+        if end > start {
+            let at = Rect::from_min_max(pos2(start, prefix_y - 7.0), pos2(end, prefix_y + 7.0));
             let _ = ui.interact(at, ui.scope_id().with(("msg_folder", key)), Sense::hover()).on_hover_text(full.as_str());
             app.hit.add("messageFolder", row.id, at);
+        }
+        if !folder_rows {
+            subject_x = end;
         }
     }
     let w = paint_clipped(p, pos2(subject_x, subject_y), (subject_end - subject_x).max(0.0), subject, sfont, scolor);
@@ -1760,7 +1843,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     // A Normal row's sender starts the line under the subject, in at most half of it, and the
     // preview goes on after it; left out where the folder's name already says it (XDA › … from XDA).
     let mut lead = 0.0;
-    if normal {
+    if normal && !folder_rows {
         let said_by_folder = folder_prefix.as_ref().is_some_and(|(_, name, _)| !name.is_empty() && name.trim().eq_ignore_ascii_case(who.trim()));
         if !said_by_folder || m.draft {
             let room = ((preview_end - left) * 0.5).max(0.0);
@@ -1946,6 +2029,8 @@ mod account_stripe_tests;
 mod density_tests;
 #[cfg(test)]
 mod focus_stays_tests;
+#[cfg(test)]
+mod for_you_tests;
 #[cfg(test)]
 mod forward_attachment_tests;
 #[cfg(test)]

@@ -29,6 +29,8 @@ const DAY: Timestamp = 86_400;
 /// The heading of the section, as the list's other headings are (in English; the window shows
 /// it through `tl!`).
 pub const HEADING: &str = "For you";
+/// The heading of the rest of the list under the section, without Show in Groups.
+pub const REST: &str = "Everything else";
 
 /// Why a message is in the section. In the order the section lists them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -92,9 +94,10 @@ pub struct ForYouPrefs {
 
 impl Default for ForYouPrefs {
     fn default() -> Self {
+        // Off until turned on (`forYou.settings`), so that upstream's lists stay as they are.
         ForYouPrefs {
-            all_mail: true,
-            inbox: true,
+            all_mail: false,
+            inbox: false,
             new_sender: true,
             new_sender_days: 30,
             replied: true,

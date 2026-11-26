@@ -23,6 +23,8 @@ fn session() -> Session {
     s.prefs.show_groups = true;
     s.prefs.sender_groups = false;
     s.view.conversations = false;
+    s.prefs.for_you.all_mail = true;
+    s.prefs.for_you.inbox = true;
     s
 }
 
@@ -402,11 +404,38 @@ fn folder_rows_are_a_row_style() {
 }
 
 #[test]
-fn the_pane_hides_itself_by_default() {
+fn the_pane_hides_itself_once_turned_on() {
     let mut s = session();
-    assert!(s.prefs.pane_auto_hide);
-    assert_eq!(s.run("view.paneAutoHide", &json!({"value": false})).unwrap(), json!({"value": false}));
-    // Settings saved before it was there have it on.
+    assert!(!s.prefs.pane_auto_hide);
+    assert_eq!(s.run("view.paneAutoHide", &json!({})).unwrap(), json!({"value": true}));
+    let back: crate::Prefs = serde_json::from_value(serde_json::to_value(&s.prefs).unwrap()).unwrap();
+    assert!(back.pane_auto_hide);
+    // Settings saved before it was there have it off, and the usual rows.
     let old: crate::Prefs = serde_json::from_value(json!({})).unwrap();
-    assert!(old.pane_auto_hide && !old.folder_rows);
+    assert!(!old.pane_auto_hide && !old.folder_rows);
+}
+
+#[test]
+fn off_until_turned_on() {
+    let mut s = session();
+    s.prefs.for_you = ForYouPrefs::default();
+    s.run("view.allMail", &json!({})).unwrap();
+    let inbox = inbox(&s);
+    add(&mut s, inbox, message("ana@people.example", 1, false));
+    assert!(section(&mut s).is_empty());
+    s.run("forYou.settings", &json!({"allMail": true})).unwrap();
+    assert_eq!(section(&mut s).len(), 1);
+}
+
+#[test]
+fn without_groups_the_rest_has_a_heading_of_its_own() {
+    let mut s = session();
+    s.prefs.show_groups = false;
+    s.run("view.allMail", &json!({})).unwrap();
+    let inbox = inbox(&s);
+    add(&mut s, inbox, message("ana@people.example", 1, false));
+    let rows = s.rows();
+    assert_eq!(rows.first().and_then(|r| r.group.as_deref()), Some(HEADING));
+    assert_eq!(rows.get(1).and_then(|r| r.group.as_deref()), Some(crate::for_you::REST));
+    assert!(rows.iter().skip(2).all(|r| r.group.is_none()));
 }

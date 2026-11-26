@@ -470,6 +470,12 @@ pub(crate) fn listing(s: &Session, decided: &HashMap<Id, bool>, searched: &HashM
     // that message's, without looking it up.
     // fork: For you's rows first, under their own heading.
     let section = crate::for_you::section(s, &mut out);
+    if section > 0
+        && !s.prefs.show_groups
+        && let Some(rest) = out.get_mut(section)
+    {
+        rest.group = Some(crate::for_you::REST.into());
+    }
     if s.prefs.show_groups {
         let direct = out.len() == shown.len() && out.iter().zip(&shown).all(|(r, m)| r.id == m.id);
         let mut last: Option<Heading> = None;

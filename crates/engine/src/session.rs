@@ -1165,8 +1165,8 @@ pub struct Prefs {
     #[serde(skip_serializing_if = "is_false")]
     pub folder_rows: bool,
     /// fork: the reading pane is hidden while no message is selected (`view.paneAutoHide`): the
-    /// list takes its room. On in settings saved before it was there.
-    #[serde(default = "yes")]
+    /// list takes its room. Off unless turned on, as upstream has the pane.
+    #[serde(skip_serializing_if = "is_false")]
     pub pane_auto_hide: bool,
 }
 
@@ -1211,7 +1211,7 @@ impl Default for Prefs {
             undo_send_secs: 0,
             for_you: Default::default(),
             folder_rows: false,
-            pane_auto_hide: true,
+            pane_auto_hide: false,
         }
     }
 }

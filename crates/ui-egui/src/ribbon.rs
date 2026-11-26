@@ -2027,6 +2027,10 @@ pub(crate) fn menu_contents(ui: &mut Ui, app: &mut MailApp, menu: Menu) {
             {
                 mi_check(ui, app, label, cur == pane, "view.readingPane", json!({"value": code}));
             }
+            // fork: out of the way while no message is selected.
+            ui.separator();
+            let hide = app.session.prefs.pane_auto_hide;
+            mi_check(ui, app, tl_later!("Hide When Nothing Is Selected"), hide, "view.paneAutoHide", json!({"value": !hide}));
         }
         Menu::NavigationBar => {
             let foot = app.session.view.nav_foot;

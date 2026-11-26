@@ -139,6 +139,8 @@ mod folder_properties;
 #[cfg(test)]
 mod folder_search_tests;
 mod follow_up_tick;
+/// fork: For you.
+mod for_you_view;
 mod font_index;
 #[cfg(test)]
 mod foreign_sign_in_tests;
@@ -1838,6 +1840,8 @@ pub struct MailApp {
     pub(crate) lifecycle: app_lifecycle::State,
     pub(crate) source_pane: source_pane::Pane,
     pub(crate) search_index_pane: search_index_ui::Pane,
+    /// fork: For you's settings window.
+    pub(crate) for_you_settings: for_you_view::Settings,
     attachment_preview: Option<attachment_preview::Preview>,
     pending_attachment_preview: Option<attachment_preview::Click>,
     pub session: Session,
@@ -2416,6 +2420,7 @@ impl MailApp {
             archive: Default::default(),
             source_pane: Default::default(),
             search_index_pane: Default::default(),
+            for_you_settings: Default::default(),
             opened_waiting: Default::default(),
             hit: Default::default(),
             reminders: Default::default(),
@@ -6362,6 +6367,7 @@ impl MailApp {
         windows::compose_window::back(self, fronted);
         sync_panel::show(self, &ctx);
         search_index_ui::show(self, &ctx);
+        for_you_view::settings_window(self, &ctx);
         updates::dialog(self, &ctx);
         // (Unless a window of the system has drawn it over itself.)
         if !std::mem::take(&mut self.windows.dialog_shown) {

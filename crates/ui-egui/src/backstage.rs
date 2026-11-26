@@ -878,6 +878,12 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     if switch.changed() {
         let _ = app.run("ui.folderTabs", json!({"value": tabs}));
     }
+    // fork: For you's settings, as the section's gear opens them.
+    let for_you = ui.button(tl!("For you settings…")).on_hover_text(tl!("What the For you section at the top of All mail and the Inbox lists"));
+    app.hit.add("optionForYou", 0, for_you.rect);
+    if for_you.clicked() {
+        app.for_you_settings.open = true;
+    }
     row(ui, tl!("Language"), |ui| {
         // Each language by its own name, so the owner finds theirs whatever the window speaks.
         let name = |l: crate::i18n::Lang| l.picker_name();
