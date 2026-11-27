@@ -92,6 +92,22 @@ Per-folder **age limit** (optional): a message leaves For you once older than th
 - **Inbox ordering and cap**: mail from folders with the switch on comes first, newest first, and is never
   capped (a fresh OTP must not hide behind "Show all"); tier-qualified mail follows in tier order, under the cap.
 
+## Revision 2026-11-27 (owner, after using 0.12.44): a list of its own
+
+The owner: "The `For You` section shouldn't be part of the list, it should be another list on top. Both lists
+should be visible at the same time", and "instead of sorted by priority, they are sorted by date?". Approved
+design (supersedes "Moved, not duplicated" and the "Everything else" heading):
+
+- For you is a separate list above the message list, with its own heading, its own scroll and a divider the
+  owner drags (kept with the window's settings). Until dragged it takes 40% of the list's height, never more
+  than its rows need, and always leaves the list below at least three rows.
+- The list below is complete: a message in For you is listed there too (For you's row is its second row,
+  `for_you::COPY`, so counts, Select all and the conversation's row stay the list's own).
+- Order: tier, then how strongly the sender qualifies (`for_you::strength`: the share of their latest
+  messages answered, of their mail with a link opened, of their mail read), then newest first. New senders
+  and switched-on folders go by date within their tier.
+- Each row of For you wears a tag saying why: New, Replied, Links, Read, Folder.
+
 ## Settings area
 
 Reached from the For you section header (a gear) and from settings. Contents:

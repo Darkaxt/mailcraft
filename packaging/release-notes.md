@@ -1,3 +1,11 @@
+**MailCraft 0.12.45** — For you is a list of its own
+- For you now sits above the message list as a separate list with its own scroll, so both are in view at once and new mail is never buried.
+- Drag the line under For you to make it taller or shorter; MailCraft remembers the height.
+- For you lists the most important mail first: new senders, then people you reply to, then senders whose links you open, then senders you read. Within each group, the senders you reply to, open or read most come first.
+- Each row in For you says why it is there: New, Replied, Links, Read or Folder.
+- The list below still shows every message, including the ones in For you.
+- Everything from 0.12.44 stays.
+
 **MailCraft 0.12.44** — the newest fixes from the original project
 - A picture shown inside a message, such as a logo in the sender's signature, is no longer listed as an attachment or marked with a paperclip.
 - Drafts are kept as their server has them, and their parts are found in one pass.

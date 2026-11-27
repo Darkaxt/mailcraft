@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! fork: For you ([`mailcraft_engine::for_you`]): the heading of its section at the top of All mail
-//! and the Inbox, with Show all and the gear, and the window of its settings.
+//! fork: For you ([`mailcraft_engine::for_you`]): the heading of its list above the list of All
+//! mail and the Inbox (`mail_view::for_you_panel`), with Show all and the gear, and the window of
+//! its settings.
 
 use egui::{Align2, Rect, Sense, Stroke, Ui, pos2, vec2};
 use mailcraft_engine::for_you::{ForYouFolder, ForYouPrefs};

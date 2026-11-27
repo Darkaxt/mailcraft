@@ -5637,6 +5637,11 @@ msgstr "Brouillons"
 msgid "Drafts you haven't sent go to your Drafts on the server. Folders and messages that are only on this computer stay on this computer, in a folder called \"Kept from {account}\". Your folders in Favorites stay there."
 msgstr "Les brouillons non envoyés vont dans vos Brouillons sur le serveur. Les dossiers et messages qui se trouvent uniquement sur cet ordinateur y restent, dans un dossier nommé « Conservé de {account} ». Vos dossiers dans les Favoris y restent."
 
+#. interface
+#: crates/ui-egui/src/mail_view/for_you_panel.rs
+msgid "Drag to make For you taller or shorter"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 msgid "Drop Cap"
@@ -6173,11 +6178,6 @@ msgid "Everything"
 msgstr "Tout"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Everything else"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/opening.rs
 #, fuzzy
 msgid "Everything else in it opens as usual."
@@ -6687,7 +6687,7 @@ msgid "Folded"
 msgstr ""
 
 #. interface, name, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/imported_dupes.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_folders.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/imported_dupes.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_folders.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
 msgid "Folder"
 msgstr "Dossier"
@@ -9330,8 +9330,8 @@ msgstr "Lignes supprimées"
 msgid "Link"
 msgstr "Lien"
 
-#. ribbon
-#: crates/ui-egui/src/ribbon.rs
+#. interface, ribbon
+#: crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 msgid "Links"
 msgstr "Liens"
 
@@ -11304,7 +11304,7 @@ msgid "Never play"
 msgstr "Ne jamais lire"
 
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/search_folders.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/search_folders.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "New"
 msgstr "Nouveau"
@@ -14406,7 +14406,7 @@ msgid "React"
 msgstr "Réagir"
 
 #. interface
-#: crates/ui-egui/src/advanced_search.rs
+#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Read"
 msgstr "Lu"
@@ -15115,6 +15115,11 @@ msgstr "Remplacer ce qui est ouvert par un fichier .mailcraft"
 #, fuzzy
 msgid "Replace with"
 msgstr "Remplacer par"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Replied"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/signatures.rs

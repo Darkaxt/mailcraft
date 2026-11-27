@@ -17,6 +17,7 @@ use crate::theme::{Tokens, paint_clipped, regular, semibold};
 use crate::widgets::{OVERLAY_SCROLL_INSET, overlay_scroll_style, scroll_ink};
 use crate::{MailApp, icons};
 
+mod for_you_panel;
 mod server_rows;
 
 /// What a drag out of the message list carries: the messages to file in the folder they are
@@ -399,13 +400,31 @@ fn group_name(group: &str, category: bool) -> &str {
         tl!("Pinned")
     } else if group == mailcraft_engine::for_you::HEADING {
         tl!("For you")
-    } else if group == mailcraft_engine::for_you::REST {
-        tl!("Everything else")
     } else if group == mailcraft_engine::list::NO_CATEGORY {
         tl!("No category")
     } else {
         tl!(group)
     }
+}
+
+/// fork: the tag of a row of For you saying why it is there, ending at `end` (its right middle): a
+/// rounded pill in the accent, never taken for a Gmail label's luggage tag or a category's square.
+/// Where it starts.
+fn paint_for_you_tag(p: &egui::Painter, end: egui::Pos2, tier: mailcraft_engine::for_you::Tier, t: &Tokens) -> f32 {
+    use mailcraft_engine::for_you::Tier;
+    let label = match tier {
+        Tier::Folder => tl!("Folder"),
+        Tier::NewSender => tl!("New"),
+        Tier::Replied => tl!("Replied"),
+        Tier::Links => tl!("Links"),
+        Tier::Read => tl!("Read"),
+    };
+    let galley = p.layout_no_wrap(label.to_string(), semibold(10.0), t.on_accent);
+    let size = galley.size() + vec2(12.0, 4.0);
+    let pill = Rect::from_min_size(pos2(end.x - size.x, end.y - size.y / 2.0), size);
+    p.rect_filled(pill, size.y / 2.0, t.accent);
+    p.galley(pos2(pill.min.x + 6.0, pill.min.y + 2.0), galley, t.on_accent);
+    pill.min.x
 }
 
 /// What the arrangement is called in the list's header, in the interface language.
@@ -855,14 +874,18 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
         }
         return;
     }
+    // fork: For you's rows, at the top of `rows`, are a list of their own above the list
+    // ([`for_you_panel`], v0.12.45); `main` is the list under it, which lists every message.
+    let section = rows.iter().take_while(|r| r.for_you.is_some()).count();
+    let main: &[Row] = rows.get(section..).unwrap_or_default();
     // Where each row starts: rows are the same height, group headings add theirs. With View ›
     // Shade Alternate Rows, which of them wear the band: every other one, the first under each
     // heading plain (#1657).
-    let mut tops = Vec::with_capacity(rows.len());
-    let mut shaded = Vec::with_capacity(rows.len());
+    let mut tops = Vec::with_capacity(main.len());
+    let mut shaded = Vec::with_capacity(main.len());
     let mut y = 0.0f32;
     let mut nth = 0usize;
-    for row in rows.iter() {
+    for row in main {
         if row.group.is_some() {
             y += GROUP_H;
             nth = 0;
@@ -883,6 +906,17 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     let focus = app.session.sel.focus_in(&rows).and_then(|i| rows.get(i)).map(|r| (r.id, r.copy));
     // What is drawn selected (#503).
     let drawn = drawn_selection(app, &rows);
+    // fork: For you above the list, its rows in a scroll of their own; the focus brought into
+    // view in the list it is in.
+    let focused_section = rows.iter().take(section).position(|r| Some((r.id, r.copy)) == focus);
+    let section_seen = if section > 0 {
+        let look = Look { drawn: &drawn, focus, shade: false };
+        let reveal_section = focused_section.filter(|_| reveal).map(|i| (i, centered));
+        for_you_panel::show(app, ui, rows.get(..section).unwrap_or_default(), row_h, look, swipe_scope, reveal_section)
+    } else {
+        Vec::new()
+    };
+    let reveal = reveal && focused_section.is_none();
     let outer = ui.available_rect_before_wrap();
     // Page Up and Page Down move by the rows that fit (#426).
     app.list_page_rows = ((outer.height() / row_h).floor() as usize).max(1);
@@ -918,8 +952,8 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
         // After a move from the keyboard, the row with the focus comes into view, however far it
         // is (End, Page Down), with its group's heading when it starts one.
         if reveal
-            && let Some(i) = rows.iter().position(|r| Some((r.id, r.copy)) == focus)
-            && let (Some(top), Some(row)) = (tops.get(i).copied(), rows.get(i))
+            && let Some(i) = main.iter().position(|r| Some((r.id, r.copy)) == focus)
+            && let (Some(top), Some(row)) = (tops.get(i).copied(), main.get(i))
         {
             let above = if row.group.is_some() { GROUP_H } else { 0.0 };
             let rect = Rect::from_min_max(pos2(origin.x, origin.y + top - above), pos2(origin.x + width, origin.y + top + row_h));
@@ -927,27 +961,23 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
         }
         // Only the rows in view are laid out.
         let first = tops.partition_point(|top| top + row_h < viewport.min.y).saturating_sub(1);
+        // (A swipe on a row of For you is For you's: [`for_you_panel`].)
         crate::swipe::reconcile(ui, swipe_scope, |id, copy| {
-            rows.iter()
+            if copy == mailcraft_engine::for_you::COPY {
+                return section_seen.contains(&id);
+            }
+            main.iter()
                 .enumerate()
                 .skip(first)
                 .take_while(|(i, _)| tops.get(*i).is_some_and(|top| *top <= viewport.max.y))
                 .any(|(i, row)| row.id == id && row.copy == copy && tops.get(i).is_some_and(|top| *top + row_h > viewport.min.y))
         });
-        // fork: how many rows For you lists (its heading says it).
-        let for_you = rows.iter().take_while(|r| r.for_you.is_some()).count();
-        for (i, row) in rows.iter().enumerate().skip(first) {
+        for (i, row) in main.iter().enumerate().skip(first) {
             let Some(top) = tops.get(i).copied() else { break };
             if top - GROUP_H > viewport.max.y {
                 break;
             }
-            if let Some(group) = &row.group
-                && row.for_you.is_some()
-                && group == mailcraft_engine::for_you::HEADING
-            {
-                let gr = Rect::from_min_max(pos2(origin.x + ROW_INSET, origin.y + top - GROUP_H), pos2(origin.x + width, origin.y + top));
-                crate::for_you_view::header(app, ui, gr, for_you, row.for_you_more, GROUP_TEXT);
-            } else if let Some(group) = &row.group {
+            if let Some(group) = &row.group {
                 // Text on the list itself: no bar, no box.
                 let gr = Rect::from_min_max(pos2(origin.x + ROW_INSET, origin.y + top - GROUP_H), pos2(origin.x + width, origin.y + top));
                 paint_clipped(
@@ -1293,7 +1323,8 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
             )
         });
     }
-    app.hit.add("message", row.id, rect);
+    // (fork: a row of For you is told from the message's row in the list below.)
+    app.hit.add(if row.copy == mailcraft_engine::for_you::COPY { "forYouMessage" } else { "message" }, row.id, rect);
     let unread = row.unread > 0;
     // The strip down the left edge is a switch between read and unread. It sits on top of the
     // row, so a click there changes the mark and leaves the selection alone.
@@ -1625,6 +1656,12 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
         marker("reply", t.text_dim);
     } else if m.forwarded {
         marker("forward", t.text_dim);
+    }
+    // fork: why a row of For you is there (v0.12.45), the first thing before the marks.
+    if let Some(tier) = row.for_you {
+        let start = paint_for_you_tag(p, pos2(x - 4.0, line1), tier, &t);
+        app.hit.add("forYouTag", row.id, Rect::from_min_max(pos2(start, line1 - 8.0), pos2(x - 4.0, line1 + 8.0)));
+        x = start - 6.0;
     }
     // Arranged by size, the message's size (#273); in a single line it comes before the marks, so
     // the sender's name stops short of it there, and a line with no room for both keeps the name.

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! fork: For you's heading in the list, Folder & subject rows, and the reading pane hidden while
-//! nothing is selected.
+//! fork: For you as a list of its own above the list, with its heading, divider and tags, Folder &
+//! subject rows, and the reading pane hidden while nothing is selected.
 
 use mailcraft_engine::Session;
 use mailcraft_model::Address;
@@ -109,6 +109,91 @@ fn the_header_shows_for_you_and_opens_the_settings() {
     assert!(harness.state().for_you_settings.open);
     harness.run_steps(3);
     assert!(harness.state().for_you_settings.open);
+}
+
+/// The sample with all of its mail read and `n` new senders' unread mail of today, For you on.
+fn with_new_senders(n: usize) -> (MailApp, Vec<Id>) {
+    let mut a = app();
+    let ids: Vec<Id> = a.session.mailbox.messages.values().map(|m| m.id).collect();
+    for id in ids {
+        a.session.mailbox.message_mut(id).unwrap().read = true;
+    }
+    a.session.mailbox_changed();
+    for_you_on(&mut a);
+    a.execute("forYou.settings", json!({"cap": 0})).unwrap();
+    let inbox = a.session.mailbox.inbox().unwrap();
+    let new = (0..n).map(|i| new_mail(&mut a, inbox, &format!("person{i}@people.example"))).collect();
+    (a, new)
+}
+
+fn drag(harness: &mut Window, from: egui::Pos2, by: f32) {
+    harness.event(egui::Event::PointerMoved(from));
+    harness.step();
+    harness.event(egui::Event::PointerButton { pos: from, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
+    harness.step();
+    for k in 1..=6 {
+        harness.event(egui::Event::PointerMoved(from + vec2(0.0, by * k as f32 / 6.0)));
+        harness.step();
+    }
+    let to = from + vec2(0.0, by);
+    harness.event(egui::Event::PointerButton { pos: to, button: egui::PointerButton::Primary, pressed: false, modifiers: egui::Modifiers::NONE });
+    harness.run_steps(3);
+}
+
+#[test]
+fn for_you_is_a_list_of_its_own_above_the_list() {
+    // v0.12.45: both lists in view at once; the list below still lists For you's mail.
+    let (a, new) = with_new_senders(3);
+    let harness = window(a);
+    let divider = harness.state().hit.rect("forYouDivider", 0).expect("For you's divider");
+    for id in &new {
+        let up = harness.state().hit.rect("forYouMessage", *id).expect("a row in For you");
+        assert!(up.max.y <= divider.min.y + 0.5, "{up:?} above {divider:?}");
+        let below = harness.state().hit.rect("message", *id).expect("its row in the list below");
+        assert!(below.min.y >= divider.max.y - 0.5, "{below:?} below {divider:?}");
+        let tag = harness.state().hit.rect("forYouTag", *id).expect("the row's tag");
+        assert!(up.contains_rect(tag));
+    }
+}
+
+#[test]
+fn a_short_for_you_is_as_tall_as_its_rows() {
+    let (h, least, most) = for_you_panel::height(800.0, 2, 50.0, 0.0);
+    assert_eq!(h, GROUP_H + 100.0);
+    assert!(least <= h && h <= most);
+    // A long one takes its share until dragged, and never the list's last rows.
+    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 0.0).0, 320.0);
+    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 5_000.0).0, 800.0 - for_you_panel::DIVIDER_H - 150.0);
+    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 1.0).0, GROUP_H + 50.0);
+}
+
+#[test]
+fn dragging_the_divider_sets_for_yous_height() {
+    let (a, _) = with_new_senders(20);
+    let mut harness = window(a);
+    let before = harness.state().hit.rect("forYouDivider", 0).unwrap();
+    assert_eq!(harness.state().ui.for_you_height, 0.0);
+    drag(&mut harness, before.center(), -80.0);
+    let after = harness.state().hit.rect("forYouDivider", 0).unwrap();
+    // (egui may keep the first few points of a drag as a click's.)
+    let moved = before.center().y - after.center().y;
+    assert!((60.0..=82.0).contains(&moved), "{before:?} {after:?}");
+    let kept = harness.state().ui.for_you_height;
+    assert!(kept > 0.0);
+    // Kept with the window's settings.
+    let mut again = app();
+    again.apply_prefs(harness.state().ui.clone());
+    assert_eq!(again.ui.for_you_height, kept);
+}
+
+#[test]
+fn a_row_of_for_you_selects_its_message() {
+    let (a, new) = with_new_senders(2);
+    let mut harness = window(a);
+    let row = harness.state().hit.rect("forYouMessage", new[1]).unwrap();
+    click_at(&mut harness, row.center());
+    assert_eq!(harness.state().session.sel.focus(), Some(new[1]));
+    assert_eq!(harness.state().session.sel.focus_copy(), mailcraft_engine::for_you::COPY);
 }
 
 #[test]

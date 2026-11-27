@@ -7,7 +7,7 @@ use mailcraft_model::{Address, FolderKind, Id, Message};
 use serde_json::json;
 
 use crate::Session;
-use crate::for_you::{ForYouFolder, ForYouPrefs, HEADING, Own, SenderStats, Tier, is_bulk, self_triggered, tier};
+use crate::for_you::{COPY, ForYouFolder, ForYouPrefs, HEADING, Own, SenderStats, Tier, is_bulk, self_triggered, strength, tier};
 
 const NOW: i64 = 1_791_993_600;
 const DAY: i64 = 86_400;
@@ -178,12 +178,65 @@ fn all_mail_lists_for_you_above_the_dates() {
 }
 
 #[test]
-fn a_message_in_for_you_is_not_listed_again_below() {
+fn a_message_in_for_you_stays_in_the_list_below() {
+    // v0.12.45: For you is a list of its own above the list, which still lists every message.
     let mut s = session();
     s.run("view.allMail", &json!({})).unwrap();
     let inbox = inbox(&s);
     let new = add(&mut s, inbox, message("ana@people.example", 1, false));
-    assert_eq!(s.rows().iter().filter(|r| r.id == new || r.members.contains(&new)).count(), 1);
+    let rows = s.rows();
+    let copies: Vec<(u16, Option<Tier>)> = rows.iter().filter(|r| r.members.contains(&new)).map(|r| (r.copy, r.for_you)).collect();
+    assert_eq!(copies, vec![(COPY, Some(Tier::NewSender)), (0, None)]);
+    // Counted once.
+    assert_eq!(crate::list::listed(&rows), rows.iter().filter(|r| r.for_you.is_none()).count());
+}
+
+/// Three read and one unread from `a` a week ago (three quarters read), two read and one unread
+/// from `b` yesterday (two thirds): both "senders you read", none of them new.
+fn two_read_senders(s: &mut Session) -> (Id, Id) {
+    let inbox = inbox(s);
+    for _ in 0..3 {
+        add(s, inbox, message("a@people.example", 40, true));
+    }
+    for _ in 0..2 {
+        add(s, inbox, message("b@people.example", 40, true));
+    }
+    let a = add(s, inbox, message("a@people.example", 7, false));
+    let b = add(s, inbox, message("b@people.example", 1, false));
+    (a, b)
+}
+
+#[test]
+fn within_a_tier_the_sender_who_qualifies_more_comes_first() {
+    let mut s = session();
+    s.run("view.allMail", &json!({})).unwrap();
+    let (a, b) = two_read_senders(&mut s);
+    // By date b would lead; a's sender is read more.
+    assert_eq!(section(&mut s), vec![(a, Tier::Read), (b, Tier::Read)]);
+}
+
+#[test]
+fn a_higher_tier_comes_before_a_stronger_sender() {
+    let mut s = session();
+    s.run("view.allMail", &json!({})).unwrap();
+    let (a, b) = two_read_senders(&mut s);
+    let inbox = inbox(&s);
+    let new = add(&mut s, inbox, message("ana@people.example", 20, false));
+    assert_eq!(section(&mut s), vec![(new, Tier::NewSender), (a, Tier::Read), (b, Tier::Read)]);
+}
+
+#[test]
+fn strength_is_the_share_that_qualifies() {
+    let p = ForYouPrefs::default();
+    let mut answered = message("c@people.example", 3, true);
+    answered.answered = true;
+    let mut mail = vec![answered, message("c@people.example", 2, true), message("c@people.example", 1, false), message("c@people.example", 4, false)];
+    let stats = SenderStats::of(mail.iter(), NOW, &p);
+    let m = mail.pop().unwrap();
+    assert_eq!(strength(Tier::Replied, &m, &stats), 250);
+    assert_eq!(strength(Tier::Read, &m, &stats), 500);
+    assert_eq!(strength(Tier::Links, &m, &stats), 0);
+    assert_eq!(strength(Tier::NewSender, &m, &stats), 0);
 }
 
 #[test]
@@ -227,9 +280,11 @@ fn a_conversation_with_an_older_unread_qualifying_message_moves_once() {
     };
     let newest = add(&mut s, inbox, reply);
     let rows = s.rows();
-    let listed: Vec<_> = rows.iter().filter(|r| r.members.contains(&older)).collect();
-    assert_eq!(listed.len(), 1);
-    assert_eq!((listed[0].id, listed[0].for_you), (newest, Some(Tier::NewSender)));
+    let section: Vec<_> = rows.iter().filter(|r| r.for_you.is_some() && r.members.contains(&older)).collect();
+    assert_eq!(section.len(), 1);
+    assert_eq!((section[0].id, section[0].for_you, section[0].copy), (newest, Some(Tier::NewSender), COPY));
+    // Once in the list below too, as its conversation's row.
+    assert_eq!(rows.iter().filter(|r| r.for_you.is_none() && r.members.contains(&older)).count(), 1);
 }
 
 #[test]
@@ -436,7 +491,8 @@ fn off_until_turned_on() {
 }
 
 #[test]
-fn without_groups_the_rest_has_a_heading_of_its_own() {
+fn without_groups_only_for_you_has_a_heading() {
+    // (Its own list in the window: the list below needs no heading to set it apart.)
     let mut s = session();
     s.prefs.show_groups = false;
     s.run("view.allMail", &json!({})).unwrap();
@@ -444,6 +500,5 @@ fn without_groups_the_rest_has_a_heading_of_its_own() {
     add(&mut s, inbox, message("ana@people.example", 1, false));
     let rows = s.rows();
     assert_eq!(rows.first().and_then(|r| r.group.as_deref()), Some(HEADING));
-    assert_eq!(rows.get(1).and_then(|r| r.group.as_deref()), Some(crate::for_you::REST));
-    assert!(rows.iter().skip(2).all(|r| r.group.is_none()));
+    assert!(rows.iter().skip(1).all(|r| r.group.is_none()));
 }

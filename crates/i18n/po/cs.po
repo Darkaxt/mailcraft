@@ -5654,6 +5654,11 @@ msgstr "Koncepty"
 msgid "Drafts you haven't sent go to your Drafts on the server. Folders and messages that are only on this computer stay on this computer, in a folder called \"Kept from {account}\". Your folders in Favorites stay there."
 msgstr "Koncepty, které jste neodeslali, se přesunou do Konceptů na serveru. Složky a zprávy, které jsou jen v tomto počítači, v něm zůstanou, ve složce s názvem „Ponecháno z {account}“. Vaše složky v Oblíbených tam zůstanou."
 
+#. interface
+#: crates/ui-egui/src/mail_view/for_you_panel.rs
+msgid "Drag to make For you taller or shorter"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -6203,11 +6208,6 @@ msgid "Everything"
 msgstr "Vše"
 
 #. interface
-#: crates/ui-egui/src/mail_view.rs
-msgid "Everything else"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/opening.rs
 #, fuzzy
 msgid "Everything else in it opens as usual."
@@ -6718,7 +6718,7 @@ msgid "Folded"
 msgstr ""
 
 #. interface, name, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/imported_dupes.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_folders.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/imported_dupes.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_folders.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
 msgid "Folder"
 msgstr "Složka"
@@ -9388,8 +9388,8 @@ msgstr "Odebrané řádky"
 msgid "Link"
 msgstr "Odkaz"
 
-#. ribbon
-#: crates/ui-egui/src/ribbon.rs
+#. interface, ribbon
+#: crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Links"
 msgstr "Odkazy"
@@ -11371,7 +11371,7 @@ msgid "Never play"
 msgstr "Nikdy nepřehrávat"
 
 #. interface, ribbon, ribbon location
-#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/search_folders.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/signatures.rs
+#: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/search_folders.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "New"
 msgstr "Nový"
@@ -14482,7 +14482,7 @@ msgid "React"
 msgstr "Reagovat"
 
 #. interface
-#: crates/ui-egui/src/advanced_search.rs
+#: crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/mail_view.rs
 #, fuzzy
 msgid "Read"
 msgstr "Přečtené"
@@ -15196,6 +15196,11 @@ msgstr "Nahradit otevřené souborem .mailcraft"
 #, fuzzy
 msgid "Replace with"
 msgstr "Nahradit čím"
+
+#. interface
+#: crates/ui-egui/src/mail_view.rs
+msgid "Replied"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/signatures.rs

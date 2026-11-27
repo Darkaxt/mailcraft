@@ -1053,6 +1053,9 @@ pub struct UiState {
     /// The message list's height with the reading pane at the bottom, as the owner dragged it
     /// (#1372; 0: a share of the window's height).
     pub list_height: f32,
+    /// fork: For you's height above the list, as the owner dragged its divider (v0.12.45; 0: a
+    /// share of the list's height).
+    pub for_you_height: f32,
     /// The Preview Pane's width, as the owner dragged it (v0.12.14).
     pub preview_pane_width: f32,
     /// Send/Receive Progress's width, and the height of its list of accounts (0: as tall as what
@@ -1195,6 +1198,7 @@ impl Default for UiState {
             folder_pane_width: 230.0,
             list_width: 380.0,
             list_height: 0.0,
+            for_you_height: 0.0,
             preview_pane_width: 380.0,
             sync_panel_width: sync_panel::WIDTH,
             sync_panel_height: 0.0,
@@ -2515,6 +2519,8 @@ impl MailApp {
         self.ui.list_width = if self.ui.list_width.is_finite() { self.ui.list_width.clamp(240.0, 900.0) } else { 380.0 };
         self.ui.list_height =
             if self.ui.list_height.is_finite() && self.ui.list_height > 0.0 { self.ui.list_height.clamp(120.0, 4000.0) } else { 0.0 };
+        self.ui.for_you_height =
+            if self.ui.for_you_height.is_finite() && self.ui.for_you_height > 0.0 { self.ui.for_you_height.clamp(40.0, 4000.0) } else { 0.0 };
         self.ui.preview_pane_width = if self.ui.preview_pane_width.is_finite() { self.ui.preview_pane_width.clamp(200.0, 1600.0) } else { 380.0 };
         (self.ui.sync_panel_width, self.ui.sync_panel_height) = sync_panel::sane_size(self.ui.sync_panel_width, self.ui.sync_panel_height);
         self.ui.collapsed_folders.truncate(10_000);

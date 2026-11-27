@@ -29,8 +29,9 @@ const DAY: Timestamp = 86_400;
 /// The heading of the section, as the list's other headings are (in English; the window shows
 /// it through `tl!`).
 pub const HEADING: &str = "For you";
-/// The heading of the rest of the list under the section, without Show in Groups.
-pub const REST: &str = "Everything else";
+/// Which of its message's rows a row of the section is ([`Row::copy`]): the section is a list of
+/// its own above the list (v0.12.45), and its messages are listed there too, as copy 0.
+pub const COPY: u16 = u16::MAX;
 
 /// Why a message is in the section. In the order the section lists them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -300,6 +301,21 @@ pub fn tier(m: &Message, stats: &SenderStats, p: &ForYouPrefs, own: &Own, now: T
     None
 }
 
+/// How strongly the sender of `m` qualifies for tier `t`, in thousandths: the share of their
+/// latest messages answered, of their mail with a link opened, of their mail read. Within a tier
+/// the section lists the strongest first, the newest first among equals; a new sender's and a
+/// switched-on folder's mail go by date alone (0).
+pub fn strength(t: Tier, m: &Message, stats: &SenderStats) -> u16 {
+    let Some(st) = stats.get(m) else { return 0 };
+    let share = |part: u64, whole: u64| (part.min(whole) * 1000).checked_div(whole).map_or(0, |v| u16::try_from(v).unwrap_or(1000));
+    match t {
+        Tier::Folder | Tier::NewSender => 0,
+        Tier::Replied => share(st.latest.iter().filter(|(_, answered)| *answered).count() as u64, st.latest.len() as u64),
+        Tier::Links => share(u64::from(st.links_opened), u64::from(st.links_total)),
+        Tier::Read => share(u64::from(st.read_read), u64::from(st.read_total)),
+    }
+}
+
 /// What of For you the message list is kept under ([`Session::rows`]): its settings, and while a
 /// folder's mail leaves the Inbox's section by age, the minute.
 pub(crate) fn list_key(s: &Session) -> String {
@@ -441,18 +457,19 @@ impl Session {
 }
 
 /// One row the section may list: the tiers of its messages that qualify, best first, with the
-/// row's place in the list (`None`: a filed message the Inbox brings back) and its arrival.
+/// row's arrival.
 struct Candidate {
     at: Timestamp,
-    from: Option<usize>,
     row: Row,
     /// (tier, message), best first; the first not warned is the row's.
     tiers: Vec<(Tier, Id)>,
     next: usize,
 }
 
-/// Moves the rows of the section to the top of `out` (the list's rows, sorted by date, without
-/// headings yet), the first wearing [`HEADING`]; how many there are. Nothing when the list in
+/// Puts the rows of the section at the top of `out` (the list's rows, sorted by date, without
+/// headings yet), the first wearing [`HEADING`], each as row [`COPY`] of its message: the window
+/// shows them as a list of their own above the list, which still lists every message (v0.12.45).
+/// By tier, then [`strength`], then newest first. How many there are; nothing when the list in
 /// view has no section.
 pub(crate) fn section(s: &Session, out: &mut Vec<Row>) -> usize {
     let Some(place) = applies(s) else { return 0 };
@@ -488,16 +505,16 @@ pub(crate) fn section(s: &Session, out: &mut Vec<Row>) -> usize {
     };
     let mut candidates: Vec<Candidate> = Vec::new();
     let mut listed: HashSet<Id> = HashSet::new();
-    for (i, row) in out.iter().enumerate() {
+    for row in out.iter() {
         listed.extend(row.members.iter().chain(&row.others).copied());
-        // An open conversation or run, and what is listed under it, stay where they are.
+        // An open conversation or run, and what is listed under it, aren't the section's.
         if row.under.is_some() || row.open || mb.message(row.id).is_none_or(|m| m.pinned) {
             continue;
         }
         let tiers = tiers_of(&row.members);
         if !tiers.is_empty() {
             let at = mb.message(row.id).map(when).unwrap_or_default();
-            candidates.push(Candidate { at, from: Some(i), row: row.clone(), tiers, next: 0 });
+            candidates.push(Candidate { at, row: row.clone(), tiers, next: 0 });
         }
     }
     if place == Where::Inbox {
@@ -510,19 +527,20 @@ pub(crate) fn section(s: &Session, out: &mut Vec<Row>) -> usize {
     // them is never in the section, and its row goes by its next message that qualifies.
     let facts = s.last_facts().unwrap_or_else(|| Arc::new(FactsBuilder::default().accounts(mb.accounts.iter()).build()));
     let warned = |id: Id| mb.message(id).is_none_or(|m| warned(s, m, &facts));
-    let mut heap: BinaryHeap<(Reverse<Tier>, Timestamp, Reverse<usize>)> =
-        candidates.iter().enumerate().filter_map(|(i, c)| c.tiers.first().map(|(t, _)| (Reverse(*t), c.at, Reverse(i)))).collect();
+    let strong = |t: Tier, id: Id| mb.message(id).map_or(0, |m| strength(t, m, &stats));
+    let mut heap: BinaryHeap<(Reverse<Tier>, u16, Timestamp, Reverse<usize>)> =
+        candidates.iter().enumerate().filter_map(|(i, c)| c.tiers.first().map(|(t, id)| (Reverse(*t), strong(*t, *id), c.at, Reverse(i)))).collect();
     let cap = if s.view.for_you_all || p.cap == 0 { usize::MAX } else { usize::from(p.cap) };
     let mut chosen: Vec<(usize, Tier)> = Vec::new();
     let mut capped = 0usize;
     let mut more = false;
-    while let Some((Reverse(t), at, Reverse(i))) = heap.pop() {
+    while let Some((Reverse(t), _, at, Reverse(i))) = heap.pop() {
         let Some(c) = candidates.get_mut(i) else { continue };
         let Some(&(_, id)) = c.tiers.get(c.next) else { continue };
         if warned(id) {
             c.next += 1;
-            if let Some((next, _)) = c.tiers.get(c.next) {
-                heap.push((Reverse(*next), at, Reverse(i)));
+            if let Some((next, id)) = c.tiers.get(c.next) {
+                heap.push((Reverse(*next), strong(*next, *id), at, Reverse(i)));
             }
             continue;
         }
@@ -538,20 +556,13 @@ pub(crate) fn section(s: &Session, out: &mut Vec<Row>) -> usize {
     if chosen.is_empty() {
         return 0;
     }
-    let moved: HashSet<usize> = chosen.iter().filter_map(|(i, _)| candidates.get(*i).and_then(|c| c.from)).collect();
     let mut rows: Vec<Row> =
-        chosen.iter().filter_map(|(i, t)| candidates.get(*i).map(|c| Row { for_you: Some(*t), group: None, ..c.row.clone() })).collect();
+        chosen.iter().filter_map(|(i, t)| candidates.get(*i).map(|c| Row { for_you: Some(*t), group: None, copy: COPY, ..c.row.clone() })).collect();
     if let Some(first) = rows.first_mut() {
         first.group = Some(HEADING.into());
         first.for_you_more = more;
     }
     let n = rows.len();
-    let mut i = 0usize;
-    out.retain(|_| {
-        let keep = !moved.contains(&i);
-        i += 1;
-        keep
-    });
     rows.append(out);
     *out = rows;
     n
@@ -593,7 +604,7 @@ fn extras(s: &Session, listed: &HashSet<Id>, tier_of: &dyn Fn(&Message) -> Optio
         if let Some(k) = thread {
             index.insert(k, out.len());
         }
-        out.push(Candidate { at, from: None, row: Row::of(m, 0), tiers: vec![(t, m.id)], next: 0 });
+        out.push(Candidate { at, row: Row::of(m, 0), tiers: vec![(t, m.id)], next: 0 });
     }
     let newest = |id: &Id| Reverse(mb.message(*id).map(|m| (when(m), m.id)));
     for c in out.iter_mut().skip(start) {
