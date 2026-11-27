@@ -298,6 +298,8 @@ pub(crate) const NAMING_PARAMS: &[&str] = &[
     // (The fork's own: a SimpleLogin alias, and a folder's tag as `view.tag` lists them.)
     "alias",
     "tag",
+    // (fork: For you's names the owner goes by on notifications, as senders' names show them.)
+    "ownNames",
 ];
 
 /// `v` with every string under one of [`NAMING_PARAMS`] that is one whole frame, as
