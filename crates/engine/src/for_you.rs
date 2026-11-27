@@ -476,7 +476,10 @@ pub(crate) fn section(s: &Session, out: &mut Vec<Row>) -> usize {
         if m.pinned || too_old(p, m, now) {
             return None;
         }
-        folder_tier(m).or_else(|| tier(m, &stats, p, &own, now)).or_else(|| before.get(&m.id).copied().filter(|_| kept(&m.id)))
+        // (Kept from the list before, which may have been the Inbox's: a folder's place is the
+        // Inbox's only.)
+        let kept_tier = before.get(&m.id).copied().filter(|t| kept(&m.id) && (place == Where::Inbox || *t != Tier::Folder));
+        folder_tier(m).or_else(|| tier(m, &stats, p, &own, now)).or(kept_tier)
     };
     let tiers_of = |members: &[Id]| -> Vec<(Tier, Id)> {
         let mut t: Vec<(Tier, Id)> = members.iter().filter_map(|id| mb.message(*id)).filter_map(|m| tier_of(m).map(|t| (t, m.id))).collect();
