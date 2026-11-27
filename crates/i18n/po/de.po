@@ -642,6 +642,11 @@ msgstr "Eine Nachricht mit der Bitte um Abmeldung geht von {from} an {to}, über
 msgid "A new message was asked for, but the one you are writing couldn't be saved first: {why}"
 msgstr ""
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt
+msgid "A new-mail notification shows up to three buttons, in the order you tick them. Reply opens the reply; the others act on the message without opening the app."
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/dialogs.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/reading/invitation.rs
 #, fuzzy
@@ -1299,6 +1304,16 @@ msgstr "Erweiterte Optionen"
 msgid "After"
 msgstr "Nach"
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt
+msgid "After 2 seconds"
+msgstr ""
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt
+msgid "After 5 seconds"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
@@ -1796,8 +1811,8 @@ msgstr "Alles, was noch an den Server gehen soll, geht zuerst: E-Mails im Postau
 msgid "App theme"
 msgstr ""
 
-#. interface
-#: crates/ui-egui/src/backstage.rs
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt crates/ui-egui/src/backstage.rs
 msgid "Appearance"
 msgstr ""
 
@@ -2004,7 +2019,7 @@ msgid "Aqua"
 msgstr "Aquamarin"
 
 #. android, command label, interface, name, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/swipe.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeButtons.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/archive.rs crates/engine/src/cmd/mail.rs crates/model/src/mailbox.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/swipe.rs
 #, fuzzy
 msgid "Archive"
 msgstr "Archivieren"
@@ -2335,8 +2350,8 @@ msgstr "Anlagenoptionen"
 msgid "Attachment options for {name}"
 msgstr "Anlagenoptionen für {name}"
 
-#. interface, ribbon location
-#: crates/engine/src/cmd/mail.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/lib.rs
+#. android, interface, ribbon location
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt crates/engine/src/cmd/mail.rs crates/ui-egui/src/advanced_search.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Attachments"
 msgstr "Anlagen"
@@ -2539,7 +2554,7 @@ msgid "Available formats:"
 msgstr "Verfügbare Formate:"
 
 #. android, command label, interface, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PeopleScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/view.rs crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PeopleScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Shell.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/view.rs crates/ui-egui/src/account_setup.rs crates/ui-egui/src/account_setup/exchange.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Back"
 msgstr "Zurück"
@@ -3793,6 +3808,11 @@ msgstr "Fenster schließen"
 msgid "Close and keep as draft"
 msgstr "Schließen und als Entwurf behalten"
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt
+msgid "Close menu"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/task_sync.rs
 msgid "Close the current dialog first."
@@ -4527,8 +4547,8 @@ msgstr "Ausschneiden nimmt keine Parameter an: Es schneidet aus, was ausgewählt
 msgid "DOMAIN\\user or you@example.org; empty for your address"
 msgstr "DOMAIN\\Benutzer oder you@example.org; leer lassen, um Ihre eigene Adresse zu verwenden"
 
-#. interface, name
-#: crates/ui-egui/src/reading/appearance.rs crates/ui-egui/src/theme.rs
+#. android, interface, name
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt crates/ui-egui/src/reading/appearance.rs crates/ui-egui/src/theme.rs
 msgid "Dark"
 msgstr "Dunkel"
 
@@ -4686,7 +4706,7 @@ msgid "Delayed until {when}"
 msgstr "Verzögert bis {when}"
 
 #. android, command label, interface, name, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/signatures.rs crates/ui-egui/src/swipe.rs crates/ui-egui/src/tasks_view.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/CalendarEditor.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeButtons.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TaskEditorScreen.kt crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/junk.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/calendar_view.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/people_view.rs crates/ui-egui/src/ribbon.rs crates/ui-egui/src/shortcuts_page.rs crates/ui-egui/src/signatures.rs crates/ui-egui/src/swipe.rs crates/ui-egui/src/tasks_view.rs
 msgid "Delete"
 msgstr "Löschen"
 
@@ -5185,8 +5205,8 @@ msgstr ""
 msgid "Down"
 msgstr ""
 
-#. ribbon location
-#: crates/engine/src/cmd/send_receive.rs
+#. android, ribbon location
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt crates/engine/src/cmd/send_receive.rs
 msgid "Download"
 msgstr "Herunterladen"
 
@@ -5523,7 +5543,7 @@ msgid "Edit Task"
 msgstr "Aufgabe bearbeiten"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Reply.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt
 #, fuzzy
 msgid "Edit draft"
 msgstr "Entwurf bearbeiten"
@@ -6289,7 +6309,7 @@ msgid "First save Google's standard IMAP and SMTP settings and a matching email 
 msgstr "Speichern Sie zuerst die standardmäßigen IMAP- und SMTP-Einstellungen von Google sowie einen passenden E-Mail-Benutzernamen, bevor Sie die Anmeldemethode wechseln."
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/swipe.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeButtons.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/swipe.rs
 #, fuzzy
 msgid "Flag"
 msgstr "Kennzeichnung"
@@ -6313,7 +6333,7 @@ msgid "Flag the message and remind me:"
 msgstr "Nachricht markieren und erinnern:"
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowParts.kt crates/engine/src/session.rs crates/ui-egui/src/reading.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowParts.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt crates/engine/src/session.rs crates/ui-egui/src/reading.rs
 #, fuzzy
 msgid "Flagged"
 msgstr "Gekennzeichnet"
@@ -6328,11 +6348,21 @@ msgstr ""
 msgid "Flags"
 msgstr ""
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt
+msgid "Fold"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Fold the calendars of this group away"
 msgstr "Kalender dieser Gruppe einklappen"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
+msgid "Folded"
+msgstr ""
 
 #. interface, name, ribbon location
 #: crates/engine/src/cmd/calendar.rs crates/engine/src/cmd/calendar_opened.rs crates/engine/src/cmd/calendar_subscribed.rs crates/engine/src/cmd/folder.rs crates/engine/src/cmd/imported_dupes.rs crates/engine/src/cmd/mail.rs crates/engine/src/cmd/rules.rs crates/engine/src/cmd/search_folders.rs crates/model/src/mailbox.rs crates/ui-egui/src/folder_properties.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
@@ -6446,6 +6476,11 @@ msgstr ""
 #, fuzzy
 msgid "Follow Up"
 msgstr "Nachverfolgung"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt
+msgid "Follow system"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/alerts.rs crates/ui-egui/src/reminders.rs
@@ -6618,7 +6653,7 @@ msgid "Forums"
 msgstr "Foren"
 
 #. android, command label, interface, name, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Reply.kt crates/engine/src/cmd/calendar/meeting.rs crates/engine/src/cmd/compose.rs crates/engine/src/cmd/view.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/meeting_dialogs.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Forward"
 msgstr "Weiterleiten"
@@ -7386,8 +7421,8 @@ msgstr "Wichtigkeit: hoch"
 msgid "High contrast"
 msgstr "Hoher Kontrast"
 
-#. interface
-#: crates/ui-egui/src/calendar_view.rs
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowParts.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MessageHeader.kt crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "High importance"
 msgstr "Wichtigkeit: hoch"
@@ -8341,7 +8376,7 @@ msgid "June"
 msgstr "Juni"
 
 #. android, interface, ribbon, ribbon location
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt crates/engine/src/cmd/junk.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListModel.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeButtons.kt crates/engine/src/cmd/junk.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Junk"
 msgstr "Junk"
@@ -8769,8 +8804,8 @@ msgstr "Lassen Sie andere wissen, dass Sie abwesend sind oder eine Zeit lang nic
 msgid "Licences"
 msgstr "Lizenzen"
 
-#. interface, name
-#: crates/ui-egui/src/reading/appearance.rs crates/ui-egui/src/theme.rs
+#. android, interface, name
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt crates/ui-egui/src/reading/appearance.rs crates/ui-egui/src/theme.rs
 #, fuzzy
 msgid "Light"
 msgstr "Hell"
@@ -9024,8 +9059,8 @@ msgstr "Niedrig"
 msgid "Low Importance"
 msgstr "Wichtigkeit: niedrig"
 
-#. interface
-#: crates/ui-egui/src/calendar_view.rs
+#. android, interface
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowParts.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MessageHeader.kt crates/ui-egui/src/calendar_view.rs
 #, fuzzy
 msgid "Low importance"
 msgstr "Wichtigkeit: niedrig"
@@ -9557,6 +9592,11 @@ msgstr "März"
 msgid "March"
 msgstr "März"
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt
+msgid "Mark"
+msgstr ""
+
 #. ribbon
 #: crates/ui-egui/src/ribbon.rs
 #, fuzzy
@@ -9619,7 +9659,7 @@ msgid "Mark as Unread"
 msgstr "Als ungelesen markieren"
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/swipe.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeButtons.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt crates/ui-egui/src/forms.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/swipe.rs
 #, fuzzy
 msgid "Mark as read"
 msgstr "Als gelesen markieren"
@@ -9634,6 +9674,11 @@ msgstr "Als ungelesen markieren"
 #: crates/ui-egui/src/security.rs
 msgid "Mark as verified"
 msgstr "Als verifiziert kennzeichnen"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt
+msgid "Marked as read"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/find_replace.rs crates/ui-egui/src/search_options.rs
@@ -9752,6 +9797,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/reading/controls.rs
 msgid "Message appearance"
+msgstr ""
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt
+msgid "Message menu"
 msgstr ""
 
 #. android
@@ -10162,7 +10212,7 @@ msgid "More about this"
 msgstr "Mehr dazu"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowView.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailRowView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesBanner.kt
 msgid "More actions"
 msgstr "Weitere Aktionen"
 
@@ -10670,6 +10720,11 @@ msgstr ""
 msgid "Neutral grey"
 msgstr "Neutrales Grau"
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt
+msgid "Never (I mark them myself)"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/junk.rs crates/ui-egui/src/ribbon.rs
 msgid "Never Block Sender"
@@ -10982,6 +11037,11 @@ msgstr "Nächste Woche"
 msgid "Next events"
 msgstr "Nächste Termine"
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MessageSwipe.kt
+msgid "Next message"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Next week"
@@ -11104,6 +11164,11 @@ msgstr "Kein Termin ist in einem eigenen Fenster geöffnet"
 #, fuzzy
 msgid "No appointment matches."
 msgstr "Kein passender Termin gefunden."
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsPages.kt
+msgid "No buttons"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -11894,6 +11959,11 @@ msgstr "Es wurden keine Daten an Microsoft gesendet und Ihr Passwort wird nicht 
 #: crates/ui-egui/src/sending.rs
 msgid "Nothing was sent: the mailbox couldn't be saved first ({error})"
 msgstr "Es wurde nichts gesendet: Das Postfach konnte vorher nicht gespeichert werden ({error})"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt
+msgid "Notification buttons"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Navigation.kt
@@ -13384,6 +13454,11 @@ msgstr "Vorheriger Monat"
 msgid "Previous Page"
 msgstr "Vorherige Seite"
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MessageSwipe.kt
+msgid "Previous message"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/nav.rs
 msgid "Primary"
@@ -14277,7 +14352,7 @@ msgid "Replies and forwards"
 msgstr "Antworten und Weiterleitungen"
 
 #. android, command label, interface, ribbon
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeButtons.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Reply.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/RowActionsSheet.kt crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 #, fuzzy
 msgid "Reply"
 msgstr "Antworten"
@@ -14299,7 +14374,7 @@ msgid "Reply All"
 msgstr "Allen antworten"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingScreen.kt crates/ui-egui/src/compose.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/Reply.kt crates/ui-egui/src/compose.rs
 #, fuzzy
 msgid "Reply all"
 msgstr "Allen antworten"
@@ -16070,8 +16145,8 @@ msgstr "Freigegebene Postfächer und Kalender: warten auf Ihre Erlaubnis"
 msgid "Shift"
 msgstr ""
 
-#. ribbon location
-#: crates/engine/src/cmd/calendar/share.rs
+#. android, ribbon location
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsScreen.kt crates/engine/src/cmd/calendar/share.rs
 msgid "Show"
 msgstr "Anzeigen"
 
@@ -17012,6 +17087,11 @@ msgstr ""
 msgid "Something did not go through, or did not arrive as it was sent. The steps below say what."
 msgstr "Etwas ist nicht durchgegangen oder nicht so angekommen, wie es gesendet wurde. Die Schritte unten zeigen, was."
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt
+msgid "Sort"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/credits.rs
 #, fuzzy
@@ -17790,7 +17870,7 @@ msgid "That day of the series can't be put exactly where it was asked to go; not
 msgstr "Dieser Tag der Serie kann nicht genau dorthin gelegt werden, wohin er sollte; es wurde nichts verschoben."
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt
 msgid "That did not work."
 msgstr "Das hat nicht funktioniert."
 
@@ -17923,6 +18003,11 @@ msgstr "Die digitale Signatur ist abgelaufen."
 #, fuzzy
 msgid "The Entire Series"
 msgstr "Die ganze Serie"
+
+#. interface
+#: crates/ui-egui/src/dialogs.rs
+msgid "The UCS Labs name and logo are trademarks of UCS Care Group Limited; see TRADEMARKS.md."
+msgstr ""
 
 #. what a command says
 #: crates/mobile/src/sync_api.rs
@@ -18782,6 +18867,11 @@ msgstr "Die Nachricht wartet in Ihrem Postausgang, wo Sie sie ändern oder abbre
 #, fuzzy
 msgid "The message was downloaded before MailCraft kept the bytes it came as. Check Again downloads them."
 msgstr "Die Nachricht wurde heruntergeladen, bevor MailCraft ihre ursprünglichen Datenbytes gespeichert hat. Mit „Erneut prüfen“ werden diese heruntergeladen."
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt
+msgid "The message was moved or deleted already"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/opened_message.rs crates/ui-egui/src/windows.rs
@@ -21269,6 +21359,11 @@ msgstr "{what} rückgängig machen"
 msgid "Undownloaded messages may contain additional attachments. OCR text is machine recognized; locations and confidence remain available with each source."
 msgstr ""
 
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt
+msgid "Unfolded"
+msgstr ""
+
 #. interface
 #: crates/ui-egui/src/nav.rs
 msgid "Unified"
@@ -21698,8 +21793,8 @@ msgstr "Version"
 msgid "Version {version}"
 msgstr "Version {version}"
 
-#. name, ribbon location
-#: crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/for_you.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
+#. android, name, ribbon location
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingToolbar.kt crates/engine/src/cmd/calendar_extra.rs crates/engine/src/cmd/calendar_settings.rs crates/engine/src/cmd/for_you.rs crates/engine/src/cmd/people.rs crates/engine/src/cmd/tasks.rs crates/engine/src/cmd/view.rs crates/engine/src/cmd/view/display.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/menubar.rs
 #, fuzzy
 msgid "View"
 msgstr "Ansicht"
@@ -21987,6 +22082,11 @@ msgstr ""
 #, fuzzy
 msgid "When"
 msgstr "Wann"
+
+#. android
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ReadingPrefs.kt
+msgid "When opened"
+msgstr ""
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -27618,7 +27718,7 @@ msgstr[0] "{n} Nachricht"
 msgstr[1] "{n} Nachrichten"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt crates/ui-egui/src/lib.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt crates/ui-egui/src/lib.rs
 msgid "{n} message archived"
 msgid_plural "{n} messages archived"
 msgstr[0] "{n} Nachricht archiviert"
@@ -27662,7 +27762,7 @@ msgstr[0] "{n} Nachricht konnte bei diesem Durchlauf nicht zwischen den Gmail-Ka
 msgstr[1] "{n} Nachrichten konnten bei diesem Durchlauf nicht zwischen den Gmail-Kategorien verschoben werden; sie warten auf den nächsten Durchlauf"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt
 msgid "{n} message deleted"
 msgid_plural "{n} messages deleted"
 msgstr[0] "{n} Nachricht gelöscht"
@@ -27720,7 +27820,7 @@ msgstr[0] "{n} Nachricht in das Konto verschoben: Senden/Empfangen legt sie ohne
 msgstr[1] "{n} Nachrichten in das Konto verschoben: Senden/Empfangen legt sie ohne die meisten ihrer Kopfzeilen (etwa Received) auf den Microsoft-Server"
 
 #. android
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/MailListScreen.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/NoticeActions.kt
 msgid "{n} message moved to Junk"
 msgid_plural "{n} messages moved to Junk"
 msgstr[0] "{n} Nachricht in den Spamordner verschoben"

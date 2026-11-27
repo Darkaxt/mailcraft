@@ -2106,6 +2106,10 @@ mod hidden;
 
 #[path = "store_compress_tests.rs"]
 mod compress;
+
+#[path = "store_drawn_tests.rs"]
+mod drawn;
+
 #[path = "store_headers_tests.rs"]
 mod headers;
 

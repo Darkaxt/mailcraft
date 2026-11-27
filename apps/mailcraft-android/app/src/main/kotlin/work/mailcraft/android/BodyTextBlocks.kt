@@ -101,10 +101,10 @@ internal fun ListItem(block: BlockView, kind: BlockKindView.ListItem, env: BodyE
 
 /** A horizontal rule, as thick and as coloured as the message says (a line of 1 to 4 pixels). */
 @Composable
-internal fun RuleBlock(block: BlockView, env: BodyEnv) {
+internal fun RuleBlock(block: BlockView, env: BodyEnv, paper: Paper) {
     val line = block.line
     val thickness = line.width.toInt().coerceIn(1, MAX_RULE)
-    val color = line.color?.let { composeColor(it.rgb()) } ?: env.rule
+    val color = line.color?.rgb()?.let(paper::rule)?.let(::composeColor) ?: env.rule
     Spacer(
         modifier = Modifier
             .padding(vertical = RULE_MARGIN.dp)
@@ -116,7 +116,7 @@ internal fun RuleBlock(block: BlockView, env: BodyEnv) {
 
 private const val BULLET = "•"
 private const val HUNDRED = 100f
-private const val DEFAULT_LINE = 1.4f
+internal const val DEFAULT_LINE = 1.4f
 
 /** The least line height, in sizes of its text: room for the ascent and descent of the phone's fonts. */
 private const val MIN_LINE = 1.2f

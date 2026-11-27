@@ -1,3 +1,9 @@
+**MailCraft 0.12.44** — the newest fixes from the original project
+- A picture shown inside a message, such as a logo in the sender's signature, is no longer listed as an attachment or marked with a paperclip.
+- Drafts are kept as their server has them, and their parts are found in one pass.
+- About no longer shows the original project's logo: its trademark terms ask changed versions to remove it.
+- Updates still come only from this fork and only when you click Update now. Everything from 0.12.43 stays.
+
 **MailCraft 0.12.43** — For you: the mail worth reading first
 - All mail and the Inbox can start with a For you section: unread mail from new senders, from people you reply to, from senders whose links you open and from senders you usually read. Newsletters and bots never count as new senders, and mail with a sender warning or caused by you never shows there.
 - In the Inbox, For you also brings back unread mail your rules filed into other folders. Mark a folder "Always" (Travels, Security) to have its mail there every time, with an age limit if you like (30 minutes for codes).

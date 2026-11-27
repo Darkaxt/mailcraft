@@ -82,7 +82,7 @@ internal object Corpus {
 
     class Entry(val name: String, val view: MessageView, val links: List<String>)
 
-    private fun view(id: ULong, subject: String, blocks: List<BlockView>, remote: UInt = 0u, attachments: List<AttachmentRecord> = emptyList()) =
+    fun view(id: ULong, subject: String, blocks: List<BlockView>, remote: UInt = 0u, attachments: List<AttachmentRecord> = emptyList()) =
         MessageView(
             1uL, id, 1uL, 1uL, ada, listOf(me), emptyList(), subject, 1_730_000_000L, false, false, emptyList(),
             attachments, blocks, false, remote, true,
@@ -172,6 +172,28 @@ internal object Corpus {
                 B.p("Let me know if the second row needs another look."),
             ),
             attachments = listOf(AttachmentRecord(0u, "numbers.xlsx", "application/vnd.ms-excel", 48_213uL, false)),
+        ),
+        emptyList(),
+    )
+
+    /** A table of ten columns, far wider than a phone: it scrolls sideways on its own, and a swipe must wait for its edge. */
+    val wideTable = Entry(
+        "wide",
+        view(
+            4uL, "Planting schedule, whole year",
+            listOf(
+                B.p("Every bed, every month.", 0u),
+                B.tableBlock(
+                    B.table(
+                        layout = false,
+                        border = true,
+                        rows = listOf(
+                            listOf("Bed", "January", "February", "March", "April", "May", "June", "July", "August", "September").map { B.cell(B.p(it, 0u), header = true) },
+                            listOf("North border", "Prune hedging", "Order seed", "Sow peas", "Plant out sweet peas", "Water weekly", "Pick first roses", "Deadhead", "Collect seed", "Divide perennials").map { B.cell(B.p(it, 0u)) },
+                        ),
+                    ),
+                ),
+            ),
         ),
         emptyList(),
     )
