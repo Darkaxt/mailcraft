@@ -266,9 +266,10 @@ fn the_inbox_brings_back_mail_filed_into_switched_on_folders() {
     // Selecting it there keeps it selected, though it is in no Inbox.
     s.run("mail.select", &json!({"ids": [ticket]})).unwrap();
     assert_eq!(s.sel.messages, vec![ticket]);
-    // All mail has no folder tier.
+    // All mail has no folder tier, the selection's kept place included. (Opening the ticket
+    // read it, so its sender is now one he reads: other tiers may list his mail there.)
     s.run("view.allMail", &json!({})).unwrap();
-    assert!(section(&mut s).is_empty());
+    assert!(section(&mut s).iter().all(|(_, t)| *t != Tier::Folder));
 }
 
 #[test]
