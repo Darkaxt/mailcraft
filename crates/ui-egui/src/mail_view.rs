@@ -1641,8 +1641,7 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     // In every account's Inbox (#625) too: the folder leads the subject's line, as in the other
     // combined views.
     let unified = mailcraft_engine::unified::of(&app.session).is_some();
-    let shown_folder =
-        (shows_folder(&app.session) || elsewhere || unified || folder_rows).then(|| app.session.mailbox.folder(m.folder)).flatten();
+    let shown_folder = (shows_folder(&app.session) || elsewhere || unified || folder_rows).then(|| app.session.mailbox.folder(m.folder)).flatten();
     // (fork: in Folder & subject rows mail in an Inbox has its sender where the folder would be.)
     let sender_on_top = folder_rows && shown_folder.is_none_or(|f| f.kind == FolderKind::Inbox);
     let shown_folder = shown_folder.filter(|_| !sender_on_top);
@@ -1795,7 +1794,8 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
     // fork: Folder & subject rows. The sender comes under the pointer, and leads the first line of
     // mail in an Inbox; the subject has the second line to itself, as far as the time's end.
     if folder_rows {
-        let tip = if m.from.email.is_empty() || m.from.name.trim().is_empty() { who.clone() } else { format!("{} <{}>", m.from.name.trim(), m.from.email) };
+        let tip =
+            if m.from.email.is_empty() || m.from.name.trim().is_empty() { who.clone() } else { format!("{} <{}>", m.from.name.trim(), m.from.email) };
         let text = Rect::from_min_max(pos2(left, rect.min.y), pos2((sx - 6.0).max(left), row_bottom));
         let _ = ui.interact(text, ui.scope_id().with(("msg_who", key)), Sense::hover()).on_hover_text(tip);
         subject_end = time_end;

@@ -6,8 +6,8 @@
 use mailcraft_model::{Address, FolderKind, Id, Message};
 use serde_json::json;
 
-use crate::for_you::{ForYouFolder, ForYouPrefs, HEADING, Own, SenderStats, Tier, is_bulk, self_triggered, tier};
 use crate::Session;
+use crate::for_you::{ForYouFolder, ForYouPrefs, HEADING, Own, SenderStats, Tier, is_bulk, self_triggered, tier};
 
 const NOW: i64 = 1_791_993_600;
 const DAY: i64 = 86_400;

@@ -539,10 +539,8 @@ pub(crate) fn section(s: &Session, out: &mut Vec<Row>) -> usize {
         return 0;
     }
     let moved: HashSet<usize> = chosen.iter().filter_map(|(i, _)| candidates.get(*i).and_then(|c| c.from)).collect();
-    let mut rows: Vec<Row> = chosen
-        .iter()
-        .filter_map(|(i, t)| candidates.get(*i).map(|c| Row { for_you: Some(*t), group: None, ..c.row.clone() }))
-        .collect();
+    let mut rows: Vec<Row> =
+        chosen.iter().filter_map(|(i, t)| candidates.get(*i).map(|c| Row { for_you: Some(*t), group: None, ..c.row.clone() })).collect();
     if let Some(first) = rows.first_mut() {
         first.group = Some(HEADING.into());
         first.for_you_more = more;

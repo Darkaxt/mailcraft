@@ -81,10 +81,10 @@ mod folder_order_tests;
 #[cfg(test)]
 mod folder_properties_tests;
 pub mod followup;
-/// fork: For you.
-pub mod for_you;
 #[cfg(test)]
 mod followup_tests;
+/// fork: For you.
+pub mod for_you;
 pub mod format;
 #[cfg(test)]
 mod format_tests;

@@ -39,7 +39,8 @@ pub(crate) fn header(app: &mut MailApp, ui: &mut Ui, gr: Rect, shown: usize, mor
         let galley = p.layout_no_wrap(label.to_string(), regular(text_size - 0.5), t.accent_text);
         let at = Rect::from_min_size(pos2(x, y - galley.size().y / 2.0), galley.size());
         if at.max.x < gear.min.x - 4.0 {
-            let resp = ui.interact(at.expand(2.0), ui.scope_id().with("for_you_show_all"), Sense::click()).on_hover_cursor(egui::CursorIcon::PointingHand);
+            let resp =
+                ui.interact(at.expand(2.0), ui.scope_id().with("for_you_show_all"), Sense::click()).on_hover_cursor(egui::CursorIcon::PointingHand);
             app.hit.add("forYouShowAll", 0, at);
             if resp.hovered() {
                 p.line_segment([pos2(at.min.x, at.max.y), at.max], Stroke::new(1.0, t.accent_text));
@@ -147,7 +148,9 @@ pub(crate) fn settings_window(app: &mut MailApp, ctx: &egui::Context) {
                 ui.separator();
                 // No undo brings the history back: a second press, Clear, forgets it.
                 ui.horizontal(|ui| {
-                    let ask = ui.add_enabled(!confirm, egui::Button::new(tl!("Clear link history"))).on_hover_text(tl!("Forget which messages you opened a link in"));
+                    let ask = ui
+                        .add_enabled(!confirm, egui::Button::new(tl!("Clear link history")))
+                        .on_hover_text(tl!("Forget which messages you opened a link in"));
                     hits.push(("forYouClearLinks", ask.rect));
                     if ask.clicked() {
                         confirm = true;

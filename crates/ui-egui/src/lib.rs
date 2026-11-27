@@ -139,9 +139,9 @@ mod folder_properties;
 #[cfg(test)]
 mod folder_search_tests;
 mod follow_up_tick;
+mod font_index;
 /// fork: For you.
 mod for_you_view;
-mod font_index;
 #[cfg(test)]
 mod foreign_sign_in_tests;
 
