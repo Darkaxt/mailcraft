@@ -362,7 +362,6 @@ const SAFE: &[&str] = &[
     // and its record of links opened (only what this computer lists).
     "view.paneAutoHide",
     "forYou.showAll",
-    "forYou.clearLinks",
     "view.day",
     "view.workWeek",
     "view.week",
@@ -607,6 +606,8 @@ const DELETE: &[&str] = &[
     "tasks.delete",
     "category.remove",
     "compose.discard",
+    // fork: which messages had a link opened, kept on this computer only: no undo brings it back.
+    "forYou.clearLinks",
 ];
 
 const ACCOUNTS: &[&str] = &[

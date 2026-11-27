@@ -170,6 +170,8 @@ pub fn object(id: &str) -> Option<Object> {
         | "ui.dismissSettingsNotice"
         | "ui.dismissSoftwareNotice"
         | "ui.reportProblem"
+        // fork: For you's record of the links opened, kept on this computer.
+        | "forYou.clearLinks"
         // The zone the calendar is shown in, which a rule reads the days mail came by (#566).
         | "view.timeZone"
         // The Public keys kept (File › Options › Security, #30): the question names the key.

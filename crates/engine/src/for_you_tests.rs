@@ -390,9 +390,16 @@ fn for_you_settings_round_trip() {
 #[test]
 fn for_you_commands_need_no_consent() {
     use crate::agent::{Access, access};
-    for id in ["forYou.settings", "forYou.showAll", "forYou.clearLinks", "view.paneAutoHide"] {
+    for id in ["forYou.settings", "forYou.showAll", "view.paneAutoHide"] {
         assert_eq!(access(id), Some(Access::Safe), "{id}");
     }
+}
+
+#[test]
+fn clearing_the_link_history_asks_an_agent_first() {
+    use crate::agent::{Access, Class, access};
+    // The history has no undo, and the "links you open" tier lives on it.
+    assert_eq!(access("forYou.clearLinks"), Some(Access::Owner(Class::Delete)));
 }
 
 #[test]

@@ -170,6 +170,57 @@ fn an_inbox_message_shows_its_sender_on_top() {
     }
 }
 
+fn settings_open(a: MailApp) -> Window {
+    let mut harness = window(a);
+    harness.state_mut().for_you_settings.open = true;
+    harness.run_steps(4);
+    harness
+}
+
+#[test]
+fn dragging_a_number_settles_it_once_the_drag_ends() {
+    let mut harness = settings_open(app());
+    let cap = harness.state().session.prefs.for_you.cap;
+    let at = harness.state().hit.rect("forYouCap", 0).expect("the cap's number").center();
+    harness.event(egui::Event::PointerMoved(at));
+    harness.step();
+    harness.event(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
+    harness.step();
+    let mut to = at;
+    for _ in 0..10 {
+        to.x += 6.0;
+        harness.event(egui::Event::PointerMoved(to));
+        harness.step();
+    }
+    // Mid-drag the list is not recounted: the setting waits.
+    assert_eq!(harness.state().session.prefs.for_you.cap, cap);
+    harness.event(egui::Event::PointerButton { pos: to, button: egui::PointerButton::Primary, pressed: false, modifiers: egui::Modifiers::NONE });
+    harness.run_steps(4);
+    assert!(harness.state().session.prefs.for_you.cap > cap);
+}
+
+#[test]
+fn clearing_the_link_history_asks_first() {
+    let mut a = app();
+    let first = a.session.mailbox.messages.values().map(|m| m.id).next().unwrap();
+    a.session.note_link_opened(first);
+    let mut harness = settings_open(a);
+    let clear = harness.state().hit.rect("forYouClearLinks", 0).expect("Clear link history");
+    click_at(&mut harness, clear.center());
+    assert!(harness.state().session.mailbox.message(first).unwrap().link_opened.is_some());
+    // Cancel keeps it...
+    let cancel = harness.state().hit.rect("forYouClearCancel", 0).expect("Cancel");
+    click_at(&mut harness, cancel.center());
+    assert!(harness.state().hit.rect("forYouClearConfirm", 0).is_none());
+    assert!(harness.state().session.mailbox.message(first).unwrap().link_opened.is_some());
+    // ...Clear forgets it.
+    let clear = harness.state().hit.rect("forYouClearLinks", 0).unwrap();
+    click_at(&mut harness, clear.center());
+    let confirm = harness.state().hit.rect("forYouClearConfirm", 0).expect("Clear");
+    click_at(&mut harness, confirm.center());
+    assert!(harness.state().session.mailbox.message(first).unwrap().link_opened.is_none());
+}
+
 fn list_width(harness: &mut Window) -> f32 {
     drawn(harness).first().map(|(_, r)| r.width()).expect("a row")
 }

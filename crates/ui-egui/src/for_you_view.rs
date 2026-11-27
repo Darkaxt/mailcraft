@@ -10,12 +10,15 @@ use serde_json::json;
 use crate::theme::{Tokens, paint_clipped, regular, semibold};
 use crate::{MailApp, icons};
 
-/// The settings window: open or not, and the names being typed (kept as typed, commas and all,
-/// until the window closes).
+/// The settings window: open or not, the names being typed (kept as typed, commas and all, until
+/// the window closes), the change waiting for a drag or the typing to end (each change recounts
+/// the mailbox), and Clear link history asking first.
 #[derive(Default)]
 pub(crate) struct Settings {
     pub open: bool,
     names: Option<String>,
+    draft: Option<ForYouPrefs>,
+    confirm_clear: bool,
 }
 
 /// The section's heading in `gr` (a group heading's place): "For you", how many rows it lists,
@@ -66,15 +69,20 @@ pub(crate) fn settings_window(app: &mut MailApp, ctx: &egui::Context) {
     if !app.for_you_settings.open || app.dialog.is_some() || !app.asking.is_empty() {
         if !app.for_you_settings.open {
             app.for_you_settings.names = None;
+            app.for_you_settings.draft = None;
+            app.for_you_settings.confirm_clear = false;
         }
         return;
     }
     let t = Tokens::get(ctx);
     let before = app.session.prefs.for_you.clone();
-    let mut p = before.clone();
+    let mut p = app.for_you_settings.draft.take().unwrap_or_else(|| before.clone());
     let mut names = app.for_you_settings.names.take().unwrap_or_else(|| p.own_names.join(", "));
     let mut open = true;
     let mut clear = false;
+    let mut confirm = app.for_you_settings.confirm_clear;
+    let mut typing = false;
+    let mut hits: Vec<(&'static str, Rect)> = Vec::new();
     let room = ctx.content_rect().size();
     let max = vec2(560.0, 640.0).min((room - vec2(24.0, 24.0)).max(vec2(260.0, 220.0)));
     let folders = folders(app);
@@ -99,7 +107,7 @@ pub(crate) fn settings_window(app: &mut MailApp, ctx: &egui::Context) {
                 tier(ui, &mut p.read, tl!("Senders you read, over (days)"), &mut p.read_days, ForYouPrefs::MAX_DAYS);
                 ui.horizontal(|ui| {
                     ui.label(tl!("Show at most"));
-                    ui.add(egui::DragValue::new(&mut p.cap).range(0..=ForYouPrefs::MAX_CAP));
+                    hits.push(("forYouCap", ui.add(egui::DragValue::new(&mut p.cap).range(0..=ForYouPrefs::MAX_CAP)).rect));
                     ui.label(egui::RichText::new(tl!("messages (0: all); the rest under Show all")).color(t.text_dim));
                 });
                 ui.horizontal(|ui| {
@@ -108,6 +116,7 @@ pub(crate) fn settings_window(app: &mut MailApp, ctx: &egui::Context) {
                     if resp.lost_focus() || resp.changed() {
                         p.own_names = names.split(',').map(|n| n.trim().to_string()).filter(|n| !n.is_empty()).collect();
                     }
+                    typing = resp.has_focus();
                 });
                 ui.separator();
                 ui.label(egui::RichText::new(tl!("Folders in the Inbox's For you")).font(semibold(12.5)));
@@ -136,18 +145,44 @@ pub(crate) fn settings_window(app: &mut MailApp, ctx: &egui::Context) {
                     }
                 });
                 ui.separator();
+                // No undo brings the history back: a second press, Clear, forgets it.
                 ui.horizontal(|ui| {
-                    clear = ui.button(tl!("Clear link history")).on_hover_text(tl!("Forget which messages you opened a link in")).clicked();
+                    let ask = ui.add_enabled(!confirm, egui::Button::new(tl!("Clear link history"))).on_hover_text(tl!("Forget which messages you opened a link in"));
+                    hits.push(("forYouClearLinks", ask.rect));
+                    if ask.clicked() {
+                        confirm = true;
+                    }
+                    if confirm {
+                        let yes = ui.button(tl!("Clear"));
+                        let no = ui.button(tl!("Cancel"));
+                        hits.push(("forYouClearConfirm", yes.rect));
+                        hits.push(("forYouClearCancel", no.rect));
+                        clear = yes.clicked();
+                        if clear || no.clicked() {
+                            confirm = false;
+                        }
+                    }
                 });
             });
         });
+    for (name, rect) in hits {
+        app.hit.add(name, 0, rect);
+    }
     // Unchanged unless something was: the folders come back in the order the window lists them.
+    // A number being dragged or names being typed wait (each change recounts the mailbox), and are
+    // kept when the window closes.
     p.folders.sort_by_key(|f| f.folder);
     let mut was = before.clone();
     was.folders.sort_by_key(|f| f.folder);
     if p != was {
-        let _ = app.run("forYou.settings", serde_json::to_value(&p).unwrap_or_default());
+        if open && (ctx.dragged_id().is_some() || typing) {
+            app.for_you_settings.draft = Some(p);
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        } else {
+            let _ = app.run("forYou.settings", serde_json::to_value(&p).unwrap_or_default());
+        }
     }
+    app.for_you_settings.confirm_clear = open && confirm;
     if clear {
         let _ = app.run("forYou.clearLinks", json!({}));
     }

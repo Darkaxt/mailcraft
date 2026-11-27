@@ -165,6 +165,7 @@ const ROWS: &[(&str, &str, Setup)] = &[
     ("tasks.delete", "{}", Setup::None),
     ("category.remove", r#"{"name": "Purple category"}"#, Setup::None),
     ("compose.discard", "{}", Setup::Writing),
+    ("forYou.clearLinks", "{}", Setup::None),
     ("ui.closeWindow", "{}", Setup::Window),
     // Accounts.
     ("account.add", r#"{"email": "bo@example.org", "incoming": {"host": "imap.example.org"}}"#, Setup::None),
