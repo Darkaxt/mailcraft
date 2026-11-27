@@ -5,6 +5,7 @@
 - Turn it on and adjust it with the gear on its heading, or in File › Options › For you settings.
 - A new row style, Folder & subject: the folder (the sender, for mail in an Inbox) on top and the subject larger under it, with no preview. The sender shows when you point at the row.
 - View › Reading Pane › Hide When Nothing Is Selected: the list takes the whole width until you select a message.
+- Fixed: the window's Maximize button works again when clicked.
 - Everything from 0.12.42 stays.
 
 **MailCraft 0.12.42** — move contacts between folders
