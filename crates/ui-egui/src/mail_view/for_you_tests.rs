@@ -157,14 +157,36 @@ fn for_you_is_a_list_of_its_own_above_the_list() {
 }
 
 #[test]
+fn for_you_is_the_headers_title_and_mails_heads_the_list_below() {
+    // v0.12.46: For you's title where the tabs were; All and Unread on the Mails heading.
+    let (a, new) = with_new_senders(2);
+    let mut harness = window(a);
+    let gear = harness.state().hit.rect("forYouGear", 0).expect("For you's title and gear");
+    let up = harness.state().hit.rect("forYouMessage", new[0]).unwrap();
+    assert!(gear.max.y <= up.min.y, "{gear:?} over {up:?}");
+    let divider = harness.state().hit.rect("forYouDivider", 0).unwrap();
+    let mails = harness.state().hit.rect("mailsHeading", 0).expect("the Mails heading");
+    assert!(mails.min.y >= divider.max.y - 0.5, "{mails:?} under {divider:?}");
+    let below = harness.state().hit.rect("message", new[0]).unwrap();
+    assert!(below.min.y >= mails.max.y - 0.5, "{below:?} under {mails:?}");
+    for n in [0, 1] {
+        let tab = harness.state().hit.rect("listTab", n).expect("All and Unread on the Mails heading");
+        assert!(tab.min.y >= mails.min.y && tab.max.y <= mails.max.y + 0.5, "{tab:?} in {mails:?}");
+    }
+    let unread = harness.state().hit.rect("listTab", 1).unwrap();
+    click_at(&mut harness, unread.center());
+    assert_eq!(harness.state().session.view.filter, Filter::Unread);
+}
+
+#[test]
 fn a_short_for_you_is_as_tall_as_its_rows() {
-    let (h, least, most) = for_you_panel::height(800.0, 2, 50.0, 0.0);
-    assert_eq!(h, GROUP_H + 100.0);
+    let (h, least, most) = for_you_panel::height(800.0, 2, 50.0, 0.0, 0.0);
+    assert_eq!(h, 100.0);
     assert!(least <= h && h <= most);
     // A long one takes its share until dragged, and never the list's last rows.
-    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 0.0).0, 320.0);
-    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 5_000.0).0, 800.0 - for_you_panel::DIVIDER_H - 150.0);
-    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 1.0).0, GROUP_H + 50.0);
+    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 0.0, 0.0).0, 320.0);
+    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 0.0, 5_000.0).0, 800.0 - for_you_panel::DIVIDER_H - 150.0);
+    assert_eq!(for_you_panel::height(800.0, 40, 50.0, 0.0, 1.0).0, 50.0);
 }
 
 #[test]
@@ -194,6 +216,33 @@ fn a_row_of_for_you_selects_its_message() {
     click_at(&mut harness, row.center());
     assert_eq!(harness.state().session.sel.focus(), Some(new[1]));
     assert_eq!(harness.state().session.sel.focus_copy(), mailcraft_engine::for_you::COPY);
+}
+
+#[test]
+fn show_all_is_beside_for_you_or_under_its_rows() {
+    // v0.12.46: in the header while there is room (the count gives way first), else the last line
+    // of For you's list: at the narrowest list, 240.
+    for (width, beside) in [(900.0, true), (240.0, false)] {
+        let mut a = app();
+        a.ui.list_width = width;
+        for_you_on(&mut a);
+        let inbox = a.session.mailbox.inbox().unwrap();
+        new_mail(&mut a, inbox, "ana@people.example");
+        new_mail(&mut a, inbox, "bo@people.example");
+        a.execute("forYou.settings", json!({"cap": 1})).unwrap();
+        let mut harness = window(a);
+        let show_all = harness.state().hit.rect("forYouShowAll", 0).expect("Show all, wherever it fits");
+        let gear = harness.state().hit.rect("forYouGear", 0).unwrap();
+        let divider = harness.state().hit.rect("forYouDivider", 0).unwrap();
+        assert!(show_all.max.y <= divider.min.y, "{width}: {show_all:?} above {divider:?}");
+        let kept = harness.state_mut().session.rows().iter().find(|r| r.for_you.is_some()).map(|r| r.id).expect("a row in For you");
+        let up = harness.state().hit.rect("forYouMessage", kept).expect("For you's row");
+        if beside {
+            assert!((show_all.center().y - gear.center().y).abs() < 4.0, "{width}: {show_all:?} beside {gear:?}");
+        } else {
+            assert!(show_all.min.y >= up.max.y - 0.5, "{width}: {show_all:?} under {up:?}");
+        }
+    }
 }
 
 #[test]

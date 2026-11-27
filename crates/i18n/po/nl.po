@@ -9764,6 +9764,11 @@ msgid "Mailbox"
 msgstr "Postvak"
 
 #. interface
+#: crates/ui-egui/src/mail_view/for_you_panel.rs
+msgid "Mails"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/signatures.rs
 #, fuzzy
 msgid "Make a signature with New."

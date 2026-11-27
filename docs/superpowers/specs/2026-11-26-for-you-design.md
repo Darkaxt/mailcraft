@@ -108,6 +108,14 @@ design (supersedes "Moved, not duplicated" and the "Everything else" heading):
   and switched-on folders go by date within their tier.
 - Each row of For you wears a tag saying why: New, Replied, Links, Read, Folder.
 
+## Revision 2026-11-27 (owner, after using 0.12.45): two headings
+
+- "For you" is the list header's title, in the font the All / Unread tabs had, with its count, Show all and
+  the gear; the sort and view controls stay at the header's right.
+- Under the divider, a "Mails" heading in the same font heads the list below. All / Unread sit at its right:
+  they filter that list (owner: the filter makes no sense in For you, which only shows unread mail).
+- Without For you (feature off, or a folder it does not apply to) the header keeps the tabs as upstream.
+
 ## Settings area
 
 Reached from the For you section header (a gear) and from settings. Contents:

@@ -11,6 +11,9 @@ use serde_json::json;
 use crate::theme::{Tokens, paint_clipped, regular, semibold};
 use crate::{MailApp, icons};
 
+/// How many For you lists and Show all, beside its title.
+const COUNT_TEXT: f32 = 12.5;
+
 /// The settings window: open or not, the names being typed (kept as typed, commas and all, until
 /// the window closes), the change waiting for a drag or the typing to end (each change recounts
 /// the mailbox), and Clear link history asking first.
@@ -22,36 +25,35 @@ pub(crate) struct Settings {
     confirm_clear: bool,
 }
 
-/// The section's heading in `gr` (a group heading's place): "For you", how many rows it lists,
-/// Show all or Show fewer while rows are held back or all of them are shown, and the gear.
-pub(crate) fn header(app: &mut MailApp, ui: &mut Ui, gr: Rect, shown: usize, more: bool, text_size: f32) {
+/// For you's title in `gr` (the list header's, in the tabs' `text_size`, v0.12.46): "For you", how
+/// many rows it lists, Show all or Show fewer while rows are held back or all of them are shown,
+/// and the gear. In a narrow list the count gives way first, then Show all: false when Show all
+/// is wanted and found no room here (For you's list then ends with it, [`show_all`]).
+pub(crate) fn header(app: &mut MailApp, ui: &mut Ui, gr: Rect, shown: usize, more: bool, text_size: f32) -> bool {
     let t = Tokens::get(ui.ctx());
     let p = ui.painter().clone();
-    let y = gr.center().y + 3.0;
+    let y = gr.center().y;
     let gear = Rect::from_center_size(pos2(gr.max.x - 16.0, y), vec2(18.0, 18.0));
     let room = (gear.min.x - 8.0 - (gr.min.x + 16.0)).max(0.0);
-    let w = paint_clipped(&p, pos2(gr.min.x + 16.0, y), room, tl!("For you"), semibold(text_size), t.group_label);
+    let w = paint_clipped(&p, pos2(gr.min.x + 16.0, y), room, tl!("For you"), regular(text_size), t.text);
     let mut x = gr.min.x + 16.0 + w + 8.0;
-    let count = p.text(pos2(x, y), Align2::LEFT_CENTER, shown.to_string(), regular(text_size - 1.0), t.text_dim).width();
-    x += count + 12.0;
-    let all = app.session.view.for_you_all;
-    if more || all {
-        let label = if all { tl!("Show fewer") } else { tl!("Show all") };
-        let galley = p.layout_no_wrap(label.to_string(), regular(text_size - 0.5), t.accent_text);
-        let at = Rect::from_min_size(pos2(x, y - galley.size().y / 2.0), galley.size());
-        if at.max.x < gear.min.x - 4.0 {
-            let resp =
-                ui.interact(at.expand(2.0), ui.scope_id().with("for_you_show_all"), Sense::click()).on_hover_cursor(egui::CursorIcon::PointingHand);
-            app.hit.add("forYouShowAll", 0, at);
-            if resp.hovered() {
-                p.line_segment([pos2(at.min.x, at.max.y), at.max], Stroke::new(1.0, t.accent_text));
-            }
-            p.galley(at.min, galley, t.accent_text);
-            if resp.clicked() {
-                let _ = app.run("forYou.showAll", json!({"value": !all}));
-            }
-        }
+    let end = gear.min.x - 4.0;
+    let link = show_all_label(app, more);
+    let width = |s: &str| p.layout_no_wrap(s.to_string(), regular(COUNT_TEXT), t.text).size().x;
+    let count = shown.to_string();
+    let (count_w, link_w) = (width(&count), link.map_or(0.0, width));
+    if x + count_w + link.map_or(0.0, |_| 12.0 + link_w) <= end {
+        p.text(pos2(x, y), Align2::LEFT_CENTER, count, regular(COUNT_TEXT), t.text_dim);
+        x += count_w + 12.0;
     }
+    let placed = match link {
+        Some(label) if x + link_w <= end => {
+            show_all(app, ui, pos2(x, y), label);
+            true
+        }
+        Some(_) => false,
+        None => true,
+    };
     let resp = ui
         .interact(gear, ui.scope_id().with("for_you_gear"), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -63,6 +65,31 @@ pub(crate) fn header(app: &mut MailApp, ui: &mut Ui, gr: Rect, shown: usize, mor
     icons::paint(&p, gear.shrink(2.0), "settings", t.icon, t.accent);
     if resp.clicked() {
         app.for_you_settings.open = true;
+    }
+    placed
+}
+
+/// Show all while For you holds rows back (`more`), Show fewer while it shows them all, or nothing.
+pub(crate) fn show_all_label(app: &MailApp, more: bool) -> Option<&'static str> {
+    let all = app.session.view.for_you_all;
+    (more || all).then(|| if all { tl!("Show fewer") } else { tl!("Show all") })
+}
+
+/// Show all or Show fewer, `label`, from `left` (its left middle): a link that turns it over.
+pub(crate) fn show_all(app: &mut MailApp, ui: &mut Ui, left: egui::Pos2, label: &str) {
+    let t = Tokens::get(ui.ctx());
+    let p = ui.painter().clone();
+    let all = app.session.view.for_you_all;
+    let galley = p.layout_no_wrap(label.to_string(), regular(COUNT_TEXT), t.accent_text);
+    let at = Rect::from_min_size(pos2(left.x, left.y - galley.size().y / 2.0), galley.size());
+    let resp = ui.interact(at.expand(2.0), ui.scope_id().with("for_you_show_all"), Sense::click()).on_hover_cursor(egui::CursorIcon::PointingHand);
+    app.hit.add("forYouShowAll", 0, at);
+    if resp.hovered() {
+        p.line_segment([pos2(at.min.x, at.max.y), at.max], Stroke::new(1.0, t.accent_text));
+    }
+    p.galley(at.min, galley, t.accent_text);
+    if resp.clicked() {
+        let _ = app.run("forYou.showAll", json!({"value": !all}));
     }
 }
 

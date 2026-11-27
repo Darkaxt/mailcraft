@@ -1,3 +1,7 @@
+**MailCraft 0.12.46** — For you and Mails
+- "For you" is now the title at the top of the list, and the list under it has its own "Mails" heading in the same style.
+- All and Unread moved to the Mails heading: they filter that list. For you only ever shows unread mail.
+
 **MailCraft 0.12.45** — For you is a list of its own
 - For you now sits above the message list as a separate list with its own scroll, so both are in view at once and new mail is never buried.
 - Drag the line under For you to make it taller or shorter; MailCraft remembers the height.

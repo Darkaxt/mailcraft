@@ -459,7 +459,10 @@ fn direction_label(sort: SortBy, descending: bool) -> &'static str {
 /// The header above the list: All and Unread as tabs on the left (the filter in use in the
 /// accent colour, with a line under it), and on the right how the list is arranged, with the
 /// arrow that turns it over. The folder's name is in the window's title and in the folder pane.
-fn list_header(app: &mut MailApp, ui: &mut Ui) {
+/// fork: `for_you` (how many For you lists, and whether it holds rows back): For you's title
+/// instead of the tabs, which go to the Mails heading ([`for_you_panel`], v0.12.46). False when
+/// For you's Show all found no room in it ([`crate::for_you_view::header`]).
+fn list_header(app: &mut MailApp, ui: &mut Ui, for_you: Option<(usize, bool)>) -> bool {
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), HEADER_H), Sense::hover());
     let rows_end = r.max.x - lane_width(app);
@@ -533,19 +536,41 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
         }
     }
 
-    // The tabs. A filter that has none (Flagged, Has Attachments, To Me) shows as a third one
-    // while it is in use.
-    let width = |f: Filter| ui.ctx().fonts_mut(|fonts| fonts.layout_no_wrap(tl!(f.label()).to_string(), regular(SENDER_TEXT), t.text).size().x);
+    // fork (v0.12.46): over For you, the header is For you's: its title in the tabs' font, how
+    // many it lists, Show all and the gear. All and Unread go to the Mails heading under it:
+    // they filter that list (For you is unread mail anyway).
+    if let Some((shown, more)) = for_you {
+        let title = Rect::from_min_max(pos2(r.min.x + TEXT_LEFT - 15.0, r.min.y + 21.0), pos2(controls_left - 8.0, r.min.y + 42.0));
+        return crate::for_you_view::header(app, ui, title, shown, more, SENDER_TEXT);
+    }
+    // The tabs.
+    let band = Rect::from_min_max(pos2(r.min.x, r.min.y + 18.0), r.max);
+    filter_tabs(app, ui, band, r.min.y + 31.5, r.min.x + TEXT_LEFT - 1.0, controls_left - 8.0, SENDER_TEXT, false);
+    true
+}
+
+/// All and Unread as tabs in `band` (a filter that has none, Flagged, Has Attachments or To Me,
+/// shows as a third one while it is in use), their text centred on `text_y`, from `x` to no
+/// further than `end` (`right`: as far right as they go), in `size`; the filter in use in the
+/// accent colour with a line under it.
+#[allow(clippy::too_many_arguments)]
+fn filter_tabs(app: &mut MailApp, ui: &mut Ui, band: Rect, text_y: f32, mut x: f32, end: f32, size: f32, right: bool) {
+    let t = Tokens::get(ui.ctx());
+    let filter = app.session.view.filter;
+    let width = |f: Filter| ui.ctx().fonts_mut(|fonts| fonts.layout_no_wrap(tl!(f.label()).to_string(), regular(size), t.text).size().x);
     let mut tabs = vec![(Filter::All, 0u64, width(Filter::All)), (Filter::Unread, 1, width(Filter::Unread))];
     if !matches!(filter, Filter::All | Filter::Unread) {
         tabs.push((filter, 2, width(filter)));
     }
     // A tab is its text with a little either side (the line under it is that wide), and the
     // next one starts 14 further on.
-    let mut x = r.min.x + TEXT_LEFT - 1.0;
+    if right {
+        let all = tabs.iter().map(|(.., w)| w + 3.0).sum::<f32>() + TAB_GAP * tabs.len().saturating_sub(1) as f32;
+        x = x.max(end - all);
+    }
     // In a list too narrow for them all, the tab in use is the last to give: the others are
     // cut short, then left out (the arrangement's menu has every filter), then it is cut too.
-    let mut over = tabs.iter().map(|(.., w)| w + 3.0).sum::<f32>() + TAB_GAP * tabs.len().saturating_sub(1) as f32 - (controls_left - 8.0 - x);
+    let mut over = tabs.iter().map(|(.., w)| w + 3.0).sum::<f32>() + TAB_GAP * tabs.len().saturating_sub(1) as f32 - (end - x);
     for (.., w) in tabs.iter_mut().rev().filter(|(f, ..)| *f != filter) {
         let cut = over.clamp(0.0, (*w - TAB_MIN).max(0.0));
         *w -= cut;
@@ -563,11 +588,11 @@ fn list_header(app: &mut MailApp, ui: &mut Ui) {
         if w < TAB_MIN / 2.0 {
             continue;
         }
-        let tab = Rect::from_min_max(pos2(x, r.min.y + 18.0), pos2(x + w + 3.0, r.max.y));
+        let tab = Rect::from_min_max(pos2(x, band.min.y), pos2(x + w + 3.0, band.max.y));
         let resp = ui.interact(tab.expand2(vec2(5.0, 0.0)), ui.scope_id().with(("list_tab", n)), Sense::click());
         app.hit.add("listTab", n, tab);
-        paint_clipped(ui.painter(), pos2(x + 2.0, r.min.y + 31.5), w + 1.0, label, regular(SENDER_TEXT), if on { t.accent_text } else { t.text });
-        let under = Rect::from_min_max(pos2(tab.min.x, r.max.y - 1.0), tab.max);
+        paint_clipped(ui.painter(), pos2(x + 2.0, text_y), w + 1.0, label, regular(size), if on { t.accent_text } else { t.text });
+        let under = Rect::from_min_max(pos2(tab.min.x, band.max.y - 1.0), tab.max);
         if on {
             ui.painter().rect_filled(under, 0.0, t.accent_text);
         } else if resp.hovered() {
@@ -761,7 +786,13 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
         return;
     }
     ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-    list_header(app, ui);
+    // fork: For you's title is the header's while For you lists anything (v0.12.46).
+    let for_you = {
+        let rows = app.session.rows();
+        let n = rows.iter().take_while(|r| r.for_you.is_some()).count();
+        (n > 0).then(|| (n, rows.first().is_some_and(|r| r.for_you_more)))
+    };
+    let show_all_placed = list_header(app, ui, for_you);
     // Gmail's categories, when they are tabs above a Gmail Inbox's list (#911).
     crate::gmail_tabs::row(app, ui);
     // A search, or a search folder, looks in the Local archive too: it is taken out for it.
@@ -912,7 +943,8 @@ fn list(app: &mut MailApp, ui: &mut Ui) {
     let section_seen = if section > 0 {
         let look = Look { drawn: &drawn, focus, shade: false };
         let reveal_section = focused_section.filter(|_| reveal).map(|i| (i, centered));
-        for_you_panel::show(app, ui, rows.get(..section).unwrap_or_default(), row_h, look, swipe_scope, reveal_section)
+        let rows = rows.get(..section).unwrap_or_default();
+        for_you_panel::show(app, ui, rows, row_h, look, swipe_scope, reveal_section, !show_all_placed)
     } else {
         Vec::new()
     };
