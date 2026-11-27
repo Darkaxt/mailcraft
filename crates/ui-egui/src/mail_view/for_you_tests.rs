@@ -75,7 +75,8 @@ fn new_mail(app: &mut MailApp, folder: Id, from: &str) -> Id {
         ..Default::default()
     };
     let id = app.session.mailbox.add_message(m).unwrap();
-    // (Through a command, so the list is built again.)
+    // (A read mark alone carries the list through as it was: the mailbox changed first.)
+    app.session.mailbox_changed();
     app.execute("mail.markUnread", json!({"ids": [id]})).unwrap();
     id
 }
@@ -94,6 +95,7 @@ fn the_header_shows_for_you_and_opens_the_settings() {
     for id in ids {
         a.session.mailbox.message_mut(id).unwrap().read = true;
     }
+    a.session.mailbox_changed();
     for_you_on(&mut a);
     let inbox = a.session.mailbox.inbox().unwrap();
     let new = new_mail(&mut a, inbox, "ana@people.example");
