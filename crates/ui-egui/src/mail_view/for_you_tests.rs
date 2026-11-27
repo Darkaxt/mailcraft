@@ -88,6 +88,12 @@ fn for_you_on(app: &mut MailApp) {
 #[test]
 fn the_header_shows_for_you_and_opens_the_settings() {
     let mut a = app();
+    // The sample's own unread mail read, so that the section holds only the message added (it
+    // would otherwise be among many newer ones, past the cap or the window's bottom).
+    let ids: Vec<Id> = a.session.mailbox.messages.values().map(|m| m.id).collect();
+    for id in ids {
+        a.session.mailbox.message_mut(id).unwrap().read = true;
+    }
     for_you_on(&mut a);
     let inbox = a.session.mailbox.inbox().unwrap();
     let new = new_mail(&mut a, inbox, "ana@people.example");
