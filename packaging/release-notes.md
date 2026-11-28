@@ -1,3 +1,8 @@
+**MailCraft 0.12.48** — the newest fixes from the original project
+- Messages laid out with tables (newsletters, receipts) look more like they do in Outlook: hidden rows and cells leave no gaps or stray coloured bars, and spacing and cell padding follow Outlook's own settings.
+- Fonts and font weights in messages are shown more faithfully.
+- Updates still come only from this fork and only when you click Update now. Everything from 0.12.47 stays.
+
 **MailCraft 0.12.47** — For you settings, old mail and sender icons
 - For you's settings are now a page of File, next to Options, in the same style as the rest of the settings. The gear on For you opens it.
 - For you only lists mail from the last 30 days: a sender you read no longer brings back their unread mail of months ago. Change the number of days under File › For you › What qualifies.
