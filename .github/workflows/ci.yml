@@ -23,6 +23,9 @@ on:
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
+  # The fork's weekly whole suite (Sunday 03:17 UTC): pushes test only what changed (below).
+  schedule:
+    - cron: '17 3 * * 0'
 
 permissions:
   contents: read
@@ -56,7 +59,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 2
+          # The fork's pushes compare against the last release tag: the whole history and its tags.
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (no releases; pinned by hash) # zizmor: ignore[ref-version-mismatch]
         with:
           toolchain: 1.98.1
@@ -74,6 +78,17 @@ jobs:
           set -euo pipefail
           args=(--event "$EVENT" --base HEAD^1)
           if [ "$FULL_CI" = true ]; then args+=(--full-ci); fi
+          # The fork (owner 2026-11-28): a validated feature is not tested again until something
+          # touching it changes. A push to main tests the packages changed since the last release
+          # tag, the way a pull request does; an upstream merge in that range, a run by hand and
+          # the weekly schedule run the whole suite.
+          if [ "$EVENT" = push ]; then
+            tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^1 2>/dev/null || true)
+            if [ -n "$tag" ] && [ -z "$(git log --merges --format=%H --grep '^Merge upstream/main' "$tag..HEAD")" ]; then
+              echo "fork: testing what changed since $tag"
+              args=(--event pull_request --base "$tag")
+            fi
+          fi
           cargo run --locked --package xtask -- affected "${args[@]}"
 
   # The checks that need no build of the workspace (seconds together): formatting, attribution,
