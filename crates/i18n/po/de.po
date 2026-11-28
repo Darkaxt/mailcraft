@@ -1328,7 +1328,7 @@ msgstr "Wenn Sie eine Besprechungsanfrage in der E-Mail zusagen, mit Vorbehalt z
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "Age limit (minutes)"
+msgid "Age limit"
 msgstr ""
 
 #. android
@@ -6582,12 +6582,12 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "For you settings"
+msgid "For you remembers which messages you opened a link in, for Senders whose links you open."
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "For you settings…"
+#: crates/ui-egui/src/for_you_view.rs
+msgid "For you settings"
 msgstr ""
 
 #. interface
@@ -7814,7 +7814,7 @@ msgstr "Mit Text in Zeile"
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "In the Inbox (with unread mail filed into other folders)"
+msgid "In the Inbox, with the unread mail your rules file into other folders"
 msgstr ""
 
 #. interface
@@ -8862,6 +8862,11 @@ msgstr "Zeilen gelöscht"
 msgid "Link"
 msgstr "Link"
 
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Link history"
+msgstr ""
+
 #. interface, ribbon
 #: crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
 msgid "Links"
@@ -9204,6 +9209,11 @@ msgstr "Offline verfügbare E-Mails"
 #, fuzzy
 msgid "Mail to keep offline"
 msgstr "Offline verfügbare E-Mails"
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Mail with one of these as its sender's name is your own doing (a notification of your own push), never in For you"
+msgstr ""
 
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/SettingsSummaries.kt
@@ -10971,7 +10981,7 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "New senders, first seen within (days)"
+msgid "New senders, first seen within"
 msgstr ""
 
 #. android
@@ -12289,6 +12299,11 @@ msgid "Only keep your custom-domain address if both addresses are aliases of the
 msgstr "Behalten Sie Ihre Adresse mit eigener Domäne nur bei, wenn beide Adressen Aliase desselben Microsoft-Postfachs sind."
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Only mail from the last"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 msgid "Only my contacts"
 msgstr "Nur meine Kontakte"
@@ -13112,7 +13127,7 @@ msgstr "Einzuladende Personen"
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "People you reply to, among their latest (messages)"
+msgid "People you reply to, among their latest"
 msgstr ""
 
 #. android, interface
@@ -15867,12 +15882,12 @@ msgstr "Adresse des Absenders enthält"
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "Senders whose links you open, over (days)"
+msgid "Senders whose links you open, over"
 msgstr ""
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "Senders you read, over (days)"
+msgid "Senders you read, over"
 msgstr ""
 
 #. name
@@ -21403,7 +21418,12 @@ msgstr "Ungelesen"
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
-msgid "Unread mail worth reading first, at the top of the list."
+msgid "Unread mail worth reading first, in a list of its own above the message list."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Unread mail your rules file into these folders comes back to the Inbox's For you: always, or until it is older than a limit."
 msgstr ""
 
 #. interface
@@ -21980,11 +22000,6 @@ msgid "What qualifies"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "What the For you section at the top of All mail and the Inbox lists"
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/sync_panel.rs
 #, fuzzy
 msgid "What the Send/Receive before came to: the last one brought nothing new"
@@ -22130,6 +22145,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/forms.rs
 msgid "Where Should This Mail Go?"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "Where it shows"
 msgstr ""
 
 #. interface
@@ -23433,6 +23453,11 @@ msgid "day"
 msgstr "Tag"
 
 #. interface
+#: crates/ui-egui/src/for_you_view.rs
+msgid "days"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "delete it"
@@ -23933,11 +23958,16 @@ msgstr "Nachricht {id} enthält kein Original"
 
 #. interface
 #: crates/ui-egui/src/for_you_view.rs
+msgid "messages"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/for_you_view.rs
 msgid "messages (0: all); the rest under Show all"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/reminders.rs
+#: crates/ui-egui/src/for_you_view.rs crates/ui-egui/src/reminders.rs
 msgid "minutes"
 msgstr "Minuten"
 

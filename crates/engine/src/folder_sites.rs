@@ -35,6 +35,20 @@ impl Session {
         None
     }
 
+    /// The sites the owner's folders wear, by brand (`amazon` → `amazon.es`): what a sender of
+    /// one of them shows on a row of the Inbox (v0.12.47), with no site looked up that the folder
+    /// pane doesn't already show.
+    pub fn folder_site_brands(&mut self) -> std::collections::HashMap<String, String> {
+        let ids: Vec<Id> = self.mailbox.folders.iter().filter(|f| f.kind == FolderKind::Custom).map(|f| f.id).collect();
+        let mut brands = std::collections::HashMap::new();
+        for id in ids {
+            if let Verdict::Site(site) = self.folder_verdict(id) {
+                brands.entry(mailcraft_model::folder_sites::brand(&site).to_string()).or_insert(site);
+            }
+        }
+        brands
+    }
+
     /// What folder `id`'s own mail says, kept while the number of messages in it stays the same.
     fn folder_verdict(&mut self, id: Id) -> Verdict {
         let counts = self.folder_counts();

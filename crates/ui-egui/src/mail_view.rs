@@ -1871,8 +1871,15 @@ fn message_row_content(app: &mut MailApp, ui: &mut Ui, row: &Row, rect: Rect, lo
         if sender_on_top {
             let who_font = if unread { semibold(LIST_TEXT) } else { regular(LIST_TEXT) };
             let mut who_x = left;
+            // fork: its site's icon before it, as a folder's before its name (v0.12.47).
+            if let Some(site) = crate::sender_images::sender_icon(app, ui.ctx(), &m) {
+                let at = Rect::from_min_size(pos2(who_x, line1 - 6.0), vec2(12.0, 12.0));
+                p.image(site.texture.id(), at, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), site.tint(t.text));
+                app.hit.add("messageSenderIcon", row.id, at);
+                who_x += 16.0;
+            }
             if m.draft {
-                who_x += paint_clipped(p, pos2(left, line1), (sx - 6.0 - left).max(0.0), tl!("[Draft]"), regular(LIST_TEXT), ink(t.red)) + 5.0;
+                who_x += paint_clipped(p, pos2(who_x, line1), (sx - 6.0 - who_x).max(0.0), tl!("[Draft]"), regular(LIST_TEXT), ink(t.red)) + 5.0;
             }
             let w = paint_clipped(p, pos2(who_x, line1), (sx - 6.0 - who_x).max(0.0), &who, who_font, who_color);
             app.hit.add("messageSender", row.id, Rect::from_min_max(pos2(left, line1 - 7.0), pos2(who_x + w, line1 + 7.0)));

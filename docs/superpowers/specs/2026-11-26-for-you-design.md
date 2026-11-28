@@ -184,3 +184,20 @@ as a View option; sender warnings exclude from every tier; sender on hover only.
 Exact UI of the section header and settings, sender-stats cache design, the self-triggered-notification
 heuristic details, the default cap, test layout. Consent policy: none of this changes mail, so all For you
 commands are Safe for agents; changing For you settings is a settings change (owner's).
+
+## Revision 2026-11-27 (owner, after using 0.12.46): old mail, a File page, sender icons
+
+The owner saw unread mail from 05/2025 in For you, missing icons on Inbox rows, and a settings window
+unlike the rest of the app.
+
+- **Age of the tiers' mail (0.12.47).** A qualifying sender no longer brings back all their unread mail:
+  only mail of the last `maxDays` days (default 30, 1-3650, my call) is in the tiers. Switched-on folders
+  keep their own age limit (none, or minutes).
+- **Settings as a File page.** The settings are File › For you, beside Options, with the backstage's
+  heading, sections and label column. The gear opens it; the window and Options' button are gone. A number
+  being dragged or names being typed are applied when the page is left.
+- **Sender icons on sender-led rows.** In Folder & subject rows of an Inbox, mail wears its site's icon before
+  the sender, while folder icons are on: the icon of a folder of the same brand (no new site asked), else the
+  site's own under the sender-picture rules (a known sender, or mail whose pictures come). Always only for
+  mail the server vouches for (DMARC), never in Junk. Senders that are neither may still show none; a looser
+  rule would be the owner's privacy call.

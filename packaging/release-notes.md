@@ -1,3 +1,9 @@
+**MailCraft 0.12.47** — For you settings, old mail and sender icons
+- For you's settings are now a page of File, next to Options, in the same style as the rest of the settings. The gear on For you opens it.
+- For you only lists mail from the last 30 days: a sender you read no longer brings back their unread mail of months ago. Change the number of days under File › For you › What qualifies.
+- In the Inbox's Folder & subject rows, mail now shows its site's icon before the sender, as folders do: the icon of your folder for the same company (Amazon, for mail from any Amazon site), or otherwise the site's own for senders you know. Only for mail whose server confirms the sender, and never in Junk E-mail.
+- Everything from 0.12.46 stays.
+
 **MailCraft 0.12.46** — For you and Mails
 - "For you" is now the title at the top of the list, and the list under it has its own "Mails" heading in the same style.
 - All and Unread moved to the Mails heading: they filter that list. For you only ever shows unread mail.

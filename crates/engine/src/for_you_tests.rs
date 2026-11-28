@@ -67,6 +67,18 @@ fn bulk(mut m: Message) -> Message {
 }
 
 #[test]
+fn a_qualifying_senders_old_unread_mail_is_left_out() {
+    // v0.12.47: a sender he reads brought back their unread mail of a year and a half ago.
+    let before: Vec<Message> = (0..4).map(|i| message("bo@people.example", 40 + i, true)).collect();
+    assert_eq!(tier_of(&before, &message("bo@people.example", 29, false)), Some(Tier::Read));
+    assert_eq!(tier_of(&before, &message("bo@people.example", 31, false)), None);
+    assert_eq!(tier_of(&before, &message("bo@people.example", 560, false)), None);
+    let mut p = ForYouPrefs { max_days: 0, ..Default::default() };
+    p.tidy();
+    assert_eq!(p.max_days, 1);
+}
+
+#[test]
 fn a_first_mail_from_a_person_is_a_new_sender() {
     assert_eq!(tier_of(&[], &message("ana@people.example", 1, false)), Some(Tier::NewSender));
 }

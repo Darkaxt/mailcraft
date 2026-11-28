@@ -1272,7 +1272,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
     ("ui.toggleMaximizeMainWindow", "Maximize or Restore", "Window", "{}"),
     ("ui.closeMainWindow", "Close", "Window", "{} — normal close; unsaved drafts still require the existing save decision"),
     ("ui.tab", "Show Ribbon Tab", "Ribbon", r#"{"tab": "Home"|"Send / Receive"|"Folder"|"View"|"Help"}"#),
-    ("ui.backstage", "File", "Ribbon", r#"{"value"?: bool, "page"?: "info"|"open"|"options"|"about"}"#),
+    ("ui.backstage", "File", "Ribbon", r#"{"value"?: bool, "page"?: "info"|"open"|"options"|"forYou"|"about"}"#),
     ("ui.collapseRibbon", "Collapse the Ribbon", "Ribbon", r#"{"value"?: bool}"#),
     ("ui.ribbonMode", "Ribbon Layout", "View › Layout", r#"{"value": "simplified"|"classic"}"#),
     (
@@ -6373,7 +6373,7 @@ impl MailApp {
         windows::compose_window::back(self, fronted);
         sync_panel::show(self, &ctx);
         search_index_ui::show(self, &ctx);
-        for_you_view::settings_window(self, &ctx);
+        for_you_view::settle(self);
         updates::dialog(self, &ctx);
         // (Unless a window of the system has drawn it over itself.)
         if !std::mem::take(&mut self.windows.dialog_shown) {

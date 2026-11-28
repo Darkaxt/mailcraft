@@ -87,6 +87,9 @@ pub struct SenderImages {
     decoded: Option<u64>,
     /// How many look-ups the host had in hand at the last frame.
     flying: usize,
+    /// The sites the owner's folders wear by brand, for the mailbox as it was (its revision and
+    /// number of messages): [`sender_icon`].
+    brands: Option<((u64, usize), Arc<HashMap<String, String>>)>,
     /// Handed to the host with every look-up, weakly: gone with this state, it stops what is in
     /// flight before its next request.
     alive: Arc<()>,
@@ -217,6 +220,48 @@ pub fn folder_icon(app: &mut MailApp, ctx: &egui::Context, id: mailcraft_model::
     let site = app.session.folder_site(id)?;
     tick(app, ctx);
     let (texture, mono) = look(app, ctx, format!("{}{site}", mailcraft_model::folder_sites::ICON_KEY))?;
+    Some(SiteIcon { texture, mono })
+}
+
+/// The icon of the site `m` is from, before its sender on a row led by its sender (Folder &
+/// subject rows of an Inbox, v0.12.47), while the owner keeps folder icons on: the icon a folder
+/// of the same brand wears (mail from `amazon.de` wears the Amazon folder's `amazon.es`), which
+/// asks nobody anything the folder pane doesn't; else the site's own, by the rules of a
+/// sender's picture ([`picture`]: a sender the owner knows, or mail whose pictures come). Never
+/// in Junk E-mail, and never for mail whose server doesn't vouch for its sender: a forged
+/// bank's logo would lend the forgery its trust.
+pub fn sender_icon(app: &mut MailApp, ctx: &egui::Context, m: &Message) -> Option<SiteIcon> {
+    use mailcraft_model::folder_sites::{ICON_KEY, brand, sender_site, wears_an_icon};
+    if !app.ui.folder_icons || app.services.sender_images.is_none() || app.session.mailbox.in_junk(m.folder) {
+        return None;
+    }
+    let own: std::collections::HashSet<String> =
+        app.session.mailbox.accounts.iter().map(|a| a.email.trim().to_lowercase()).filter(|a| !a.is_empty()).collect();
+    let site = sender_site(m, &own).filter(|s| wears_an_icon(s))?;
+    if !crate::reading::remote::vouched(app.session.mailbox.account(m.account), m) {
+        return None;
+    }
+    let at = (app.session.rev(), app.session.mailbox.messages.len());
+    let brands = match &app.sender_images.brands {
+        Some((was, brands)) if *was == at => brands.clone(),
+        _ => {
+            let brands = Arc::new(app.session.folder_site_brands());
+            app.sender_images.brands = Some((at, brands.clone()));
+            brands
+        }
+    };
+    let site = match brands.get(brand(&site)) {
+        Some(folder_site) => folder_site.clone(),
+        None => {
+            let address = key(&m.from)?;
+            if !is_known(app, &address) && crate::reading::remote::access(app, m) != crate::reading::Access::Allowed {
+                return None;
+            }
+            site
+        }
+    };
+    tick(app, ctx);
+    let (texture, mono) = look(app, ctx, format!("{ICON_KEY}{site}"))?;
     Some(SiteIcon { texture, mono })
 }
 

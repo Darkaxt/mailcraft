@@ -572,6 +572,58 @@ fn a_rows_folder_wears_its_sites_icon() {
     assert!(shown, "the site's icon, in the emoji's place");
 }
 
+/// v0.12.47: in an Inbox's Folder & subject rows, mail a server vouches for wears its site's icon
+/// before its sender: a folder's of the same brand (no site asked that the folder pane doesn't
+/// ask), else the site's own by the rules of a sender's picture; mail nobody vouches for, and a
+/// stranger's of a brand no folder wears, wear none.
+#[test]
+fn an_inbox_rows_sender_wears_its_brands_folder_icon() {
+    let (mut app, asked, _) = window(|_| Ok(png()));
+    let account = app.session.mailbox.accounts[0].id;
+    let inbox = app.session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+    let folder = app.session.mailbox.add_folder(account, None, "Amazon").unwrap();
+    for from in ["a@amazon.es", "b@amazon.es", "c@amazon.es"] {
+        let m = Message { folder, from: Address::new("", from), subject: "Order".into(), date: NOW, read: true, ..Default::default() };
+        app.session.mailbox.add_message(m).unwrap();
+    }
+    let vouched = |from: &str| Message {
+        folder: inbox,
+        from: Address::new("", from),
+        subject: "News".into(),
+        date: NOW,
+        uid: 1,
+        headers: vec![("Authentication-Results".into(), format!("mx.example.org; dmarc=pass header.from={}", from.rsplit('@').next().unwrap_or("")))],
+        ..Default::default()
+    };
+    let brand = app.session.mailbox.add_message(vouched("news@amazon.de")).unwrap();
+    let forged = app.session.mailbox.add_message(Message { headers: Vec::new(), uid: 0, ..vouched("deals@amazon.de") }).unwrap();
+    let stranger = app.session.mailbox.add_message(vouched("x@unknownbrand.example")).unwrap();
+    app.execute("view.rowStyle", json!({"value": "folder"})).unwrap();
+    app.execute("folder.select", json!({"id": inbox})).unwrap();
+    let ctx = egui::Context::default();
+    crate::theme::install_fonts(&ctx);
+    let list = |app: &mut MailApp| {
+        app.hit.clear();
+        let input =
+            egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(1200.0, 800.0))), ..Default::default() };
+        let mut out = ctx.run_ui(input, |ui| crate::mail_view::show(app, ui));
+        out.textures_delta.clear();
+        [brand, forged, stranger].map(|id| app.hit.rect("messageSenderIcon", id).is_some())
+    };
+    let mut shown = list(&mut app);
+    for _ in 0..20 {
+        if shown[0] {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        shown = list(&mut app);
+    }
+    assert_eq!(shown, [true, false, false], "the brand's folder icon, and none for the others");
+    let asked = asked.lock().unwrap();
+    assert!(asked.iter().any(|a| a == "site:amazon.es"), "{asked:?}");
+    assert!(!asked.iter().any(|a| a == "site:amazon.de" || a == "site:unknownbrand.example"), "{asked:?}");
+}
+
 /// An icon `n` pixels square, `paint(x, y)` its colour.
 fn icon_of(n: usize, paint: impl Fn(usize, usize) -> egui::Color32) -> egui::ColorImage {
     egui::ColorImage::new([n, n], (0..n * n).map(|i| paint(i % n, i / n)).collect())

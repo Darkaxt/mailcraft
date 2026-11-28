@@ -70,6 +70,9 @@ pub struct ForYouPrefs {
     pub all_mail: bool,
     /// The section in an Inbox (the unified one and each account's).
     pub inbox: bool,
+    /// Only mail of the last this many days is in the tiers (v0.12.47): a sender who qualifies
+    /// brings back none of their old unread mail. Switched-on folders keep their own age limit.
+    pub max_days: u16,
     pub new_sender: bool,
     /// A sender is new for this many days after their first message here.
     pub new_sender_days: u16,
@@ -99,6 +102,7 @@ impl Default for ForYouPrefs {
         ForYouPrefs {
             all_mail: false,
             inbox: false,
+            max_days: 30,
             new_sender: true,
             new_sender_days: 30,
             replied: true,
@@ -129,7 +133,7 @@ impl ForYouPrefs {
 
     /// Every number within its bounds and the folders once each, as a settings file may say anything.
     pub fn tidy(&mut self) {
-        for days in [&mut self.new_sender_days, &mut self.links_days, &mut self.read_days] {
+        for days in [&mut self.max_days, &mut self.new_sender_days, &mut self.links_days, &mut self.read_days] {
             *days = (*days).clamp(1, Self::MAX_DAYS);
         }
         self.replied_last = self.replied_last.clamp(1, Self::MAX_LAST);
@@ -279,9 +283,9 @@ pub fn self_triggered(m: &Message, own: &Own) -> bool {
 
 /// The highest tier of the tiers of `p` the unread message `m` is in, by its sender's mail
 /// (`stats`) as of `now`; `None` for a message that is read, a draft, of the owner's own doing,
-/// or in none. (Sender warnings and folders are the section's to judge: [`section`].)
+/// older than [`ForYouPrefs::max_days`], or in none. (Sender warnings and folders are the section's to judge: [`section`].)
 pub fn tier(m: &Message, stats: &SenderStats, p: &ForYouPrefs, own: &Own, now: Timestamp) -> Option<Tier> {
-    if m.read || m.draft || self_triggered(m, own) {
+    if m.read || m.draft || self_triggered(m, own) || when(m) < now.saturating_sub(Timestamp::from(p.max_days) * DAY) {
         return None;
     }
     let st = stats.get(m)?;
@@ -316,10 +320,12 @@ pub fn strength(t: Tier, m: &Message, stats: &SenderStats) -> u16 {
     }
 }
 
-/// What of For you the message list is kept under ([`Session::rows`]): its settings, and while a
-/// folder's mail leaves the Inbox's section by age, the minute.
+/// What of For you the message list is kept under ([`Session::rows`]): its settings, the day (mail
+/// leaves the tiers by age, [`ForYouPrefs::max_days`]), and while a folder's mail leaves the
+/// Inbox's section by age, the minute.
 pub(crate) fn list_key(s: &Session) -> String {
     let mut key = serde_json::to_string(&s.prefs.for_you).unwrap_or_default();
+    key.push_str(&format!("#{}", s.now().div_euclid(DAY)));
     if s.prefs.for_you.folders.iter().any(|f| f.max_age_minutes.is_some()) && applies(s) == Some(Where::Inbox) {
         key.push_str(&format!("@{}", s.now().div_euclid(60)));
     }

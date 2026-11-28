@@ -104,11 +104,13 @@ fn the_header_shows_for_you_and_opens_the_settings() {
     assert!(rows.iter().any(|(r, _)| r.id == new && r.for_you.is_some()));
     assert_eq!(rows.first().and_then(|(r, _)| r.group.as_deref()), Some(mailcraft_engine::for_you::HEADING));
     let gear = harness.state().hit.rect("forYouGear", 0).expect("the section's gear");
-    assert!(!harness.state().for_you_settings.open);
+    assert!(!harness.state().ui.backstage);
     click_at(&mut harness, gear.center());
-    assert!(harness.state().for_you_settings.open);
     harness.run_steps(3);
-    assert!(harness.state().for_you_settings.open);
+    // v0.12.47: File › For you, a page as Options is.
+    assert!(harness.state().ui.backstage);
+    assert_eq!(harness.state().ui.backstage_page, crate::for_you_view::PAGE);
+    assert!(harness.state().hit.rect("forYouCap", 0).is_some());
 }
 
 /// The sample with all of its mail read and `n` new senders' unread mail of today, For you on.
@@ -306,7 +308,7 @@ fn an_inbox_message_shows_its_sender_on_top() {
 
 fn settings_open(a: MailApp) -> Window {
     let mut harness = window(a);
-    harness.state_mut().for_you_settings.open = true;
+    harness.state_mut().execute("ui.backstage", json!({"value": true, "page": crate::for_you_view::PAGE})).unwrap();
     harness.run_steps(4);
     harness
 }
@@ -331,6 +333,29 @@ fn dragging_a_number_settles_it_once_the_drag_ends() {
     harness.event(egui::Event::PointerButton { pos: to, button: egui::PointerButton::Primary, pressed: false, modifiers: egui::Modifiers::NONE });
     harness.run_steps(4);
     assert!(harness.state().session.prefs.for_you.cap > cap);
+}
+
+#[test]
+fn a_number_being_typed_is_kept_when_the_page_is_left() {
+    let mut harness = settings_open(app());
+    let days = harness.state().session.prefs.for_you.max_days;
+    assert_eq!(days, 30);
+    let at = harness.state().hit.rect("forYouMaxDays", 0).expect("Only mail from the last").center();
+    harness.event(egui::Event::PointerMoved(at));
+    harness.step();
+    harness.event(egui::Event::PointerButton { pos: at, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
+    harness.step();
+    let mut to = at;
+    for _ in 0..10 {
+        to.x += 6.0;
+        harness.event(egui::Event::PointerMoved(to));
+        harness.step();
+    }
+    // Leaving the page mid-drag: the change is made, not lost.
+    harness.state_mut().execute("ui.backstage", json!({"value": false})).unwrap();
+    harness.event(egui::Event::PointerButton { pos: to, button: egui::PointerButton::Primary, pressed: false, modifiers: egui::Modifiers::NONE });
+    harness.run_steps(4);
+    assert!(harness.state().session.prefs.for_you.max_days > days);
 }
 
 #[test]
